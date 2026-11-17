@@ -1989,6 +1989,11 @@ Rispondi in JSON: is_fish (c'è un pesce?), species, scientific_name, confidence
       alternatives:(o.alternatives||[]).filter(a=>a.species&&a.species!==o.species).slice(0,3).map(a=>({species:a.species,confidence:clamp(+a.confidence||0,0,1)})),note:o.note||'',emb:null};
 }
 async function gemCall(body,key=gemKey()){
+  // modello sovraccarico (503/500) o senza quota: provo gli altri modelli e poi riprovo una volta dopo una pausa
+  try{return await gemTry(body,key);}
+  catch(e){if(e.message!=='gem-busy')throw e;await new Promise(r=>setTimeout(r,2500));return gemTry(body,key);}
+}
+async function gemTry(body,key){
   let last='';
   for(const m of GEM_MODELS){
     const ac=new AbortController(),t=setTimeout(()=>ac.abort(),40000);
@@ -1999,7 +2004,8 @@ async function gemCall(body,key=gemKey()){
       // leggo il motivo vero dell'errore: chiave errata, servizio non abilitato, limite, modello inesistente…
       let er={};try{er=(await r.json()).error||{};}catch(e){}
       const reason=(er.details||[]).map(d=>d.reason).find(Boolean)||er.status||'';GEM_LAST=`${m}: ${r.status} ${reason} ${er.message||''}`.trim();
-      if(r.status===404||/not found|not supported/i.test(er.message||'')){last='gem-model';continue;}
+      if(r.status===404||/not found|not supported/i.test(er.message||'')){last=last||'gem-model';continue;}
+      if(r.status>=500){last='gem-busy';continue;}
       if(reason==='API_KEY_INVALID'||/api key not valid/i.test(er.message||''))throw new Error('gem-key');
       if(r.status===429){if(/limit: 0/.test(er.message||'')){last='gem-limit';continue;}throw new Error('gem-limit');}
       if(r.status===403)throw new Error('gem-perm');
@@ -2034,7 +2040,7 @@ async function geminiMeasure(src,sp){
   else{m.refOk=false;m.pts=f1&&f2?[f1,f2]:null;m.len=o.length_cm>0?Math.round(o.length_cm*10)/10:null;m.est=true;}
   return m;
 }
-const GEM_ERR={'gem-perm':'Chiave senza accesso a Gemini (abilita la Gemini API per questa chiave)','gem-other':'Gemini ha rifiutato la richiesta','gem-key':'Chiave Gemini non valida','gem-limit':'Limite gratuito di Gemini raggiunto per ora','gem-timeout':'Gemini non risponde','gem-net':'Gemini non raggiungibile','gem-model':'Modello Gemini non disponibile'};
+const GEM_ERR={'gem-busy':'Gemini è sovraccarico in questo momento, riprova tra poco','gem-perm':'Chiave senza accesso a Gemini (abilita la Gemini API per questa chiave)','gem-other':'Gemini ha rifiutato la richiesta','gem-key':'Chiave Gemini non valida','gem-limit':'Limite gratuito di Gemini raggiunto per ora','gem-timeout':'Gemini non risponde','gem-net':'Gemini non raggiungibile','gem-model':'Modello Gemini non disponibile'};
 // Gemini se c'è la chiave e internet, altrimenti (o se Gemini fallisce) il modello sul telefono
 async function recognize(src,mode){
   if(gemOn()){
@@ -2050,7 +2056,10 @@ async function gemTest(){
   // verifica semplice: una domanda di testo, senza immagine né schema
   try{await gemCall({contents:[{parts:[{text:'Rispondi in JSON {"ok":true}'}]}],generationConfig:{responseMimeType:'application/json'}},k);
     LS.set('gemkey',k);LS.set('gemerr','');toast('✨ Gemini attivo');render();}
-  catch(e){const msg=(GEM_ERR[e.message]||'Verifica non riuscita')+(GEM_LAST?' — '+GEM_LAST:'');LS.set('gemerr',msg);toast('⚠️ '+(GEM_ERR[e.message]||'Verifica non riuscita'));render();}
+  catch(e){
+    // chiave accettata ma Gemini occupato o senza quota: la chiave è buona, la salvo lo stesso
+    if(e.message==='gem-busy'||e.message==='gem-limit'){LS.set('gemkey',k);LS.set('gemerr','');toast('✨ Chiave valida, Gemini attivo (ora è molto richiesto: se non risponde uso il modello sul telefono)');render();return;}
+    const msg=(GEM_ERR[e.message]||'Verifica non riuscita')+(GEM_LAST?' — '+GEM_LAST:'');LS.set('gemerr',msg);toast('⚠️ '+(GEM_ERR[e.message]||'Verifica non riuscita'));render();}
 }
 function aiCard(st,target){
   if(!st)return '';
