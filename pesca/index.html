@@ -1030,6 +1030,11 @@ function hourAxis(hs,x,H,p){
   // una linea verticale leggera per ogni ora, un po' più marcata ogni 3 ore (dove c'è l'etichetta)
   return hs.map((h,i)=>{const k=h.t.getHours()%3===0;return `<line x1="${x(i)}" x2="${x(i)}" y1="${p}" y2="${H-p}" stroke="rgba(255,255,255,${k?.16:.07})" stroke-width="${k?1.2:1}"/>`+(k?`<text x="${x(i)}" y="${H+16}" fill="#c3d6e8" font-size="21" font-weight="700" text-anchor="middle">${pad(h.t.getHours())}</text>`:'');}).join('');
 }
+// valore massimo della scala: a sinistra per la linea principale, a destra per la seconda linea (se c'è)
+function axisMax(W,p,yt,left,right,cl='#c3d6e8',cr='#ffb547'){
+  return `<line x1="${p}" x2="${W-p}" y1="${yt}" y2="${yt}" stroke="rgba(255,255,255,.18)" stroke-dasharray="2 4"/>
+    <text x="${p+2}" y="${yt-6}" fill="${cl}" font-size="17" font-weight="700">${left}</text>${right?`<text x="${W-p-2}" y="${yt-6}" fill="${cr}" font-size="17" font-weight="700" text-anchor="end">${right}</text>`:''}`;
+}
 function nowIdx(hs){const t=Date.now();const i=hs.findIndex(h=>h.t.getTime()<=t&&h.t.getTime()+3600e3>t);return i>=0?i:null;}
 // linea dell'ora attuale, con il valore di quell'ora (lab: funzione indice → testo)
 function nowLine(hs,x,y0,y1,lab){
@@ -1052,7 +1057,7 @@ function waveChart(hs){
   return `<svg viewBox="0 -66 ${W} ${H+88}" data-ch="wave" style="touch-action:pan-y;width:calc(100% + 20px);margin:0 -10px;display:block"><defs><linearGradient id="wvg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b8cff" stop-opacity=".6"/><stop offset="1" stop-color="#3b8cff" stop-opacity="0"/></linearGradient></defs>
     ${hourAxis(hs,x,H,p)}<path d="${area}" fill="url(#wvg)"/><path d="${smooth(ok)}" fill="none" stroke="#5aa8ff" stroke-width="3"/>
     ${pp.length>1?`<path d="${smooth(pp)}" fill="none" stroke="#c58cff" stroke-width="2.5" stroke-dasharray="6 5"/>`:''}
-    ${nowLine(hs,x,p,H-p,i=>fmtOnda(vals[i]))}<g class="sel"></g></svg>
+    ${nowLine(hs,x,p,H-p,i=>fmtOnda(vals[i]))}${axisMax(W,p,y(top),fmtOnda(top),pv.length?fmt0(phi)+' s':'','#5aa8ff','#c58cff')}<g class="sel"></g></svg>
     <div class="legend"><span><i style="background:#5aa8ff"></i>Altezza</span>${pv.length?`<span><i style="background:#c58cff"></i>Periodo (${fmt0(Math.min(...pv))}–${fmt0(Math.max(...pv))} s)</span>`:''}</div>
     <div class="legend"><span>🌊 massima ${fmtOnda(mx)} alle ${pad(hs[iMax].t.getHours())}:00</span><span>${seaState(mx)}</span></div>`;
 }
@@ -1081,7 +1086,7 @@ function tideChart(hs){
   return `<svg viewBox="0 -66 ${W} ${H+88}" data-ch="tide" style="touch-action:pan-y;width:calc(100% + 20px);margin:0 -10px;display:block">${hourAxis(hs,x,H,p)}
     ${mn<0&&mx>0?`<line x1="${p}" x2="${W-p}" y1="${y(0)}" y2="${y(0)}" stroke="rgba(255,255,255,.25)" stroke-dasharray="4 5"/>`:''}
     <path d="${smooth(ok)}" fill="none" stroke="${var_('--acc2')}" stroke-width="2.5"/>
-    ${nowLine(hs,x,p,H-p,i=>cm(vals[i]))}<g class="sel"></g></svg><div class="legend"><span>↕️ escursione ${mx-mn} cm</span><span>⬆️ alta ${pad(hs[iMax].t.getHours())}:00</span><span>⬇️ bassa ${pad(hs[iMin].t.getHours())}:00</span></div>`;
+    ${nowLine(hs,x,p,H-p,i=>cm(vals[i]))}${axisMax(W,p,y(mx),cm(mx),'',var_('--acc2'))}<g class="sel"></g></svg><div class="legend"><span>↕️ escursione ${mx-mn} cm</span><span>⬆️ alta ${pad(hs[iMax].t.getHours())}:00</span><span>⬇️ bassa ${pad(hs[iMin].t.getHours())}:00</span></div>`;
 }
 const fmt2=n=>(Math.round(n*100)/100).toLocaleString('it-IT');
 // tocco o trascinamento sul grafico: evidenzia il punto più vicino con il suo valore
@@ -1131,7 +1136,7 @@ function chart(hs){
     ${grid}<path d="${area}" fill="url(#ar)"/><path d="${line}" fill="none" stroke="url(#ln)" stroke-width="3" stroke-linecap="round"/>
     <path d="${smooth(wp)}" fill="none" stroke="#ffb547" stroke-width="2" stroke-dasharray="5 5" opacity=".9"/>
     <circle cx="${ip[best][0]}" cy="${ip[best][1]}" r="11" fill="#2fe0cf" opacity=".25"/><circle cx="${ip[best][0]}" cy="${ip[best][1]}" r="5" fill="#fff" stroke="#2fe0cf" stroke-width="3"/>
-    <text x="${clamp(ip[best][0],60,W-60)}" y="${ip[best][1]-16}" fill="#fff" font-size="20" font-weight="800" text-anchor="middle">${hs[best].idx} · ${pad(hs[best].t.getHours())}:00</text>${lbl}${nowLine(hs,x,p,H-p,i=>String(hs[i].idx))}<g class="sel"></g></svg>
+    <text x="${clamp(ip[best][0],60,W-60)}" y="${ip[best][1]-16}" fill="#fff" font-size="20" font-weight="800" text-anchor="middle">${hs[best].idx} · ${pad(hs[best].t.getHours())}:00</text>${lbl}${nowLine(hs,x,p,H-p,i=>String(hs[i].idx))}${axisMax(W,p,y(1),Math.round(hi),fmt0(wmx)+' km/h','#2fe0cf')}<g class="sel"></g></svg>
   <div class="legend"><span><i style="background:var(--grad)"></i>Indice di pesca</span><span><i style="background:#ffb547"></i>Vento</span></div>`;
 }
 
