@@ -1928,7 +1928,7 @@ function measBlock(st,target){
   if(m.err)return `<div class="small" style="margin-top:8px;color:var(--acc2)">⚠️ ${esc(m.err)}</div>`;
   const refChips=`<div class="chips" style="margin-top:6px">${autoRefs().map(([r,i])=>`<span class="chip" style="padding:3px 9px;font-size:12px;${m.ref===i?'background:var(--acc);color:#03282a':''}" onclick="setAutoRef('${target}',${i})">${esc(refName(i))}</span>`).join('')}</div>`;
   const manual=`<u style="cursor:pointer;color:var(--acc)" onclick="openMeasureFor('${target}')">📏 Controlla o correggi i punti</u>`;
-  if(m.len){const w=(m.gem&&m.wgem)||estW(sp,m.len)||m.wgem;return `<div class="aigrid" style="margin-top:10px"><div><b>${fmt1(m.len)} cm</b><span>lunghezza</span></div><div><b>${w?fmt1(w)+' kg':'—'}</b><span>${m.gem&&m.wgem?'peso stimato da Gemini':'peso stimato'}</span></div><div><b style="font-size:12px">${m.est?'Senza riferimento':esc(refName(m.ref))}</b><span>${m.manual?'segnato da te':m.est?'stima di Gemini':m.gem?'trovato da Gemini':m.forced?'riferimento scelto':'riferimento trovato'}</span></div></div>
+  if(m.len){const w=(m.gem&&m.wgem)||estW(sp,m.len)||m.wgem;return `<div class="aigrid" style="margin-top:10px"><div><b>${fmt1(m.len)} cm</b><span>lunghezza</span></div><div><b>${w?fmt1(w)+' kg':'—'}</b><span>${m.scale?'letto sulla bilancia':m.gem&&m.wgem?'peso stimato da Gemini':'peso stimato'}</span></div><div><b style="font-size:12px">${m.est?'Senza riferimento':esc(refName(m.ref))}</b><span>${m.manual?'segnato da te':m.est?'stima di Gemini':m.gem?'trovato da Gemini':m.forced?'riferimento scelto':'riferimento trovato'}</span></div></div>
     ${m.gem&&!m.manual?`<div class="small mut">✨ Misurato con Gemini${m.note?' · '+esc(m.note):''}${m.refDoubt?' · la misura con il riferimento non era coerente con forma e peso del pesce: uso la stima coerente':''}${m.est?' · senza un riferimento accanto è solo una stima: per una misura precisa metti una moneta, il bancomat o una scarpa':''}</div>`:''}
     ${m.fishCut&&!m.manual?'<div class="small" style="color:var(--acc2)">✂️ Il pesce esce dalla foto (testa o coda tagliate): la misura è per difetto. Meglio rifare la foto con tutto il pesce dentro.</div>':''}
     ${m.refCut&&!m.manual?`<div class="small" style="color:var(--acc2)">✂️ ${m.kind==='foot'?'Il piede':'La scarpa'} esce dalla foto: la misura è sbagliata, rifai la foto con tutto dentro.</div>`:''}
@@ -1986,7 +1986,9 @@ Le foto sono spesso di notte, con il pesce sporco di sabbia o tenuto in mano: gu
 - Sarago pizzuto: muso appuntito e labbra grosse, 5-6 bande sbiadite, macchia nera sul peduncolo.
 - Sarago fasciato: due grandi fasce nere, una dietro la testa e una sul peduncolo.
 - Sparaglione: piccolo, macchia nera sul peduncolo e alla base della pettorale.
-- Mormora: corpo più allungato e basso del sarago, muso appuntito e lungo, 14-15 sottili bande verticali scure regolari, nessuna macchia nera sul peduncolo.
+- Mormora: corpo più allungato e basso del sarago, muso appuntito e lungo, 14-15 sottili bande verticali scure regolari, coda nettamente a forcella, nessuna macchia nera sul peduncolo.
+- Ombrina: corpo allungato con dorso arcuato, muso arrotondato e ottuso con un piccolo barbiglio sotto il mento, linee oblique ondulate dorate/grigio-azzurre sui fianchi (non bande verticali), bordo scuro sull'opercolo, coda dritta o appena concava (non a forcella). Non confonderla con la mormora.
+- Corvina: scura bronzea, corpo alto, pinne ventrali e anale nere, coda dritta.
 - Orata: banda dorata tra gli occhi, macchia scura sull'opercolo, profilo della testa curvo.
 - Tanuta: grigio scuro uniforme, macchia nera sul peduncolo, corpo ovale.
 - Leccia stella: argentea, corpo alto e compresso, 4-6 macchie scure lungo i fianchi, coda lunga a forcella.
@@ -2042,17 +2044,20 @@ async function geminiMeasure(src,sp){
 - ref_a, ref_b: i due estremi della misura del riferimento (diametro per le monete).
 - length_cm: la tua stima diretta della lunghezza totale, usando tutti gli indizi della scena (mani, testa e corpo delle persone, lavandino, piastrelle, oggetti noti) e ricordando che un pesce tenuto verso la fotocamera sembra più grande.
 - weight_kg: il peso del pesce stimato dalla specie, dalla lunghezza e dallo spessore/altezza del corpo che vedi (un pesce alto e grasso pesa molto più di uno snello della stessa lunghezza).
+- scale_kg: se nella foto c'è una bilancia o pesa con il pesce appeso, leggi il display e converti in kg (es. «02.15» o «2.15» = 2,15 kg; se l'unità è lb converti in kg); se non c'è, 0.
 - fish_whole: il pesce è intero nella foto? note: al massimo 12 parole.`;
   const body={contents:[{parts:[{inline_data:{mime_type:'image/jpeg',data:b64}},{text:prompt}]}],
     generationConfig:{temperature:0.1,responseMimeType:'application/json',responseSchema:{type:'OBJECT',properties:{
       fish_snout:pt,fish_tail:pt,reference:{type:'STRING',enum:['coin2','coin1','card','shoe','foot','hand','none']},ref_a:pt,ref_b:pt,
-      length_cm:{type:'NUMBER'},weight_kg:{type:'NUMBER'},fish_whole:{type:'BOOLEAN'},note:{type:'STRING'}},required:['fish_snout','fish_tail','reference','length_cm','weight_kg','fish_whole']}}};
+      length_cm:{type:'NUMBER'},weight_kg:{type:'NUMBER'},scale_kg:{type:'NUMBER'},fish_whole:{type:'BOOLEAN'},note:{type:'STRING'}},required:['fish_snout','fish_tail','reference','length_cm','weight_kg','fish_whole']}}};
   const o=await gemCall(body),P=q=>Array.isArray(q)&&q.length===2?[clamp(q[1]/1000,0,1),clamp(q[0]/1000,0,1)]:null;
   const d=(a,b)=>Math.hypot((a[0]-b[0])*W,(a[1]-b[1])*H),f1=P(o.fish_snout),f2=P(o.fish_tail),r1=P(o.ref_a),r2=P(o.ref_b);
   let idx=GEM_REF[o.reference];if(idx==='FOOT')idx=FOOT;
   const m={gem:true,note:o.note||'',fishOk:!!(f1&&f2),fishCut:o.fish_whole===false,wgem:o.weight_kg>0?o.weight_kg:null,ref:idx??null,kind:idx!=null?(REFS[idx]?.[2]?.t||null):null};
+  // bilancia nella foto: il peso letto vale più di qualsiasi stima
+  if(o.scale_kg>0){o.weight_kg=o.scale_kg;m.wgem=o.scale_kg;m.scale=true;}
   // altre due stime della lunghezza: quella diretta di Gemini e quella ricavata dal peso stimato (tabella lunghezza-peso della specie)
-  const others=[o.length_cm>0?o.length_cm:null,lenFromW(sp,o.weight_kg)].filter(Boolean);
+  const lw=lenFromW(sp,o.weight_kg),others=m.scale&&lw?[lw]:[o.length_cm>0?o.length_cm:null,lw].filter(Boolean);  // con la bilancia conta solo la lunghezza ricavata dal peso letto
   const mid=others.length?others.reduce((a,b)=>a+b,0)/others.length:null;
   if(f1&&f2&&idx!=null&&r1&&r2&&d(r1,r2)>8){m.refOk=true;m.pts=[f1,f2,r1,r2];m.len=d(f1,f2)/d(r1,r2)*refCm(idx);
     if(m.kind==='hand'&&mid)m.len=(m.len+mid)/2;  // mano: riferimento approssimato, medio con le altre stime
