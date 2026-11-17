@@ -1928,7 +1928,7 @@ function measBlock(st,target){
   if(m.err)return `<div class="small" style="margin-top:8px;color:var(--acc2)">⚠️ ${esc(m.err)}</div>`;
   const refChips=`<div class="chips" style="margin-top:6px">${autoRefs().map(([r,i])=>`<span class="chip" style="padding:3px 9px;font-size:12px;${m.ref===i?'background:var(--acc);color:#03282a':''}" onclick="setAutoRef('${target}',${i})">${esc(refName(i))}</span>`).join('')}</div>`;
   const manual=`<u style="cursor:pointer;color:var(--acc)" onclick="openMeasureFor('${target}')">📏 Controlla o correggi i punti</u>`;
-  if(m.len){const w=estW(sp,m.len)||m.wgem;return `<div class="aigrid" style="margin-top:10px"><div><b>${fmt1(m.len)} cm</b><span>lunghezza</span></div><div><b>${w?fmt1(w)+' kg':'—'}</b><span>peso stimato</span></div><div><b style="font-size:12px">${m.est?'Senza riferimento':esc(refName(m.ref))}</b><span>${m.manual?'segnato da te':m.est?'stima di Gemini':m.gem?'trovato da Gemini':m.forced?'riferimento scelto':'riferimento trovato'}</span></div></div>
+  if(m.len){const w=(m.gem&&m.wgem)||estW(sp,m.len)||m.wgem;return `<div class="aigrid" style="margin-top:10px"><div><b>${fmt1(m.len)} cm</b><span>lunghezza</span></div><div><b>${w?fmt1(w)+' kg':'—'}</b><span>${m.gem&&m.wgem?'peso stimato da Gemini':'peso stimato'}</span></div><div><b style="font-size:12px">${m.est?'Senza riferimento':esc(refName(m.ref))}</b><span>${m.manual?'segnato da te':m.est?'stima di Gemini':m.gem?'trovato da Gemini':m.forced?'riferimento scelto':'riferimento trovato'}</span></div></div>
     ${m.gem&&!m.manual?`<div class="small mut">✨ Misurato con Gemini${m.note?' · '+esc(m.note):''}${m.est?' · senza un riferimento accanto è solo una stima: per una misura precisa metti una moneta, il bancomat o una scarpa':''}</div>`:''}
     ${m.fishCut&&!m.manual?'<div class="small" style="color:var(--acc2)">✂️ Il pesce esce dalla foto (testa o coda tagliate): la misura è per difetto. Meglio rifare la foto con tutto il pesce dentro.</div>':''}
     ${m.refCut&&!m.manual?`<div class="small" style="color:var(--acc2)">✂️ ${m.kind==='foot'?'Il piede':'La scarpa'} esce dalla foto: la misura è sbagliata, rifai la foto con tutto dentro.</div>`:''}
@@ -1946,7 +1946,7 @@ function stOf(t){return t==='live'?LIVEAI:t==='assist'?ASSIST?.st:ENTRYAI[+t];}
 function photoOf(t){return t==='live'?(LIVEQ.big||LIVEQ.photo):t==='assist'?(ASSIST.big||ASSIST.photo):(DRAFT.catches[+t].big||DRAFT.catches[+t].photo);}
 function redraw(t){if(t==='live'){if(S.tab==='live')render();}else if(t==='assist'){if(S.tab==='pesce')render();}else if(document.getElementById('sheet').classList.contains('on')&&DRAFT&&!MEAS_OPEN())drawEntry();}
 function applyAuto(t){
-  const st=stOf(t),m=st?.m;if(!m?.len)return;const sp=st.r?.species,w=estW(sp,m.len)||m.wgem;
+  const st=stOf(t),m=st?.m;if(!m?.len)return;const sp=st.r?.species,w=(m.gem&&m.wgem)||estW(sp,m.len)||m.wgem;
   if(t==='live'){LIVEQ.l=String(Math.round(m.len));LIVEQ.w=w?String(Math.round(w*100)/100):LIVEQ.w;}
   else if(t!=='assist'){const c=DRAFT.catches[+t];if(c){c.l=Math.round(m.len);if(w)c.w=Math.round(w*100)/100;}}
 }
@@ -2027,9 +2027,10 @@ async function geminiMeasure(src,sp){
   const pt={type:'ARRAY',items:{type:'NUMBER'}};
   const prompt=`Foto di un pesce${sp?' ('+sp+')':''} con eventualmente un oggetto di riferimento accanto. Coordinate come [y, x] normalizzate 0-1000 (0,0 in alto a sinistra).
 - fish_snout: punta del muso; fish_tail: estremità della pinna caudale (lunghezza totale).
-- reference: l'oggetto di riferimento più affidabile vicino al pesce, uno tra coin2 (moneta 2 euro), coin1 (moneta 1 euro), card (bancomat/carta, lato lungo), shoe (scarpa, dalla punta al tallone), foot (piede nudo, dall'alluce al tallone), hand (mano aperta: larghezza del palmo alla base delle dita), none.
+- reference: l'oggetto di riferimento più affidabile vicino al pesce, uno tra coin2 (moneta 2 euro), coin1 (moneta 1 euro), card (bancomat/carta, lato lungo), shoe (scarpa, dalla punta al tallone), foot (piede nudo, dall'alluce al tallone), hand (una mano che tocca o regge il pesce, anche se non è aperta: misura la larghezza del palmo all'altezza delle nocche, dall'indice al mignolo), none.
 - ref_a, ref_b: i due estremi della misura del riferimento (diametro per le monete).
-- length_cm e weight_kg: la tua stima diretta della lunghezza totale e del peso del pesce.
+- length_cm: la tua stima diretta della lunghezza totale, usando tutti gli indizi della scena (mani, testa e corpo delle persone, lavandino, piastrelle, oggetti noti) e ricordando che un pesce tenuto verso la fotocamera sembra più grande.
+- weight_kg: il peso del pesce stimato dalla specie, dalla lunghezza e dallo spessore/altezza del corpo che vedi (un pesce alto e grasso pesa molto più di uno snello della stessa lunghezza).
 - fish_whole: il pesce è intero nella foto? note: al massimo 12 parole.`;
   const body={contents:[{parts:[{inline_data:{mime_type:'image/jpeg',data:b64}},{text:prompt}]}],
     generationConfig:{temperature:0.1,responseMimeType:'application/json',responseSchema:{type:'OBJECT',properties:{
@@ -2039,7 +2040,8 @@ async function geminiMeasure(src,sp){
   const d=(a,b)=>Math.hypot((a[0]-b[0])*W,(a[1]-b[1])*H),f1=P(o.fish_snout),f2=P(o.fish_tail),r1=P(o.ref_a),r2=P(o.ref_b);
   let idx=GEM_REF[o.reference];if(idx==='FOOT')idx=FOOT;
   const m={gem:true,note:o.note||'',fishOk:!!(f1&&f2),fishCut:o.fish_whole===false,wgem:o.weight_kg>0?o.weight_kg:null,ref:idx??null,kind:idx!=null?(REFS[idx]?.[2]?.t||null):null};
-  if(f1&&f2&&idx!=null&&r1&&r2&&d(r1,r2)>8){m.refOk=true;m.pts=[f1,f2,r1,r2];m.len=Math.round(d(f1,f2)/d(r1,r2)*refCm(idx)*10)/10;}
+  if(f1&&f2&&idx!=null&&r1&&r2&&d(r1,r2)>8){m.refOk=true;m.pts=[f1,f2,r1,r2];m.len=Math.round(d(f1,f2)/d(r1,r2)*refCm(idx)*10)/10;
+    if(m.kind==='hand'&&o.length_cm>0)m.len=Math.round((m.len+o.length_cm)/2*10)/10;}  // mano: riferimento approssimato, medio con la stima di Gemini
   else{m.refOk=false;m.pts=f1&&f2?[f1,f2]:null;m.len=o.length_cm>0?Math.round(o.length_cm*10)/10:null;m.est=true;}
   return m;
 }
