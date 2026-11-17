@@ -1766,6 +1766,12 @@ function vSettings(v){
   <div class="card"><h3>🧠 Riconoscimento dei pesci</h3>
     <p class="small" style="margin-bottom:8px">Il riconoscimento della specie funziona <b>sul telefono</b>, gratis e anche senza internet, con BioCLIP: un modello open source addestrato su milioni di foto di animali e piante. Lunghezza e peso si calcolano da soli con SlimSAM, che ritaglia pesce e oggetto di riferimento nella foto. I modelli si scaricano una volta (circa 155 MB).</p>
     <div id="mstat"><div class="small mut">Controllo…</div></div>
+    <div style="margin-top:14px;padding:12px;border-radius:14px;background:rgba(255,255,255,.04)">
+      <b>✨ Riconoscimento con Gemini (facoltativo)</b>
+      <p class="small mut" style="margin:4px 0 8px">Più preciso del modello sul telefono, ma serve internet. Crea una chiave gratuita su <u onclick="window.open('https://aistudio.google.com/apikey','_blank')" style="cursor:pointer">aistudio.google.com</u> («Get API key») e incollala qui: resta solo su questo telefono. Le foto vengono inviate a Google; con il piano gratuito Google può usarle per migliorare i suoi servizi. Senza internet uso il modello sul telefono.</p>
+      <div class="row" style="gap:8px"><input id="gemk" type="password" placeholder="Chiave API Gemini" value="${esc(gemKey())}" style="flex:1" autocomplete="off"><button class="btn" onclick="gemTest()">${gemKey()?'Aggiorna':'Attiva'}</button></div>
+      <div class="small" style="margin-top:6px">${gemKey()?'<span style="color:var(--ok)">● Gemini attivo</span> · <u style="cursor:pointer" onclick="LS.set(\'gemkey\',\'\');render()">disattiva</u>':'<span class="mut">● Non attivo: uso il modello sul telefono</span>'}</div>
+    </div>
     <div class="kv" style="margin-top:10px"><span>Numero della tua scarpa (riferimento di riserva)</span><input type="number" min="30" max="50" step="0.5" style="width:80px;padding:6px 8px" value="${shoeSize()}" onchange="if(+this.value>=30&&+this.value<=50)LS.set('shoesize',+this.value)"></div>
     <div class="kv"><span>Catture che hai confermato</span><b>${myFish().length}</b></div>
     <p class="small mut" style="margin-top:6px">Ogni cattura con foto che salvi insegna al riconoscimento i pesci delle tue zone. Per la misura automatica fotografa il pesce dall'alto con accanto una moneta, un bancomat, una scarpa o la mano: li riconosco da solo. Se non c'è nulla, ti chiedo di segnare la tua scarpa sulla foto.</p>
@@ -1958,6 +1964,55 @@ function setAutoRef(t,i){runMeasure(t,i);}
 function openMeasureFor(t,ref){const st=stOf(t),m=st?.m;openMeasure(photoOf(t),t,{pts:m?.pts||null,ref:ref??m?.ref??3});}
 
 /* ===================== Schede risultato ===================== */
+/* ===================== Riconoscimento con Gemini (facoltativo, con la chiave dell'utente) ===================== */
+// La chiave resta solo sul telefono. Senza chiave o senza internet si usa il modello sul telefono (BioCLIP).
+const gemKey=()=>LS.get('gemkey','');
+const gemOn=()=>!!gemKey()&&navigator.onLine;
+const GEM_MODELS=['gemini-flash-latest','gemini-2.5-flash'];
+async function geminiFish(src,key=gemKey()){
+  const b64=src.split(',')[1],names=SPECIES.map(x=>x.n).join(', ');
+  const prompt=`Sei un esperto di pesci del Mediterraneo e delle acque dolci italiane. Guarda la foto e riconosci la specie del pesce.
+Usa il nome comune italiano; se è una di queste usa esattamente questo nome: ${names}.
+Rispondi in JSON: is_fish (c'è un pesce?), species, scientific_name, confidence (0-1, quanto sei sicuro), alternatives (fino a 3 altre specie possibili con confidence), note (al massimo 12 parole: il dettaglio che ti ha fatto decidere).`;
+  const body={contents:[{parts:[{inline_data:{mime_type:'image/jpeg',data:b64}},{text:prompt}]}],
+    generationConfig:{temperature:0.2,responseMimeType:'application/json',responseSchema:{type:'OBJECT',properties:{
+      is_fish:{type:'BOOLEAN'},species:{type:'STRING'},scientific_name:{type:'STRING'},confidence:{type:'NUMBER'},note:{type:'STRING'},
+      alternatives:{type:'ARRAY',items:{type:'OBJECT',properties:{species:{type:'STRING'},confidence:{type:'NUMBER'}},required:['species','confidence']}}},
+      required:['is_fish','species','scientific_name','confidence','alternatives']}}};
+  let last='';
+  for(const m of GEM_MODELS){
+    const ac=new AbortController(),t=setTimeout(()=>ac.abort(),30000);
+    let r;try{r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`,{method:'POST',signal:ac.signal,headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify(body)});}
+    catch(e){clearTimeout(t);throw new Error(e.name==='AbortError'?'gem-timeout':'gem-net');}
+    clearTimeout(t);
+    if(r.status===404){last='gem-model';continue;}
+    if(r.status===400||r.status===401||r.status===403)throw new Error('gem-key');
+    if(r.status===429)throw new Error('gem-limit');
+    if(!r.ok)throw new Error('gem-'+r.status);
+    const j=await r.json(),txt=j.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||'';
+    const o=JSON.parse(txt);
+    return {src:'gemini',is_fish:!!o.is_fish,species:o.species||'',scientific_name:o.scientific_name||'',confidence:clamp(+o.confidence||0,0,1),
+      alternatives:(o.alternatives||[]).filter(a=>a.species&&a.species!==o.species).slice(0,3).map(a=>({species:a.species,confidence:clamp(+a.confidence||0,0,1)})),note:o.note||'',emb:null};
+  }
+  throw new Error(last||'gem-model');
+}
+const GEM_ERR={'gem-key':'Chiave Gemini non valida','gem-limit':'Limite gratuito di Gemini raggiunto per ora','gem-timeout':'Gemini non risponde','gem-net':'Gemini non raggiungibile','gem-model':'Modello Gemini non disponibile'};
+// Gemini se c'è la chiave e internet, altrimenti (o se Gemini fallisce) il modello sul telefono
+async function recognize(src,mode){
+  if(gemOn()){
+    try{return await geminiFish(src);}
+    catch(e){if(!(await modelReady()))throw new Error(GEM_ERR[e.message]?GEM_ERR[e.message]+'. Scarica il modello sul telefono per usarlo anche offline':'Riconoscimento non riuscito');
+      toast((GEM_ERR[e.message]||'Gemini non disponibile')+': uso il modello sul telefono');}
+  }
+  return classifyFish(src,mode);
+}
+async function gemTest(){
+  const k=document.getElementById('gemk').value.trim();if(!k){LS.set('gemkey','');toast('Gemini disattivato');render();return;}
+  toast('Verifico la chiave…');
+  try{const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');g.fillStyle='#3b8cff';g.fillRect(0,0,64,64);
+    await geminiFish(c.toDataURL('image/jpeg',.8),k);LS.set('gemkey',k);toast('✨ Gemini attivo');render();}
+  catch(e){toast('⚠️ '+(GEM_ERR[e.message]||'Verifica non riuscita'));}
+}
 function aiCard(st,target){
   if(!st)return '';
   if(st.needModel)return `<div class="aibox"><span style="font-size:24px">🧠</span><div style="flex:1"><b>Riconoscimento automatico gratuito</b><div class="small mut">Scarica una volta i modelli (circa 155 MB, meglio con Wi-Fi): poi specie, misura e peso si calcolano da soli, anche senza internet.</div>
@@ -1968,7 +2023,7 @@ function aiCard(st,target){
   if(!r.is_fish)return `<div class="aibox err"><span style="font-size:22px">🤔</span><div><b>Non sembra un pesce</b><div class="small mut">Inquadra il pesce intero, da vicino e di lato. Se è un pesce, scegli la specie qui sotto.</div>${target!=='assist'?`<div class="small" style="margin-top:6px"><u style="cursor:pointer;color:var(--acc)" onclick="openMeasureFor('${target}')">📏 Misura a mano sulla foto</u></div>`:''}</div></div>`;
   const pick=r.confidence==null,pc=pick?100:Math.round(r.confidence*100),col=pc>=70?'var(--ok)':pc>=40?'var(--acc2)':'var(--bad)';
   return `<div class="aibox ok"><div style="flex:1;min-width:0">
-    <div class="small mut" style="text-transform:uppercase;letter-spacing:1px;font-weight:700">🧠 ${r.cropped?'Riconosciuto su foto intera e pesce ritagliato':'Riconosciuto sul telefono'}</div>
+    <div class="small mut" style="text-transform:uppercase;letter-spacing:1px;font-weight:700">${r.src==='gemini'?'✨ Riconosciuto da Gemini (Google)':'🧠 '+(r.cropped?'Riconosciuto su foto intera e pesce ritagliato':'Riconosciuto sul telefono')}${r.note?` · <span style="text-transform:none;letter-spacing:0">${esc(r.note)}</span>`:''}</div>
     <div style="font-size:19px;font-weight:800;margin-top:2px">${esc(r.species)} <span class="pill" style="background:${col}22;color:${col}">${pick?'scelta da te':pc+'%'}</span></div>
     <div class="small mut">${pick?'':`<i>${esc(r.scientific_name)}</i>`}${!pick&&pc<40?' · poco sicuro, controlla le alternative':''}</div>
     ${r.alternatives?.length?`<div class="small" style="margin-top:6px">Oppure: ${r.alternatives.map(a=>`<span class="chip" style="padding:3px 9px;font-size:12px" onclick="aiPick('${target}','${esc(a.species).replace(/'/g,"\\'")}')">${esc(a.species)} ${Math.round(a.confidence*100)}%</span>`).join(' ')}</div>`:''}
@@ -1979,10 +2034,10 @@ function aiCard(st,target){
 let LIVEAI=null;
 async function liveAnalyze(){
   if(!LIVEQ.photo)return;
-  if(!(await modelReady())){LIVEAI={needModel:true};render();return;}
+  if(!gemOn()&&!(await modelReady())){LIVEAI={needModel:true};render();return;}
   LIVEAI={loading:true};render();
   try{
-    const r=await classifyFish(LIVEQ.big||LIVEQ.photo,S.live?.mode||S.mode);LIVEAI={r};
+    const r=await recognize(LIVEQ.big||LIVEQ.photo,S.live?.mode||S.mode);LIVEAI={r};
     if(r.is_fish){LIVEQ.sp=r.species;LIVEQ.emb=r.emb;if(LIVEQ.l){const w=estW(r.species,LIVEQ.l);if(w)LIVEQ.w=String(Math.round(w*100)/100);}}
   }catch(e){LIVEAI={err:aiErrMsg(e)};}
   if(S.tab==='live')render();
@@ -1991,10 +2046,10 @@ async function liveAnalyze(){
 const ENTRYAI={};
 async function entryAnalyze(i,big){
   const c=DRAFT.catches[i];if(!c?.photo)return;
-  if(!(await modelReady())){ENTRYAI[i]={needModel:true};drawEntry();return;}
+  if(!gemOn()&&!(await modelReady())){ENTRYAI[i]={needModel:true};drawEntry();return;}
   ENTRYAI[i]={loading:true};drawEntry();
   if(big)c.big=big;
-  try{const r=await classifyFish(big||c.photo,DRAFT.mode);ENTRYAI[i]={r};if(r.is_fish&&DRAFT.catches[i]===c){c.sp=r.species;c.emb=r.emb;}}
+  try{const r=await recognize(big||c.photo,DRAFT.mode);ENTRYAI[i]={r};if(r.is_fish&&DRAFT.catches[i]===c){c.sp=r.species;c.emb=r.emb;}}
   catch(e){ENTRYAI[i]={err:aiErrMsg(e)};}
   if(document.getElementById('sheet').classList.contains('on')&&DRAFT&&!MEAS_OPEN())drawEntry();
 }
@@ -2010,9 +2065,9 @@ let ASSIST=null;
 async function assistSnap(inp){const d=await readPhoto(inp);if(!d)return;ASSIST={photo:d,big:readPhoto.big};assistAnalyze();}
 async function assistAnalyze(){
   if(!ASSIST)return;
-  if(!(await modelReady())){ASSIST.st={needModel:true};render();return;}
+  if(!gemOn()&&!(await modelReady())){ASSIST.st={needModel:true};render();return;}
   ASSIST.st={loading:true};render();
-  try{ASSIST.st={r:await classifyFish(ASSIST.big||ASSIST.photo,S.mode)};}catch(e){ASSIST.st={err:aiErrMsg(e)};}
+  try{ASSIST.st={r:await recognize(ASSIST.big||ASSIST.photo,S.mode)};}catch(e){ASSIST.st={err:aiErrMsg(e)};}
   if(S.tab==='pesce')render();
 }
 /* Impostazioni: stato del modello */
