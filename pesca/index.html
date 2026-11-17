@@ -1981,6 +1981,17 @@ async function geminiFish(src,key=gemKey()){
   const b64=src.split(',')[1],names=SPECIES.map(x=>x.n).join(', ');
   const prompt=`Sei un esperto di pesci del Mediterraneo e delle acque dolci italiane. Guarda la foto e riconosci la specie del pesce.
 Usa il nome comune italiano; se è una di queste usa esattamente questo nome: ${names}.
+Le foto sono spesso di notte, con il pesce sporco di sabbia o tenuto in mano: guarda con attenzione forma del corpo, profilo della testa, bande, macchie e coda. Specie che si confondono spesso:
+- Sarago maggiore: corpo alto e ovale (molto compresso), 8-9 bande verticali scure sottili alternate (più evidenti nei giovani), macchia nera a sella sul peduncolo della coda, coda con bordo scuro.
+- Sarago pizzuto: muso appuntito e labbra grosse, 5-6 bande sbiadite, macchia nera sul peduncolo.
+- Sarago fasciato: due grandi fasce nere, una dietro la testa e una sul peduncolo.
+- Sparaglione: piccolo, macchia nera sul peduncolo e alla base della pettorale.
+- Mormora: corpo più allungato e basso del sarago, muso appuntito e lungo, 14-15 sottili bande verticali scure regolari, nessuna macchia nera sul peduncolo.
+- Orata: banda dorata tra gli occhi, macchia scura sull'opercolo, profilo della testa curvo.
+- Tanuta: grigio scuro uniforme, macchia nera sul peduncolo, corpo ovale.
+- Leccia stella: argentea, corpo alto e compresso, 4-6 macchie scure lungo i fianchi, coda lunga a forcella.
+- Spigola: corpo allungato, argento, macchia scura sull'opercolo, due pinne dorsali separate.
+Se le bande non si vedono (sabbia, luce), decidi da forma del corpo, muso e macchia sul peduncolo.
 Rispondi in JSON: is_fish (c'è un pesce?), species, scientific_name, confidence (0-1, quanto sei sicuro), alternatives (fino a 3 altre specie possibili con confidence), note (al massimo 12 parole: il dettaglio che ti ha fatto decidere).`;
   const body={contents:[{parts:[{inline_data:{mime_type:'image/jpeg',data:b64}},{text:prompt}]}],
     generationConfig:{temperature:0.2,responseMimeType:'application/json',responseSchema:{type:'OBJECT',properties:{
