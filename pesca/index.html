@@ -1647,10 +1647,10 @@ async function runCompare(force){
   const rows=[],t0=new Date();t0.setHours(0,0,0,0);
   for(const sp of S.spots.slice(0,12)){
     try{
-      const r=await fetchRaw(sp,force),X=build(r.w,r.m,sp,sp.mode||S.mode);
+      const r=await fetchRaw(sp,force),X=build(r.w,r.m,sp,sp.mode||S.mode),wq=await waterInfo(sp);
       const h=X.hours.find(x=>x.t<=new Date()&&x.t.getTime()+3600e3>Date.now());
       const t1=X.fdays[1]?.date;
-      rows.push({sp,sim:r.sim,now:h?.idx,code:h?.code,temp:h?.temp,s:[dayScore(X,t0),t1?dayScore(X,t1):0],w:[bestWindows(X,t0,1)[0],t1?bestWindows(X,t1,1)[0]:null]});
+      rows.push({sp,na:wq?.water===false,sim:r.sim,now:h?.idx,code:h?.code,temp:h?.temp,s:[dayScore(X,t0),t1?dayScore(X,t1):0],w:[bestWindows(X,t0,1)[0],t1?bestWindows(X,t1,1)[0]:null]});
     }catch(e){}
   }
   COMP={ts:Date.now(),rows,loading:false};if(S.tab==='compare')render();
@@ -1660,13 +1660,13 @@ function vCompare(v){
   if(S.spots.length<2){v.innerHTML=head+'<div class="empty"><div>🧭</div>Salva almeno due spot per confrontarli.<br><br><button class="btn" onclick="go(\'spot\')">Aggiungi spot</button></div>';return;}
   if(!COMP.rows||Date.now()-COMP.ts>15*60e3||COMP.rows.length!==Math.min(12,S.spots.length)){if(!COMP.loading)setTimeout(runCompare,0);}
   if(COMP.loading||!COMP.rows){v.innerHTML=head+'<div class="loader"><div class="spin"></div><p>Analizzo i tuoi spot…</p></div>';return;}
-  const k=S.cmpDay||0,rows=COMP.rows.slice().sort((a,b)=>b.s[k]-a.s[k]),med=['🥇','🥈','🥉'];
+  const k=S.cmpDay||0,rows=COMP.rows.slice().sort((a,b)=>(a.na-b.na)||b.s[k]-a.s[k])  /* spot lontani dal mare (NA) in fondo */,med=['🥇','🥈','🥉'];
   v.innerHTML=head+`<div class="seg2"><button class="${k===0?'on':''}" onclick="S.cmpDay=0;render()">Oggi</button><button class="${k===1?'on':''}" onclick="S.cmpDay=1;render()">Domani</button></div>
   ${rows.some(r=>r.sim)?'<div class="banner">⚠️ Per alcuni spot il meteo non è raggiungibile: valori simulati.</div>':''}
-  ${rows.map((r,i)=>`<div class="card"><div class="rank"><div class="md">${med[i]||'<span class="mut small">'+(i+1)+'°</span>'}</div>
-    <div class="t"><b>${esc(r.sp.name)}</b><div class="small mut">${svgInline(r.sp.mode)} ${MODES[r.sp.mode]?.n||''}${k===0&&r.now!=null?` · ora ${wmo(r.code)[0]} ${fmt0(r.temp)}° · indice ${r.now}`:''}</div>
-    <div class="small" style="margin-top:3px">${r.w[k]?`⏰ Meglio <b>${hhmm(r.w[k].from)}–${hhmm(r.w[k].to)}</b>`:'<span class="mut">Nessuna finestra favorevole</span>'}</div></div>
-    ${miniRing(r.s[k])}</div>
+  ${rows.map((r,i)=>`<div class="card"><div class="rank"><div class="md">${r.na?'<span class="mut small">—</span>':med[i]||'<span class="mut small">'+(i+1)+'°</span>'}</div>
+    <div class="t"><b>${esc(r.sp.name)}</b><div class="small mut">${svgInline(r.sp.mode)} ${MODES[r.sp.mode]?.n||''}${k===0&&r.now!=null?` · ora ${wmo(r.code)[0]} ${fmt0(r.temp)}° · indice ${r.na?'NA':r.now}`:''}</div>
+    <div class="small" style="margin-top:3px">${r.na?`<span class="mut">Mare a ${fmt1(r.sp.wq.km)} km: indice NA</span>`:r.w[k]?`⏰ Meglio <b>${hhmm(r.w[k].from)}–${hhmm(r.w[k].to)}</b>`:'<span class="mut">Nessuna finestra favorevole</span>'}</div></div>
+    ${r.na?'<div style="width:58px;height:58px;border-radius:50%;border:5px solid #5d7381;display:grid;place-items:center;font-weight:800;color:#9fb3c0">NA</div>':miniRing(r.s[k])}</div>
     ${r.sp.id!==S.active?`<button class="btn ghost full" style="margin-top:12px;padding:10px" onclick="useSpot('${r.sp.id}')">Usa questo spot</button>`:''}</div>`).join('')}
   <button class="btn ghost full" onclick="runCompare(true)">↻ Aggiorna</button>`;
 }
