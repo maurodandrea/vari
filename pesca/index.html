@@ -2044,7 +2044,7 @@ async function geminiMeasure(src,sp){
 - ref_a, ref_b: i due estremi della misura del riferimento (diametro per le monete).
 - length_cm: la tua stima diretta della lunghezza totale, usando tutti gli indizi della scena (mani, testa e corpo delle persone, lavandino, piastrelle, oggetti noti) e ricordando che un pesce tenuto verso la fotocamera sembra più grande.
 - weight_kg: il peso del pesce stimato dalla specie, dalla lunghezza e dallo spessore/altezza del corpo che vedi (un pesce alto e grasso pesa molto più di uno snello della stessa lunghezza).
-- scale_kg: se nella foto c'è una bilancia o pesa con il pesce appeso, leggi il display e converti in kg (es. «02.15» o «2.15» = 2,15 kg; se l'unità è lb converti in kg); se non c'è, 0.
+- scale_kg: se nella foto c'è una bilancia o pesa con il pesce appeso, leggi il numero esattamente come appare sul display, con il punto decimale nella sua posizione, e guarda l'unità indicata (kg, g, lb, oz): poi converti in kg. Molte pese da pesca mostrano kg con 3 decimali (es. 0.215 = 215 g). Controlla che il valore sia plausibile per la grandezza del pesce che vedi; se il display non è leggibile, 0. Se non c'è una bilancia, 0.
 - fish_whole: il pesce è intero nella foto? note: al massimo 12 parole.`;
   const body={contents:[{parts:[{inline_data:{mime_type:'image/jpeg',data:b64}},{text:prompt}]}],
     generationConfig:{temperature:0.1,responseMimeType:'application/json',responseSchema:{type:'OBJECT',properties:{
