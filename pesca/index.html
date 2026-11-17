@@ -849,7 +849,7 @@ function render(){
   if(S.tab!=='spot'&&MAP){MAP.remove();MAP=null;NEWPIN=null;}
   ({home:vHome,meteo:vMeteo,spot:vSpot,diario:vDiario,stats:vStats,ai:vAI,pesce:vPesce,altro:vAltro,live:vLive,trofei:vTrofei,cal:vCal,compare:vCompare,guide:vGuide,settings:vSettings}[S.tab]||vHome)(v);
   countUp(v);bindCharts(v);
-  if(S.tab==='home'&&!COMP_ON&&!needCompassPerm())compassStart();
+  if(S.tab==='home'&&!COMP_ON)compassStart();
   if(S.tab==='settings')modelStatus();
 }
 function countUp(root){
@@ -913,7 +913,6 @@ function compassCard(h,X){
       <div class="small" style="margin-top:10px">💨 Vento da <b>${dirName(h.wd)}</b> ${windName(h.wd)} · ${fmt0(h.ws)} km/h</div>
       ${X.face!=null?`<div class="small">🌊 Mare verso <b>${dirName(X.face)}</b></div>`:''}
       <div class="small">⛰️ Altitudine <b>${X.elev!=null?fmt0(X.elev)+' m':'—'}</b> s.l.m.</div>
-      ${!COMP_ON&&needCompassPerm()?'<button class="btn" style="margin-top:10px;padding:8px 12px" onclick="compassStart()">Attiva bussola</button>':''}
       <div class="small mut" id="cnote" style="margin-top:6px">${COMP_H==null?'Tieni il telefono in piano':''}</div></div></div></div>`;
 }
 function compassStart(){
@@ -921,9 +920,14 @@ function compassStart(){
     const on=e=>{let hd=e.webkitCompassHeading!=null?e.webkitCompassHeading:(e.absolute||e.type==='deviceorientationabsolute')&&e.alpha!=null?(360-e.alpha)%360:null;
       if(hd==null)return;setHeading((hd+(screen.orientation?.angle||0)+360)%360);};
     window.addEventListener('deviceorientationabsolute',on,true);window.addEventListener('deviceorientation',on,true);};
-  if(needCompassPerm())DeviceOrientationEvent.requestPermission().then(r=>{if(r==='granted'){listen();render();}else toast('Permesso per la bussola negato');}).catch(()=>toast('Bussola non disponibile'));
-  else listen();
+  // la bussola parte subito: i sensori si ascoltano sempre; dove il browser chiede il permesso lo chiedo
+  // all'avvio e, se serve un tocco dell'utente, al primo tocco sullo schermo
+  listen();
+  if(needCompassPerm()&&!compassStart.asked){compassStart.asked=true;
+    const ask=()=>DeviceOrientationEvent.requestPermission().then(r=>{COMP_PERM=r==='granted';}).catch(()=>{});
+    ask().finally(()=>{if(!COMP_PERM)document.addEventListener('click',()=>ask(),{once:true,capture:true});});}
 }
+let COMP_PERM=false;
 // angolo continuo: la rosa gira dal lato più corto, senza fare il giro completo tra 359° e 0°
 function setHeading(hd){
   if(COMP_H==null)COMP_ACC=hd;else COMP_ACC+=((hd-COMP_H+540)%360)-180;COMP_H=hd;
