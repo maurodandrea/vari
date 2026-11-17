@@ -1044,11 +1044,17 @@ function waveChart(hs){
   const mx=Math.max(...v),top=Math.max(.5,mx*1.15),x=i=>p+i*(W-2*p)/(n-1||1),y=q=>H-p-q/top*(H-2*p-14);
   const pts=vals.map((q,i)=>q==null?null:[x(i),y(q)]),ok=pts.filter(Boolean);
   const area=smooth(ok)+` L${ok[ok.length-1][0]} ${H-p} L${ok[0][0]} ${H-p}Z`;
-  CHARTS.wave={now:nowIdx(hs),W,xs:pts.map(q=>q?q[0]:null),ys:pts.map(q=>q?q[1]:null),txt:i=>`${fmtOnda(vals[i])} · ${pad(hs[i].t.getHours())}:00`,top:p,bot:H-p};
+  // periodo dell'onda (secondi tra un'onda e l'altra), su una sua scala
+  const per=hs.map(h=>h.wper),pv=per.filter(q=>q!=null),plo=pv.length?Math.min(...pv)-1.5:0,phi=pv.length?Math.max(...pv)+1.5:1,yp=q=>H-p-(q-plo)/(phi-plo)*(H-2*p-14);
+  const pp=per.map((q,i)=>q==null?null:[x(i),yp(q)]).filter(Boolean);
+  CHARTS.wave={now:nowIdx(hs),W,xs:pts.map(q=>q?q[0]:null),ys:pts.map(q=>q?q[1]:null),txt:i=>`${fmtOnda(vals[i])}${per[i]!=null?' · ogni '+fmt0(per[i])+' s':''} · ${pad(hs[i].t.getHours())}:00`,top:p,bot:H-p};
   const iMax=vals.indexOf(mx);
   return `<svg viewBox="0 -66 ${W} ${H+88}" data-ch="wave" style="touch-action:pan-y;width:calc(100% + 20px);margin:0 -10px;display:block"><defs><linearGradient id="wvg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b8cff" stop-opacity=".6"/><stop offset="1" stop-color="#3b8cff" stop-opacity="0"/></linearGradient></defs>
     ${hourAxis(hs,x,H,p)}<path d="${area}" fill="url(#wvg)"/><path d="${smooth(ok)}" fill="none" stroke="#5aa8ff" stroke-width="3"/>
-    ${nowLine(hs,x,p,H-p,i=>fmtOnda(vals[i]))}<g class="sel"></g></svg><div class="legend"><span>🌊 massima ${fmtOnda(mx)} alle ${pad(hs[iMax].t.getHours())}:00</span><span>${seaState(mx)}</span></div>`;
+    ${pp.length>1?`<path d="${smooth(pp)}" fill="none" stroke="#c58cff" stroke-width="2.5" stroke-dasharray="6 5"/>`:''}
+    ${nowLine(hs,x,p,H-p,i=>fmtOnda(vals[i]))}<g class="sel"></g></svg>
+    <div class="legend"><span><i style="background:#5aa8ff"></i>Altezza</span>${pv.length?`<span><i style="background:#c58cff"></i>Periodo (${fmt0(Math.min(...pv))}–${fmt0(Math.max(...pv))} s)</span>`:''}</div>
+    <div class="legend"><span>🌊 massima ${fmtOnda(mx)} alle ${pad(hs[iMax].t.getHours())}:00</span><span>${seaState(mx)}</span></div>`;
 }
 // Home: altezza massima dell'onda giorno per giorno nella settimana
 function weekWave(X){
