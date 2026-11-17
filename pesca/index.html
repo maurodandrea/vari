@@ -1034,7 +1034,7 @@ function nowIdx(hs){const t=Date.now();const i=hs.findIndex(h=>h.t.getTime()<=t&
 // linea dell'ora attuale, con il valore di quell'ora (lab: funzione indice → testo)
 function nowLine(hs,x,y0,y1,lab){
   const now=Date.now(),t0=hs[0]?.t.getTime();if(!hs.length||now<t0||now>hs[hs.length-1].t.getTime()+3600e3)return '';
-  const f=(now-t0)/3600e3,X=x(0)+(x(1)-x(0))*f,i=nowIdx(hs),t='ora'+(lab&&i!=null?' · '+lab(i):'');
+  const f=(now-t0)/3600e3,X=x(0)+(x(1)-x(0))*f,i=nowIdx(hs),t=(lab&&i!=null?lab(i)+' · ':'')+'ora';
   return `<line x1="${X}" x2="${X}" y1="${y0-6}" y2="${y1}" stroke="#fff" stroke-width="1.5" stroke-dasharray="3 3" opacity=".8"/><text x="${clamp(X,t.length*6,500-t.length*6)}" y="${y0-10}" fill="#fff" font-size="19" font-weight="800" text-anchor="middle">${t}</text>`;
 }
 // grafico della marea: come quello dell'indice, con ore, ora attuale e selezione del punto
