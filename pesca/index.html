@@ -1769,8 +1769,9 @@ function vSettings(v){
     <div style="margin-top:14px;padding:12px;border-radius:14px;background:rgba(255,255,255,.04)">
       <b>✨ Riconoscimento con Gemini (facoltativo)</b>
       <p class="small mut" style="margin:4px 0 8px">Più preciso del modello sul telefono, ma serve internet. Crea una chiave gratuita su <u onclick="window.open('https://aistudio.google.com/apikey','_blank')" style="cursor:pointer">aistudio.google.com</u> («Get API key») e incollala qui: resta solo su questo telefono. Le foto vengono inviate a Google; con il piano gratuito Google può usarle per migliorare i suoi servizi. Senza internet uso il modello sul telefono.</p>
-      <div class="row" style="gap:8px"><input id="gemk" type="password" placeholder="Chiave API Gemini" value="${esc(gemKey())}" style="flex:1" autocomplete="off"><button class="btn" onclick="gemTest()">${gemKey()?'Aggiorna':'Attiva'}</button></div>
+      <div class="row" style="gap:8px"><input id="gemk" type="password" placeholder="Chiave API Gemini" value="${esc(gemKey()||GEM_TRY)}" style="flex:1" autocomplete="off"><button class="btn" onclick="gemTest()">${gemKey()?'Aggiorna':'Attiva'}</button></div>
       <div class="small" style="margin-top:6px">${gemKey()?'<span style="color:var(--ok)">● Gemini attivo</span> · <u style="cursor:pointer" onclick="LS.set(\'gemkey\',\'\');render()">disattiva</u>':'<span class="mut">● Non attivo: uso il modello sul telefono</span>'}</div>
+      ${LS.get('gemerr','')&&!gemKey()?`<div class="small" style="margin-top:6px;color:var(--bad);word-break:break-word">⚠️ ${esc(LS.get('gemerr',''))}</div>`:''}
     </div>
     <div class="kv" style="margin-top:10px"><span>Numero della tua scarpa (riferimento di riserva)</span><input type="number" min="30" max="50" step="0.5" style="width:80px;padding:6px 8px" value="${shoeSize()}" onchange="if(+this.value>=30&&+this.value<=50)LS.set('shoesize',+this.value)"></div>
     <div class="kv"><span>Catture che hai confermato</span><b>${myFish().length}</b></div>
@@ -1971,7 +1972,8 @@ function openMeasureFor(t,ref){const st=stOf(t),m=st?.m;openMeasure(photoOf(t),t
 // La chiave resta solo sul telefono. Senza chiave o senza internet si usa il modello sul telefono (BioCLIP).
 const gemKey=()=>LS.get('gemkey','');
 const gemOn=()=>!!gemKey()&&navigator.onLine;
-const GEM_MODELS=['gemini-flash-latest','gemini-2.5-flash'];
+const GEM_MODELS=['gemini-flash-latest','gemini-2.5-flash','gemini-2.0-flash'];
+let GEM_LAST='',GEM_TRY='';  // ultimo errore restituito da Google, mostrato nelle Impostazioni
 async function geminiFish(src,key=gemKey()){
   const b64=src.split(',')[1],names=SPECIES.map(x=>x.n).join(', ');
   const prompt=`Sei un esperto di pesci del Mediterraneo e delle acque dolci italiane. Guarda la foto e riconosci la specie del pesce.
@@ -1993,10 +1995,17 @@ async function gemCall(body,key=gemKey()){
     let r;try{r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`,{method:'POST',signal:ac.signal,headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify(body)});}
     catch(e){clearTimeout(t);throw new Error(e.name==='AbortError'?'gem-timeout':'gem-net');}
     clearTimeout(t);
-    if(r.status===404){last='gem-model';continue;}
-    if(r.status===400||r.status===401||r.status===403)throw new Error('gem-key');
-    if(r.status===429)throw new Error('gem-limit');
-    if(!r.ok)throw new Error('gem-'+r.status);
+    if(!r.ok){
+      // leggo il motivo vero dell'errore: chiave errata, servizio non abilitato, limite, modello inesistente…
+      let er={};try{er=(await r.json()).error||{};}catch(e){}
+      const reason=(er.details||[]).map(d=>d.reason).find(Boolean)||er.status||'';GEM_LAST=`${m}: ${r.status} ${reason} ${er.message||''}`.trim();
+      if(r.status===404||/not found|not supported/i.test(er.message||'')){last='gem-model';continue;}
+      if(reason==='API_KEY_INVALID'||/api key not valid/i.test(er.message||''))throw new Error('gem-key');
+      if(r.status===429){if(/limit: 0/.test(er.message||'')){last='gem-limit';continue;}throw new Error('gem-limit');}
+      if(r.status===403)throw new Error('gem-perm');
+      throw new Error('gem-other');
+    }
+    GEM_LAST='';
     const j=await r.json();return JSON.parse(j.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||'{}');
   }
   throw new Error(last||'gem-model');
@@ -2025,7 +2034,7 @@ async function geminiMeasure(src,sp){
   else{m.refOk=false;m.pts=f1&&f2?[f1,f2]:null;m.len=o.length_cm>0?Math.round(o.length_cm*10)/10:null;m.est=true;}
   return m;
 }
-const GEM_ERR={'gem-key':'Chiave Gemini non valida','gem-limit':'Limite gratuito di Gemini raggiunto per ora','gem-timeout':'Gemini non risponde','gem-net':'Gemini non raggiungibile','gem-model':'Modello Gemini non disponibile'};
+const GEM_ERR={'gem-perm':'Chiave senza accesso a Gemini (abilita la Gemini API per questa chiave)','gem-other':'Gemini ha rifiutato la richiesta','gem-key':'Chiave Gemini non valida','gem-limit':'Limite gratuito di Gemini raggiunto per ora','gem-timeout':'Gemini non risponde','gem-net':'Gemini non raggiungibile','gem-model':'Modello Gemini non disponibile'};
 // Gemini se c'è la chiave e internet, altrimenti (o se Gemini fallisce) il modello sul telefono
 async function recognize(src,mode){
   if(gemOn()){
@@ -2036,11 +2045,12 @@ async function recognize(src,mode){
   return classifyFish(src,mode);
 }
 async function gemTest(){
-  const k=document.getElementById('gemk').value.trim();if(!k){LS.set('gemkey','');toast('Gemini disattivato');render();return;}
+  const k=document.getElementById('gemk').value.trim();GEM_TRY=k;if(!k){LS.set('gemkey','');toast('Gemini disattivato');render();return;}
   toast('Verifico la chiave…');
-  try{const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d');g.fillStyle='#3b8cff';g.fillRect(0,0,64,64);
-    await geminiFish(c.toDataURL('image/jpeg',.8),k);LS.set('gemkey',k);toast('✨ Gemini attivo');render();}
-  catch(e){toast('⚠️ '+(GEM_ERR[e.message]||'Verifica non riuscita'));}
+  // verifica semplice: una domanda di testo, senza immagine né schema
+  try{await gemCall({contents:[{parts:[{text:'Rispondi in JSON {"ok":true}'}]}],generationConfig:{responseMimeType:'application/json'}},k);
+    LS.set('gemkey',k);LS.set('gemerr','');toast('✨ Gemini attivo');render();}
+  catch(e){const msg=(GEM_ERR[e.message]||'Verifica non riuscita')+(GEM_LAST?' — '+GEM_LAST:'');LS.set('gemerr',msg);toast('⚠️ '+(GEM_ERR[e.message]||'Verifica non riuscita'));render();}
 }
 function aiCard(st,target){
   if(!st)return '';
