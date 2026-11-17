@@ -1925,12 +1925,13 @@ function measBlock(st,target){
   if(m.err)return `<div class="small" style="margin-top:8px;color:var(--acc2)">⚠️ ${esc(m.err)}</div>`;
   const refChips=`<div class="chips" style="margin-top:6px">${autoRefs().map(([r,i])=>`<span class="chip" style="padding:3px 9px;font-size:12px;${m.ref===i?'background:var(--acc);color:#03282a':''}" onclick="setAutoRef('${target}',${i})">${esc(refName(i))}</span>`).join('')}</div>`;
   const manual=`<u style="cursor:pointer;color:var(--acc)" onclick="openMeasureFor('${target}')">📏 Controlla o correggi i punti</u>`;
-  if(m.len){const w=estW(sp,m.len);return `<div class="aigrid" style="margin-top:10px"><div><b>${fmt1(m.len)} cm</b><span>lunghezza</span></div><div><b>${w?fmt1(w)+' kg':'—'}</b><span>peso stimato</span></div><div><b style="font-size:12px">${esc(refName(m.ref))}</b><span>${m.manual?'segnato da te':m.forced?'riferimento scelto':'riferimento trovato'}</span></div></div>
+  if(m.len){const w=estW(sp,m.len)||m.wgem;return `<div class="aigrid" style="margin-top:10px"><div><b>${fmt1(m.len)} cm</b><span>lunghezza</span></div><div><b>${w?fmt1(w)+' kg':'—'}</b><span>peso stimato</span></div><div><b style="font-size:12px">${m.est?'Senza riferimento':esc(refName(m.ref))}</b><span>${m.manual?'segnato da te':m.est?'stima di Gemini':m.gem?'trovato da Gemini':m.forced?'riferimento scelto':'riferimento trovato'}</span></div></div>
+    ${m.gem&&!m.manual?`<div class="small mut">✨ Misurato con Gemini${m.note?' · '+esc(m.note):''}${m.est?' · senza un riferimento accanto è solo una stima: per una misura precisa metti una moneta, il bancomat o una scarpa':''}</div>`:''}
     ${m.fishCut&&!m.manual?'<div class="small" style="color:var(--acc2)">✂️ Il pesce esce dalla foto (testa o coda tagliate): la misura è per difetto. Meglio rifare la foto con tutto il pesce dentro.</div>':''}
     ${m.refCut&&!m.manual?`<div class="small" style="color:var(--acc2)">✂️ ${m.kind==='foot'?'Il piede':'La scarpa'} esce dalla foto: la misura è sbagliata, rifai la foto con tutto dentro.</div>`:''}
     ${m.kind==='hand'?'<div class="small" style="color:var(--acc2)">✋ Con la mano la misura è approssimativa (le mani sono diverse): meglio una moneta o un bancomat.</div>':''}
     ${m.preview?`<img src="${m.preview}" alt="" style="width:100%;border-radius:14px;margin:8px 0 4px;display:block" onclick="openMeasureFor('${target}')">
-      <div class="small mut">Linea azzurra: pesce · linea arancione: ${esc(refName(m.ref))}. Se non sono giuste, tocca la foto per correggerle.</div>`:''}
+      <div class="small mut">Linea azzurra: pesce${m.pts?.length>=4?' · linea arancione: '+esc(refName(m.ref)):''}. Se non sono giuste, tocca la foto per correggerle.</div>`:''}
     <div class="small">${manual}</div><details class="small" style="margin-top:4px"><summary class="mut" style="cursor:pointer">Il riferimento è un altro?</summary>${refChips}</details>`;}
   if(m.fishCut)return `<div class="small" style="margin-top:8px">📏 <b>Il pesce esce dalla foto</b> (testa o coda tagliate): non posso misurarlo. Rifai la foto con tutto il pesce dentro${m.refOk?'':', e accanto una moneta, un bancomat o la tua scarpa'}. ${manual}</div>`;
   if(!m.fishOk&&m.refOk)return `<div class="small" style="margin-top:8px">📏 Ho trovato «${esc(refName(m.ref))}» ma non riesco a isolare il pesce: fotografalo intero, dall'alto. ${manual}</div>`;
@@ -1942,7 +1943,7 @@ function stOf(t){return t==='live'?LIVEAI:t==='assist'?ASSIST?.st:ENTRYAI[+t];}
 function photoOf(t){return t==='live'?(LIVEQ.big||LIVEQ.photo):t==='assist'?(ASSIST.big||ASSIST.photo):(DRAFT.catches[+t].big||DRAFT.catches[+t].photo);}
 function redraw(t){if(t==='live'){if(S.tab==='live')render();}else if(t==='assist'){if(S.tab==='pesce')render();}else if(document.getElementById('sheet').classList.contains('on')&&DRAFT&&!MEAS_OPEN())drawEntry();}
 function applyAuto(t){
-  const st=stOf(t),m=st?.m;if(!m?.len)return;const sp=st.r?.species,w=estW(sp,m.len);
+  const st=stOf(t),m=st?.m;if(!m?.len)return;const sp=st.r?.species,w=estW(sp,m.len)||m.wgem;
   if(t==='live'){LIVEQ.l=String(Math.round(m.len));LIVEQ.w=w?String(Math.round(w*100)/100):LIVEQ.w;}
   else if(t!=='assist'){const c=DRAFT.catches[+t];if(c){c.l=Math.round(m.len);if(w)c.w=Math.round(w*100)/100;}}
 }
@@ -1951,12 +1952,14 @@ async function runMeasure(t,force){
   st.m={loading:true,pct:0};redraw(t);
   let last=0;
   try{
-    const m=await autoMeasure(src,force,p=>{st.m.pct=p;if(Date.now()-last>400){last=Date.now();const el=document.querySelector('.mrow b');if(el)el.textContent=Math.round(p*100)+'%';}});
+    let m=null;
+    if(gemOn()&&force==null){try{m=await geminiMeasure(src,st.r?.species);}catch(e){toast((GEM_ERR[e.message]||'Gemini non disponibile')+': misuro sul telefono');}}
+    if(!m)m=await autoMeasure(src,force,p=>{st.m.pct=p;if(Date.now()-last>400){last=Date.now();const el=document.querySelector('.mrow b');if(el)el.textContent=Math.round(p*100)+'%';}});
     if(stOf(t)!==st)return;
     try{m.preview=await measPreview(src,m.pts);}catch(e){}
     st.m=m;applyAuto(t);
     // nessun riferimento trovato: nella sessione di pesca si apre subito la foto per segnare la scarpa
-    if(!m.refOk&&!m.forced&&!m.fishCut&&t==='live'&&S.tab==='live'){redraw(t);openMeasureFor(t,3);return;}
+    if(!m.refOk&&!m.len&&!m.forced&&!m.fishCut&&t==='live'&&S.tab==='live'){redraw(t);openMeasureFor(t,3);return;}
   }catch(e){st.m={err:'Misura automatica non riuscita: '+aiErrMsg(e)};}
   redraw(t);
 }
@@ -1979,9 +1982,14 @@ Rispondi in JSON: is_fish (c'è un pesce?), species, scientific_name, confidence
       is_fish:{type:'BOOLEAN'},species:{type:'STRING'},scientific_name:{type:'STRING'},confidence:{type:'NUMBER'},note:{type:'STRING'},
       alternatives:{type:'ARRAY',items:{type:'OBJECT',properties:{species:{type:'STRING'},confidence:{type:'NUMBER'}},required:['species','confidence']}}},
       required:['is_fish','species','scientific_name','confidence','alternatives']}}};
+  const o=await gemCall(body,key);
+    return {src:'gemini',is_fish:!!o.is_fish,species:o.species||'',scientific_name:o.scientific_name||'',confidence:clamp(+o.confidence||0,0,1),
+      alternatives:(o.alternatives||[]).filter(a=>a.species&&a.species!==o.species).slice(0,3).map(a=>({species:a.species,confidence:clamp(+a.confidence||0,0,1)})),note:o.note||'',emb:null};
+}
+async function gemCall(body,key=gemKey()){
   let last='';
   for(const m of GEM_MODELS){
-    const ac=new AbortController(),t=setTimeout(()=>ac.abort(),30000);
+    const ac=new AbortController(),t=setTimeout(()=>ac.abort(),40000);
     let r;try{r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`,{method:'POST',signal:ac.signal,headers:{'Content-Type':'application/json','x-goog-api-key':key},body:JSON.stringify(body)});}
     catch(e){clearTimeout(t);throw new Error(e.name==='AbortError'?'gem-timeout':'gem-net');}
     clearTimeout(t);
@@ -1989,12 +1997,33 @@ Rispondi in JSON: is_fish (c'è un pesce?), species, scientific_name, confidence
     if(r.status===400||r.status===401||r.status===403)throw new Error('gem-key');
     if(r.status===429)throw new Error('gem-limit');
     if(!r.ok)throw new Error('gem-'+r.status);
-    const j=await r.json(),txt=j.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||'';
-    const o=JSON.parse(txt);
-    return {src:'gemini',is_fish:!!o.is_fish,species:o.species||'',scientific_name:o.scientific_name||'',confidence:clamp(+o.confidence||0,0,1),
-      alternatives:(o.alternatives||[]).filter(a=>a.species&&a.species!==o.species).slice(0,3).map(a=>({species:a.species,confidence:clamp(+a.confidence||0,0,1)})),note:o.note||'',emb:null};
+    const j=await r.json();return JSON.parse(j.candidates?.[0]?.content?.parts?.map(p=>p.text||'').join('')||'{}');
   }
   throw new Error(last||'gem-model');
+}
+// Misura con Gemini: trova muso, coda e gli estremi del riferimento (coordinate 0–1000); la lunghezza la calcolo io
+// con le misure note del riferimento. Senza riferimento uso la stima diretta di Gemini.
+const GEM_REF={coin2:0,coin1:1,card:2,shoe:3,hand:4,foot:'FOOT'};
+async function geminiMeasure(src,sp){
+  const img=await loadImg(src),W=img.naturalWidth,H=img.naturalHeight,b64=src.split(',')[1];
+  const pt={type:'ARRAY',items:{type:'NUMBER'}};
+  const prompt=`Foto di un pesce${sp?' ('+sp+')':''} con eventualmente un oggetto di riferimento accanto. Coordinate come [y, x] normalizzate 0-1000 (0,0 in alto a sinistra).
+- fish_snout: punta del muso; fish_tail: estremità della pinna caudale (lunghezza totale).
+- reference: l'oggetto di riferimento più affidabile vicino al pesce, uno tra coin2 (moneta 2 euro), coin1 (moneta 1 euro), card (bancomat/carta, lato lungo), shoe (scarpa, dalla punta al tallone), foot (piede nudo, dall'alluce al tallone), hand (mano aperta: larghezza del palmo alla base delle dita), none.
+- ref_a, ref_b: i due estremi della misura del riferimento (diametro per le monete).
+- length_cm e weight_kg: la tua stima diretta della lunghezza totale e del peso del pesce.
+- fish_whole: il pesce è intero nella foto? note: al massimo 12 parole.`;
+  const body={contents:[{parts:[{inline_data:{mime_type:'image/jpeg',data:b64}},{text:prompt}]}],
+    generationConfig:{temperature:0.1,responseMimeType:'application/json',responseSchema:{type:'OBJECT',properties:{
+      fish_snout:pt,fish_tail:pt,reference:{type:'STRING',enum:['coin2','coin1','card','shoe','foot','hand','none']},ref_a:pt,ref_b:pt,
+      length_cm:{type:'NUMBER'},weight_kg:{type:'NUMBER'},fish_whole:{type:'BOOLEAN'},note:{type:'STRING'}},required:['fish_snout','fish_tail','reference','length_cm','weight_kg','fish_whole']}}};
+  const o=await gemCall(body),P=q=>Array.isArray(q)&&q.length===2?[clamp(q[1]/1000,0,1),clamp(q[0]/1000,0,1)]:null;
+  const d=(a,b)=>Math.hypot((a[0]-b[0])*W,(a[1]-b[1])*H),f1=P(o.fish_snout),f2=P(o.fish_tail),r1=P(o.ref_a),r2=P(o.ref_b);
+  let idx=GEM_REF[o.reference];if(idx==='FOOT')idx=FOOT;
+  const m={gem:true,note:o.note||'',fishOk:!!(f1&&f2),fishCut:o.fish_whole===false,wgem:o.weight_kg>0?o.weight_kg:null,ref:idx??null,kind:idx!=null?(REFS[idx]?.[2]?.t||null):null};
+  if(f1&&f2&&idx!=null&&r1&&r2&&d(r1,r2)>8){m.refOk=true;m.pts=[f1,f2,r1,r2];m.len=Math.round(d(f1,f2)/d(r1,r2)*refCm(idx)*10)/10;}
+  else{m.refOk=false;m.pts=f1&&f2?[f1,f2]:null;m.len=o.length_cm>0?Math.round(o.length_cm*10)/10:null;m.est=true;}
+  return m;
 }
 const GEM_ERR={'gem-key':'Chiave Gemini non valida','gem-limit':'Limite gratuito di Gemini raggiunto per ora','gem-timeout':'Gemini non risponde','gem-net':'Gemini non raggiungibile','gem-model':'Modello Gemini non disponibile'};
 // Gemini se c'è la chiave e internet, altrimenti (o se Gemini fallisce) il modello sul telefono
