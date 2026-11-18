@@ -195,9 +195,9 @@ const norm=t=>String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
 function tRow(rid,icon,name,sub,key,open,depth){
   const r=CH.rooms[rid],l=r?.last,s=seen(),un=l&&l.uid!==me()?.uid&&l.ts>(s[rid]||0)&&!blocked().includes(l.uid);
   return `<div class="croom ctree" style="padding-left:${depth*18}px" onclick="CHAT.open('${rid}')">
-    ${key?`<button class="ctog" onclick="event.stopPropagation();CHAT.tog('${key}')" aria-label="${open?'Chiudi':'Apri'}">${open?'▾':'▸'}</button>`:'<span class="ctog sp"></span>'}
     <div class="cri">${icon}</div><div style="flex:1;min-width:0"><b>${esc(name)}</b>${sub?`<div class="small mut cprev">${esc(sub)}</div>`:''}</div>
-    ${follows().includes(rid)?'<span class="small" title="Segui">⭐</span>':''}${un?'<i class="cdot"></i>':''}</div>`;}
+    ${follows().includes(rid)?'<span class="small" title="Segui">⭐</span>':''}${un?'<i class="cdot"></i>':''}
+    ${key?`<button class="ctog ${open?'on':''}" onclick="event.stopPropagation();CHAT.tog('${key}')" aria-label="${open?'Chiudi':'Apri'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg></button>`:''}</div>`;}
 function comRows(pc){const q=prov(pc);if(!q)return '';const f=norm(CH.exp.q[pc]||'');
   const l=q[0][3].filter(x=>!f||norm(x[0]).includes(f));
   return l.map(x=>tRow('c_'+x[1],'🏘️',x[0],'',null,false,3)).join('')||'<p class="small mut" style="padding-left:72px">Nessun comune trovato.</p>';}
@@ -213,7 +213,7 @@ function chanHtml(){
   const near=sp?roomRow('near','🎣',`Pescatori con lo spot entro ${NEAR_KM} km da «${placeName(sp)}»`):'<p class="small mut">Scegli uno spot per vedere chi pesca vicino a te.</p>';
   return `<div class="card"><h3>🎣 Il tuo spot</h3><p class="small mut" style="margin:-4px 0 6px">Ci sono solo i pescatori che hanno lo spot attivo a meno di ${NEAR_KM} km dal tuo. La tua posizione non viene mai mostrata.</p>${near}</div>
   <div class="card"><h3>⭐ Canali che segui</h3>${fol.map(rid=>roomRow(rid,chIcon(rid),'')).join('')||'<p class="small mut" style="margin:0 0 6px">Nessun canale seguito.</p>'}<p class="small mut" style="margin:8px 0 0">Per seguire o smettere di seguire un canale aprilo e tocca ⭐ in alto.</p></div>
-  <div class="card" id="chbrowse"><h3>🇮🇹 Tutti i canali</h3><p class="small mut" style="margin:-4px 0 6px">Tocca ▸ per aprire regioni, province e comuni; tocca il nome per entrare nel canale.</p>${treeHtml()}</div>`;
+  <div class="card" id="chbrowse"><h3>🇮🇹 Tutti i canali</h3><p class="small mut" style="margin:-4px 0 6px">Tocca la freccia a destra per aprire regioni, province e comuni; tocca il nome per entrare nel canale.</p>${treeHtml()}</div>`;
 }
 function notifCard(){
   const n=LS.get('chatnotif',{on:false,zones:true}),perm='Notification' in window?Notification.permission:'unsupported';
