@@ -83,8 +83,7 @@ async function ensureRoom(rid){const ff=F(),ref=ff.doc(D(),'rooms',rid);const s=
 async function syncSubs(){if(!CH.started)return;const ff=F(),want=new Set(follows());
   for(const k of Object.keys(CH.subs))if(k.startsWith('f:')&&!want.has(k.slice(2))){CH.subs[k]();delete CH.subs[k];}
   for(const rid of want){const k='f:'+rid;if(CH.subs[k])continue;CH.subs[k]=()=>{};
-    try{await ensureRoom(rid);}catch(e){}
-    listenChan(rid,0);}}
+    ensureRoom(rid).catch(()=>{});listenChan(rid,0);}}
 // ascolto di un canale: se viene rifiutato (per esempio perché la stanza non esisteva ancora) la creo e riprovo;
 // al secondo rifiuto lascio perdere quel canale senza bloccare il resto della chat
 function listenChan(rid,n){const ff=F(),k='f:'+rid;
@@ -103,10 +102,11 @@ function nearCells(lat,lon){const dy=NEAR_KM/111,dx=NEAR_KM/(111*Math.cos(lat*Ma
   for(const a of [-dy,0,dy])for(const b of [-dx,0,dx])out.add(geohash(lat+a,lon+b));return [...out];}
 CH.nearMsgs=[];
 function nearSync(){const sp=activeSpot();const key=sp&&sp.lat!=null?nearCells(sp.lat,sp.lon).join(','):'';
-  if(key===CH.nearKey)return;CH.nearKey=key;CH.subs._near?.();delete CH.subs._near;CH.nearAll=new Map();CH.nearMsgs=[];if(!key||!CH.started)return;
+  if(key===CH.nearKey)return;CH.nearKey=key;CH.subs._near?.();delete CH.subs._near;CH.nearAll=new Map();CH.nearMsgs=[];CH.nearLoaded=false;if(!key||!CH.started)return;
   const ff=F();ensureRoom('near').catch(()=>{});
   CH.subs._near=ff.onSnapshot(ff.query(ff.collection(D(),'rooms','near','msgs'),ff.where('g','in',key.split(','))),snap=>{
     snap.docChanges().forEach(c=>{if(c.type==='removed')CH.nearAll.delete(c.doc.id);else CH.nearAll.set(c.doc.id,{id:c.doc.id,...c.doc.data()});});
+    CH.nearLoaded=true;if(CH.rid==='near'){CH.loaded=true;CH.slow=false;}
     const sp=activeSpot(),old=CH.nearMsgs.at(-1)?.ts||0;
     CH.nearMsgs=[...CH.nearAll.values()].filter(m=>m.la!=null&&km(sp.lat,sp.lon,m.la,m.lo)<=NEAR_KM).sort((a,b)=>a.ts-b.ts).slice(-80);
     const l=CH.nearMsgs.at(-1);if(l)CH.rooms.near={id:'near',type:'zone',name:'Entro 5km',last:{text:l.text||(l.kind==='catch'?'🐟 '+(l.catch?.sp||''):'🌊 condizioni'),name:l.name,uid:l.uid,ts:l.ts}};
@@ -124,8 +124,9 @@ CH.start=async()=>{
     // email appena attivata: il token di accesso può essere ancora quello vecchio («email non verificata») e Firebase
     // rifiuterebbe tutto per un'ora; lo rinnovo subito
     try{const t=await u.getIdTokenResult?.();if(t&&u.emailVerified&&t.claims?.email_verified!==true)await u.getIdToken(true);}catch(e){}
-    await ff.setDoc(ff.doc(db,'profiles',u.uid),{name:C().name(),code:uidCode(u.uid),t:Date.now()},{merge:true});
-    step='canale Italia';
+    // il profilo si salva in sottofondo: gli ascolti partono subito (con rete lenta la scrittura può metterci molto)
+    ff.setDoc(ff.doc(db,'profiles',u.uid),{name:C().name(),code:uidCode(u.uid),t:Date.now()},{merge:true}).catch(e=>{CH.diag='profilo: '+(e.code||e.message);});
+    step='ascolti';
     loadGeo();if(GEO)defaultFollow();syncSubs();nearSync();
     CH.subs._mine=ff.onSnapshot(ff.query(ff.collection(db,'rooms'),ff.where('members','array-contains',u.uid)),snap=>{
       snap.docChanges().forEach(c=>{const id=c.doc.id;if(c.type==='removed'){delete CH.mine[id];return;}const old=CH.mine[id]?.last?.ts||0;CH.mine[id]={id,...c.doc.data()};onRoom(id,old);});
@@ -183,6 +184,8 @@ function refresh(){CH.badge();if(S.tab!=='chat')return;
 
 /* ---------- pagina ---------- */
 CH.view=v=>{
+  // accesso ancora in caricamento (app appena aperta): niente «Accedi», solo l'attesa
+  if(!me()&&window.LENZA_FB?.apiKey&&!C()?.authKnown){v.innerHTML=subHead('Chat','Zone, amici e assistente','home')+`<div class="card" style="text-align:center;padding:30px"><span class="aispin" style="width:28px;height:28px;border-width:3px;display:inline-block"></span><p class="mut">Carico la chat…</p></div>`;return;}
   if(!me()){v.innerHTML=subHead('Chat','Funzione Premium','home')+`<div class="card"><p class="mut">Accedi con il tuo account per usare la chat.</p><button class="btn" onclick="CLOUD.open()">Accedi</button></div>`;return;}
   CH.start();nearSync();
   if(CH.rid)return roomView(v);
@@ -253,15 +256,23 @@ CH.setNotifZones=on=>{const n=LS.get('chatnotif',{on:false});n.zones=on;LS.set('
 CH.openNotif=async id=>{const x=CH.notifs.find(n=>n.id===id);if(!x)return;x.read=true;try{await F().deleteDoc(F().doc(D(),'notifs',me().uid,'items',id));}catch(e){}CH.notifs=CH.notifs.filter(n=>n.id!==id);CH.open(x.rid);};
 
 /* ---------- stanza ---------- */
-CH.open=rid=>{CH.rid=rid;CH.reply=null;CH.msgs=[];CH.unsubRoom?.();CH.unsubRoom=null;markSeen(rid);
+CH.open=rid=>{CH.rid=rid;CH.reply=null;CH.msgs=[];CH.unsubRoom?.();CH.unsubRoom=null;markSeen(rid);CH.loaded=rid==='bot'||(rid==='near'&&CH.nearLoaded);CH.slow=false;
+  clearTimeout(CH._wd);CH._wd=setTimeout(()=>{if(CH.rid===rid&&!CH.loaded){CH.slow=true;refresh();}},10000);
   if(rid==='near'){CH.msgs=CH.nearMsgs;}
-  else if(rid!=='bot'){const ff=F();
-    // il canale va creato prima di leggerne i messaggi (le regole controllano la stanza)
-    (/^(z_it|r_|p_|c_)/.test(rid)?ensureRoom(rid).catch(()=>{}):Promise.resolve()).then(()=>{if(CH.rid!==rid)return;CH.unsubRoom=ff.onSnapshot(ff.query(ff.collection(D(),'rooms',rid,'msgs'),ff.orderBy('ts','desc'),ff.limit(80)),snap=>{
-    const m=new Map(CH.msgs.map(x=>[x.id,x]));snap.docChanges().forEach(c=>{if(c.type==='removed')m.delete(c.doc.id);else m.set(c.doc.id,{id:c.doc.id,...c.doc.data()});});
-    CH.msgs=[...m.values()].sort((a,b)=>a.ts-b.ts).slice(-80);if(S.tab==='chat'&&CH.rid===rid)markSeen(rid);refresh();},e=>{if(!CH._rtry){CH._rtry=1;ensureRoom(rid).catch(()=>{}).then(()=>setTimeout(()=>{if(CH.rid===rid){CH._rtry=1;CH.open(rid);}},1500));return;}snapErr('messaggi di '+rid)(e);});});}
+  else if(rid!=='bot')listenMsgs(rid,0);
   if(S.tab!=='chat')go('chat');else render();};
-CH.back=()=>{CH._rtry=0;CH.unsubRoom?.();CH.unsubRoom=null;CH.rid=null;CH.reply=null;render();};
+function listenMsgs(rid,n){const ff=F();
+  if(n===0&&/^(z_it|r_|p_|c_)/.test(rid))ensureRoom(rid).catch(()=>{});
+  CH.unsubRoom=ff.onSnapshot(ff.query(ff.collection(D(),'rooms',rid,'msgs'),ff.orderBy('ts','desc'),ff.limit(80)),snap=>{
+    if(CH.rid!==rid)return;
+    const m=new Map(CH.msgs.map(x=>[x.id,x]));snap.docChanges().forEach(c=>{if(c.type==='removed')m.delete(c.doc.id);else m.set(c.doc.id,{id:c.doc.id,...c.doc.data()});});
+    CH.msgs=[...m.values()].sort((a,b)=>a.ts-b.ts).slice(-80);CH.loaded=true;CH.slow=false;if(S.tab==='chat')markSeen(rid);refresh();},
+    e=>{if(CH.rid!==rid)return;
+      // il canale potrebbe non esistere ancora: lo creo e riprovo (fino a 2 volte) prima di mostrare l'errore
+      if(n<2){ensureRoom(rid).catch(()=>{}).then(()=>setTimeout(()=>{if(CH.rid===rid)listenMsgs(rid,n+1);},1200));return;}
+      CH.loaded=true;snapErr('messaggi di '+rid)(e);});}
+CH.retry=()=>{const rid=CH.rid;if(!rid)return;if(!CH.started){CH.stop();CH.start();}CH.open(rid);};
+CH.back=()=>{clearTimeout(CH._wd);CH.unsubRoom?.();CH.unsubRoom=null;CH.rid=null;CH.reply=null;render();};
 function roomView(v){
   const rid=CH.rid,r=CH.rooms[rid]||CH.mine[rid],bot=rid==='bot';
   const sub=bot?'Consigli su misura per il tuo spot':rid==='near'?`Spot attuale · chi ha lo spot a meno di ${NEAR_KM} km`:rid==='z_it'?'Canale nazionale':rid.startsWith('r_')?'Canale regionale':rid.startsWith('p_')?'Canale provinciale':rid.startsWith('c_')?'Canale comunale':r?.type==='zone'?'Canale pubblico':r?.type==='group'?`Gruppo · ${(r.members||[]).length} persone`:'Messaggio privato';
@@ -281,6 +292,7 @@ function logHtml(){
       h.map(m=>`<div class="cmsg ${m.me?'me':''}"><div class="cb">${m.me?esc(m.text):fmtBot(m.text)}<div class="ct">${hm(m.ts)}</div></div></div>`).join('')+(CH.botBusy?'<div class="cmsg"><div class="cb"><span class="aispin" style="width:16px;height:16px;border-width:2px;display:inline-block;vertical-align:-3px"></span> Ci penso…</div></div>':'');}
   const u=me()?.uid,bl=blocked(),now=Date.now();
   const ms=CH.msgs.filter(m=>!bl.includes(m.uid)&&!(m.kind==='cond'&&m.exp&&m.exp<now));
+  if(!ms.length&&!CH.loaded)return `<div class="cempty"><span class="aispin" style="width:26px;height:26px;border-width:3px;display:inline-block"></span><br>Carico i messaggi…${CH.slow?`<br><span class="small">La connessione è lenta.</span><br><button class="btn" style="margin-top:8px;padding:8px 16px" onclick="CHAT.retry()">↻ Riprova</button>`:''}</div>`;
   if(!ms.length)return `<div class="cempty">Nessun messaggio. Rompi il ghiaccio! 🎣</div>`;
   let lastDay='';
   return ms.map(m=>{const mine=m.uid===u,day=new Date(m.ts).toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
