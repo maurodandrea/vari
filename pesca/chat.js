@@ -39,7 +39,7 @@ const km=(a,b,c,d)=>{const R=6371,t=Math.PI/180,x=Math.sin((c-a)*t/2)**2+Math.co
 function myPlace(sp=activeSpot()){if(!GEO||!sp||sp.lat==null)return null;let best=null,bd=1e9;
   for(const r of GEO.r)for(const p of r[2])for(const x of p[3]){if(x.length<4)continue;const d=(x[2]-sp.lat)**2+((x[3]-sp.lon)*Math.cos(sp.lat*Math.PI/180))**2;if(d<bd){bd=d;best={c:x,p,r};}}
   return best;}
-const chName=rid=>{if(rid==='z_it')return 'Tutta Italia';if(rid==='near'){const sp=activeSpot();return 'Vicino (<5km) a '+(sp?placeName(sp):'spot corrente');}const t=rid.slice(0,2),c=rid.slice(2);
+const chName=rid=>{if(rid==='z_it')return 'Tutta Italia';if(rid==='near'){const sp=activeSpot();return 'Entro 5km da '+(sp?placeName(sp):'spot attuale');}const t=rid.slice(0,2),c=rid.slice(2);
   if(t==='r_'){const r=reg(c);return r?'Regione '+r[1]:null;}
   if(t==='p_'){const q=prov(c);return q?'Provincia di '+q[0][1]:null;}
   if(t==='c_'){const q=com(c);return q?`${q[0][0]} (${q[1][2]})`:null;}return null;};
@@ -109,7 +109,7 @@ function nearSync(){const sp=activeSpot();const key=sp&&sp.lat!=null?nearCells(s
     snap.docChanges().forEach(c=>{if(c.type==='removed')CH.nearAll.delete(c.doc.id);else CH.nearAll.set(c.doc.id,{id:c.doc.id,...c.doc.data()});});
     const sp=activeSpot(),old=CH.nearMsgs.at(-1)?.ts||0;
     CH.nearMsgs=[...CH.nearAll.values()].filter(m=>m.la!=null&&km(sp.lat,sp.lon,m.la,m.lo)<=NEAR_KM).sort((a,b)=>a.ts-b.ts).slice(-80);
-    const l=CH.nearMsgs.at(-1);if(l)CH.rooms.near={id:'near',type:'zone',name:'Vicino (<5km)',last:{text:l.text||(l.kind==='catch'?'🐟 '+(l.catch?.sp||''):'🌊 condizioni'),name:l.name,uid:l.uid,ts:l.ts}};
+    const l=CH.nearMsgs.at(-1);if(l)CH.rooms.near={id:'near',type:'zone',name:'Entro 5km',last:{text:l.text||(l.kind==='catch'?'🐟 '+(l.catch?.sp||''):'🌊 condizioni'),name:l.name,uid:l.uid,ts:l.ts}};
     if(CH.rid==='near'){CH.msgs=CH.nearMsgs;if(S.tab==='chat')markSeen('near');}
     if(l&&l.ts>old)onRoom('near',old);else refresh();},snapErr('spot vicini'));}
 
@@ -232,7 +232,7 @@ function treeHtml(){
   return h;}
 function chanHtml(){
   loadGeo();defaultFollow();const sp=activeSpot(),fol=follows();
-  const near=sp?roomRow('near','🎣',`Spot corrente · pescatori con lo spot a meno di ${NEAR_KM} km`):'<p class="small mut">Scegli uno spot per vedere chi pesca vicino a te.</p>';
+  const near=sp?roomRow('near','🎣',`Spot attuale · pescatori con lo spot a meno di ${NEAR_KM} km`):'<p class="small mut">Scegli uno spot per vedere chi pesca vicino a te.</p>';
   return `<div class="card"><h3>🎣 Il tuo spot</h3><p class="small mut" style="margin:-4px 0 6px">Ci sono solo i pescatori che hanno lo spot attivo a meno di ${NEAR_KM} km dal tuo. La tua posizione non viene mai mostrata.</p>${near}</div>
   <div class="card"><h3><span>⭐ Canali che segui <span style="text-transform:none;letter-spacing:0;font-weight:600;opacity:.75;white-space:nowrap">(Default: Comuni dei tuoi Spot)</span></span></h3>${fol.map(rid=>roomRow(rid,chIcon(rid),'')).join('')||'<p class="small mut" style="margin:0 0 6px">Nessun canale seguito.</p>'}<p class="small mut" style="margin:8px 0 0">Per seguire o smettere di seguire un canale aprilo e tocca ⭐ in alto.</p></div>
   <div class="card" id="chbrowse"><h3>🇮🇹 Tutti i canali</h3><p class="small mut" style="margin:-4px 0 6px">Tocca ▸ per aprire regioni, province e comuni; tocca il nome per entrare nel canale.</p>${treeHtml()}</div>`;
@@ -264,7 +264,7 @@ CH.open=rid=>{CH.rid=rid;CH.reply=null;CH.msgs=[];CH.unsubRoom?.();CH.unsubRoom=
 CH.back=()=>{CH._rtry=0;CH.unsubRoom?.();CH.unsubRoom=null;CH.rid=null;CH.reply=null;render();};
 function roomView(v){
   const rid=CH.rid,r=CH.rooms[rid]||CH.mine[rid],bot=rid==='bot';
-  const sub=bot?'Consigli su misura per il tuo spot':rid==='near'?`Spot corrente · chi ha lo spot a meno di ${NEAR_KM} km`:rid==='z_it'?'Canale nazionale':rid.startsWith('r_')?'Canale regionale':rid.startsWith('p_')?'Canale provinciale':rid.startsWith('c_')?'Canale comunale':r?.type==='zone'?'Canale pubblico':r?.type==='group'?`Gruppo · ${(r.members||[]).length} persone`:'Messaggio privato';
+  const sub=bot?'Consigli su misura per il tuo spot':rid==='near'?`Spot attuale · chi ha lo spot a meno di ${NEAR_KM} km`:rid==='z_it'?'Canale nazionale':rid.startsWith('r_')?'Canale regionale':rid.startsWith('p_')?'Canale provinciale':rid.startsWith('c_')?'Canale comunale':r?.type==='zone'?'Canale pubblico':r?.type==='group'?`Gruppo · ${(r.members||[]).length} persone`:'Messaggio privato';
   const canFollow=/^(z_it|r_|p_|c_)/.test(rid),fol=follows().includes(rid);
   v.innerHTML=`<div class="subhead"><button class="back" onclick="CHAT.back()" aria-label="Indietro">‹</button><div style="flex:1;min-width:0"><h2>${esc(roomName(rid))}</h2><p>${sub}</p></div>${canFollow?`<button class="btn ${fol?'':'ghost'}" style="padding:8px 12px;flex:none" onclick="CHAT.follow('${rid}')" title="${fol?'Smetti di seguire':'Segui il canale'}">${fol?'⭐ Segui':'☆ Segui'}</button>`:''}</div>
   <div class="card chatcard"><div id="chatlog" class="chatlog">${logHtml()}</div>
