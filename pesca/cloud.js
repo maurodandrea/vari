@@ -87,6 +87,8 @@ function setStatus(t){C.status=t;const el=document.getElementById('cloudst');if(
 
 async function start(){
   const uid=C.user.uid,first=raw.get('clouduid')!==uid;
+  // email attivata da poco: rinnovo il token, altrimenti le regole di Firestore lo vedono ancora «non verificato»
+  try{const t=await C.user.getIdTokenResult?.();if(t&&C.user.emailVerified&&t.claims?.email_verified!==true)await C.user.getIdToken(true);}catch(e){}
   setStatus('Sincronizzo…');C.busy=true;
   try{
     const [ds,es]=await Promise.all([ff.getDocs(dataCol()),ff.getDocs(diaryCol())]);

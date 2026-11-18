@@ -44,6 +44,9 @@ CH.start=async()=>{
   if(CH.started||!me()||!C().ff||typeof isPremium!=='function'||!isPremium())return;
   CH.started=true;const ff=F(),db=D(),u=me();let step='profilo';
   try{
+    // email appena attivata: il token di accesso può essere ancora quello vecchio («email non verificata») e Firebase
+    // rifiuterebbe tutto per un'ora; lo rinnovo subito
+    try{const t=await u.getIdTokenResult?.();if(t&&u.emailVerified&&t.claims?.email_verified!==true)await u.getIdToken(true);}catch(e){}
     await ff.setDoc(ff.doc(db,'profiles',u.uid),{name:C().name(),code:uidCode(u.uid),t:Date.now()},{merge:true});
     for(const z of zones()){
       const ref=ff.doc(db,'rooms',z.rid);
@@ -61,7 +64,11 @@ CH.start=async()=>{
       snap.docChanges().forEach(c=>{if(c.type==='removed')return;const n={id:c.doc.id,...c.doc.data()};if(CH.notifs.some(x=>x.id===n.id))return;CH.notifs.push(n);
         if(n.ts>CH.t0&&!blocked().includes(n.fromUid))notify(`${n.from} ti ha risposto`,clean(n.text),n.rid);});
       CH.notifs.sort((a,b)=>b.ts-a.ts);refresh();},snapErr('avvisi'));
-  }catch(e){CH.err=(e.code==='permission-denied'?'La chat non ha i permessi su Firebase: pubblica le regole aggiornate (file firestore.rules) in Console Firebase › Firestore Database › Regole.':'Chat non raggiungibile: '+(e.code||e.message))+
+  }catch(e){
+    // permessi negati: un tentativo con il token rinnovato prima di mostrare l'errore
+    if(e.code==='permission-denied'&&!CH.retried){CH.retried=true;CH.started=false;Object.values(CH.subs).forEach(f=>{try{f();}catch(x){}});CH.subs={};
+      try{await u.getIdToken(true);}catch(x){}return CH.start();}
+    CH.err=(e.code==='permission-denied'?'La chat non ha i permessi su Firebase: pubblica le regole aggiornate (file firestore.rules) in Console Firebase › Firestore Database › Regole.':'Chat non raggiungibile: '+(e.code||e.message))+
       ` [passo: ${step} · accesso: ${(u.providerData||[]).map(p=>p.providerId).join(',')||'?'} · email verificata: ${u.emailVerified?'sì':'no'}]`;
     CH.started=false;Object.values(CH.subs).forEach(f=>{try{f();}catch(x){}});CH.subs={};if(S.tab==='chat')render();else refresh();}
 };
