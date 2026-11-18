@@ -12,8 +12,14 @@ const raw={get:k=>{try{const v=localStorage.getItem('lenza.'+k);return v?JSON.pa
   set:(k,v)=>{try{localStorage.setItem('lenza.'+k,JSON.stringify(v));}catch(e){}}};
 
 // ogni salvataggio locale di una chiave sincronizzata viene inviato dopo 2 secondi
+// (solo se il valore è cambiato davvero: niente invii a vuoto, che tra due dispositivi aperti rimbalzavano all'infinito)
 const set0=LS.set;
-LS.set=function(k,v){const r=set0.call(LS,k,v);if(C.user&&!C.applying&&(k==='diary'||SYNC_KEYS.includes(k))){C.dirty.add(k);clearTimeout(C.timer);C.timer=setTimeout(push,2000);}return r;};
+LS.set=function(k,v){
+  const sync=C.user&&!C.applying&&(k==='diary'||SYNC_KEYS.includes(k));
+  let before=null;if(sync){try{before=localStorage.getItem('lenza.'+k);}catch(e){}}
+  const r=set0.call(LS,k,v);
+  if(sync&&before!==JSON.stringify(v)){C.dirty.add(k);clearTimeout(C.timer);C.timer=setTimeout(push,3000);}
+  return r;};
 
 async function init(){
   const cfg=window.LENZA_FB;if(!cfg||!cfg.apiKey)return;
@@ -25,7 +31,7 @@ async function init(){
     fa.getRedirectResult(auth).catch(e=>toast('⚠️ '+errMsg(e)));
     fa.onAuthStateChanged(auth,u=>{C.user=u;C.unsub.forEach(f=>f());C.unsub=[];
       // accesso fatto dalla finestra di login: la chiudo
-      if(u&&document.getElementById('sheet').classList.contains('on')&&document.getElementById('cle'))closeSheet();
+      if(u&&document.querySelector('#sheetBox #cle'))closeSheet();
       C.chip();if(u)start();else{C.status='';if(S.tab==='settings'||S.tab==='home')render();}});
   }catch(e){C.status='Servizio account non raggiungibile';}
   if(S.tab==='settings')render();
@@ -35,18 +41,19 @@ async function init(){
 const ERR={'auth/invalid-email':'Email non valida','auth/missing-password':'Inserisci la password','auth/weak-password':'Password troppo corta (almeno 6 caratteri)',
   'auth/email-already-in-use':'Esiste già un account con questa email: accedi','auth/invalid-credential':'Email o password sbagliate','auth/wrong-password':'Email o password sbagliate',
   'auth/user-not-found':'Nessun account con questa email','auth/too-many-requests':'Troppi tentativi: riprova tra qualche minuto','auth/network-request-failed':'Connessione assente',
-  'auth/popup-closed-by-user':'Accesso con Google annullato','auth/unauthorized-domain':'Dominio non autorizzato nel progetto Firebase','auth/operation-not-allowed':'Metodo di accesso non attivato nel progetto Firebase',
+  'auth/popup-closed-by-user':'Accesso annullato','auth/unauthorized-domain':'Dominio non autorizzato nel progetto Firebase','auth/operation-not-allowed':'Metodo di accesso non attivato nel progetto Firebase',
   'auth/account-exists-with-different-credential':'Questa email usa un altro metodo di accesso'};
 const errMsg=e=>ERR[e?.code]||e?.message||'Operazione non riuscita';
 const form=()=>({email:(document.getElementById('cle')?.value||'').trim(),pw:document.getElementById('clp')?.value||''});
 C.login=async()=>{const {email,pw}=form();try{await fa.signInWithEmailAndPassword(auth,email,pw);toast('✅ Accesso effettuato');}catch(e){toast('⚠️ '+errMsg(e));}};
 C.register=async()=>{const {email,pw}=form();try{const r=await fa.createUserWithEmailAndPassword(auth,email,pw);fa.sendEmailVerification(r.user).catch(()=>{});toast('✅ Account creato');}catch(e){toast('⚠️ '+errMsg(e));}};
 C.reset=async()=>{const {email}=form();if(!email){toast('Scrivi prima la tua email');return;}try{await fa.sendPasswordResetEmail(auth,email);toast('📧 Ti ho inviato un\'email per reimpostare la password');}catch(e){toast('⚠️ '+errMsg(e));}};
-C.google=async()=>{const p=new fa.GoogleAuthProvider();
-  // nell'app installata le finestre a comparsa spesso non funzionano: uso il reindirizzamento
-  if(standalone())return fa.signInWithRedirect(auth,p);
+C.google=()=>social(new fa.GoogleAuthProvider());
+C.apple=()=>{const p=new fa.OAuthProvider('apple.com');p.addScope('email');p.addScope('name');p.setCustomParameters({locale:'it'});return social(p);};
+// finestra a comparsa (sui domini diversi da Firebase il reindirizzamento è poco affidabile); se è bloccata, reindirizzamento
+async function social(p){
   try{await fa.signInWithPopup(auth,p);toast('✅ Accesso effettuato');}
-  catch(e){if(e.code==='auth/popup-blocked'||e.code==='auth/operation-not-supported-in-this-environment')return fa.signInWithRedirect(auth,p);toast('⚠️ '+errMsg(e));}};
+  catch(e){if(e.code==='auth/popup-blocked'||e.code==='auth/operation-not-supported-in-this-environment')return fa.signInWithRedirect(auth,p);toast('⚠️ '+errMsg(e));}}
 C.logout=async()=>{if(!confirm('Uscire dall\'account? I dati restano su questo dispositivo, ma non verranno più sincronizzati.'))return;clearTimeout(C.timer);await fa.signOut(auth);raw.set('clouduid',null);toast('Sei uscito');render();};
 C.syncNow=()=>{SYNC_KEYS.forEach(k=>C.dirty.add(k));C.dirty.add('diary');push();};
 
@@ -79,7 +86,8 @@ async function start(){
       const e=JSON.parse(o.v),l=byId.get(d.id);if(l&&hs[d.id]&&hash(JSON.stringify(l))!==hs[d.id])return;  // modificata qui e non ancora inviata
       byId.set(d.id,e);hs[d.id]=hash(JSON.stringify(e));});
     const merged=[...byId.values()].sort((a,b)=>(a.start||0)-(b.start||0));
-    raw.set('diary',merged);raw.set('cloudhash',hs);raw.set('cloudts',ts);raw.set('clouduid',uid);
+    const sent={};ds.forEach(d=>{const o=d.data();if(SYNC_KEYS.includes(d.id))sent[d.id]=hash(o.v);});
+    raw.set('diary',merged);raw.set('cloudhash',hs);raw.set('cloudts',ts);raw.set('clouduid',uid);raw.set('cloudsent',sent);
     if(merged.some(e=>!hs[e.id])||first)C.dirty.add('diary');
     C.applying=false;reload();
     setStatus('Dati sincronizzati');
@@ -89,10 +97,18 @@ async function start(){
   C.busy=false;if(S.tab==='settings')render();
 }
 // i dati letti dal cloud entrano nello stato dell'app
+let lastReload=0,reloadTimer=null;
+function reloadSoon(){  // modifiche arrivate da un altro dispositivo: ridisegno al massimo una volta ogni 60 secondi
+  const wait=60000-(Date.now()-lastReload);
+  if(wait<=0)return reload();
+  if(!reloadTimer)reloadTimer=setTimeout(()=>{reloadTimer=null;reload();},wait);
+}
 function reload(){
+  lastReload=Date.now();C.applying=true;  // i calcoli fatti qui (trofei, profilo) non vanno rimandati online
   S.spots=LS.get('spots',S.spots);S.active=LS.get('active',S.active);if(!S.spots.find(s=>s.id===S.active))S.active=S.spots[0]?.id||null;
   S.diary=LS.get('diary',[]);S.live=LS.get('live',null);
   try{buildProfile();checkBadges();}catch(e){}
+  C.applying=false;
   if(!document.getElementById('sheet').classList.contains('on'))render();
 }
 
@@ -101,10 +117,12 @@ async function push(){
   const keys=[...C.dirty];C.dirty.clear();setStatus('Salvo online…');
   try{
     const ts=raw.get('cloudts')||{},now=Date.now();
+    const sent=raw.get('cloudsent')||{};
     for(const k of keys.filter(k=>k!=='diary')){
-      const s=JSON.stringify(raw.get(k));ts[k]=now;
-      await ff.setDoc(ff.doc(dataCol(),k),{v:s,t:now});
+      const s=JSON.stringify(raw.get(k));if(sent[k]===hash(s))continue;  // uguale all'ultimo invio
+      ts[k]=now;await ff.setDoc(ff.doc(dataCol(),k),{v:s,t:now});sent[k]=hash(s);
     }
+    raw.set('cloudsent',sent);
     raw.set('cloudts',ts);
     if(keys.includes('diary'))await pushDiary();
     await ff.setDoc(uref(),{email:C.user.email||'',t:now},{merge:true});
@@ -136,8 +154,8 @@ function listen(){
   C.unsub.push(ff.onSnapshot(dataCol(),snap=>{
     if(snap.metadata.hasPendingWrites)return;let ch=false;const ts=raw.get('cloudts')||{};
     snap.docChanges().forEach(c=>{const k=c.doc.id,o=c.doc.data();if(!SYNC_KEYS.includes(k)||C.dirty.has(k)||(ts[k]||0)>=(o.t||0))return;
-      C.applying=true;raw.set(k,JSON.parse(o.v));C.applying=false;ts[k]=o.t;ch=true;});
-    if(ch){raw.set('cloudts',ts);reload();}
+      ts[k]=o.t;if(JSON.stringify(raw.get(k))===o.v)return;raw.set(k,JSON.parse(o.v));ch=true;});
+    raw.set('cloudts',ts);if(ch)reloadSoon();
   }));
   C.unsub.push(ff.onSnapshot(diaryCol(),snap=>{
     if(snap.metadata.hasPendingWrites||C.dirty.has('diary'))return;let ch=false;
@@ -145,7 +163,7 @@ function listen(){
     snap.docChanges().forEach(c=>{const id=c.doc.id,o=c.doc.data();
       if(o.deleted){if(byId.has(id)){byId.delete(id);ch=true;}delete hs[id];return;}
       const e=JSON.parse(o.v),h=hash(JSON.stringify(e));if(hs[id]===h&&byId.has(id))return;byId.set(id,e);hs[id]=h;ch=true;});
-    if(ch){C.applying=true;raw.set('diary',[...byId.values()].sort((a,b)=>(a.start||0)-(b.start||0)));raw.set('cloudhash',hs);C.applying=false;reload();}
+    if(ch){raw.set('diary',[...byId.values()].sort((a,b)=>(a.start||0)-(b.start||0)));raw.set('cloudhash',hs);reloadSoon();}
   }));
 }
 
@@ -153,16 +171,26 @@ function listen(){
 // nome da mostrare: quello dell'account Google, altrimenti la parte dell'email prima della @
 C.name=()=>{const u=C.user;if(!u)return '';return (u.displayName||(u.email||'').split('@')[0]||'utente').trim();};
 // in alto accanto allo spot: nome dell'utente se è collegato, altrimenti «Accedi»
-C.chip=()=>{const el=document.getElementById('userChip');if(!el)return;
-  if(!window.LENZA_FB?.apiKey||!C.ready){el.style.display='none';return;}
+C.chip=()=>{C.gate();const el=document.getElementById('userChip');if(!el)return;
+  if(!window.LENZA_FB?.apiKey||!C.ready||!C.user){el.style.display='none';return;}
   el.style.display='';const n=C.name(),short=innerWidth<1000?n.split(/[ ._\-]/)[0]:n;  // sul telefono solo il primo nome
   el.innerHTML=C.user?`<i>${esc(n.charAt(0).toUpperCase())}</i><span>${esc(short)}</span>`:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Accedi</span>`;
   el.title=C.user?(C.user.email||n):'Accedi o registrati';el.classList.toggle('in',!!C.user);};
 C.open=()=>{if(C.user){go('settings');return;}openSheet(C.form());};
 // riquadro nella Home per chi non ha fatto l'accesso
-C.homeCard=()=>!window.LENZA_FB?.apiKey||!C.ready||C.user?'':`<div class="card loginbox"><div><b>☁️ Accedi o registrati</b><div class="small mut">Salva spot, diario e foto online e ritrovali su telefono e PC.</div></div><button class="btn" onclick="CLOUD.open()">Login</button></div>`;
+C.homeCard=()=>'';const _homeCard_old=()=>`<div class="card loginbox"><div><b>☁️ Accedi o registrati</b><div class="small mut">Salva spot, diario e foto online e ritrovali su telefono e PC.</div></div><button class="btn" onclick="CLOUD.open()">Login</button></div>`;
+// senza accesso: schermata di accesso grande sopra l'app, che resta sfocata sotto
+C.gate=()=>{
+  const on=!!window.LENZA_FB?.apiKey&&C.ready&&!C.user;let g=document.getElementById('gate');
+  if(!on){if(g)g.remove();document.body.classList.remove('gated');return;}
+  if(g)return;
+  g=document.createElement('div');g.id='gate';
+  g.innerHTML=`<div class="gbox"><div class="glogo"><div class="mark">${document.querySelector('.logo .mark')?.innerHTML||''}</div><span>Len<b>za</b></span></div>
+    <p class="gsub">Accedi per usare l'app: spot, diario e foto salvati online e sincronizzati su telefono e PC.</p>${C.form(true)}</div>`;
+  document.body.appendChild(g);document.body.classList.add('gated');
+};
 C.card=()=>{
-  if(!window.LENZA_FB?.apiKey)return '';
+  if(!window.LENZA_FB?.apiKey||!C.user)return '';
   if(!C.ready)return `<div class="card"><h3>☁️ Account</h3><p class="small mut">${esc(C.status||'Carico…')}</p></div>`;
   if(C.user)return `<div class="card"><h3>☁️ Account</h3>
     <div class="kv"><span>Accesso come</span><b style="word-break:break-all">${esc(C.user.email||C.user.displayName||'utente')}</b></div>
@@ -171,9 +199,10 @@ C.card=()=>{
     <div class="row" style="gap:8px;margin-top:8px"><button class="btn ghost" style="flex:1" onclick="CLOUD.syncNow()">↻ Sincronizza ora</button><button class="btn ghost" style="flex:1" onclick="CLOUD.logout()">Esci</button></div></div>`;
   return `<div class="card">${C.form().replace('<h2>','<h3>').replace('</h2>','</h3>')}</div>`;
 };
-C.form=()=>`<h2>☁️ Accedi o registrati</h2>
-    <p class="small mut" style="margin-bottom:10px">Con un account i tuoi dati sono salvati online e li ritrovi su telefono e PC.</p>
+C.form=(big)=>`${big?'':'<h2>☁️ Accedi o registrati</h2>'}
+    ${big?'':'<p class="small mut" style="margin-bottom:10px">Con un account i tuoi dati sono salvati online e li ritrovi su telefono e PC.</p>'}
     <button class="btn full" style="margin-bottom:12px;background:#fff;color:#1f1f1f" onclick="CLOUD.google()"><svg viewBox="0 0 48 48" width="18" height="18" style="vertical-align:-3px;margin-right:6px"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>Accedi con Google</button>
+    <button class="btn full" style="margin-bottom:12px;background:#000;color:#fff;border:1px solid rgba(255,255,255,.25)" onclick="CLOUD.apple()"><svg viewBox="0 0 24 24" width="18" height="18" fill="#fff" style="vertical-align:-3px;margin-right:6px"><path d="M16.37 12.6c-.02-2.3 1.88-3.4 1.96-3.46-1.07-1.56-2.73-1.77-3.32-1.8-1.41-.14-2.76.83-3.48.83-.72 0-1.82-.81-3-.79-1.54.02-2.96.9-3.76 2.27-1.6 2.78-.41 6.9 1.15 9.16.77 1.1 1.68 2.34 2.87 2.3 1.15-.05 1.59-.75 2.98-.75 1.39 0 1.78.75 3 .72 1.24-.02 2.02-1.12 2.78-2.23.87-1.28 1.23-2.52 1.25-2.58-.03-.01-2.4-.92-2.43-3.67zM14.1 5.86c.63-.77 1.06-1.83.94-2.89-.91.04-2.02.61-2.67 1.37-.58.67-1.09 1.76-.96 2.8 1.02.08 2.06-.52 2.69-1.28z"/></svg>Accedi con Apple</button>
     <div class="small mut" style="text-align:center;margin-bottom:8px">oppure con email e password</div>
     <input id="cle" type="email" placeholder="Email" autocomplete="email" style="margin-bottom:8px">
     <input id="clp" type="password" placeholder="Password (almeno 6 caratteri)" autocomplete="current-password">
