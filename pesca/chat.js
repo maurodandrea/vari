@@ -488,7 +488,7 @@ function mapHtml(){
     <p class="small mut" style="margin:6px 0 0">La posizione viene presa dal GPS del telefono, arrotondata a circa 100 m, e aggiornata ogni 5 minuti mentre LenzApp è aperta. Dopo ${LOC_MAX_H} ore senza aggiornamenti sparisce dalla mappa.${CH.locErr?`<br>⚠️ ${esc(CH.locErr)}`:''}</p></div>
   <div class="card" style="padding:10px"><div id="cmap" style="height:58vh;min-height:320px;border-radius:16px;overflow:hidden"></div>
     <div id="cfstat">${friendStatus()}</div>
-    <div class="small" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;justify-content:center"><span>${manSvg('#3b8cff')} Tu</span><span>${manSvg('#2ecc71')} Amici</span><span>${manSvg('#ff5a5f')} Altri utenti</span></div></div>`;
+    <div class="small" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;justify-content:center"><span><svg width="12" height="15" viewBox="0 0 20 24" style="vertical-align:-2px"><circle cx="10" cy="6" r="4.6" fill="#3b8cff" stroke="#fff" stroke-width="1.8"/><path d="M2.5 22.5c0-5 3.4-8.6 7.5-8.6s7.5 3.6 7.5 8.6z" fill="#3b8cff" stroke="#fff" stroke-width="1.8"/></svg> Tu</span><span>${manSvg('#2ecc71')} Amici</span><span>${manSvg('#ff5a5f')} Altri utenti</span></div></div>`;
 }
 CH.setLoc=async v=>{LS.set('chatloc',v);CH.locErr='';
   if(v==='off'){clearInterval(CH._locT);try{await F().deleteDoc(F().doc(D(),'locations',me().uid));}catch(e){}delete CH.locs[me().uid];toast('📡 Posizione non più condivisa');refresh();return;}
@@ -524,13 +524,20 @@ function mapInit(){
 // omino colorato: blu tu, verde gli amici, rosso gli altri utenti
 const manIcon=col=>L.divIcon({className:'',iconSize:[34,42],iconAnchor:[17,40],popupAnchor:[0,-36],
   html:`<svg width="34" height="42" viewBox="0 0 34 42"><path d="M17 41c-1-4-14-14-14-24a14 14 0 0 1 28 0c0 10-13 20-14 24z" fill="${col}" stroke="#fff" stroke-width="2"/><circle cx="17" cy="11.5" r="4" fill="#fff"/><path d="M10.5 25c0-4.2 2.9-7.5 6.5-7.5s6.5 3.3 6.5 7.5z" fill="#fff"/></svg>`});
+// tu: omino piccolo senza goccia, sotto gli altri
+const meIcon=()=>L.divIcon({className:'',iconSize:[20,24],iconAnchor:[10,22],popupAnchor:[0,-20],
+  html:`<svg width="20" height="24" viewBox="0 0 20 24"><circle cx="10" cy="6" r="4.6" fill="#3b8cff" stroke="#fff" stroke-width="1.8"/><path d="M2.5 22.5c0-5 3.4-8.6 7.5-8.6s7.5 3.6 7.5 8.6z" fill="#3b8cff" stroke="#fff" stroke-width="1.8"/></svg>`});
 function mapMarkers(){
   if(!CH.map||!CH.mlayer||!document.getElementById('cmap'))return;CH.mlayer.clearLayers();
   const u=me()?.uid,fr=new Set(friends().map(f=>f.uid)),bl=blocked(),now=Date.now(),pts=[];
-  for(const l of Object.values(CH.locs)){
-    if(l.lat==null||bl.includes(l.id)||now-l.ts>LOC_MAX_H*3600e3)continue;
+  const vis=Object.values(CH.locs).filter(l=>l.lat!=null&&!bl.includes(l.id)&&now-l.ts<=LOC_MAX_H*3600e3);
+  // stesse coordinate (posizioni arrotondate a 100 m): distanzio gli omini in cerchio, così si vedono tutti
+  const groups={};vis.forEach(l=>{(groups[l.lat+','+l.lon]=groups[l.lat+','+l.lon]||[]).push(l);});
+  const pos={};for(const g of Object.values(groups)){g.sort((a,b)=>(a.id===u)-(b.id===u));g.forEach((l,i)=>{
+    if(g.length===1){pos[l.id]=[l.lat,l.lon];return;}const a=2*Math.PI*i/g.length,r=.00035;pos[l.id]=[l.lat+r*Math.cos(a),l.lon+r*Math.sin(a)/Math.cos(l.lat*Math.PI/180)];});}
+  for(const l of vis){
     const mine=l.id===u,col=mine?'#3b8cff':fr.has(l.id)?'#2ecc71':'#ff5a5f';
-    const m=L.marker([l.lat,l.lon],{icon:manIcon(col),zIndexOffset:mine?1000:0}).addTo(CH.mlayer);pts.push([l.lat,l.lon]);
+    const m=L.marker(pos[l.id],{icon:mine?meIcon():manIcon(col),zIndexOffset:mine?-1000:0}).addTo(CH.mlayer);pts.push(pos[l.id]);
     m.bindPopup(`<b>${esc(mine?'Tu':l.name||'Pescatore')}</b><br><span style="font-size:12px">aggiornata ${ago(l.ts)} fa${mine?' · '+(l.vis==='all'?'visibile a tutti':'visibile agli amici'):fr.has(l.id)?' · amico':''}</span>${mine?'':`<br><button class="btn" style="margin-top:6px;padding:6px 12px" onclick="CHAT.dm('${l.id}','${esc(l.name||'').replace(/'/g,'')}')">💬 Scrivi</button>`}`);
   }
   if(pts.length&&!CH._fitted){CH._fitted=true;if(pts.length>1)CH.map.fitBounds(pts,{padding:[40,40],maxZoom:13});else CH.map.setView(pts[0],12);}
