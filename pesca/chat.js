@@ -16,6 +16,8 @@ const REP_HIDE=3; // messaggio nascosto dopo 3 segnalazioni
 const uidCode=u=>{let h=7;for(const c of u)h=(h*131+c.charCodeAt(0))>>>0;return h.toString(36).toUpperCase().padStart(6,'0').slice(-6);};
 const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const seen=()=>LS.get('chatseen',{});
+// errore di un ascolto in tempo reale: lo mostro con il nome dell'operazione rifiutata
+const snapErr=label=>e=>{CH.err=(e.code==='permission-denied'?'La chat non ha i permessi su Firebase: pubblica le regole aggiornate (file firestore.rules) in Console Firebase › Firestore Database › Regole.':'Chat non raggiungibile: '+(e.code||e.message))+` [ascolto: ${label}]`;if(S.tab==='chat')render();};
 const friends=()=>LS.get('chatfriends',[]);
 const blocked=()=>LS.get('chatblock',[]);
 const notifOn=()=>LS.get('chatnotif',{on:false}).on;
@@ -40,26 +42,27 @@ const roomName=rid=>{const r=CH.rooms[rid]||CH.mine[rid];if(rid==='bot')return '
 /* ---------- avvio: profilo, stanze e ascolto delle novità ---------- */
 CH.start=async()=>{
   if(CH.started||!me()||!C().ff||typeof isPremium!=='function'||!isPremium())return;
-  CH.started=true;const ff=F(),db=D(),u=me();
+  CH.started=true;const ff=F(),db=D(),u=me();let step='profilo';
   try{
     await ff.setDoc(ff.doc(db,'profiles',u.uid),{name:C().name(),code:uidCode(u.uid),t:Date.now()},{merge:true});
     for(const z of zones()){
       const ref=ff.doc(db,'rooms',z.rid);
-      try{const s=await ff.getDoc(ref);if(!s.exists())await ff.setDoc(ref,{type:'zone',name:z.name,zone:z.lat!=null?{lat:z.lat,lon:z.lon}:null,t:Date.now()});}catch(e){}
-      CH.subs[z.rid]=ff.onSnapshot(ref,s=>{if(!s.exists())return;const old=CH.rooms[z.rid]?.last?.ts||0;CH.rooms[z.rid]={id:z.rid,...s.data()};onRoom(z.rid,old);});
+      step='stanza '+z.rid;const s=await ff.getDoc(ref);if(!s.exists())await ff.setDoc(ref,{type:'zone',name:z.name,zone:z.lat!=null?{lat:z.lat,lon:z.lon}:null,t:Date.now()});
+      CH.subs[z.rid]=ff.onSnapshot(ref,s=>{if(!s.exists())return;const old=CH.rooms[z.rid]?.last?.ts||0;CH.rooms[z.rid]={id:z.rid,...s.data()};onRoom(z.rid,old);},snapErr('stanza '+z.rid));
     }
     CH.subs._mine=ff.onSnapshot(ff.query(ff.collection(db,'rooms'),ff.where('members','array-contains',u.uid)),snap=>{
       snap.docChanges().forEach(c=>{const id=c.doc.id;if(c.type==='removed'){delete CH.mine[id];return;}const old=CH.mine[id]?.last?.ts||0;CH.mine[id]={id,...c.doc.data()};onRoom(id,old);});
-      refresh();});
-    CH.subs._ban=ff.onSnapshot(ff.doc(db,'banned',u.uid),s=>{CH.banned=s.exists();if(S.tab==='chat'&&CH.rid)render();});
+      refresh();},snapErr('stanze private'));
+    CH.subs._ban=ff.onSnapshot(ff.doc(db,'banned',u.uid),s=>{CH.banned=s.exists();if(S.tab==='chat'&&CH.rid)render();},snapErr('blocco'));
     if(CH.isAdmin())CH.subs._rep=ff.onSnapshot(ff.collection(db,'reports'),snap=>{
       snap.docChanges().forEach(c=>{CH.reports=CH.reports.filter(r=>r.id!==c.doc.id);if(c.type!=='removed')CH.reports.push({id:c.doc.id,...c.doc.data()});});
-      CH.badge();if(S.tab==='mod'||S.tab==='altro')render();});
+      CH.badge();if(S.tab==='mod'||S.tab==='altro')render();},snapErr('segnalazioni'));
     CH.subs._notif=ff.onSnapshot(ff.collection(db,'notifs',u.uid,'items'),snap=>{
       snap.docChanges().forEach(c=>{if(c.type==='removed')return;const n={id:c.doc.id,...c.doc.data()};if(CH.notifs.some(x=>x.id===n.id))return;CH.notifs.push(n);
         if(n.ts>CH.t0&&!blocked().includes(n.fromUid))notify(`${n.from} ti ha risposto`,clean(n.text),n.rid);});
-      CH.notifs.sort((a,b)=>b.ts-a.ts);refresh();});
-  }catch(e){CH.err=e.code==='permission-denied'?'La chat non ha i permessi su Firebase: pubblica le regole aggiornate (file firestore.rules) in Console Firebase › Firestore Database › Regole.':'Chat non raggiungibile: '+(e.code||e.message);
+      CH.notifs.sort((a,b)=>b.ts-a.ts);refresh();},snapErr('avvisi'));
+  }catch(e){CH.err=(e.code==='permission-denied'?'La chat non ha i permessi su Firebase: pubblica le regole aggiornate (file firestore.rules) in Console Firebase › Firestore Database › Regole.':'Chat non raggiungibile: '+(e.code||e.message))+
+      ` [passo: ${step} · accesso: ${(u.providerData||[]).map(p=>p.providerId).join(',')||'?'} · email verificata: ${u.emailVerified?'sì':'no'}]`;
     CH.started=false;Object.values(CH.subs).forEach(f=>{try{f();}catch(x){}});CH.subs={};if(S.tab==='chat')render();else refresh();}
 };
 CH.isAdmin=()=>{const u=me();return !!u&&u.emailVerified!==false&&ADMINS.includes((u.email||'').toLowerCase());};
@@ -145,7 +148,7 @@ CH.openNotif=async id=>{const x=CH.notifs.find(n=>n.id===id);if(!x)return;x.read
 CH.open=rid=>{CH.rid=rid;CH.reply=null;CH.msgs=[];CH.unsubRoom?.();CH.unsubRoom=null;markSeen(rid);
   if(rid!=='bot'){const ff=F();CH.unsubRoom=ff.onSnapshot(ff.query(ff.collection(D(),'rooms',rid,'msgs'),ff.orderBy('ts','desc'),ff.limit(80)),snap=>{
     const m=new Map(CH.msgs.map(x=>[x.id,x]));snap.docChanges().forEach(c=>{if(c.type==='removed')m.delete(c.doc.id);else m.set(c.doc.id,{id:c.doc.id,...c.doc.data()});});
-    CH.msgs=[...m.values()].sort((a,b)=>a.ts-b.ts).slice(-80);if(S.tab==='chat'&&CH.rid===rid)markSeen(rid);refresh();});}
+    CH.msgs=[...m.values()].sort((a,b)=>a.ts-b.ts).slice(-80);if(S.tab==='chat'&&CH.rid===rid)markSeen(rid);refresh();},snapErr('messaggi'));}
   if(S.tab!=='chat')go('chat');else render();};
 CH.back=()=>{CH.unsubRoom?.();CH.unsubRoom=null;CH.rid=null;CH.reply=null;render();};
 function roomView(v){
