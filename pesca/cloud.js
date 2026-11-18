@@ -169,11 +169,15 @@ function listen(){
 
 /* ---------- riquadro nelle Impostazioni ---------- */
 // nome da mostrare: quello dell'account Google, altrimenti la parte dell'email prima della @
-C.name=()=>{const u=C.user;if(!u)return '';return (u.displayName||(u.email||'').split('@')[0]||'utente').trim();};
+// nome da mostrare: con Google o Apple il nome di battesimo; con email e password lo username (l'email senza dominio)
+C.name=()=>{const u=C.user;if(!u)return '';const user=(u.email||'').split('@')[0];
+  const social=(u.providerData||[]).some(p=>p.providerId==='google.com'||p.providerId==='apple.com');
+  const nome=(u.displayName||(u.providerData||[]).map(p=>p.displayName).find(Boolean)||'').trim().split(/\s+/)[0];
+  return (social&&nome?nome:user)||'utente';};
 // in alto accanto allo spot: nome dell'utente se è collegato, altrimenti «Accedi»
 C.chip=()=>{C.gate();const el=document.getElementById('userChip');if(!el)return;
   if(!window.LENZA_FB?.apiKey||!C.ready||!C.user){el.style.display='none';return;}
-  el.style.display='';const n=C.name(),short=innerWidth<1000?n.split(/[ ._\-]/)[0]:n;  // sul telefono solo il primo nome
+  el.style.display='';const n=C.name(),short=n;
   el.innerHTML=C.user?`<i>${esc(n.charAt(0).toUpperCase())}</i><span>${esc(short)}</span>`:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Accedi</span>`;
   el.title=C.user?(C.user.email||n):'Accedi o registrati';el.classList.toggle('in',!!C.user);};
 C.open=()=>{if(C.user){go('settings');return;}openSheet(C.form());};
