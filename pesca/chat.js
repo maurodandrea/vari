@@ -127,7 +127,7 @@ CH.start=async()=>{
     // il profilo si salva in sottofondo: gli ascolti partono subito (con rete lenta la scrittura può metterci molto)
     ff.setDoc(ff.doc(db,'profiles',u.uid),{name:C().name(),code:uidCode(u.uid),t:Date.now()},{merge:true}).catch(e=>{CH.diag='profilo: '+(e.code||e.message);});
     step='ascolti';
-    loadGeo();if(GEO)defaultFollow();syncSubs();nearSync();
+    loadGeo();if(GEO)defaultFollow();syncSubs();nearSync();if(locVis()!=='off'){pushLoc(false);startLocTimer();}
     CH.subs._mine=ff.onSnapshot(ff.query(ff.collection(db,'rooms'),ff.where('members','array-contains',u.uid)),snap=>{
       snap.docChanges().forEach(c=>{const id=c.doc.id;if(c.type==='removed'){delete CH.mine[id];return;}const old=CH.mine[id]?.last?.ts||0;CH.mine[id]={id,...c.doc.data()};onRoom(id,old);});
       refresh();},snapErr('stanze private'));
@@ -150,7 +150,7 @@ CH.start=async()=>{
 CH.isAdmin=()=>{const u=me();return !!u&&u.emailVerified!==false&&ADMINS.includes((u.email||'').toLowerCase());};
 CH.reports=[];
 CH.reportCount=()=>new Set(CH.reports.map(r=>r.rid+'/'+r.mid)).size;
-CH.stop=()=>{Object.values(CH.subs).forEach(f=>{try{f();}catch(e){}});CH.subs={};CH.unsubRoom?.();CH.unsubRoom=null;CH.started=false;};
+CH.stop=()=>{clearInterval(CH._locT);Object.values(CH.subs).forEach(f=>{try{f();}catch(e){}});CH.subs={};CH.unsubRoom?.();CH.unsubRoom=null;CH.started=false;};
 // nuova attività in una stanza: avviso se il messaggio è di un altro e non sto già guardando quella stanza
 function onRoom(rid,oldTs){
   const r=CH.rooms[rid]||CH.mine[rid],l=r?.last;
@@ -180,6 +180,7 @@ function markSeen(rid){const s=seen();s[rid]=Date.now();LS.set('chatseen',s);CH.
 // aggiorno solo la parte che cambia, così il testo che si sta scrivendo non si perde
 function refresh(){CH.badge();if(S.tab!=='chat')return;
   if(CH.rid){const log=document.getElementById('chatlog');if(log){const atEnd=log.scrollHeight-log.scrollTop-log.clientHeight<80;log.innerHTML=logHtml();if(atEnd)log.scrollTop=log.scrollHeight;}}
+  else if(CH.tab==='mappa')mapMarkers();
   else{const box=document.getElementById('chatlist');if(box)box.innerHTML=listHtml();}}
 
 /* ---------- pagina ---------- */
@@ -189,9 +190,10 @@ CH.view=v=>{
   if(!me()){v.innerHTML=subHead('Chat','Funzione Premium','home')+`<div class="card"><p class="mut">Accedi con il tuo account per usare la chat.</p><button class="btn" onclick="CLOUD.open()">Accedi</button></div>`;return;}
   CH.start();nearSync();
   if(CH.rid)return roomView(v);
-  const tabs=[['zone','📍 Canali'],['priv','👥 Privati'],['bot','🤖 Assistente'],['amici','🤝 Amici']];
+  const tabs=[['zone','📍 Canali'],['priv','👥 Privati'],['mappa','🗺️ Mappa'],['bot','🤖 Assistente'],['amici','🤝 Amici']];
   v.innerHTML=subHead('Chat','Zone, amici e assistente','home')+(CH.err?`<div class="banner">⚠️ ${esc(CH.err)}</div>`:'')+
     `<div class="chips" style="margin-bottom:12px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none">${tabs.map(([k,n])=>`<span class="chip ${CH.tab===k?'on':''}" style="flex:none;white-space:nowrap" onclick="CHAT.tab='${k}';render()">${n}</span>`).join('')}</div><div id="chatlist">${listHtml()}</div>`;
+  if(CH.tab==='mappa')setTimeout(mapInit,0);
 };
 const ago=ts=>{const m=Math.round((Date.now()-ts)/60000);return m<1?'ora':m<60?m+' min':m<1440?Math.round(m/60)+' h':new Date(ts).toLocaleDateString('it-IT',{day:'numeric',month:'short'});};
 function roomRow(rid,icon,sub){
@@ -202,6 +204,7 @@ function roomRow(rid,icon,sub){
 }
 function listHtml(){
   if(CH.tab==='zone')return chanHtml()+notifCard()+(CH.diag?`<p class="small mut" style="text-align:center;opacity:.6">Diagnosi: ${esc(CH.diag)}</p>`:'');
+  if(CH.tab==='mappa')return mapHtml();
   if(CH.tab==='priv'){const rs=Object.values(CH.mine).sort((a,b)=>(b.last?.ts||b.t||0)-(a.last?.ts||a.t||0));
     return `<div class="card"><h3>👥 Messaggi privati e gruppi</h3>${rs.length?rs.map(r=>roomRow(r.id,r.type==='group'?'👥':'💬','')).join(''):'<p class="small mut">Nessuna conversazione. Aggiungi un amico nella scheda «Amici» e scrivigli.</p>'}
       <button class="btn ghost full" style="margin-top:10px" onclick="CHAT.newGroup()">➕ Nuovo gruppo di pesca</button></div>`;}
@@ -350,14 +353,14 @@ CH.block=(uid,name)=>{closeSheet();if(!confirm(`Bloccare ${name}? Non vedrai pi�
 CH.unblock=uid=>{LS.set('chatblock',blocked().filter(u=>u!==uid));render();};
 
 /* ---------- amici, privati e gruppi ---------- */
-CH.befriend=(uid,name)=>{closeSheet();if(friends().some(f=>f.uid===uid))return;LS.set('chatfriends',[...friends(),{uid,name}]);toast('🤝 '+name+' aggiunto agli amici');};
-CH.unfriend=uid=>{if(!confirm('Togliere dagli amici?'))return;LS.set('chatfriends',friends().filter(f=>f.uid!==uid));render();};
+CH.befriend=(uid,name)=>{closeSheet();if(friends().some(f=>f.uid===uid))return;LS.set('chatfriends',[...friends(),{uid,name}]);CH.friendsChanged();toast('🤝 '+name+' aggiunto agli amici');};
+CH.unfriend=uid=>{if(!confirm('Togliere dagli amici?'))return;LS.set('chatfriends',friends().filter(f=>f.uid!==uid));CH.friendsChanged();render();};
 CH.addByCode=async()=>{const code=(document.getElementById('fcode')?.value||'').trim().toUpperCase();if(code.length!==6){toast('Il codice ha 6 caratteri');return;}
   if(code===uidCode(me().uid)){toast('Questo è il tuo codice 🙂');return;}
   try{const ff=F(),s=await ff.getDocs(ff.query(ff.collection(D(),'profiles'),ff.where('code','==',code)));
     if(!s.docs.length){toast('Nessun pescatore con questo codice');return;}
     const d=s.docs[0],p=d.data();if(friends().some(f=>f.uid===d.id)){toast('È già tra i tuoi amici');return;}
-    LS.set('chatfriends',[...friends(),{uid:d.id,name:p.name||'Amico'}]);toast('🤝 '+(p.name||'Amico')+' aggiunto agli amici');render();}
+    LS.set('chatfriends',[...friends(),{uid:d.id,name:p.name||'Amico'}]);CH.friendsChanged();toast('🤝 '+(p.name||'Amico')+' aggiunto agli amici');render();}
   catch(e){toast('⚠️ '+(e.code||e.message));}};
 CH.dm=async(uid,name)=>{const u=me();name=name||friends().find(f=>f.uid===uid)?.name||'Amico';
   const rid='d_'+[u.uid,uid].sort().join('_'),ff=F();
@@ -453,6 +456,61 @@ CH.ask=async q=>{
       (typeof gemKey==='function'&&gemKey()?'':'\n\nPer risposte libere a qualsiasi domanda attiva Gemini nelle Impostazioni.');}
   const h2=LS.get('chatbot',[]);h2.push({me:false,text:ans,ts:Date.now()});LS.set('chatbot',h2.slice(-40));CH.botBusy=false;refresh();
 };
+
+/* ---------- mappa: posizione condivisa ---------- */
+// locations/{uid}: {name, lat, lon (arrotondati a circa 100 m), vis:'all'|'friends', friends:[uid], ts}
+// vis 'all': la vedono tutti gli utenti della chat; 'friends': solo gli utenti che ho tra gli amici. Spenta: il documento viene cancellato.
+const LOC_MAX_H=6;
+const manSvg=col=>`<svg width="16" height="20" viewBox="0 0 34 42" style="vertical-align:-4px"><path d="M17 41c-1-4-14-14-14-24a14 14 0 0 1 28 0c0 10-13 20-14 24z" fill="${col}" stroke="#fff" stroke-width="2"/><circle cx="17" cy="11.5" r="4" fill="#fff"/><path d="M10.5 25c0-4.2 2.9-7.5 6.5-7.5s6.5 3.3 6.5 7.5z" fill="#fff"/></svg>`;            // dopo 6 ore senza aggiornamenti la posizione non si mostra più
+const locVis=()=>LS.get('chatloc','off');
+CH.locs={};
+function mapHtml(){
+  const v=locVis(),opt=[['off','🚫 Non condivisa','Nessuno vede la tua posizione'],['friends','🤝 Solo amici','La vedono solo gli utenti nei tuoi amici'],['all','🌍 Tutti','La vedono tutti gli utenti della chat']];
+  return `<div class="card"><h3>📡 La mia posizione</h3>${opt.map(([k,n,d])=>`<label class="crow" style="align-items:flex-start"><input type="radio" name="cloc" ${v===k?'checked':''} onchange="CHAT.setLoc('${k}')" style="margin-top:3px"><span><b>${n}</b><br><span class="small mut">${d}</span></span></label>`).join('')}
+    <p class="small mut" style="margin:6px 0 0">La posizione viene presa dal GPS del telefono, arrotondata a circa 100 m, e aggiornata ogni 5 minuti mentre LenzApp è aperta. Dopo ${LOC_MAX_H} ore senza aggiornamenti sparisce dalla mappa.${CH.locErr?`<br>⚠️ ${esc(CH.locErr)}`:''}</p></div>
+  <div class="card" style="padding:10px"><div id="cmap" style="height:58vh;min-height:320px;border-radius:16px;overflow:hidden"></div>
+    <div class="small" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;justify-content:center"><span>${manSvg('#3b8cff')} Tu</span><span>${manSvg('#2ecc71')} Amici</span><span>${manSvg('#ff5a5f')} Altri utenti</span></div></div>`;
+}
+CH.setLoc=async v=>{LS.set('chatloc',v);CH.locErr='';
+  if(v==='off'){clearInterval(CH._locT);try{await F().deleteDoc(F().doc(D(),'locations',me().uid));}catch(e){}delete CH.locs[me().uid];toast('📡 Posizione non più condivisa');refresh();return;}
+  await pushLoc(true);startLocTimer();};
+function startLocTimer(){clearInterval(CH._locT);if(locVis()==='off')return;CH._locT=setInterval(()=>pushLoc(false),5*60000);}
+async function pushLoc(say){
+  const v=locVis();if(v==='off'||!me())return;
+  const pos=await new Promise(ok=>{if(!navigator.geolocation)return ok(null);navigator.geolocation.getCurrentPosition(p=>ok(p.coords),()=>ok(null),{enableHighAccuracy:true,timeout:15000,maximumAge:120000});});
+  if(!pos){CH.locErr='Non riesco a leggere il GPS: controlla che la posizione sia attiva e consentita per LenzApp.';refresh();if(say)render();return;}
+  const d={name:C().name(),lat:Math.round(pos.latitude*1000)/1000,lon:Math.round(pos.longitude*1000)/1000,vis:v,friends:friends().map(f=>f.uid),ts:Date.now()};
+  try{await F().setDoc(F().doc(D(),'locations',me().uid),d);CH.locs[me().uid]={id:me().uid,...d};if(say)toast(v==='all'?'🌍 Posizione visibile a tutti':'🤝 Posizione visibile agli amici');CH.locErr='';refresh();if(say&&CH.tab==='mappa')render();}
+  catch(e){CH.locErr='Posizione non condivisa: '+(e.code||e.message);if(say)render();}}
+CH.friendsChanged=()=>{if(locVis()!=='off')pushLoc(false);};
+// ascolto delle posizioni: quelle pubbliche e quelle condivise con me dagli amici
+function locListen(){if(CH.subs._locA||!CH.started)return;const ff=F(),col=ff.collection(D(),'locations'),u=me().uid;
+  const on=snap=>{snap.docChanges().forEach(c=>{if(c.type==='removed')delete CH.locs[c.doc.id];else CH.locs[c.doc.id]={id:c.doc.id,...c.doc.data()};});if(CH.tab==='mappa'&&S.tab==='chat')mapMarkers();};
+  CH.subs._locA=ff.onSnapshot(ff.query(col,ff.where('vis','==','all')),on,snapErr('posizioni pubbliche'));
+  CH.subs._locF=ff.onSnapshot(ff.query(col,ff.where('friends','array-contains',u)),on,snapErr('posizioni degli amici'));
+  CH.subs._locMe=ff.onSnapshot(ff.doc(col,u),s=>{if(s.exists())CH.locs[u]={id:u,...s.data()};},()=>{});}
+function mapInit(){
+  const el=document.getElementById('cmap');if(!el||!window.L)return;
+  CH.map?.remove();CH._fitted=false;const me0=CH.locs[me()?.uid],sp=activeSpot();
+  const c=me0?[me0.lat,me0.lon]:sp&&sp.lat!=null?[sp.lat,sp.lon]:[41.9,12.5];
+  CH.map=L.map(el,{zoomControl:true,attributionControl:true}).setView(c,me0||sp?10:6);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap'}).addTo(CH.map);
+  CH.mlayer=L.layerGroup().addTo(CH.map);locListen();if(locVis()!=='off')pushLoc(false);mapMarkers();
+}
+// omino colorato: blu tu, verde gli amici, rosso gli altri utenti
+const manIcon=col=>L.divIcon({className:'',iconSize:[34,42],iconAnchor:[17,40],popupAnchor:[0,-36],
+  html:`<svg width="34" height="42" viewBox="0 0 34 42"><path d="M17 41c-1-4-14-14-14-24a14 14 0 0 1 28 0c0 10-13 20-14 24z" fill="${col}" stroke="#fff" stroke-width="2"/><circle cx="17" cy="11.5" r="4" fill="#fff"/><path d="M10.5 25c0-4.2 2.9-7.5 6.5-7.5s6.5 3.3 6.5 7.5z" fill="#fff"/></svg>`});
+function mapMarkers(){
+  if(!CH.map||!CH.mlayer||!document.getElementById('cmap'))return;CH.mlayer.clearLayers();
+  const u=me()?.uid,fr=new Set(friends().map(f=>f.uid)),bl=blocked(),now=Date.now(),pts=[];
+  for(const l of Object.values(CH.locs)){
+    if(l.lat==null||bl.includes(l.id)||now-l.ts>LOC_MAX_H*3600e3)continue;
+    const mine=l.id===u,col=mine?'#3b8cff':fr.has(l.id)?'#2ecc71':'#ff5a5f';
+    const m=L.marker([l.lat,l.lon],{icon:manIcon(col),zIndexOffset:mine?1000:0}).addTo(CH.mlayer);pts.push([l.lat,l.lon]);
+    m.bindPopup(`<b>${esc(mine?'Tu':l.name||'Pescatore')}</b><br><span style="font-size:12px">aggiornata ${ago(l.ts)} fa${mine?' · '+(l.vis==='all'?'visibile a tutti':'visibile agli amici'):fr.has(l.id)?' · amico':''}</span>${mine?'':`<br><button class="btn" style="margin-top:6px;padding:6px 12px" onclick="CHAT.dm('${l.id}','${esc(l.name||'').replace(/'/g,'')}')">💬 Scrivi</button>`}`);
+  }
+  if(pts.length&&!CH._fitted){CH._fitted=true;if(pts.length>1)CH.map.fitBounds(pts,{padding:[40,40],maxZoom:13});else CH.map.setView(pts[0],12);}
+}
 
 /* ---------- segnalazioni (solo amministratori) ---------- */
 CH.modView=async v=>{
