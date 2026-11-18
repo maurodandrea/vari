@@ -410,6 +410,33 @@
   .snapbtn{flex:1;text-align:center;padding:10px;border-radius:14px;background:rgba(47,224,207,.12);border:1px solid rgba(47,224,207,.35);color:var(--acc);font-weight:700;font-size:13px;cursor:pointer;}
   .snapalt{color:var(--mut);font-size:13px;cursor:pointer;padding:10px 6px;}
   .snap .snapalt{border-radius:14px;border:1px solid var(--line);text-align:center;padding:10px 12px;}
+  /* chat */
+  .chatcard{padding:10px;display:flex;flex-direction:column}
+  .chatlog{height:calc(100vh - 330px);min-height:280px;overflow-y:auto;padding:4px 2px;display:flex;flex-direction:column;gap:6px;overscroll-behavior:contain}
+  .cmsg{display:flex}.cmsg.me{justify-content:flex-end}
+  .cb{max-width:82%;background:rgba(255,255,255,.08);border-radius:16px 16px 16px 4px;padding:8px 11px;font-size:14.5px;line-height:1.4;word-wrap:break-word;cursor:pointer}
+  .cmsg.me .cb{background:linear-gradient(135deg,rgba(47,224,207,.28),rgba(58,140,255,.28));border-radius:16px 16px 4px 16px}
+  .cb.hid{opacity:.6;font-style:italic;cursor:default}
+  .cn{font-size:12px;font-weight:800;color:var(--acc);margin-bottom:2px}
+  .ct{font-size:10.5px;opacity:.55;text-align:right;margin-top:3px}
+  .crq{font-size:12px;border-left:3px solid var(--acc);padding:3px 7px;margin-bottom:5px;background:rgba(0,0,0,.18);border-radius:6px;opacity:.9}
+  .cday{align-self:center;font-size:11.5px;opacity:.6;margin:8px 0 2px;text-transform:capitalize}
+  .cempty{text-align:center;opacity:.75;margin:auto 0;padding:20px 6px;line-height:2}
+  .ccomp{display:flex;gap:6px;align-items:flex-end;margin-top:8px}
+  .ccomp textarea{flex:1;resize:none;min-height:42px;max-height:120px;border-radius:14px;padding:10px 12px;font:inherit;font-size:15px;background:rgba(255,255,255,.07);color:inherit;border:1px solid rgba(255,255,255,.12)}
+  .cbtn{flex:none;width:42px;height:42px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.07);color:inherit;font-size:18px;cursor:pointer}
+  .cbtn.send{background:linear-gradient(135deg,var(--acc),#3a8cff);color:#03282a;font-weight:900;border:0}
+  .crply{font-size:12.5px;margin-top:6px;padding:6px 9px;border-radius:10px;background:rgba(47,224,207,.1)}
+  .croom{display:flex;gap:10px;align-items:center;padding:10px 4px;border-bottom:1px solid rgba(255,255,255,.06);cursor:pointer}
+  .croom:last-child{border-bottom:0}
+  .cri{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:rgba(255,255,255,.07);font-size:19px;flex:none}
+  .cprev{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cdot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--acc);box-shadow:0 0 8px var(--acc);margin-top:4px}
+  .ccode{font-size:34px;font-weight:900;letter-spacing:6px;text-align:center;margin:6px 0;color:var(--acc)}
+  .crow{display:flex;gap:8px;align-items:center;padding:6px 0;cursor:pointer}.crow input{width:auto;margin:0}
+  .ccatch img{width:100%;max-height:260px;object-fit:cover;border-radius:12px;display:block;margin-bottom:6px}
+  .ccond .cchips{display:flex;flex-wrap:wrap;gap:4px;margin:5px 0}.ccond .cchips span{font-size:12px;padding:3px 8px;border-radius:99px;background:rgba(47,224,207,.15)}
+  .cbadge{position:absolute;top:2px;right:calc(50% - 24px);min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#ff5a5f;color:#fff;font:800 10.5px/17px 'Outfit',sans-serif;font-style:normal;text-align:center}
   .cphoto{position:relative;margin-top:8px;}
   .cphoto img{width:100%;max-height:220px;object-fit:cover;border-radius:16px;display:block;cursor:zoom-in;}
   .cphoto.big{margin:0 0 14px;}
@@ -460,6 +487,8 @@
     nav button{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;padding:12px 14px;font-size:15px;border-radius:16px;}
     nav button:hover{background:rgba(255,255,255,.06);color:var(--txt);}
     nav button .lk{position:static;margin-left:-6px;font-size:13px;line-height:1;}
+    nav button .cbadge{position:static;margin-left:auto;}
+    .chatlog{height:calc(100vh - 290px);}
     nav .fab{order:-1;margin:0 0 8px;padding:0;flex-direction:row;}
     nav .fab .fb{width:100%;height:50px;border-radius:16px;box-shadow:0 10px 24px -10px rgba(47,224,207,.9);}
     nav .fab em{display:none;}
@@ -958,20 +987,12 @@ function render(){
   if(PREMIUM_TABS[S.tab]&&!isPremium()){premiumPage(v,S.tab);countUp(v);return;}
   ({home:vHome,meteo:vMeteo,spot:vSpot,diario:vDiario,stats:vStats,ai:vAI,pesce:vPesce,altro:vAltro,live:vLive,trofei:vTrofei,cal:vCal,compare:vCompare,guide:vGuide,settings:vSettings,chat:vChat}[S.tab]||vHome)(v);
   countUp(v);bindCharts(v);
+  window.CHAT?.start();window.CHAT?.badge();
   if(S.tab==='home'&&!COMP_ON)compassStart();
   if(S.tab==='settings')modelStatus();
 }
-// Chat (Premium): per ora pagina di presentazione, la chat vera e propria è in sviluppo
-function vChat(v){
-  const F=[['💬','Canali per zona','Una chat per ogni zona di pesca vicina ai tuoi spot.'],
-    ['📸','Catture condivise','Pubblica la cattura riconosciuta con specie, misura e foto.'],
-    ['🌊','Condizioni in diretta','Chi è sul posto racconta mare, vento e mangianza.'],
-    ['👥','Amici e messaggi privati','Scrivi ai tuoi compagni di pesca e organizza le uscite.'],
-    ['🤖','Assistente in chat','Chiedi consigli su esche, montature e orari migliori.'],
-    ['🛡️','Spot protetti','Le coordinate restano private: condividi solo la zona, se vuoi.']];
-  v.innerHTML=subHead('Chat','Funzione Premium · in arrivo','home')+`<div class="card" style="text-align:center;padding:24px 18px"><div style="font-size:46px">💬</div><h2 style="margin:6px 0">La chat dei pescatori</h2><p class="mut" style="margin:0">Stiamo preparando la chat di Lenza. Ecco cosa troverai:</p></div>
-  <div class="card">${F.map(([e,t,d])=>`<div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)"><div style="font-size:24px;line-height:1">${e}</div><div><b>${t}</b><div class="small mut">${d}</div></div></div>`).join('')}</div>`;
-}
+// Chat (Premium): canali per zona, catture, condizioni, amici, assistente… (chat.js)
+function vChat(v){if(window.CHAT)CHAT.view(v);else v.innerHTML=subHead('Chat','Funzione Premium','home')+'<div class="card"><p class="mut">Chat non disponibile.</p></div>';}
 function countUp(root){
   root.querySelectorAll('[data-count]').forEach(el=>{
     const to=+el.dataset.count,t0=performance.now(),dur=1300;
@@ -2241,6 +2262,7 @@ function aiCard(st,target){
     <div class="small mut">${pick?'':`<i>${esc(r.scientific_name)}</i>`}${!pick&&pc<40?' · poco sicuro, controlla le alternative':''}</div>
     ${r.alternatives?.length?`<div class="small" style="margin-top:6px">Oppure: ${r.alternatives.map(a=>`<span class="chip" style="padding:3px 9px;font-size:12px" onclick="aiPick('${target}','${esc(a.species).replace(/'/g,"\\'")}')">${esc(a.species)} ${Math.round(a.confidence*100)}%</span>`).join(' ')}</div>`:''}
     ${measBlock(st,target)}
+    ${target==='assist'&&window.CHAT&&window.CLOUD?.user&&isPremium()?`<button class="btn ghost" style="margin-top:10px;width:100%" onclick="CHAT.shareCatch()">💬 Condividi in chat</button>`:''}
   </div></div>`;
 }
 /* Sessione live */
@@ -2334,5 +2356,6 @@ if('serviceWorker' in navigator&&location.protocol.startsWith('http')){
 </script>
 <script src="firebase-config.js"></script>
 <script src="cloud.js"></script>
+<script src="chat.js"></script>
 </body>
 </html>

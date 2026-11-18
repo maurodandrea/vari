@@ -1,5 +1,5 @@
 // Service worker di Lenza: app disponibile offline; i dati meteo passano sempre dalla rete.
-const CACHE='lenza-v28';
+const CACHE='lenza-v29';
 const SHELL=['./','./index.html','./manifest.webmanifest','./icon-192.png','./icon-512.png',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css',
   'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js'];
@@ -26,3 +26,7 @@ self.addEventListener('fetch',e=>{
     return hit||net;
   }));
 });
+// tocco su una notifica della chat: apro (o porto in primo piano) Lenza sulla chat
+self.addEventListener('notificationclick',e=>{e.notification.close();const url=e.notification.data?.url||'./#chat';
+  e.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(cs=>{const c=cs.find(x=>x.url.includes('/pesca'));
+    if(c){c.focus();return c.navigate?c.navigate(url).catch(()=>{}):null;}return self.clients.openWindow(url);}));});

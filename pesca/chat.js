@@ -1,0 +1,315 @@
+// Chat di Lenza (funzione Premium): canali per zona, catture condivise, condizioni in diretta, amici e messaggi privati,
+// assistente in chat, spot protetti, moderazione e notifiche. Usa lo stesso progetto Firebase degli account (cloud.js).
+// Firestore:
+//   profiles/{uid}              nome e codice amico di ogni utente
+//   rooms/{rid}                 stanze: 'zone' (pubbliche, per zona), 'dm' (due persone), 'group' (gruppo di amici)
+//   rooms/{rid}/msgs/{id}       messaggi: testo, cattura, condizioni del mare
+//   notifs/{uid}/items/{id}     avvisi per l'utente (risposte ai suoi messaggi)
+//   reports/{id}                segnalazioni dei messaggi
+(function(){
+const CH={rid:null,tab:'zone',msgs:[],unsubRoom:null,subs:{},rooms:{},mine:{},notifs:[],reply:null,started:false,t0:Date.now(),botBusy:false};
+window.CHAT=CH;
+const C=()=>window.CLOUD,F=()=>C().ff,D=()=>C().db,me=()=>C()?.user;
+const COND_H=6;  // le condizioni del mare restano visibili 6 ore
+const REP_HIDE=3; // messaggio nascosto dopo 3 segnalazioni
+const uidCode=u=>{let h=7;for(const c of u)h=(h*131+c.charCodeAt(0))>>>0;return h.toString(36).toUpperCase().padStart(6,'0').slice(-6);};
+const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+const seen=()=>LS.get('chatseen',{});
+const friends=()=>LS.get('chatfriends',[]);
+const blocked=()=>LS.get('chatblock',[]);
+const notifOn=()=>LS.get('chatnotif',{on:false}).on;
+
+/* ---------- filtro parole offensive ---------- */
+const BAD=['cazz','minchi','stronz','vaffancul','fancul','coglion','puttan','troi','merd','bastard','porco ?dio','porcodio','dio ?cane','diocane','porca ?madonna','froci','ricchion','negr[oiae]','mongoloid','zoccol','frocio'];
+const BADRE=new RegExp('\\b('+BAD.join('|')+')\\w*','gi');
+const clean=t=>String(t||'').replace(BADRE,w=>w[0]+'*'.repeat(Math.max(2,w.length-1)));
+
+/* ---------- zone: una stanza per ogni area di circa 25 km ---------- */
+const placeName=sp=>(sp.name||'').replace(/^Posizione attuale( · )?/,'').trim()||'Posizione attuale';
+const zoneId=(lat,lon)=>'z_'+Math.round(lat*4)+'_'+Math.round(lon*4);
+function zones(){
+  const out=[],seenZ=new Set();
+  for(const sp of S.spots||[]){if(sp.lat==null)continue;const rid=zoneId(sp.lat,sp.lon);if(seenZ.has(rid))continue;seenZ.add(rid);out.push({rid,name:'Zona '+placeName(sp),lat:Math.round(sp.lat*4)/4,lon:Math.round(sp.lon*4)/4});}
+  out.push({rid:'z_it',name:'Tutta Italia'});
+  return out;
+}
+const roomName=rid=>{const r=CH.rooms[rid]||CH.mine[rid];if(rid==='bot')return 'Assistente';if(!r)return zones().find(z=>z.rid===rid)?.name||'Chat';
+  if(r.type==='dm'){const o=(r.members||[]).find(u=>u!==me()?.uid);return (r.names||{})[o]||'Messaggio privato';}return r.name||'Chat';};
+
+/* ---------- avvio: profilo, stanze e ascolto delle novità ---------- */
+CH.start=async()=>{
+  if(CH.started||!me()||!C().ff||typeof isPremium!=='function'||!isPremium())return;
+  CH.started=true;const ff=F(),db=D(),u=me();
+  try{
+    await ff.setDoc(ff.doc(db,'profiles',u.uid),{name:C().name(),code:uidCode(u.uid),t:Date.now()},{merge:true});
+    for(const z of zones()){
+      const ref=ff.doc(db,'rooms',z.rid);
+      try{const s=await ff.getDoc(ref);if(!s.exists())await ff.setDoc(ref,{type:'zone',name:z.name,zone:z.lat!=null?{lat:z.lat,lon:z.lon}:null,t:Date.now()});}catch(e){}
+      CH.subs[z.rid]=ff.onSnapshot(ref,s=>{if(!s.exists())return;const old=CH.rooms[z.rid]?.last?.ts||0;CH.rooms[z.rid]={id:z.rid,...s.data()};onRoom(z.rid,old);});
+    }
+    CH.subs._mine=ff.onSnapshot(ff.query(ff.collection(db,'rooms'),ff.where('members','array-contains',u.uid)),snap=>{
+      snap.docChanges().forEach(c=>{const id=c.doc.id;if(c.type==='removed'){delete CH.mine[id];return;}const old=CH.mine[id]?.last?.ts||0;CH.mine[id]={id,...c.doc.data()};onRoom(id,old);});
+      refresh();});
+    CH.subs._notif=ff.onSnapshot(ff.collection(db,'notifs',u.uid,'items'),snap=>{
+      snap.docChanges().forEach(c=>{if(c.type==='removed')return;const n={id:c.doc.id,...c.doc.data()};if(CH.notifs.some(x=>x.id===n.id))return;CH.notifs.push(n);
+        if(n.ts>CH.t0&&!blocked().includes(n.fromUid))notify(`${n.from} ti ha risposto`,clean(n.text),n.rid);});
+      CH.notifs.sort((a,b)=>b.ts-a.ts);refresh();});
+  }catch(e){CH.err='Chat non raggiungibile: '+(e.code||e.message);CH.started=false;refresh();}
+};
+CH.stop=()=>{Object.values(CH.subs).forEach(f=>{try{f();}catch(e){}});CH.subs={};CH.unsubRoom?.();CH.unsubRoom=null;CH.started=false;};
+// nuova attività in una stanza: avviso se il messaggio è di un altro e non sto già guardando quella stanza
+function onRoom(rid,oldTs){
+  const r=CH.rooms[rid]||CH.mine[rid],l=r?.last;
+  if(l&&l.ts>oldTs&&l.ts>CH.t0&&l.uid!==me()?.uid&&!blocked().includes(l.uid)){
+    const watching=CH.rid===rid&&S.tab==='chat'&&document.visibilityState==='visible';
+    if(watching)markSeen(rid);
+    else if(r.type!=='zone'||LS.get('chatnotif',{}).zones!==false)notify(roomName(rid),`${l.name}: ${clean(l.text)}`,rid);
+  }
+  refresh();
+}
+function notify(title,body,rid){
+  CH.badge();
+  if(!notifOn())return;
+  if(document.visibilityState==='visible'){if(S.tab!=='chat'||CH.rid!==rid)toast('💬 '+title+' · '+String(body).slice(0,60));return;}
+  if(!('Notification' in window)||Notification.permission!=='granted')return;
+  navigator.serviceWorker?.ready.then(r=>r.showNotification(title,{body:String(body).slice(0,140),icon:'icon-192.png',badge:'icon-192.png',tag:'lenza-'+rid,data:{url:location.pathname+'#chat',rid}})).catch(()=>{try{new Notification(title,{body});}catch(e){}});
+}
+CH.unread=()=>{const s=seen(),u=me()?.uid;let n=0;
+  for(const r of [...Object.values(CH.rooms),...Object.values(CH.mine)]){const l=r.last;if(l&&l.uid!==u&&l.ts>(s[r.id]||0)&&!blocked().includes(l.uid))n++;}
+  return n+CH.notifs.filter(x=>!x.read).length;};
+CH.badge=()=>{const b=document.querySelector(`#nav button[onclick="go('chat')"]`);if(!b)return;let el=b.querySelector('.cbadge');const n=CH.unread();
+  if(!n){el?.remove();return;}if(!el){el=document.createElement('i');el.className='cbadge';b.appendChild(el);}el.textContent=n>9?'9+':n;};
+function markSeen(rid){const s=seen();s[rid]=Date.now();LS.set('chatseen',s);CH.badge();}
+// aggiorno solo la parte che cambia, così il testo che si sta scrivendo non si perde
+function refresh(){CH.badge();if(S.tab!=='chat')return;
+  if(CH.rid){const log=document.getElementById('chatlog');if(log){const atEnd=log.scrollHeight-log.scrollTop-log.clientHeight<80;log.innerHTML=logHtml();if(atEnd)log.scrollTop=log.scrollHeight;}}
+  else{const box=document.getElementById('chatlist');if(box)box.innerHTML=listHtml();}}
+
+/* ---------- pagina ---------- */
+CH.view=v=>{
+  if(!me()){v.innerHTML=subHead('Chat','Funzione Premium','home')+`<div class="card"><p class="mut">Accedi con il tuo account per usare la chat.</p><button class="btn" onclick="CLOUD.open()">Accedi</button></div>`;return;}
+  CH.start();
+  if(CH.rid)return roomView(v);
+  const tabs=[['zone','📍 Zone'],['priv','👥 Privati'],['bot','🤖 Assistente'],['amici','🤝 Amici']];
+  v.innerHTML=subHead('Chat','Zone, amici e assistente','home')+(CH.err?`<div class="banner">⚠️ ${esc(CH.err)}</div>`:'')+
+    `<div class="chips" style="margin-bottom:12px">${tabs.map(([k,n])=>`<span class="chip ${CH.tab===k?'on':''}" onclick="CHAT.tab='${k}';render()">${n}</span>`).join('')}</div><div id="chatlist">${listHtml()}</div>`;
+};
+const ago=ts=>{const m=Math.round((Date.now()-ts)/60000);return m<1?'ora':m<60?m+' min':m<1440?Math.round(m/60)+' h':new Date(ts).toLocaleDateString('it-IT',{day:'numeric',month:'short'});};
+function roomRow(rid,icon,sub){
+  const r=CH.rooms[rid]||CH.mine[rid],l=r?.last,s=seen(),un=l&&l.uid!==me()?.uid&&l.ts>(s[rid]||0)&&!blocked().includes(l.uid);
+  return `<div class="croom" onclick="CHAT.open('${rid}')"><div class="cri">${icon}</div><div style="flex:1;min-width:0"><b>${esc(roomName(rid))}</b>
+    <div class="small mut cprev">${l&&!blocked().includes(l.uid)?esc(l.name+': '+clean(l.text)):esc(sub||'Nessun messaggio: scrivi tu per primo')}</div></div>
+    <div style="text-align:right">${l?`<div class="small mut">${ago(l.ts)}</div>`:''}${un?'<i class="cdot"></i>':''}</div></div>`;
+}
+function listHtml(){
+  if(CH.tab==='zone')return `<div class="card"><h3>📍 Canali per zona</h3><p class="small mut" style="margin:-4px 0 6px">Una stanza per ogni zona dei tuoi spot (circa 25 km). Le coordinate dei tuoi spot non vengono mai mostrate.</p>
+    ${zones().map(z=>roomRow(z.rid,z.rid==='z_it'?'🇮🇹':'📍',z.rid==='z_it'?'Tutti i pescatori di Lenza':'')).join('')}</div>${notifCard()}`;
+  if(CH.tab==='priv'){const rs=Object.values(CH.mine).sort((a,b)=>(b.last?.ts||b.t||0)-(a.last?.ts||a.t||0));
+    return `<div class="card"><h3>👥 Messaggi privati e gruppi</h3>${rs.length?rs.map(r=>roomRow(r.id,r.type==='group'?'👥':'💬','')).join(''):'<p class="small mut">Nessuna conversazione. Aggiungi un amico nella scheda «Amici» e scrivigli.</p>'}
+      <button class="btn ghost full" style="margin-top:10px" onclick="CHAT.newGroup()">➕ Nuovo gruppo di pesca</button></div>`;}
+  if(CH.tab==='bot')return `<div class="card"><h3>🤖 Assistente in chat</h3><p class="small mut">Chiedi esche, montature, tecniche e orari migliori: risponde con il meteo, il mare e l'indice di pescosità del tuo spot attivo${typeof gemKey==='function'&&gemKey()?' (con Gemini)':''}.</p>${roomRow('bot','🤖','Fai una domanda')}</div>`;
+  const fr=friends(),bl=blocked(),code=uidCode(me().uid);
+  return `<div class="card"><h3>🤝 Il tuo codice amico</h3><div class="ccode">${code}</div><p class="small mut" style="text-align:center">Dallo ai tuoi compagni di pesca: con questo codice ti aggiungono agli amici.</p>
+    <div class="row" style="gap:8px;margin-top:8px"><input id="fcode" placeholder="Codice di un amico" maxlength="6" style="flex:1;text-transform:uppercase"><button class="btn" onclick="CHAT.addByCode()">Aggiungi</button></div></div>
+  <div class="card"><h3>Amici</h3>${fr.length?fr.map(f=>`<div class="croom"><div class="cri">🎣</div><div style="flex:1"><b>${esc(f.name)}</b></div><button class="btn" style="padding:7px 12px" onclick="CHAT.dm('${f.uid}')">Scrivi</button><button class="btn ghost" style="padding:7px 10px" onclick="CHAT.unfriend('${f.uid}')">✕</button></div>`).join(''):'<p class="small mut">Nessun amico ancora.</p>'}</div>
+  ${bl.length?`<div class="card"><h3>🚫 Utenti bloccati</h3><p class="small mut">Non vedi i loro messaggi.</p>${bl.map(u=>`<div class="croom"><div style="flex:1">${esc((LS.get('chatblocknames',{})[u])||'Utente')}</div><button class="btn ghost" style="padding:7px 12px" onclick="CHAT.unblock('${u}')">Sblocca</button></div>`).join('')}</div>`:''}`;
+}
+function notifCard(){
+  const n=LS.get('chatnotif',{on:false,zones:true}),perm='Notification' in window?Notification.permission:'unsupported';
+  const reps=CH.notifs.slice(0,5);
+  return `${reps.length?`<div class="card"><h3>🔔 Risposte ai tuoi messaggi</h3>${reps.map(x=>`<div class="croom" onclick="CHAT.openNotif('${x.id}')"><div class="cri">↩️</div><div style="flex:1;min-width:0"><b>${esc(x.from)}</b> <span class="small mut">in ${esc(x.room||'')}</span><div class="small mut cprev">${esc(clean(x.text))}</div></div><div class="small mut">${ago(x.ts)}</div>${x.read?'':'<i class="cdot"></i>'}</div>`).join('')}</div>`:''}
+  <div class="card"><h3>🔔 Notifiche</h3>
+    <label class="crow"><input type="checkbox" ${n.on?'checked':''} onchange="CHAT.setNotif(this.checked)"> Avvisami dei nuovi messaggi</label>
+    <label class="crow"><input type="checkbox" ${n.zones!==false?'checked':''} onchange="CHAT.setNotifZones(this.checked)"> Anche per i canali delle zone</label>
+    <p class="small mut" style="margin:6px 0 0">${perm==='denied'?'⚠️ Le notifiche sono bloccate nelle impostazioni del browser.':perm==='unsupported'?'Questo browser non supporta le notifiche: vedrai gli avvisi dentro l\'app.':'Arrivano mentre Lenza è aperta, anche in un\'altra scheda o in secondo piano. Messaggi privati e risposte ti avvisano sempre.'}</p></div>`;
+}
+CH.setNotif=async on=>{const n=LS.get('chatnotif',{zones:true});n.on=on;
+  if(on&&'Notification' in window&&Notification.permission==='default'){try{await Notification.requestPermission();}catch(e){}}
+  LS.set('chatnotif',n);render();};
+CH.setNotifZones=on=>{const n=LS.get('chatnotif',{on:false});n.zones=on;LS.set('chatnotif',n);};
+CH.openNotif=async id=>{const x=CH.notifs.find(n=>n.id===id);if(!x)return;x.read=true;try{await F().deleteDoc(F().doc(D(),'notifs',me().uid,'items',id));}catch(e){}CH.notifs=CH.notifs.filter(n=>n.id!==id);CH.open(x.rid);};
+
+/* ---------- stanza ---------- */
+CH.open=rid=>{CH.rid=rid;CH.reply=null;CH.msgs=[];CH.unsubRoom?.();CH.unsubRoom=null;markSeen(rid);
+  if(rid!=='bot'){const ff=F();CH.unsubRoom=ff.onSnapshot(ff.query(ff.collection(D(),'rooms',rid,'msgs'),ff.orderBy('ts','desc'),ff.limit(80)),snap=>{
+    const m=new Map(CH.msgs.map(x=>[x.id,x]));snap.docChanges().forEach(c=>{if(c.type==='removed')m.delete(c.doc.id);else m.set(c.doc.id,{id:c.doc.id,...c.doc.data()});});
+    CH.msgs=[...m.values()].sort((a,b)=>a.ts-b.ts).slice(-80);if(S.tab==='chat'&&CH.rid===rid)markSeen(rid);refresh();});}
+  if(S.tab!=='chat')go('chat');else render();};
+CH.back=()=>{CH.unsubRoom?.();CH.unsubRoom=null;CH.rid=null;CH.reply=null;render();};
+function roomView(v){
+  const rid=CH.rid,r=CH.rooms[rid]||CH.mine[rid],bot=rid==='bot';
+  const sub=bot?'Consigli su misura per il tuo spot':r?.type==='zone'?'Canale pubblico della zona':r?.type==='group'?`Gruppo · ${(r.members||[]).length} persone`:'Messaggio privato';
+  v.innerHTML=`<div class="subhead"><button class="back" onclick="CHAT.back()" aria-label="Indietro">‹</button><div><h2>${esc(roomName(rid))}</h2><p>${sub}</p></div></div>
+  <div class="card chatcard"><div id="chatlog" class="chatlog">${logHtml()}</div>
+    <div id="creply">${replyHtml()}</div>
+    <div class="ccomp">${bot?'':`<button class="cbtn" title="Condividi una cattura" onclick="CHAT.shareCatch()">📸</button><button class="cbtn" title="Condizioni in diretta" onclick="CHAT.condSheet()">🌊</button>`}
+      <textarea id="cmsg" rows="1" maxlength="1000" placeholder="${bot?'Chiedi all\'assistente…':'Scrivi un messaggio…'}" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();CHAT.send();}"></textarea>
+      <button class="cbtn send" onclick="CHAT.send()" aria-label="Invia">➤</button></div></div>`;
+  const log=document.getElementById('chatlog');log.scrollTop=log.scrollHeight;
+}
+const hm=ts=>new Date(ts).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
+function logHtml(){
+  if(CH.rid==='bot'){const h=LS.get('chatbot',[]);
+    return (h.length?'':`<div class="cempty">🤖 Ciao! Chiedimi per esempio:<br><span class="chip" onclick="CHAT.ask('Quando conviene pescare oggi?')">Quando conviene pescare oggi?</span> <span class="chip" onclick="CHAT.ask('Che esca uso per le orate adesso?')">Che esca uso per le orate?</span> <span class="chip" onclick="CHAT.ask('Che montatura per il surfcasting con mare mosso?')">Montatura con mare mosso?</span></div>`)+
+      h.map(m=>`<div class="cmsg ${m.me?'me':''}"><div class="cb">${m.me?esc(m.text):fmtBot(m.text)}<div class="ct">${hm(m.ts)}</div></div></div>`).join('')+(CH.botBusy?'<div class="cmsg"><div class="cb"><span class="aispin" style="width:16px;height:16px;border-width:2px;display:inline-block;vertical-align:-3px"></span> Ci penso…</div></div>':'');}
+  const u=me()?.uid,bl=blocked(),now=Date.now();
+  const ms=CH.msgs.filter(m=>!bl.includes(m.uid)&&!(m.kind==='cond'&&m.exp&&m.exp<now));
+  if(!ms.length)return `<div class="cempty">Nessun messaggio. Rompi il ghiaccio! 🎣</div>`;
+  let lastDay='';
+  return ms.map(m=>{const mine=m.uid===u,day=new Date(m.ts).toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
+    const sep=day!==lastDay?`<div class="cday">${day}</div>`:'';lastDay=day;
+    if((m.rep||0)>=REP_HIDE&&!mine)return sep+`<div class="cmsg"><div class="cb hid">🛡️ Messaggio nascosto dopo le segnalazioni</div></div>`;
+    const rp=m.reply?`<div class="crq">↩️ <b>${esc(m.reply.name)}</b>: ${esc(clean(m.reply.text).slice(0,80))}</div>`:'';
+    let body='';
+    if(m.kind==='catch'){const c=m.catch||{};body=`<div class="ccatch">${c.photo?`<img src="${c.photo}" alt="" onclick="viewPhoto(this.src)">`:''}<div class="cct"><b>🐟 ${esc(c.sp||'Cattura')}</b>${c.sci?` <i class="small">${esc(c.sci)}</i>`:''}
+      <div class="small">${c.len?`📏 ${fmt1(c.len)} cm`:''}${c.w?` · ⚖️ ${c.w<1?Math.round(c.w*1000)+' g':fmt1(c.w)+' kg'}`:''}</div><div class="small mut">📍 ${c.pos?`<a href="https://www.openstreetmap.org/?mlat=${c.pos.lat}&mlon=${c.pos.lon}#map=15/${c.pos.lat}/${c.pos.lon}" target="_blank" rel="noopener" style="color:inherit">posizione condivisa</a>`:esc(c.zone||'zona')}</div></div></div>`;}
+    else if(m.kind==='cond'){const c=m.cond||{},left=Math.max(0,Math.round((m.exp-now)/3600e3));body=`<div class="ccond"><b>🌊 Condizioni in diretta</b><div class="cchips">${['sea','wind','water','bite'].filter(k=>c[k]).map(k=>`<span>${esc(c[k])}</span>`).join('')}</div><div class="small mut">valide ancora ${left?left+' h':'meno di un\'ora'}</div></div>`;}
+    const txt=m.text?`<div>${esc(clean(m.text)).replace(/\n/g,'<br>')}</div>`:'';
+    return sep+`<div class="cmsg ${mine?'me':''}" onclick="CHAT.act('${m.id}')"><div class="cb">${mine?'':`<div class="cn">${esc(m.name)}</div>`}${rp}${body}${txt}<div class="ct">${hm(m.ts)}</div></div></div>`;}).join('');
+}
+const fmtBot=t=>esc(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>').replace(/\n/g,'<br>');
+function replyHtml(){return CH.reply?`<div class="crply">↩️ Rispondi a <b>${esc(CH.reply.name)}</b>: ${esc(clean(CH.reply.text).slice(0,60))} <u style="cursor:pointer;margin-left:6px" onclick="CHAT.reply=null;document.getElementById('creply').innerHTML=''">annulla</u></div>`:'';}
+
+/* ---------- invio ---------- */
+async function post(msg,preview){
+  const ff=F(),db=D(),u=me(),rid=CH.rid,id=newId();
+  const name=C().name();Object.assign(msg,{uid:u.uid,name,ts:Date.now()});
+  if(CH.reply){msg.reply={id:CH.reply.id,uid:CH.reply.uid,name:CH.reply.name,text:String(CH.reply.text||'').slice(0,120)};}
+  await ff.setDoc(ff.doc(db,'rooms',rid,'msgs',id),msg);
+  await ff.setDoc(ff.doc(db,'rooms',rid),{last:{text:preview.slice(0,120),name,uid:u.uid,ts:msg.ts}},{merge:true});
+  if(msg.reply&&msg.reply.uid!==u.uid)ff.setDoc(ff.doc(db,'notifs',msg.reply.uid,'items',id),{rid,room:roomName(rid),from:name,fromUid:u.uid,text:preview.slice(0,140),ts:msg.ts}).catch(()=>{});
+  CH.reply=null;const rp=document.getElementById('creply');if(rp)rp.innerHTML='';
+}
+CH.send=async()=>{
+  const el=document.getElementById('cmsg');const t=(el?.value||'').trim();if(!t)return;
+  if(CH.rid==='bot')return CH.ask(t);
+  el.value='';
+  try{await post({kind:'text',text:clean(t)},clean(t));}catch(e){el.value=t;toast('⚠️ Messaggio non inviato: '+(e.code||e.message));}
+};
+// azioni su un messaggio: rispondi, amici, privato, segnala, blocca, elimina
+CH.act=id=>{const m=CH.msgs.find(x=>x.id===id);if(!m)return;const mine=m.uid===me()?.uid,fr=friends().some(f=>f.uid===m.uid);
+  openSheet(`<h2>${mine?'Il tuo messaggio':esc(m.name)}</h2><div class="small mut" style="margin-bottom:12px">${esc(clean(m.text||m.catch?.sp||'Condizioni del mare').slice(0,140))}</div>
+    <button class="btn full" style="margin-bottom:8px" onclick="CHAT.replyTo('${id}')">↩️ Rispondi</button>
+    ${mine?`<button class="btn ghost full" onclick="CHAT.del('${id}')">🗑️ Elimina messaggio</button>`:`
+    ${fr?'':`<button class="btn ghost full" style="margin-bottom:8px" onclick="CHAT.befriend('${m.uid}','${esc(m.name).replace(/'/g,'')}')">🤝 Aggiungi agli amici</button>`}
+    <button class="btn ghost full" style="margin-bottom:8px" onclick="closeSheet();CHAT.dm('${m.uid}','${esc(m.name).replace(/'/g,'')}')">💬 Scrivi in privato</button>
+    <button class="btn ghost full" style="margin-bottom:8px" onclick="CHAT.report('${id}')">🚩 Segnala messaggio</button>
+    <button class="btn ghost full" onclick="CHAT.block('${m.uid}','${esc(m.name).replace(/'/g,'')}')">🚫 Blocca ${esc(m.name)}</button>`}`);};
+CH.replyTo=id=>{const m=CH.msgs.find(x=>x.id===id);closeSheet();if(!m)return;CH.reply={id,uid:m.uid,name:m.name,text:m.text||('🐟 '+(m.catch?.sp||'cattura'))};
+  const rp=document.getElementById('creply');if(rp)rp.innerHTML=replyHtml();document.getElementById('cmsg')?.focus();};
+CH.del=async id=>{closeSheet();try{await F().deleteDoc(F().doc(D(),'rooms',CH.rid,'msgs',id));toast('Messaggio eliminato');}catch(e){toast('⚠️ '+(e.code||e.message));}};
+CH.report=async id=>{closeSheet();const m=CH.msgs.find(x=>x.id===id);if(!m)return;const ff=F();
+  const done=LS.get('chatreported',[]);if(done.includes(id)){toast('Hai già segnalato questo messaggio');return;}
+  try{await ff.setDoc(ff.doc(D(),'reports',newId()),{rid:CH.rid,mid:id,uid:m.uid,name:m.name,text:String(m.text||'').slice(0,300),by:me().uid,ts:Date.now()});
+    await ff.updateDoc(ff.doc(D(),'rooms',CH.rid,'msgs',id),{rep:ff.increment(1)});
+    LS.set('chatreported',[...done,id].slice(-300));toast('🚩 Segnalazione inviata, grazie');}catch(e){toast('⚠️ '+(e.code||e.message));}};
+CH.block=(uid,name)=>{closeSheet();if(!confirm(`Bloccare ${name}? Non vedrai più i suoi messaggi.`))return;
+  LS.set('chatblock',[...new Set([...blocked(),uid])]);const n=LS.get('chatblocknames',{});n[uid]=name;LS.set('chatblocknames',n);refresh();toast('🚫 '+name+' bloccato');};
+CH.unblock=uid=>{LS.set('chatblock',blocked().filter(u=>u!==uid));render();};
+
+/* ---------- amici, privati e gruppi ---------- */
+CH.befriend=(uid,name)=>{closeSheet();if(friends().some(f=>f.uid===uid))return;LS.set('chatfriends',[...friends(),{uid,name}]);toast('🤝 '+name+' aggiunto agli amici');};
+CH.unfriend=uid=>{if(!confirm('Togliere dagli amici?'))return;LS.set('chatfriends',friends().filter(f=>f.uid!==uid));render();};
+CH.addByCode=async()=>{const code=(document.getElementById('fcode')?.value||'').trim().toUpperCase();if(code.length!==6){toast('Il codice ha 6 caratteri');return;}
+  if(code===uidCode(me().uid)){toast('Questo è il tuo codice 🙂');return;}
+  try{const ff=F(),s=await ff.getDocs(ff.query(ff.collection(D(),'profiles'),ff.where('code','==',code)));
+    if(!s.docs.length){toast('Nessun pescatore con questo codice');return;}
+    const d=s.docs[0],p=d.data();if(friends().some(f=>f.uid===d.id)){toast('È già tra i tuoi amici');return;}
+    LS.set('chatfriends',[...friends(),{uid:d.id,name:p.name||'Amico'}]);toast('🤝 '+(p.name||'Amico')+' aggiunto agli amici');render();}
+  catch(e){toast('⚠️ '+(e.code||e.message));}};
+CH.dm=async(uid,name)=>{const u=me();name=name||friends().find(f=>f.uid===uid)?.name||'Amico';
+  const rid='d_'+[u.uid,uid].sort().join('_'),ff=F();
+  try{await ff.setDoc(ff.doc(D(),'rooms',rid),{type:'dm',members:[u.uid,uid].sort(),names:{[u.uid]:C().name(),[uid]:name},t:Date.now()},{merge:true});
+    CH.mine[rid]=CH.mine[rid]||{id:rid,type:'dm',members:[u.uid,uid],names:{[u.uid]:C().name(),[uid]:name}};CH.open(rid);}
+  catch(e){toast('⚠️ '+(e.code||e.message));}};
+CH.newGroup=()=>{const fr=friends();if(!fr.length){toast('Aggiungi prima qualche amico');CH.tab='amici';render();return;}
+  openSheet(`<h2>👥 Nuovo gruppo</h2><input id="gname" placeholder="Nome del gruppo (es. Uscita di sabato)" maxlength="40" style="margin-bottom:10px">
+    ${fr.map(f=>`<label class="crow"><input type="checkbox" class="gmem" value="${f.uid}"> ${esc(f.name)}</label>`).join('')}
+    <button class="btn full" style="margin-top:12px" onclick="CHAT.makeGroup()">Crea il gruppo</button>`);};
+CH.makeGroup=async()=>{const name=clean((document.getElementById('gname')?.value||'').trim())||'Gruppo di pesca';
+  const mem=[...document.querySelectorAll('.gmem:checked')].map(x=>x.value);if(!mem.length){toast('Scegli almeno un amico');return;}
+  const u=me(),rid='g_'+newId(),ff=F(),members=[u.uid,...mem];
+  try{await ff.setDoc(ff.doc(D(),'rooms',rid),{type:'group',name,members,owner:u.uid,t:Date.now()});closeSheet();CH.mine[rid]={id:rid,type:'group',name,members};CH.open(rid);}
+  catch(e){toast('⚠️ '+(e.code||e.message));}};
+
+/* ---------- catture condivise (con spot protetti) ---------- */
+async function small(src,max=640){if(!src)return null;
+  const img=await new Promise((ok,ko)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=ko;i.src=src;});
+  const k=Math.min(1,max/Math.max(img.width,img.height)),cv=document.createElement('canvas');cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);
+  cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);return cv.toDataURL('image/jpeg',.62);}
+CH.shareCatch=(fromRecog)=>{
+  const st=window.ASSIST?.st,r=st?.r,m=st?.m;
+  const have=r?.is_fish;const len=m?.len||'',w=have&&m?.len?((m.gem&&m.wgem)||(typeof estW==='function'&&estW(r.species,m.len))||m.wgem||''):'';
+  const rooms=[...zones().map(z=>[z.rid,z.name]),...Object.values(CH.mine).map(x=>[x.id,roomName(x.id)])];
+  const cur=CH.rid&&CH.rid!=='bot'?CH.rid:rooms[0][0];
+  CH._photo=have?window.ASSIST.photo:null;
+  openSheet(`<h2>📸 Condividi una cattura</h2>
+    ${have?`<div class="cphoto"><img src="${window.ASSIST.photo}" alt=""></div>`:`<label class="shoot" style="margin-bottom:10px"><input type="file" accept="image/*" onchange="CHAT.pickPhoto(this)"><span class="cam">🖼️</span><b>Scegli la foto</b><small id="cphname">facoltativa</small></label>`}
+    <label>Specie</label><input id="csp" value="${esc(have?r.species:'')}" placeholder="es. Orata">
+    <div class="row" style="gap:8px"><div style="flex:1"><label>Lunghezza (cm)</label><input id="clen" type="number" inputmode="decimal" value="${len?Math.round(len*10)/10:''}"></div>
+    <div style="flex:1"><label>Peso (kg)</label><input id="cw" type="number" inputmode="decimal" step="0.01" value="${w?Math.round(w*100)/100:''}"></div></div>
+    <label>Commento</label><input id="ctxt" maxlength="300" placeholder="es. Presa all'alba con l'arenicola">
+    <label>Dove la pubblico</label><select id="croom">${rooms.map(([id,n])=>`<option value="${id}" ${id===cur?'selected':''}>${esc(n)}</option>`).join('')}</select>
+    <label class="crow" style="margin-top:10px"><input type="checkbox" id="cpos"> Condividi la posizione esatta</label>
+    <p class="small mut" style="margin:2px 0 12px">🛡️ Spot protetti: se non la spunti, gli altri vedono solo la zona${activeSpot()?` («${esc(placeName(activeSpot()))}»)`:''}, mai le coordinate.</p>
+    <button class="btn full" onclick="CHAT.postCatch()">Pubblica</button>`);
+  CH._sci=have?r.scientific_name:'';
+};
+CH.pickPhoto=async inp=>{const f=inp.files?.[0];if(!f)return;const d=await new Promise(ok=>{const fr=new FileReader();fr.onload=()=>ok(fr.result);fr.readAsDataURL(f);});CH._photo=d;const n=document.getElementById('cphname');if(n)n.textContent='✔ '+f.name;};
+CH.postCatch=async()=>{
+  const sp=clean(document.getElementById('csp').value.trim()),len=parseFloat(document.getElementById('clen').value.replace(',','.')),w=parseFloat(document.getElementById('cw').value.replace(',','.'));
+  const rid=document.getElementById('croom').value,exact=document.getElementById('cpos').checked,txt=clean(document.getElementById('ctxt').value.trim());
+  if(!sp&&!CH._photo){toast('Scrivi la specie o scegli una foto');return;}
+  const s=activeSpot(),c={sp:sp||'Cattura',sci:CH._sci||'',len:isNaN(len)?null:len,w:isNaN(w)?null:w,zone:s?placeName(s):''};
+  if(exact&&s)c.pos={lat:Math.round(s.lat*1e5)/1e5,lon:Math.round(s.lon*1e5)/1e5};
+  toast('Pubblico…');
+  try{c.photo=await small(CH._photo);}catch(e){c.photo=null;}
+  const prev=CH.rid;CH.rid=rid;
+  try{await post({kind:'catch',catch:c,text:txt},`🐟 ${c.sp}${c.len?' '+fmt1(c.len)+' cm':''}`);closeSheet();toast('✅ Cattura pubblicata');CH.open(rid);}
+  catch(e){CH.rid=prev;toast('⚠️ Non pubblicata: '+(e.code||e.message));}
+};
+
+/* ---------- condizioni in diretta ---------- */
+const COND={sea:['Mare piatto','Mare poco mosso','Mare mosso','Mare agitato'],wind:['Niente vento','Vento leggero','Vento teso','Vento forte'],water:['Acqua limpida','Acqua velata','Acqua torbida','Alghe'],bite:['Mangiano!','Qualche tocco','Niente mangianza']};
+CH.condSheet=()=>{CH._cond={};const lab={sea:'Mare',wind:'Vento',water:'Acqua',bite:'Mangianza'};
+  openSheet(`<h2>🌊 Condizioni in diretta</h2><p class="small mut" style="margin-top:-4px">Racconta com'è adesso: il messaggio resta visibile ${COND_H} ore.</p>
+    ${Object.entries(COND).map(([k,a])=>`<label>${lab[k]}</label><div class="chips">${a.map(x=>`<span class="chip" data-k="${k}" onclick="CHAT.pickCond(this)">${x}</span>`).join('')}</div>`).join('')}
+    <label>Note</label><input id="cnote" maxlength="200" placeholder="es. Mangianza di aguglie sotto riva">
+    <button class="btn full" style="margin-top:12px" onclick="CHAT.postCond()">Pubblica</button>`);};
+CH.pickCond=el=>{const k=el.dataset.k,on=CH._cond[k]===el.textContent;document.querySelectorAll(`.chip[data-k="${k}"]`).forEach(x=>x.classList.remove('on'));if(!on){el.classList.add('on');CH._cond[k]=el.textContent;}else delete CH._cond[k];};
+CH.postCond=async()=>{const c=CH._cond||{};const note=clean(document.getElementById('cnote').value.trim());if(!Object.keys(c).length&&!note){toast('Scegli almeno una voce');return;}
+  try{await post({kind:'cond',cond:c,text:note,exp:Date.now()+COND_H*3600e3},'🌊 '+[c.sea,c.wind,c.bite].filter(Boolean).join(', ')+(note?' · '+note:''));closeSheet();toast('✅ Condizioni pubblicate');}
+  catch(e){toast('⚠️ '+(e.code||e.message));}};
+
+/* ---------- assistente ---------- */
+const strip=h=>String(h).replace(/<[^>]+>/g,'');
+function context(){
+  const sp=activeSpot(),X=S.wx,out=[];
+  if(sp)out.push(`Spot attivo: ${placeName(sp)} (ambiente: ${MODES[S.mode]?.n||S.mode}).`);
+  out.push('Data e ora: '+new Date().toLocaleString('it-IT',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'})+'.');
+  try{if(X){const now=new Date(),h=X.hours.find(x=>x.t<=now&&x.t.getTime()+3600e3>now);
+    if(h)out.push(`Adesso: ${fmt1(h.temp)}°C, vento ${fmt1(h.ws)} km/h, onda ${h.wave!=null?fmt1(h.wave)+' m':'n.d.'}, pressione ${Math.round(h.p)} hPa.`);
+    out.push('Indice di pescosità dei prossimi giorni: '+X.fdays.slice(0,4).map(d=>`${d.date.toLocaleDateString('it-IT',{weekday:'short'})} ${dayScore(X,d.date)}`).join(', ')+' (0-100).');
+    const today=new Date();today.setHours(0,0,0,0);const w=bestWindows(X,today,2);if(w.length)out.push('Finestre migliori di oggi: '+w.map(x=>`${hhmm(x.from)}-${hhmm(x.to)} (indice ${x.max})`).join(', ')+'.');}}catch(e){}
+  try{out.push('Consigli calcolati dall\'app: '+advice().map(a=>strip(a[1])).join(' '));}catch(e){}
+  return out.join('\n');
+}
+CH.ask=async q=>{
+  const el=document.getElementById('cmsg');if(el)el.value='';
+  const h=LS.get('chatbot',[]);h.push({me:true,text:q,ts:Date.now()});LS.set('chatbot',h.slice(-40));CH.botBusy=true;refresh();
+  let ans='';
+  if(typeof gemKey==='function'&&gemKey()){
+    try{const sys=`Sei l'assistente di pesca dell'app Lenza. Rispondi in italiano, in modo pratico e breve (massimo 8 righe), con esche, montature, tecniche e orari adatti alle condizioni. Usa le unità metriche. Se la domanda non riguarda la pesca, riporta gentilmente il discorso sulla pesca. Ricorda di rispettare le misure minime e la normativa locale quando parli di trattenere il pesce. Rispondi in JSON: {"risposta":"testo"}.\nDati attuali:\n${context()}`;
+      const hist=LS.get('chatbot',[]).slice(-10).map(m=>({role:m.me?'user':'model',parts:[{text:m.text}]}));
+      const j=await gemCall({systemInstruction:{parts:[{text:sys}]},contents:hist,generationConfig:{responseMimeType:'application/json',temperature:.6}});
+      ans=String(j.risposta||j.answer||'').trim();}
+    catch(e){ans='';}
+  }
+  if(!ans){let tips=[];try{tips=advice().map(a=>a[0]+' '+strip(a[1]));}catch(e){}
+    ans=(tips.length?'Ecco cosa ti consiglio adesso per il tuo spot:\n'+tips.join('\n'):'Sto ancora caricando il meteo del tuo spot: riprova tra qualche secondo.')+
+      (typeof gemKey==='function'&&gemKey()?'':'\n\nPer risposte libere a qualsiasi domanda attiva Gemini nelle Impostazioni.');}
+  const h2=LS.get('chatbot',[]);h2.push({me:false,text:ans,ts:Date.now()});LS.set('chatbot',h2.slice(-40));CH.botBusy=false;refresh();
+};
+
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.tab==='chat'&&CH.rid)markSeen(CH.rid);});
+})();
