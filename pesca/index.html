@@ -135,7 +135,7 @@
   .hero-stats .arrow{font-size:20px;color:#fff;}
   .hero-stats b{display:block;font-size:15px;margin-top:2px;}
   .hero-stats span{font-size:10.5px;opacity:.75;text-transform:uppercase;letter-spacing:.6px;}
-  .hero .waves{position:absolute;left:0;right:0;bottom:0;height:90px;z-index:-1;}
+  .hero .waves{position:absolute;left:0;right:0;bottom:0;width:100%;height:90px;z-index:-1;}
   .hero .waves use{animation:wave 7s linear infinite;}
   .hero .waves use:nth-child(2){animation-duration:11s;animation-direction:reverse;}
   .hero .waves use:nth-child(3){animation-duration:15s;}
@@ -321,7 +321,7 @@
   .live-stats div{background:rgba(0,10,30,.3);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:10px 4px;backdrop-filter:blur(8px);}
   .live-stats b{display:block;font-size:24px;}
   .live-stats span{font-size:11px;opacity:.75;text-transform:uppercase;letter-spacing:.6px;}
-  .live-hero .waves{position:absolute;left:0;right:0;bottom:0;height:90px;z-index:-1;}
+  .live-hero .waves{position:absolute;left:0;right:0;bottom:0;width:100%;height:90px;z-index:-1;}
   .live-hero .waves use{animation:wave 7s linear infinite;}
   .live-hero .waves use:nth-child(2){animation-duration:11s;animation-direction:reverse;}
   .btn.fish{font-size:19px;padding:18px;border-radius:20px;letter-spacing:.3px;}
@@ -418,6 +418,35 @@
   .welcome .feat span{width:40px;height:40px;flex:none;border-radius:13px;display:grid;place-items:center;font-size:19px;background:rgba(255,255,255,.07);}
   .kv{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--line);font-size:14px;}
   .kv:last-child{border-bottom:0;}
+  /* ===== Versione PC (schermi larghi): menu laterale, contenuti su due colonne, finestre al centro ===== */
+  .hnav{display:none;}
+  @media (min-width:1000px){
+    #app{max-width:1320px;padding-left:250px;}
+    header{padding:18px 28px 12px;}
+    header .spotchip{max-width:420px;}
+    nav{left:max(16px,calc((100vw - 1320px)/2 + 16px));top:92px;bottom:auto;transform:none;width:218px;max-width:none;flex-direction:column;align-items:stretch;gap:4px;padding:10px;border-radius:24px;}
+    nav button{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;padding:12px 14px;font-size:15px;border-radius:16px;}
+    nav button:hover{background:rgba(255,255,255,.06);color:var(--txt);}
+    nav .fab{order:-1;margin:0 0 8px;padding:0;flex-direction:row;}
+    nav .fab .fb{width:100%;height:50px;border-radius:16px;box-shadow:0 10px 24px -10px rgba(47,224,207,.9);}
+    nav .fab em{display:none;}
+    nav .fab .fb::after{content:'Inizia a pescare';font:700 15px 'Outfit',sans-serif;margin-left:8px;}
+    nav .fab.live .fb::after{content:'Sessione in corso';}
+    nav .fab .fb{display:flex;align-items:center;justify-content:center;}
+    main{padding:8px 28px 60px;columns:2 440px;column-gap:20px;}
+    main>*{break-inside:avoid;}
+    main>.hero,main>.subhead,main>.quick,main>.days,main>.seg2,main>.banner,main>.alert,main>.row,main>.empty,main>.loader,main>#map,main>#res,main>.modes{column-span:all;}
+    main>.card{display:inline-block;width:100%;}
+    .hero{padding:26px 34px 28px;}
+    .hnav{display:grid;place-items:center;position:absolute;top:50%;transform:translateY(-50%);z-index:5;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.25);background:rgba(3,13,26,.35);color:#fff;font:700 26px/1 'Outfit',sans-serif;cursor:pointer;}
+    .hnav:hover{background:rgba(3,13,26,.6);}
+    .hnav.l{left:12px;}.hnav.r{right:12px;}
+    .quick{grid-template-columns:repeat(4,minmax(0,220px));}
+    #map{height:62vh;}
+    .sheet{align-items:center;}
+    .sheet .box{max-width:640px;border-radius:30px;border-bottom:1px solid rgba(255,255,255,.1);max-height:88vh;}
+    .card:hover{border-color:rgba(255,255,255,.18);}
+  }
   @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;}}
 </style>
 </head>
@@ -943,7 +972,7 @@ function vHome(v){
   const D=X.days.find(d=>d.date.toDateString()===today.toDateString())||X.days[1];
   const wins=bestWindows(X,today),sol=X.sol[today.toDateString()]||[],sky=skyPhase(D,now);
   v.innerHTML=simBanner()+`
-  <section class="hero sky-${sky} ${SWIPE_DIR?'in-'+SWIPE_DIR:''}">${sky==='night'?'<div class="stars"></div>':''}<div class="orb"></div>
+  <section class="hero sky-${sky} ${SWIPE_DIR?'in-'+SWIPE_DIR:''}">${S.spots.length>1?'<button class="hnav l" onclick="stepSpot(-1)" aria-label="Spot precedente">‹</button><button class="hnav r" onclick="stepSpot(1)" aria-label="Spot successivo">›</button>':''}${sky==='night'?'<div class="stars"></div>':''}<div class="orb"></div>
     <div class="hero-top"><div><div class="hero-loc"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 0 0-7 7c0 5.3 7 13 7 13s7-7.7 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>${esc(activeSpot()?.name||'')}</div>
       <div class="hero-date">${now.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'})} · ${hhmm(now)}</div></div>
       <div class="hero-wx"><div class="ic">${wmo(h.code)[0]}</div><b>${fmt0(h.temp)}°</b></div></div>
@@ -2175,9 +2204,12 @@ document.addEventListener('touchstart',e=>{SW0=S.tab==='home'&&e.target.closest(
 document.addEventListener('touchend',e=>{
   if(!SW0)return;const t=e.changedTouches[0],dx=t.clientX-SW0.x,dy=t.clientY-SW0.y;SW0=null;
   if(Math.abs(dx)<60||Math.abs(dx)<Math.abs(dy)*1.5)return;
-  const i=S.spots.findIndex(x=>x.id===activeSpot()?.id),n=S.spots.length,j=(i+(dx<0?1:-1)+n)%n;
-  S.active=S.spots[j].id;LS.set('active',S.active);SWIPE_DIR=dx<0?'l':'r';toast('📍 '+S.spots[j].name);loadWeather().finally(()=>{SWIPE_DIR='';});
+  stepSpot(dx<0?1:-1);
 },{passive:true});
+function stepSpot(d){
+  const i=S.spots.findIndex(x=>x.id===activeSpot()?.id),n=S.spots.length;if(n<2)return;const j=(i+d+n)%n;
+  S.active=S.spots[j].id;LS.set('active',S.active);SWIPE_DIR=d>0?'l':'r';toast('📍 '+S.spots[j].name);loadWeather().finally(()=>{SWIPE_DIR='';});
+}
 checkBadges();
 render();
 loadWeather();
