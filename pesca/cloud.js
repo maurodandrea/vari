@@ -183,7 +183,8 @@ C.name=()=>{const u=C.user;if(!u)return '';const user=(u.email||'').split('@')[0
 C.chip=()=>{C.gate();const el=document.getElementById('userChip');if(!el)return;
   if(!window.LENZA_FB?.apiKey||!C.ready||!C.user){el.style.display='none';return;}
   el.style.display='';const n=C.name(),short=n;
-  el.innerHTML=C.user?`<i>${esc(n.charAt(0).toUpperCase())}</i><span>${esc(short)}</span>`:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Accedi</span>`;
+  const king=typeof isPremium==='function'&&isPremium();  // utenti Premium: corona accanto al nome
+  el.innerHTML=C.user?`<i>${esc(n.charAt(0).toUpperCase())}</i><span>${esc(short)}</span>${king?'<em class="crown" title="Premium">👑</em>':''}`:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Accedi</span>`;
   el.title=C.user?(C.user.email||n):'Accedi o registrati';el.classList.toggle('in',!!C.user);};
 C.open=()=>{if(C.user){go('settings');return;}openSheet(C.form());};
 // riquadro nella Home per chi non ha fatto l'accesso
@@ -202,7 +203,7 @@ C.card=()=>{
   if(!window.LENZA_FB?.apiKey||!C.user)return '';
   if(!C.ready)return `<div class="card"><h3>☁️ Account</h3><p class="small mut">${esc(C.status||'Carico…')}</p></div>`;
   if(C.user)return `<div class="card"><h3>☁️ Account</h3>
-    <div class="kv"><span>Accesso come</span><b style="word-break:break-all">${esc(C.user.email||C.user.displayName||'utente')}</b></div>
+    <div class="kv"><span>Accesso come</span><b style="word-break:break-all">${esc(C.user.email||C.user.displayName||'utente')}${typeof isPremium==='function'&&isPremium()?' 👑':''}</b></div>
     <p class="small" id="cloudst" style="margin:8px 0;color:var(--ok)">${esc(C.status||'')}</p>
     <p class="small mut">Spot, diario con le foto, catture, trofei e impostazioni sono salvati online e sincronizzati su tutti i dispositivi in cui accedi con questo account.</p>
     <div class="row" style="gap:8px;margin-top:8px"><button class="btn ghost" style="flex:1" onclick="CLOUD.syncNow()">↻ Sincronizza ora</button><button class="btn ghost" style="flex:1" onclick="CLOUD.logout()">Esci</button></div></div>`;
