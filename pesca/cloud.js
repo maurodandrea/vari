@@ -54,7 +54,12 @@ C.apple=()=>{const p=new fa.OAuthProvider('apple.com');p.addScope('email');p.add
 async function social(p){
   try{await fa.signInWithPopup(auth,p);toast('✅ Accesso effettuato');}
   catch(e){if(e.code==='auth/popup-blocked'||e.code==='auth/operation-not-supported-in-this-environment')return fa.signInWithRedirect(auth,p);toast('⚠️ '+errMsg(e));}}
-C.logout=async()=>{if(!confirm('Uscire dall\'account? I dati restano su questo dispositivo, ma non verranno più sincronizzati.'))return;clearTimeout(C.timer);await fa.signOut(auth);raw.set('clouduid',null);toast('Sei uscito');render();};
+// all'uscita i dati restano solo nell'account: tolgo la copia dal dispositivo (prima invio le ultime modifiche)
+C.logout=async()=>{if(!confirm('Uscire dall\'account? I tuoi dati restano salvati online e li ritrovi al prossimo accesso; da questo dispositivo vengono tolti.'))return;
+  clearTimeout(C.timer);try{await push();}catch(e){}
+  C.unsub.forEach(f=>f());C.unsub=[];await fa.signOut(auth);
+  try{[...SYNC_KEYS,'diary','cloudts','cloudhash','cloudsent','clouduid'].forEach(k=>localStorage.removeItem('lenza.'+k));}catch(e){}
+  location.hash='';location.reload();};
 C.syncNow=()=>{SYNC_KEYS.forEach(k=>C.dirty.add(k));C.dirty.add('diary');push();};
 
 /* ---------- sincronizzazione ---------- */
