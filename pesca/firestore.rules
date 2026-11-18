@@ -1,8 +1,9 @@
 rules_version = '2';
-// Regole di sicurezza per Lenza: ogni utente legge e scrive solo i propri dati (users/{uid}/...).
-// Chi si registra con email e password deve prima attivare l'account dal link ricevuto per email;
-// gli accessi con Google e Apple hanno già l'email verificata.
-// Da incollare in Console Firebase › Firestore Database › Regole › Pubblica.
+// Regole di sicurezza per Lenza. Da incollare in Console Firebase › Firestore Database › Regole › Pubblica.
+// - ogni utente legge e scrive solo i propri dati (users/{uid}/...);
+// - chi si registra con email e password deve prima attivare l'account dal link ricevuto per email
+//   (Google e Apple hanno già l'email verificata);
+// - chat: stanze pubbliche per zona, messaggi privati e gruppi visibili solo ai membri.
 service cloud.firestore {
   match /databases/{database}/documents {
     function attivo() {
@@ -10,8 +11,47 @@ service cloud.firestore {
         && (request.auth.token.email_verified == true
             || request.auth.token.firebase.sign_in_provider != 'password');
     }
+    function stanza(rid) { return get(/databases/$(database)/documents/rooms/$(rid)).data; }
+    function membro(r) { return r.type == 'zone' || request.auth.uid in r.members; }
+
     match /users/{uid}/{document=**} {
       allow read, write: if attivo() && request.auth.uid == uid;
+    }
+
+    // profilo pubblico: nome e codice amico
+    match /profiles/{uid} {
+      allow read: if attivo();
+      allow write: if attivo() && request.auth.uid == uid;
+    }
+
+    // stanze della chat
+    match /rooms/{rid} {
+      allow read: if attivo() && (resource == null || membro(resource.data));
+      allow create: if attivo() && (request.resource.data.type == 'zone' || request.auth.uid in request.resource.data.members);
+      allow update: if attivo() && membro(resource.data)
+        && request.resource.data.type == resource.data.type
+        && (resource.data.type == 'zone' || request.resource.data.members == resource.data.members);
+
+      match /msgs/{mid} {
+        allow read: if attivo() && membro(stanza(rid));
+        allow create: if attivo() && membro(stanza(rid)) && request.resource.data.uid == request.auth.uid;
+        allow delete: if attivo() && resource.data.uid == request.auth.uid;
+        // gli altri possono solo aumentare di 1 il contatore delle segnalazioni
+        allow update: if attivo() && membro(stanza(rid))
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rep'])
+          && request.resource.data.rep == resource.data.get('rep', 0) + 1;
+      }
+    }
+
+    // avvisi personali (risposte ai propri messaggi): chiunque può lasciarne uno, solo il destinatario li legge
+    match /notifs/{uid}/items/{id} {
+      allow read, delete: if attivo() && request.auth.uid == uid;
+      allow create: if attivo() && request.resource.data.fromUid == request.auth.uid;
+    }
+
+    // segnalazioni: si possono solo inviare (le legge l'amministratore dalla console)
+    match /reports/{id} {
+      allow create: if attivo() && request.resource.data.by == request.auth.uid;
     }
   }
 }
