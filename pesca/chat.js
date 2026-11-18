@@ -44,9 +44,12 @@ const chName=rid=>{if(rid==='z_it')return 'Tutta Italia';if(rid==='near')return 
   if(t==='p_'){const q=prov(c);return q?'Provincia di '+q[0][1]:null;}
   if(t==='c_'){const q=com(c);return q?`${q[0][0]} (${q[1][2]})`:null;}return null;};
 const chIcon=rid=>rid==='z_it'?'🇮🇹':rid==='near'?'🎣':rid.startsWith('r_')?'🗺️':rid.startsWith('p_')?'🏙️':rid.startsWith('c_')?'🏘️':'📍';
-// canali seguiti (avvisi e anteprima): all'inizio Italia, la regione, la provincia e il comune dello spot attivo
-const follows=()=>LS.get('chatfollow',null)||['z_it'];
-function defaultFollow(){if(LS.get('chatfollow',null))return;const m=myPlace();if(!m)return;LS.set('chatfollow',['z_it','r_'+m.r[0],'p_'+m.p[0],'c_'+m.c[1]]);}
+// canali seguiti (avvisi e anteprima): all'inizio solo il comune dello spot attivo; Italia, regione e provincia si seguono a scelta
+const follows=()=>LS.get('chatfollow',null)||[];
+function defaultFollow(){const m=myPlace(),f=LS.get('chatfollow',null);
+  // chi aveva i vecchi preferiti automatici (Italia, regione, provincia e comune) tiene solo il comune
+  if(f&&!LS.get('chatfollow2',false)&&m){const old=['z_it','r_'+m.r[0],'p_'+m.p[0]];LS.set('chatfollow',f.filter(x=>!old.includes(x)));LS.set('chatfollow2',true);return;}
+  if(f||!m)return;LS.set('chatfollow',['c_'+m.c[1]]);LS.set('chatfollow2',true);}
 CH.follow=rid=>{const f=follows();LS.set('chatfollow',f.includes(rid)?f.filter(x=>x!==rid):[...f,rid]);syncSubs();render();};
 async function ensureRoom(rid){const ff=F(),ref=ff.doc(D(),'rooms',rid);const s=await ff.getDoc(ref);
   if(!s.exists())await ff.setDoc(ref,{type:'zone',name:chName(rid)||'Canale',t:Date.now()});}
@@ -96,8 +99,8 @@ CH.start=async()=>{
     // rifiuterebbe tutto per un'ora; lo rinnovo subito
     try{const t=await u.getIdTokenResult?.();if(t&&u.emailVerified&&t.claims?.email_verified!==true)await u.getIdToken(true);}catch(e){}
     await ff.setDoc(ff.doc(db,'profiles',u.uid),{name:C().name(),code:uidCode(u.uid),t:Date.now()},{merge:true});
-    step='canale Italia';await ensureRoom('z_it');
-    loadGeo();syncSubs();nearSync();
+    step='canale Italia';
+    loadGeo();if(GEO)defaultFollow();syncSubs();nearSync();
     CH.subs._mine=ff.onSnapshot(ff.query(ff.collection(db,'rooms'),ff.where('members','array-contains',u.uid)),snap=>{
       snap.docChanges().forEach(c=>{const id=c.doc.id;if(c.type==='removed'){delete CH.mine[id];return;}const old=CH.mine[id]?.last?.ts||0;CH.mine[id]={id,...c.doc.data()};onRoom(id,old);});
       refresh();},snapErr('stanze private'));
@@ -159,7 +162,7 @@ CH.view=v=>{
   if(CH.rid)return roomView(v);
   const tabs=[['zone','📍 Canali'],['priv','👥 Privati'],['bot','🤖 Assistente'],['amici','🤝 Amici']];
   v.innerHTML=subHead('Chat','Zone, amici e assistente','home')+(CH.err?`<div class="banner">⚠️ ${esc(CH.err)}</div>`:'')+
-    `<div class="chips" style="margin-bottom:12px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none">${tabs.map(([k,n])=>`<span class="chip ${CH.tab===k?'on':''}" onclick="CHAT.tab='${k}';render()">${n}</span>`).join('')}</div><div id="chatlist">${listHtml()}</div>`;
+    `<div class="chips" style="margin-bottom:12px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none">${tabs.map(([k,n])=>`<span class="chip ${CH.tab===k?'on':''}" style="flex:none;white-space:nowrap" onclick="CHAT.tab='${k}';render()">${n}</span>`).join('')}</div><div id="chatlist">${listHtml()}</div>`;
 };
 const ago=ts=>{const m=Math.round((Date.now()-ts)/60000);return m<1?'ora':m<60?m+' min':m<1440?Math.round(m/60)+' h':new Date(ts).toLocaleDateString('it-IT',{day:'numeric',month:'short'});};
 function roomRow(rid,icon,sub){
@@ -197,7 +200,7 @@ function chanHtml(){
     else if(r)browse=crumb+roomRow('r_'+r[0],'🗺️','Canale di tutta la regione')+`<div class="small mut" style="margin:10px 0 2px">Scegli la provincia</div>`+r[2].map(p=>`<div class="croom" onclick="CHAT.navTo('${r[0]}','${p[0]}')"><div class="cri">🏙️</div><div style="flex:1"><b>${esc(p[1])}</b> <span class="small mut">${esc(p[2])} · ${p[3].length} comuni</span></div><span class="mut">›</span></div>`).join('');
     else browse=crumb+roomRow('z_it','🇮🇹','Tutti i pescatori di LenzApp')+`<div class="small mut" style="margin:10px 0 2px">Scegli la regione</div>`+GEO.r.map(r=>`<div class="croom" onclick="CHAT.navTo('${r[0]}')"><div class="cri">🗺️</div><div style="flex:1"><b>${esc(r[1])}</b></div><span class="mut">›</span></div>`).join('');}
   return `<div class="card"><h3>🎣 Il tuo spot</h3><p class="small mut" style="margin:-4px 0 6px">Ci sono solo i pescatori che hanno lo spot attivo a meno di ${NEAR_KM} km dal tuo. La tua posizione non viene mai mostrata.</p>${near}</div>
-  <div class="card"><h3>⭐ Canali che segui</h3>${fol.map(rid=>roomRow(rid,chIcon(rid),'')).join('')}<p class="small mut" style="margin:8px 0 0">Per seguire o smettere di seguire un canale aprilo e tocca ⭐ in alto.</p></div>
+  <div class="card"><h3>⭐ Canali che segui</h3>${fol.map(rid=>roomRow(rid,chIcon(rid),'')).join('')||'<p class="small mut" style="margin:0 0 6px">Nessun canale seguito.</p>'}<p class="small mut" style="margin:8px 0 0">Per seguire o smettere di seguire un canale aprilo e tocca ⭐ in alto.</p></div>
   <div class="card" id="chbrowse"><h3>🇮🇹 Tutti i canali</h3>${browse}</div>`;
 }
 function notifCard(){
