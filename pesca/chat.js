@@ -27,16 +27,57 @@ const BAD=['cazz','minchi','stronz','vaffancul','fancul','coglion','puttan','tro
 const BADRE=new RegExp('\\b('+BAD.join('|')+')\\w*','gi');
 const clean=t=>String(t||'').replace(BADRE,w=>w[0]+'*'.repeat(Math.max(2,w.length-1)));
 
-/* ---------- zone: una stanza per ogni area di circa 25 km ---------- */
+/* ---------- canali: Italia › Regione › Provincia › Comune ---------- */
 const placeName=sp=>(sp.name||'').replace(/^Posizione attuale( · )?/,'').trim()||'Posizione attuale';
-const zoneId=(lat,lon)=>'z_'+Math.round(lat*4)+'_'+Math.round(lon*4);
-function zones(){
-  const out=[],seenZ=new Set();
-  for(const sp of S.spots||[]){if(sp.lat==null)continue;const rid=zoneId(sp.lat,sp.lon);if(seenZ.has(rid))continue;seenZ.add(rid);out.push({rid,name:'Zona '+placeName(sp),lat:Math.round(sp.lat*4)/4,lon:Math.round(sp.lon*4)/4});}
-  out.push({rid:'z_it',name:'Tutta Italia'});
-  return out;
-}
-const roomName=rid=>{const r=CH.rooms[rid]||CH.mine[rid];if(rid==='bot')return 'Assistente';if(!r)return zones().find(z=>z.rid===rid)?.name||'Chat';
+let GEO=null,GEOP=null;  // comuni.json: [codice regione, nome, [[codice provincia, nome, sigla, [[comune, codice, lat, lon]]]]]
+const loadGeo=()=>GEOP||(GEOP=fetch('comuni.json').then(r=>r.json()).then(j=>{GEO=j;defaultFollow();syncSubs();refresh();return j;}).catch(()=>{GEOP=null;return null;}));
+const reg=c=>GEO?.r.find(r=>r[0]===c);
+const prov=c=>{for(const r of GEO?.r||[])for(const p of r[2])if(p[0]===c)return [p,r];return null;};
+const com=c=>{for(const r of GEO?.r||[])for(const p of r[2])for(const x of p[3])if(x[1]===c)return [x,p,r];return null;};
+const km=(a,b,c,d)=>{const R=6371,t=Math.PI/180,x=Math.sin((c-a)*t/2)**2+Math.cos(a*t)*Math.cos(c*t)*Math.sin((d-b)*t/2)**2;return 2*R*Math.asin(Math.sqrt(x));};
+// comune dello spot attivo: il più vicino tra quelli con coordinate
+function myPlace(){const sp=activeSpot();if(!GEO||!sp||sp.lat==null)return null;let best=null,bd=1e9;
+  for(const r of GEO.r)for(const p of r[2])for(const x of p[3]){if(x.length<4)continue;const d=(x[2]-sp.lat)**2+((x[3]-sp.lon)*Math.cos(sp.lat*Math.PI/180))**2;if(d<bd){bd=d;best={c:x,p,r};}}
+  return best;}
+const chName=rid=>{if(rid==='z_it')return 'Tutta Italia';if(rid==='near')return 'Spot vicini · 5 km';const t=rid.slice(0,2),c=rid.slice(2);
+  if(t==='r_'){const r=reg(c);return r?'Regione '+r[1]:null;}
+  if(t==='p_'){const q=prov(c);return q?'Provincia di '+q[0][1]:null;}
+  if(t==='c_'){const q=com(c);return q?`${q[0][0]} (${q[1][2]})`:null;}return null;};
+const chIcon=rid=>rid==='z_it'?'🇮🇹':rid==='near'?'🎣':rid.startsWith('r_')?'🗺️':rid.startsWith('p_')?'🏙️':rid.startsWith('c_')?'🏘️':'📍';
+// canali seguiti (avvisi e anteprima): all'inizio Italia, la regione, la provincia e il comune dello spot attivo
+const follows=()=>LS.get('chatfollow',null)||['z_it'];
+function defaultFollow(){if(LS.get('chatfollow',null))return;const m=myPlace();if(!m)return;LS.set('chatfollow',['z_it','r_'+m.r[0],'p_'+m.p[0],'c_'+m.c[1]]);}
+CH.follow=rid=>{const f=follows();LS.set('chatfollow',f.includes(rid)?f.filter(x=>x!==rid):[...f,rid]);syncSubs();render();};
+async function ensureRoom(rid){const ff=F(),ref=ff.doc(D(),'rooms',rid);const s=await ff.getDoc(ref);
+  if(!s.exists())await ff.setDoc(ref,{type:'zone',name:chName(rid)||'Canale',t:Date.now()});}
+// ascolto dei canali seguiti: aggiungo i nuovi, tolgo quelli non più seguiti
+async function syncSubs(){if(!CH.started)return;const ff=F(),want=new Set(follows());
+  for(const k of Object.keys(CH.subs))if(k.startsWith('f:')&&!want.has(k.slice(2))){CH.subs[k]();delete CH.subs[k];}
+  for(const rid of want){const k='f:'+rid;if(CH.subs[k])continue;CH.subs[k]=()=>{};
+    try{await ensureRoom(rid);}catch(e){}
+    CH.subs[k]=ff.onSnapshot(ff.doc(D(),'rooms',rid),s=>{if(!s.exists())return;const old=CH.rooms[rid]?.last?.ts||0;CH.rooms[rid]={id:rid,...s.data()};onRoom(rid,old);},snapErr('canale '+rid));}}
+
+/* ---------- canale dello spot: solo chi ha lo spot attivo entro 5 km ---------- */
+// i messaggi portano una posizione approssimata (circa 1 km) e una cella geohash di 4 caratteri per cercarli;
+// la posizione non viene mai mostrata, serve solo a calcolare la distanza
+const NEAR_KM=5,GH='0123456789bcdefghjkmnpqrstuvwxyz';
+function geohash(lat,lon,p=4){let a=[-90,90],b=[-180,180],h='',bit=0,ch=0,ev=true;
+  while(h.length<p){const r=ev?b:a,v=ev?lon:lat,m=(r[0]+r[1])/2;if(v>=m){ch=ch*2+1;r[0]=m;}else{ch=ch*2;r[1]=m;}ev=!ev;if(++bit===5){h+=GH[ch];bit=0;ch=0;}}return h;}
+function nearCells(lat,lon){const dy=NEAR_KM/111,dx=NEAR_KM/(111*Math.cos(lat*Math.PI/180)),out=new Set();
+  for(const a of [-dy,0,dy])for(const b of [-dx,0,dx])out.add(geohash(lat+a,lon+b));return [...out];}
+CH.nearMsgs=[];
+function nearSync(){const sp=activeSpot();const key=sp&&sp.lat!=null?nearCells(sp.lat,sp.lon).join(','):'';
+  if(key===CH.nearKey)return;CH.nearKey=key;CH.subs._near?.();delete CH.subs._near;CH.nearAll=new Map();CH.nearMsgs=[];if(!key||!CH.started)return;
+  const ff=F();ensureRoom('near').catch(()=>{});
+  CH.subs._near=ff.onSnapshot(ff.query(ff.collection(D(),'rooms','near','msgs'),ff.where('g','in',key.split(','))),snap=>{
+    snap.docChanges().forEach(c=>{if(c.type==='removed')CH.nearAll.delete(c.doc.id);else CH.nearAll.set(c.doc.id,{id:c.doc.id,...c.doc.data()});});
+    const sp=activeSpot(),old=CH.nearMsgs.at(-1)?.ts||0;
+    CH.nearMsgs=[...CH.nearAll.values()].filter(m=>m.la!=null&&km(sp.lat,sp.lon,m.la,m.lo)<=NEAR_KM).sort((a,b)=>a.ts-b.ts).slice(-80);
+    const l=CH.nearMsgs.at(-1);if(l)CH.rooms.near={id:'near',type:'zone',name:'Spot vicini',last:{text:l.text||(l.kind==='catch'?'🐟 '+(l.catch?.sp||''):'🌊 condizioni'),name:l.name,uid:l.uid,ts:l.ts}};
+    if(CH.rid==='near'){CH.msgs=CH.nearMsgs;if(S.tab==='chat')markSeen('near');}
+    if(l&&l.ts>old)onRoom('near',old);else refresh();},snapErr('spot vicini'));}
+
+const roomName=rid=>{const r=CH.rooms[rid]||CH.mine[rid];if(rid==='bot')return 'Assistente';const cn=chName(rid);if(cn)return cn;if(!r)return 'Chat';
   if(r.type==='dm'){const o=(r.members||[]).find(u=>u!==me()?.uid);return (r.names||{})[o]||'Messaggio privato';}return r.name||'Chat';};
 
 /* ---------- avvio: profilo, stanze e ascolto delle novità ---------- */
@@ -48,11 +89,8 @@ CH.start=async()=>{
     // rifiuterebbe tutto per un'ora; lo rinnovo subito
     try{const t=await u.getIdTokenResult?.();if(t&&u.emailVerified&&t.claims?.email_verified!==true)await u.getIdToken(true);}catch(e){}
     await ff.setDoc(ff.doc(db,'profiles',u.uid),{name:C().name(),code:uidCode(u.uid),t:Date.now()},{merge:true});
-    for(const z of zones()){
-      const ref=ff.doc(db,'rooms',z.rid);
-      step='stanza '+z.rid;const s=await ff.getDoc(ref);if(!s.exists())await ff.setDoc(ref,{type:'zone',name:z.name,zone:z.lat!=null?{lat:z.lat,lon:z.lon}:null,t:Date.now()});
-      CH.subs[z.rid]=ff.onSnapshot(ref,s=>{if(!s.exists())return;const old=CH.rooms[z.rid]?.last?.ts||0;CH.rooms[z.rid]={id:z.rid,...s.data()};onRoom(z.rid,old);},snapErr('stanza '+z.rid));
-    }
+    step='canale Italia';await ensureRoom('z_it');
+    loadGeo();syncSubs();nearSync();
     CH.subs._mine=ff.onSnapshot(ff.query(ff.collection(db,'rooms'),ff.where('members','array-contains',u.uid)),snap=>{
       snap.docChanges().forEach(c=>{const id=c.doc.id;if(c.type==='removed'){delete CH.mine[id];return;}const old=CH.mine[id]?.last?.ts||0;CH.mine[id]={id,...c.doc.data()};onRoom(id,old);});
       refresh();},snapErr('stanze private'));
@@ -110,11 +148,11 @@ function refresh(){CH.badge();if(S.tab!=='chat')return;
 /* ---------- pagina ---------- */
 CH.view=v=>{
   if(!me()){v.innerHTML=subHead('Chat','Funzione Premium','home')+`<div class="card"><p class="mut">Accedi con il tuo account per usare la chat.</p><button class="btn" onclick="CLOUD.open()">Accedi</button></div>`;return;}
-  CH.start();
+  CH.start();nearSync();
   if(CH.rid)return roomView(v);
-  const tabs=[['zone','📍 Zone'],['priv','👥 Privati'],['bot','🤖 Assistente'],['amici','🤝 Amici']];
+  const tabs=[['zone','📍 Canali'],['priv','👥 Privati'],['bot','🤖 Assistente'],['amici','🤝 Amici']];
   v.innerHTML=subHead('Chat','Zone, amici e assistente','home')+(CH.err?`<div class="banner">⚠️ ${esc(CH.err)}</div>`:'')+
-    `<div class="chips" style="margin-bottom:12px">${tabs.map(([k,n])=>`<span class="chip ${CH.tab===k?'on':''}" onclick="CHAT.tab='${k}';render()">${n}</span>`).join('')}</div><div id="chatlist">${listHtml()}</div>`;
+    `<div class="chips" style="margin-bottom:12px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none">${tabs.map(([k,n])=>`<span class="chip ${CH.tab===k?'on':''}" onclick="CHAT.tab='${k}';render()">${n}</span>`).join('')}</div><div id="chatlist">${listHtml()}</div>`;
 };
 const ago=ts=>{const m=Math.round((Date.now()-ts)/60000);return m<1?'ora':m<60?m+' min':m<1440?Math.round(m/60)+' h':new Date(ts).toLocaleDateString('it-IT',{day:'numeric',month:'short'});};
 function roomRow(rid,icon,sub){
@@ -124,8 +162,7 @@ function roomRow(rid,icon,sub){
     <div style="text-align:right">${l?`<div class="small mut">${ago(l.ts)}</div>`:''}${un?'<i class="cdot"></i>':''}</div></div>`;
 }
 function listHtml(){
-  if(CH.tab==='zone')return `<div class="card"><h3>📍 Canali per zona</h3><p class="small mut" style="margin:-4px 0 6px">Una stanza per ogni zona dei tuoi spot (circa 25 km). Le coordinate dei tuoi spot non vengono mai mostrate.</p>
-    ${zones().map(z=>roomRow(z.rid,z.rid==='z_it'?'🇮🇹':'📍',z.rid==='z_it'?'Tutti i pescatori di LenzApp':'')).join('')}</div>${notifCard()}`;
+  if(CH.tab==='zone')return chanHtml()+notifCard();
   if(CH.tab==='priv'){const rs=Object.values(CH.mine).sort((a,b)=>(b.last?.ts||b.t||0)-(a.last?.ts||a.t||0));
     return `<div class="card"><h3>👥 Messaggi privati e gruppi</h3>${rs.length?rs.map(r=>roomRow(r.id,r.type==='group'?'👥':'💬','')).join(''):'<p class="small mut">Nessuna conversazione. Aggiungi un amico nella scheda «Amici» e scrivigli.</p>'}
       <button class="btn ghost full" style="margin-top:10px" onclick="CHAT.newGroup()">➕ Nuovo gruppo di pesca</button></div>`;}
@@ -136,13 +173,33 @@ function listHtml(){
   <div class="card"><h3>Amici</h3>${fr.length?fr.map(f=>`<div class="croom"><div class="cri">🎣</div><div style="flex:1"><b>${esc(f.name)}</b></div><button class="btn" style="padding:7px 12px" onclick="CHAT.dm('${f.uid}')">Scrivi</button><button class="btn ghost" style="padding:7px 10px" onclick="CHAT.unfriend('${f.uid}')">✕</button></div>`).join(''):'<p class="small mut">Nessun amico ancora.</p>'}</div>
   ${bl.length?`<div class="card"><h3>🚫 Utenti bloccati</h3><p class="small mut">Non vedi i loro messaggi.</p>${bl.map(u=>`<div class="croom"><div style="flex:1">${esc((LS.get('chatblocknames',{})[u])||'Utente')}</div><button class="btn ghost" style="padding:7px 12px" onclick="CHAT.unblock('${u}')">Sblocca</button></div>`).join('')}</div>`:''}`;
 }
+CH.nav={r:null,p:null,q:''};
+CH.navTo=(r,p)=>{CH.nav={r:r||null,p:p||null,q:''};refresh();document.getElementById('chbrowse')?.scrollIntoView({block:'start',behavior:'smooth'});};
+CH.navQ=q=>{CH.nav.q=q;const el=document.getElementById('comlist');if(el)el.innerHTML=comRows();};
+const norm=t=>String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+function comRows(){const q=prov(CH.nav.p);if(!q)return '';const f=norm(CH.nav.q||'');
+  const l=q[0][3].filter(x=>!f||norm(x[0]).includes(f));
+  return l.map(x=>`<div class="croom" onclick="CHAT.open('c_${x[1]}')"><div class="cri">🏘️</div><div style="flex:1"><b>${esc(x[0])}</b></div>${follows().includes('c_'+x[1])?'<span class="small mut">⭐</span>':''}<span class="mut">›</span></div>`).join('')||'<p class="small mut">Nessun comune trovato.</p>';}
+function chanHtml(){
+  loadGeo();const sp=activeSpot(),fol=follows();
+  const near=sp?roomRow('near','🎣',`Pescatori con lo spot entro ${NEAR_KM} km da «${placeName(sp)}»`):'<p class="small mut">Scegli uno spot per vedere chi pesca vicino a te.</p>';
+  let browse='<p class="small mut">Carico regioni e comuni…</p>';
+  if(GEO){const n=CH.nav,r=n.r&&reg(n.r),pq=n.p&&prov(n.p);
+    const crumb=`<div class="ccrumb"><u onclick="CHAT.navTo()">Italia</u>${r?` › <u onclick="CHAT.navTo('${r[0]}')">${esc(r[1])}</u>`:''}${pq?` › <b>${esc(pq[0][1])}</b>`:''}</div>`;
+    if(pq)browse=crumb+roomRow('p_'+pq[0][0],'🏙️','Canale di tutta la provincia')+`<input id="comq" placeholder="Cerca un comune della provincia" value="${esc(n.q)}" oninput="CHAT.navQ(this.value)" style="margin:10px 0 4px"><div id="comlist">${comRows()}</div>`;
+    else if(r)browse=crumb+roomRow('r_'+r[0],'🗺️','Canale di tutta la regione')+`<div class="small mut" style="margin:10px 0 2px">Scegli la provincia</div>`+r[2].map(p=>`<div class="croom" onclick="CHAT.navTo('${r[0]}','${p[0]}')"><div class="cri">🏙️</div><div style="flex:1"><b>${esc(p[1])}</b> <span class="small mut">${esc(p[2])} · ${p[3].length} comuni</span></div><span class="mut">›</span></div>`).join('');
+    else browse=crumb+roomRow('z_it','🇮🇹','Tutti i pescatori di LenzApp')+`<div class="small mut" style="margin:10px 0 2px">Scegli la regione</div>`+GEO.r.map(r=>`<div class="croom" onclick="CHAT.navTo('${r[0]}')"><div class="cri">🗺️</div><div style="flex:1"><b>${esc(r[1])}</b></div><span class="mut">›</span></div>`).join('');}
+  return `<div class="card"><h3>🎣 Il tuo spot</h3><p class="small mut" style="margin:-4px 0 6px">Ci sono solo i pescatori che hanno lo spot attivo a meno di ${NEAR_KM} km dal tuo. La tua posizione non viene mai mostrata.</p>${near}</div>
+  <div class="card"><h3>⭐ Canali che segui</h3>${fol.map(rid=>roomRow(rid,chIcon(rid),'')).join('')}<p class="small mut" style="margin:8px 0 0">Per seguire o smettere di seguire un canale aprilo e tocca ⭐ in alto.</p></div>
+  <div class="card" id="chbrowse"><h3>🇮🇹 Tutti i canali</h3>${browse}</div>`;
+}
 function notifCard(){
   const n=LS.get('chatnotif',{on:false,zones:true}),perm='Notification' in window?Notification.permission:'unsupported';
   const reps=CH.notifs.slice(0,5);
   return `${reps.length?`<div class="card"><h3>🔔 Risposte ai tuoi messaggi</h3>${reps.map(x=>`<div class="croom" onclick="CHAT.openNotif('${x.id}')"><div class="cri">↩️</div><div style="flex:1;min-width:0"><b>${esc(x.from)}</b> <span class="small mut">in ${esc(x.room||'')}</span><div class="small mut cprev">${esc(clean(x.text))}</div></div><div class="small mut">${ago(x.ts)}</div>${x.read?'':'<i class="cdot"></i>'}</div>`).join('')}</div>`:''}
   <div class="card"><h3>🔔 Notifiche</h3>
     <label class="crow"><input type="checkbox" ${n.on?'checked':''} onchange="CHAT.setNotif(this.checked)"> Avvisami dei nuovi messaggi</label>
-    <label class="crow"><input type="checkbox" ${n.zones!==false?'checked':''} onchange="CHAT.setNotifZones(this.checked)"> Anche per i canali delle zone</label>
+    <label class="crow"><input type="checkbox" ${n.zones!==false?'checked':''} onchange="CHAT.setNotifZones(this.checked)"> Anche per i canali che segui (spot vicini compreso)</label>
     <p class="small mut" style="margin:6px 0 0">${perm==='denied'?'⚠️ Le notifiche sono bloccate nelle impostazioni del browser.':perm==='unsupported'?'Questo browser non supporta le notifiche: vedrai gli avvisi dentro l\'app.':'Arrivano mentre LenzApp è aperta, anche in un\'altra scheda o in secondo piano. Messaggi privati e risposte ti avvisano sempre.'}</p></div>`;
 }
 CH.setNotif=async on=>{const n=LS.get('chatnotif',{zones:true});n.on=on;
@@ -153,15 +210,19 @@ CH.openNotif=async id=>{const x=CH.notifs.find(n=>n.id===id);if(!x)return;x.read
 
 /* ---------- stanza ---------- */
 CH.open=rid=>{CH.rid=rid;CH.reply=null;CH.msgs=[];CH.unsubRoom?.();CH.unsubRoom=null;markSeen(rid);
-  if(rid!=='bot'){const ff=F();CH.unsubRoom=ff.onSnapshot(ff.query(ff.collection(D(),'rooms',rid,'msgs'),ff.orderBy('ts','desc'),ff.limit(80)),snap=>{
+  if(rid==='near'){CH.msgs=CH.nearMsgs;}
+  else if(rid!=='bot'){const ff=F();
+    // il canale va creato prima di leggerne i messaggi (le regole controllano la stanza)
+    (/^(z_it|r_|p_|c_)/.test(rid)?ensureRoom(rid).catch(()=>{}):Promise.resolve()).then(()=>{if(CH.rid!==rid)return;CH.unsubRoom=ff.onSnapshot(ff.query(ff.collection(D(),'rooms',rid,'msgs'),ff.orderBy('ts','desc'),ff.limit(80)),snap=>{
     const m=new Map(CH.msgs.map(x=>[x.id,x]));snap.docChanges().forEach(c=>{if(c.type==='removed')m.delete(c.doc.id);else m.set(c.doc.id,{id:c.doc.id,...c.doc.data()});});
-    CH.msgs=[...m.values()].sort((a,b)=>a.ts-b.ts).slice(-80);if(S.tab==='chat'&&CH.rid===rid)markSeen(rid);refresh();},snapErr('messaggi'));}
+    CH.msgs=[...m.values()].sort((a,b)=>a.ts-b.ts).slice(-80);if(S.tab==='chat'&&CH.rid===rid)markSeen(rid);refresh();},snapErr('messaggi'));});}
   if(S.tab!=='chat')go('chat');else render();};
 CH.back=()=>{CH.unsubRoom?.();CH.unsubRoom=null;CH.rid=null;CH.reply=null;render();};
 function roomView(v){
   const rid=CH.rid,r=CH.rooms[rid]||CH.mine[rid],bot=rid==='bot';
-  const sub=bot?'Consigli su misura per il tuo spot':r?.type==='zone'?'Canale pubblico della zona':r?.type==='group'?`Gruppo · ${(r.members||[]).length} persone`:'Messaggio privato';
-  v.innerHTML=`<div class="subhead"><button class="back" onclick="CHAT.back()" aria-label="Indietro">‹</button><div><h2>${esc(roomName(rid))}</h2><p>${sub}</p></div></div>
+  const sub=bot?'Consigli su misura per il tuo spot':rid==='near'?`Chi pesca entro ${NEAR_KM} km da «${esc(placeName(activeSpot()||{}))}»`:rid==='z_it'?'Canale nazionale':rid.startsWith('r_')?'Canale regionale':rid.startsWith('p_')?'Canale provinciale':rid.startsWith('c_')?'Canale comunale':r?.type==='zone'?'Canale pubblico':r?.type==='group'?`Gruppo · ${(r.members||[]).length} persone`:'Messaggio privato';
+  const canFollow=/^(z_it|r_|p_|c_)/.test(rid),fol=follows().includes(rid);
+  v.innerHTML=`<div class="subhead"><button class="back" onclick="CHAT.back()" aria-label="Indietro">‹</button><div style="flex:1;min-width:0"><h2>${esc(roomName(rid))}</h2><p>${sub}</p></div>${canFollow?`<button class="btn ${fol?'':'ghost'}" style="padding:8px 12px;flex:none" onclick="CHAT.follow('${rid}')" title="${fol?'Smetti di seguire':'Segui il canale'}">${fol?'⭐ Segui':'☆ Segui'}</button>`:''}</div>
   <div class="card chatcard"><div id="chatlog" class="chatlog">${logHtml()}</div>
     <div id="creply">${replyHtml()}</div>
     ${CH.banned&&!bot?'<div class="banner" style="margin:8px 0 0">🚫 Un amministratore ti ha bloccato: puoi leggere ma non scrivere in chat.</div>':`<div class="ccomp">${bot?'':`<button class="cbtn" title="Condividi una cattura" onclick="CHAT.shareCatch()">📸</button><button class="cbtn" title="Condizioni in diretta" onclick="CHAT.condSheet()">🌊</button>`}
@@ -196,9 +257,12 @@ function replyHtml(){return CH.reply?`<div class="crply">↩️ Rispondi a <b>${
 async function post(msg,preview){
   const ff=F(),db=D(),u=me(),rid=CH.rid,id=newId();
   const name=C().name();Object.assign(msg,{uid:u.uid,name,ts:Date.now()});
+  if(rid==='near'){const sp=activeSpot();if(!sp||sp.lat==null)throw new Error('Scegli prima uno spot');
+    Object.assign(msg,{g:geohash(sp.lat,sp.lon),la:Math.round(sp.lat*100)/100,lo:Math.round(sp.lon*100)/100});await ensureRoom('near');}
+  else if(/^(z_it|r_|p_|c_)/.test(rid))await ensureRoom(rid);
   if(CH.reply){msg.reply={id:CH.reply.id,uid:CH.reply.uid,name:CH.reply.name,text:String(CH.reply.text||'').slice(0,120)};}
   await ff.setDoc(ff.doc(db,'rooms',rid,'msgs',id),msg);
-  await ff.setDoc(ff.doc(db,'rooms',rid),{last:{text:preview.slice(0,120),name,uid:u.uid,ts:msg.ts}},{merge:true});
+  if(rid!=='near')await ff.setDoc(ff.doc(db,'rooms',rid),{last:{text:preview.slice(0,120),name,uid:u.uid,ts:msg.ts}},{merge:true});
   if(msg.reply&&msg.reply.uid!==u.uid)ff.setDoc(ff.doc(db,'notifs',msg.reply.uid,'items',id),{rid,room:roomName(rid),from:name,fromUid:u.uid,text:preview.slice(0,140),ts:msg.ts}).catch(()=>{});
   CH.reply=null;const rp=document.getElementById('creply');if(rp)rp.innerHTML='';
 }
@@ -262,7 +326,8 @@ async function small(src,max=640){if(!src)return null;
 CH.shareCatch=(fromRecog)=>{
   const st=window.ASSIST?.st,r=st?.r,m=st?.m;
   const have=r?.is_fish;const len=m?.len||'',w=have&&m?.len?((m.gem&&m.wgem)||(typeof estW==='function'&&estW(r.species,m.len))||m.wgem||''):'';
-  const rooms=[...zones().map(z=>[z.rid,z.name]),...Object.values(CH.mine).map(x=>[x.id,roomName(x.id)])];
+  const rooms=[...(activeSpot()?[['near',roomName('near')]]:[]),...follows().map(r=>[r,roomName(r)]),...Object.values(CH.mine).map(x=>[x.id,roomName(x.id)])];
+  if(CH.rid&&CH.rid!=='bot'&&!rooms.some(r=>r[0]===CH.rid))rooms.unshift([CH.rid,roomName(CH.rid)]);
   const cur=CH.rid&&CH.rid!=='bot'?CH.rid:rooms[0][0];
   CH._photo=have?window.ASSIST.photo:null;
   openSheet(`<h2>📸 Condividi una cattura</h2>
