@@ -480,7 +480,7 @@ CH.ask=async q=>{
 // vis 'all': la vedono tutti gli utenti della chat; 'friends': solo gli utenti che ho tra gli amici. Spenta: il documento viene cancellato.
 const LOC_MAX_H=6;
 const manSvg=col=>`<svg width="16" height="20" viewBox="0 0 34 42" style="vertical-align:-4px"><path d="M17 41c-1-4-14-14-14-24a14 14 0 0 1 28 0c0 10-13 20-14 24z" fill="${col}" stroke="#fff" stroke-width="2"/><circle cx="17" cy="11.5" r="4" fill="#fff"/><path d="M10.5 25c0-4.2 2.9-7.5 6.5-7.5s6.5 3.3 6.5 7.5z" fill="#fff"/></svg>`;            // dopo 6 ore senza aggiornamenti la posizione non si mostra più
-const locVis=()=>LS.get('chatloc','off');
+const locVis=()=>LS.get('chatloc',null)||'friends';  // di default visibile agli amici; chi ha scelto altro tiene la sua scelta
 CH.locs={};
 function mapHtml(){
   const v=locVis(),opt=[['off','🚫 Non condivisa','Nessuno vede la tua posizione'],['friends','🤝 Solo amici','La vedono solo gli utenti nei tuoi amici'],['all','🌍 Tutti','La vedono tutti gli utenti della chat']];
