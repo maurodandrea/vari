@@ -69,6 +69,7 @@
   #gate .btn{padding:14px 16px;font-size:16px;}
   #gate input{font-size:16px;padding:13px 14px;}
   body.gated #app{filter:blur(3px);pointer-events:none;user-select:none;}
+  .day.locked{opacity:.55;}
   .loginbox{display:flex;align-items:center;gap:12px;}
   .loginbox>div{flex:1;min-width:0;}
   .loginbox .btn{flex:none;padding:10px 20px;}
@@ -570,6 +571,29 @@ const S = {
 if(!S.spots){S.spots=[{id:uid(),name:'Lido di Ostia',lat:41.7275,lon:12.2772,mode:'coast',note:'Spot di esempio: aggiungi i tuoi dalla mappa'}];LS.set('spots',S.spots);}
 if(!S.active||!S.spots.find(s=>s.id===S.active)){S.active=S.spots[0]?.id||null;}
 
+/* ===================== Premium ===================== */
+// Codice valido: la data del giorno in cui lo inserisci (ggmmaaaa, come numero) moltiplicata per un numero pari.
+// Lo stato è salvato in LS 'premium' (sincronizzato con l'account). Controllo solo lato app: non è una protezione forte.
+const FREE_SPOTS=3,FREE_DAYS=3;
+const isPremium=()=>!!LS.get('premium',null)?.ok;
+function premiumCodeOk(code,d=new Date()){
+  const c=String(code||'').replace(/\D/g,'');if(!c)return false;
+  const p2=n=>String(n).padStart(2,'0'),day=BigInt(p2(d.getDate())+p2(d.getMonth()+1)+d.getFullYear()),n=BigInt(c);
+  if(n%day!==0n)return false;const k=n/day;return k>=2n&&k%2n===0n;
+}
+function activatePremium(){
+  const el=document.getElementById('pcode'),c=(el?.value||'').trim();
+  if(!premiumCodeOk(c)){toast('⚠️ Codice non valido');return;}
+  LS.set('premium',{ok:true,since:Date.now()});toast('⭐ Premium attivato');render();
+}
+// finestra che spiega che la funzione è riservata ai Premium
+function needPremium(what){
+  openSheet(`<div style="text-align:center"><div style="font-size:46px">⭐</div><h2>Funzione Premium</h2><p class="mut">${esc(what)} è riservato agli utenti Premium.</p>
+    <p class="small mut" style="margin:10px 0 16px">Con Premium: riconoscimento dei pesci, spot illimitati, previsioni per tutta la settimana e chat (in arrivo). Attivalo inserendo il codice nelle Impostazioni.</p>
+    <button class="btn full" onclick="closeSheet();go('settings')">Inserisci il codice</button><button class="btn ghost full" style="margin-top:8px" onclick="closeSheet()">Non ora</button></div>`);
+  return false;
+}
+const savedSpots=()=>S.spots.filter(s=>!s.here).length;
 function uid(){return Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);}
 function activeSpot(){return S.spots.find(s=>s.id===S.active)||S.spots[0];}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -1059,10 +1083,12 @@ function timeline(sol,D){
 
 function vMeteo(v){
   if(needWx(v))return;
+  if(!isPremium()&&S.day>=FREE_DAYS)S.day=0;
   const X=S.wx,d=X.fdays[S.day]||X.fdays[0],hs=dayHours(X,d.date),ph=moonPhase(new Date(d.date.getTime()+12*3600e3));
   const sc=dayScore(X,d.date),sol=X.sol[d.date.toDateString()]||[];
   v.innerHTML=simBanner()+`
-  <div class="days" style="margin-bottom:12px">${X.fdays.map((x,k)=>`<div class="day ${k===S.day?'on':''}" onclick="S.day=${k};render()"><div class="d">${k?dayName(x.date):'Oggi'}</div><div class="small">${dateStr(x.date)}</div><div class="ic">${wmo(x.code)[0]}</div>${miniRing(dayScore(X,x.date))}<div class="small mut">${fmt0(x.tmax)}°/${fmt0(x.tmin)}°</div></div>`).join('')}</div>
+  <div class="days" style="margin-bottom:12px">${X.fdays.map((x,k)=>k>=FREE_DAYS&&!isPremium()?`<div class="day locked" onclick="needPremium('Vedere le previsioni oltre ${FREE_DAYS} giorni')"><div class="d">${dayName(x.date)}</div><div class="small">${dateStr(x.date)}</div><div class="ic">🔒</div><div class="small mut">Premium</div></div>`
+    :`<div class="day ${k===S.day?'on':''}" onclick="S.day=${k};render()"><div class="d">${k?dayName(x.date):'Oggi'}</div><div class="small">${dateStr(x.date)}</div><div class="ic">${wmo(x.code)[0]}</div>${miniRing(dayScore(X,x.date))}<div class="small mut">${fmt0(x.tmax)}°/${fmt0(x.tmin)}°</div></div>`).join('')}</div>
   ${X.marine?weekWave(X):''}
   <div class="card"><div class="grid2">
     <div class="tile"><div class="k">Indice del giorno</div><div class="v" style="color:${idxColor(sc)}">${sc} · ${idxLabel(sc)[0]}</div></div>
@@ -1126,7 +1152,7 @@ function waveChart(hs){
 }
 // Home: altezza massima dell'onda giorno per giorno nella settimana
 function weekWave(X){
-  const ds=X.fdays.map(d=>{const v=dayHours(X,d.date).map(h=>h.wave).filter(q=>q!=null);return {d,mx:v.length?Math.max(...v):null,mn:v.length?Math.min(...v):null};}).filter(o=>o.mx!=null);
+  const ds=X.fdays.slice(0,isPremium()?99:FREE_DAYS).map(d=>{const v=dayHours(X,d.date).map(h=>h.wave).filter(q=>q!=null);return {d,mx:v.length?Math.max(...v):null,mn:v.length?Math.min(...v):null};}).filter(o=>o.mx!=null);
   if(!ds.length)return '';
   const W=500,H=230,p=16,bw=(W-2*p)/ds.length,top=Math.max(.5,...ds.map(o=>o.mx))*1.12,y=q=>H-34-q/top*(H-34-46);
   const col=q=>q>=1.5?'#ff6b6b':q>=1?'#ffb547':q>=.5?'#2fe0cf':'#5aa8ff';
@@ -1238,7 +1264,7 @@ function dropPin(lat,lon){
   document.getElementById('newspot').innerHTML=`<div class="row" style="gap:8px"><span class="small" style="flex:1">Trascina il pallino nel punto esatto, poi conferma.</span><button class="btn ghost" onclick="cancelPin()">Annulla</button><button class="btn" onclick="confirmPin()">📍 Crea spot qui</button></div>`;
 }
 function cancelPin(){if(NEWPIN&&MAP)MAP.removeLayer(NEWPIN);NEWPIN=null;const el=document.getElementById('newspot');if(el)el.innerHTML='<p class="small mut" style="margin:0">Tocca la mappa per mettere un nuovo spot.</p>';}
-function confirmPin(){if(!NEWPIN)return;const p=NEWPIN.getLatLng();editSpot(null,p.lat,p.lng);
+function confirmPin(){if(!NEWPIN)return;if(!isPremium()&&savedSpots()>=FREE_SPOTS){needPremium('Salvare più di '+FREE_SPOTS+' spot');return;}const p=NEWPIN.getLatLng();editSpot(null,p.lat,p.lng);
 }
 function useSpot(id){S.active=id;LS.set('active',id);const sp=activeSpot();if(false){S.mode=sp.mode;LS.set('mode',sp.mode);}S.wx=null;loadWeather();toast('Spot attivo: '+sp.name);go('home');}
 function editSpot(id,lat,lon){
@@ -1253,7 +1279,7 @@ function editSpot(id,lat,lon){
 function saveSpot(id,lat,lon){
   const name=document.getElementById('spN').value.trim()||'Spot senza nome',mode=S.mode,note=document.getElementById('spT').value.trim(),fv=document.getElementById('spF').value,face=fv===''?null:+fv;
   if(id){Object.assign(S.spots.find(s=>s.id===id),{name,mode,note,face});if(id===S.active){S.wx=null;loadWeather();}COMP.rows=null;}
-  else{const s={id:uid(),name,lat,lon,mode,note,face};COMP.rows=null;S.spots.push(s);NEWPIN=null;LS.set('spots',S.spots);closeSheet();useSpot(s.id);return;}
+  else{if(!isPremium()&&savedSpots()>=FREE_SPOTS){closeSheet();needPremium('Salvare più di '+FREE_SPOTS+' spot');return;}const s={id:uid(),name,lat,lon,mode,note,face};COMP.rows=null;S.spots.push(s);NEWPIN=null;LS.set('spots',S.spots);closeSheet();useSpot(s.id);return;}
   LS.set('spots',S.spots);LS.set('active',S.active);closeSheet();toast('Spot salvato');render();
 }
 function delSpot(id){
@@ -1813,6 +1839,9 @@ function vSettings(v){
   let bytes=0;try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k.startsWith('lenza.'))bytes+=(localStorage.getItem(k)||'').length*2;}}catch(e){}
   v.innerHTML=subHead('Impostazioni','Account, dati, backup e informazioni')+`
   ${window.CLOUD?CLOUD.card():''}
+  <div class="card"><h3>⭐ Premium</h3>${isPremium()?`<p style="color:var(--ok);font-weight:700;margin:0 0 6px">● Premium attivo</p><p class="small mut">Attivato il ${new Date(LS.get('premium',{}).since||Date.now()).toLocaleDateString('it-IT')}. Hai accesso a riconoscimento dei pesci, spot illimitati, previsioni per tutta la settimana e chat (in arrivo).</p>`
+    :`<p class="small mut" style="margin:0 0 10px">Con Premium: riconoscimento dei pesci, più di ${FREE_SPOTS} spot, previsioni oltre ${FREE_DAYS} giorni e chat (in arrivo).</p>
+    <div class="row" style="gap:8px"><input id="pcode" inputmode="numeric" placeholder="Codice Premium" style="flex:1" autocomplete="off"><button class="btn" onclick="activatePremium()">Attiva</button></div>`}</div>
   <div class="card"><h3>I tuoi dati</h3>
     <div class="kv"><span>Spot salvati</span><b>${S.spots.length}</b></div><div class="kv"><span>Uscite nel diario</span><b>${S.diary.length}</b></div>
     ${window.CLOUD?.user?`<div class="kv"><span>Dove sono salvati</span><b>Online nel tuo account</b></div>
@@ -2007,6 +2036,7 @@ function applyAuto(t){
   else if(t!=='assist'){const c=DRAFT.catches[+t];if(c){c.l=Math.round(m.len);if(w)c.w=Math.round(w*100)/100;}}
 }
 async function runMeasure(t,force){
+  if(!isPremium())return needPremium('Misurare lunghezza e peso');
   const st=stOf(t);if(!st)return;const src=photoOf(t);
   st.m={loading:true,pct:0};redraw(t);
   let last=0;
@@ -2149,6 +2179,7 @@ async function gemTest(){
 }
 function aiCard(st,target){
   if(!st)return '';
+  if(st.needPremium)return `<div class="aibox"><span style="font-size:24px">⭐</span><div style="flex:1"><b>Riconoscimento dei pesci: funzione Premium</b><div class="small mut">Specie, lunghezza e peso dalla foto sono riservati agli utenti Premium.</div><button class="btn" style="margin-top:8px;padding:9px 14px" onclick="go('settings')">Inserisci il codice Premium</button></div></div>`;
   if(st.needModel)return `<div class="aibox"><span style="font-size:24px">🧠</span><div style="flex:1"><b>Riconoscimento automatico gratuito</b><div class="small mut">Scarica una volta i modelli (circa 155 MB, meglio con Wi-Fi): poi specie, misura e peso si calcolano da soli, anche senza internet.</div>
     ${MODEL_DL?`<div class="dlb"><div id="dlbar" style="width:${(MODEL_DL.st.pct*100).toFixed(1)}%"></div></div><div class="small mut"><span id="dlpct">${Math.round(MODEL_DL.st.pct*100)}%</span> scaricato…</div>`:`<button class="btn" style="margin-top:8px;padding:9px 14px" onclick="downloadModel().then(()=>aiRetry('${target}')).catch(e=>toast(aiErrMsg(e)))">⬇️ Scarica e riconosci</button>`}</div></div>`;
   if(st.loading)return `<div class="aibox"><div class="aispin"></div><div><b>Riconosco il pesce…</b><div class="small mut">Poi misuro lunghezza e peso · sul telefono, senza internet</div></div></div>`;
@@ -2168,6 +2199,7 @@ function aiCard(st,target){
 let LIVEAI=null;
 async function liveAnalyze(){
   if(!LIVEQ.photo)return;
+  if(!isPremium()){LIVEAI={needPremium:true};render();return;}
   if(!gemOn()&&!(await modelReady())){LIVEAI={needModel:true};render();return;}
   LIVEAI={loading:true};render();
   try{
@@ -2180,6 +2212,7 @@ async function liveAnalyze(){
 const ENTRYAI={};
 async function entryAnalyze(i,big){
   const c=DRAFT.catches[i];if(!c?.photo)return;
+  if(!isPremium()){ENTRYAI[i]={needPremium:true};drawEntry();return;}
   if(!gemOn()&&!(await modelReady())){ENTRYAI[i]={needModel:true};drawEntry();return;}
   ENTRYAI[i]={loading:true};drawEntry();
   if(big)c.big=big;
@@ -2199,6 +2232,7 @@ let ASSIST=null;
 async function assistSnap(inp){const d=await readPhoto(inp);if(!d)return;ASSIST={photo:d,big:readPhoto.big};assistAnalyze();}
 async function assistAnalyze(){
   if(!ASSIST)return;
+  if(!isPremium()){ASSIST.st={needPremium:true};render();return;}
   if(!gemOn()&&!(await modelReady())){ASSIST.st={needModel:true};render();return;}
   ASSIST.st={loading:true};render();
   try{ASSIST.st={r:await recognize(ASSIST.big||ASSIST.photo,S.mode)};}catch(e){ASSIST.st={err:aiErrMsg(e)};}
