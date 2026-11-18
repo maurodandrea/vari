@@ -608,20 +608,22 @@ const PREMIUM_TABS={pesce:['Riconosci e misura','Il riconoscimento della specie 
   compare:['Dove pescare','La classifica dei tuoi spot per indice di pesca è riservata agli utenti Premium.'],ai:['Assistente','I consigli su misura e le specie di stagione sono riservati agli utenti Premium.'],guide:['Guida','La guida a nodi, montature ed esche è riservata agli utenti Premium.']};
 const lockedTab=t=>!!PREMIUM_TABS[t]&&!isPremium();
 // anteprima sfocata di Riconosci: un pesce disegnato, riconosciuto e misurato
-// fotomontaggio da foto reali: orata di Alidz31 su iNaturalist (CC BY 4.0) e scarpe di Freestocks.org (CC0)
-// linea azzurra: lunghezza dell'orata dal muso alla coda; linea arancione: scarpa usata come riferimento, dal tallone alla punta
-const FISH_PREVIEW=`<div style="position:relative"><img src="img/orata-preview.jpg" alt="Orata accanto a una scarpa" style="display:block;width:100%;border-radius:16px">
-  <svg viewBox="0 0 800 646" style="position:absolute;inset:0;width:100%;height:100%">
-  <line x1="698" y1="198" x2="128" y2="161" stroke="rgba(0,0,0,.6)" stroke-width="11" stroke-linecap="round"/><line x1="698" y1="198" x2="128" y2="161" stroke="#2fe0cf" stroke-width="6" stroke-linecap="round"/>
-  <circle cx="698" cy="198" r="10" fill="#2fe0cf" stroke="#fff" stroke-width="3"/><circle cx="128" cy="161" r="10" fill="#2fe0cf" stroke="#fff" stroke-width="3"/>
-  <line x1="211" y1="552" x2="609" y2="552" stroke="rgba(0,0,0,.6)" stroke-width="11" stroke-linecap="round"/><line x1="211" y1="552" x2="609" y2="552" stroke="#ffb547" stroke-width="6" stroke-linecap="round"/>
-  <circle cx="211" cy="552" r="10" fill="#ffb547" stroke="#fff" stroke-width="3"/><circle cx="609" cy="552" r="10" fill="#ffb547" stroke="#fff" stroke-width="3"/></svg></div>`;
+// fotomontaggio da foto reali: orata di Alidz31 su iNaturalist (CC BY 4.0), stivale di Steinsky su Wikimedia Commons (CC BY-SA 3.0),
+// mano di Jiajitan su Wikimedia Commons (CC0), moneta di Michal Jarmoluk (CC0); il bancomat è disegnato, senza marchi.
+// linea azzurra: lunghezza dell'orata; linee arancioni: i riferimenti (altezza dello stivale, palmo, lato lungo del bancomat, diametro della moneta)
+const FISH_PREVIEW=`<div style="position:relative"><img src="img/orata-preview.jpg" alt="Orata con stivale, mano, bancomat e moneta" style="display:block;width:100%;border-radius:16px">
+  <svg viewBox="0 0 800 667" style="position:absolute;inset:0;width:100%;height:100%">
+  <line x1="525" y1="145" x2="56" y2="113" stroke="rgba(0,0,0,.6)" stroke-width="11" stroke-linecap="round"/><line x1="525" y1="145" x2="56" y2="113" stroke="#2fe0cf" stroke-width="6" stroke-linecap="round"/><circle cx="525" cy="145" r="10" fill="#2fe0cf" stroke="#fff" stroke-width="3"/><circle cx="56" cy="113" r="10" fill="#2fe0cf" stroke="#fff" stroke-width="3"/>
+  <line x1="25" y1="325" x2="478" y2="325" stroke="rgba(0,0,0,.6)" stroke-width="11" stroke-linecap="round"/><line x1="25" y1="325" x2="478" y2="325" stroke="#ffb547" stroke-width="6" stroke-linecap="round"/><circle cx="25" cy="325" r="10" fill="#ffb547" stroke="#fff" stroke-width="3"/><circle cx="478" cy="325" r="10" fill="#ffb547" stroke="#fff" stroke-width="3"/>
+  <line x1="523" y1="363" x2="752" y2="310" stroke="rgba(0,0,0,.6)" stroke-width="11" stroke-linecap="round"/><line x1="523" y1="363" x2="752" y2="310" stroke="#ffb547" stroke-width="6" stroke-linecap="round"/><circle cx="523" cy="363" r="10" fill="#ffb547" stroke="#fff" stroke-width="3"/><circle cx="752" cy="310" r="10" fill="#ffb547" stroke="#fff" stroke-width="3"/>
+  <line x1="535" y1="595" x2="634" y2="609" stroke="rgba(0,0,0,.6)" stroke-width="9" stroke-linecap="round"/><line x1="535" y1="595" x2="634" y2="609" stroke="#ffb547" stroke-width="4" stroke-linecap="round"/><circle cx="535" cy="595" r="6" fill="#ffb547" stroke="#fff" stroke-width="3"/><circle cx="634" cy="609" r="6" fill="#ffb547" stroke="#fff" stroke-width="3"/>
+  <line x1="688" y1="580" x2="718" y2="580" stroke="rgba(0,0,0,.6)" stroke-width="8" stroke-linecap="round"/><line x1="688" y1="580" x2="718" y2="580" stroke="#ffb547" stroke-width="3" stroke-linecap="round"/><circle cx="688" cy="580" r="5" fill="#ffb547" stroke="#fff" stroke-width="3"/><circle cx="718" cy="580" r="5" fill="#ffb547" stroke="#fff" stroke-width="3"/></svg></div>`;
 function premiumPreview(){return `<div class="pvwrap"><div class="pvblur">
   <div class="cphoto big" style="margin-bottom:10px">${FISH_PREVIEW}</div>
   <div class="aibox ok"><div style="flex:1"><div class="small mut" style="text-transform:uppercase;letter-spacing:1px;font-weight:700">✨ Riconosciuto</div>
     <div style="font-size:19px;font-weight:800;margin-top:2px">Orata <span class="pill" style="background:#5ee08a22;color:var(--ok)">94%</span></div><div class="small mut"><i>Sparus aurata</i></div>
-    <div class="aigrid" style="margin-top:10px"><div><b>41 cm</b><span>lunghezza</span></div><div><b>1,1 kg</b><span>peso stimato</span></div><div><b style="font-size:12px">Scarpa n. 43</b><span>riferimento trovato</span></div></div></div></div>
-  </div><div class="small mut" style="margin-top:6px;font-size:11px">Fotomontaggio da foto di Alidz31 (iNaturalist, CC BY) e Freestocks.org (CC0)</div></div>`;}
+    <div class="aigrid" style="margin-top:10px"><div><b>40 cm</b><span>lunghezza</span></div><div><b>1,0 kg</b><span>peso stimato</span></div><div><b style="font-size:12px">4 riferimenti</b><span>stivale, palmo, bancomat, 2 €</span></div></div></div></div>
+  </div><div class="small mut" style="margin-top:6px;font-size:11px">Fotomontaggio da foto di Alidz31 (iNaturalist, CC BY), Steinsky (Wikimedia Commons, CC BY-SA), Jiajitan e Michal Jarmoluk (CC0)</div></div>`;}
 function premiumPage(v,t){const [title,what]=PREMIUM_TABS[t];
   v.innerHTML=subHead(title,'Funzione Premium',t==='pesce'||t==='compare'?'home':'altro')+(t==='pesce'?`<div class="pvhost">${premiumPreview()}</div>`:'')+`<div class="card" style="text-align:center;padding:28px 18px">
     <div style="font-size:52px">⭐</div><h2 style="margin:6px 0">Funzione Premium</h2>
