@@ -154,7 +154,7 @@ CH.start=async()=>{
 CH.isAdmin=()=>{const u=me();return !!u&&u.emailVerified!==false&&ADMINS.includes((u.email||'').toLowerCase());};
 CH.reports=[];
 CH.reportCount=()=>new Set(CH.reports.map(r=>r.rid+'/'+r.mid)).size;
-CH.stop=()=>{clearInterval(CH._locT);Object.values(CH.subs).forEach(f=>{try{f();}catch(e){}});CH.subs={};CH.unsubRoom?.();CH.unsubRoom=null;CH.started=false;};
+CH.stop=()=>{clearInterval(CH._locT);CH.locMode=null;Object.values(CH.subs).forEach(f=>{try{f();}catch(e){}});CH.subs={};CH.unsubRoom?.();CH.unsubRoom=null;CH.started=false;};
 // nuova attività in una stanza: avviso se il messaggio è di un altro e non sto già guardando quella stanza
 function onRoom(rid,oldTs){
   const r=CH.rooms[rid]||CH.mine[rid],l=r?.last;
@@ -483,31 +483,38 @@ const manSvg=col=>`<svg width="16" height="20" viewBox="0 0 34 42" style="vertic
 const locVis=()=>LS.get('chatloc',null)||'friends';  // di default visibile agli amici; chi ha scelto altro tiene la sua scelta
 CH.locs={};
 function mapHtml(){
-  const v=locVis(),opt=[['off','🚫 Non condivisa','Nessuno vede la tua posizione'],['friends','🤝 Solo amici','La vedono solo gli utenti nei tuoi amici'],['all','🌍 Tutti','La vedono tutti gli utenti della chat']];
+  const v=locVis(),opt=[['off','🚫 Non condivisa','Nessuno ti vede e tu non vedi nessuno'],['friends','🤝 Solo amici','Ti vedono solo i tuoi amici e tu vedi solo loro'],['all','🌍 Tutti','Ti vedono tutti e tu vedi tutti']];
   return `<div class="card"><h3>📡 La mia posizione</h3>${opt.map(([k,n,d])=>`<label class="crow" style="align-items:flex-start"><input type="radio" name="cloc" ${v===k?'checked':''} onchange="CHAT.setLoc('${k}')" style="margin-top:3px"><span><b>${n}</b><br><span class="small mut">${d}</span></span></label>`).join('')}
     <p class="small mut" style="margin:6px 0 0">La posizione viene presa dal GPS del telefono, arrotondata a circa 100 m, e aggiornata ogni 5 minuti mentre LenzApp è aperta. Dopo ${LOC_MAX_H} ore senza aggiornamenti sparisce dalla mappa.${CH.locErr?`<br>⚠️ ${esc(CH.locErr)}`:''}</p></div>
   <div class="card" style="padding:10px"><div id="cmap" style="height:58vh;min-height:320px;border-radius:16px;overflow:hidden"></div>
-    <div id="cfstat">${friendStatus()}</div>
+    ${v==='off'?'<p class="small" style="margin:8px 4px 0;color:var(--acc2)">🚫 Hai scelto «Non condivisa»: nessuno ti vede e tu non vedi nessuno.</p>':`<div id="cfstat">${friendStatus()}</div>`}
     <div class="small" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;justify-content:center"><span><svg width="12" height="15" viewBox="0 0 20 24" style="vertical-align:-2px"><circle cx="10" cy="6" r="4.6" fill="#3b8cff" stroke="#fff" stroke-width="1.8"/><path d="M2.5 22.5c0-5 3.4-8.6 7.5-8.6s7.5 3.6 7.5 8.6z" fill="#3b8cff" stroke="#fff" stroke-width="1.8"/></svg> Tu</span><span>${manSvg('#2ecc71')} Amici</span><span>${manSvg('#ff5a5f')} Altri utenti</span></div></div>`;
 }
 CH.setLoc=async v=>{LS.set('chatloc',v);CH.locErr='';
-  if(v==='off'){clearInterval(CH._locT);try{await F().deleteDoc(F().doc(D(),'locations',me().uid));}catch(e){}delete CH.locs[me().uid];toast('📡 Posizione non più condivisa');refresh();return;}
-  await pushLoc(true);startLocTimer();};
+  if(v==='off'){clearInterval(CH._locT);try{await F().deleteDoc(F().doc(D(),'locations',me().uid));}catch(e){}locStop();delete CH.locs[me().uid];toast('📡 Posizione non condivisa: non vedi e non sei visto');render();return;}
+  await pushLoc(true);startLocTimer();locListen();};
 function startLocTimer(){clearInterval(CH._locT);if(locVis()==='off')return;CH._locT=setInterval(()=>pushLoc(false),5*60000);}
 async function pushLoc(say){
   const v=locVis();if(v==='off'||!me())return;
   const pos=await new Promise(ok=>{if(!navigator.geolocation)return ok(null);navigator.geolocation.getCurrentPosition(p=>ok(p.coords),()=>ok(null),{enableHighAccuracy:true,timeout:15000,maximumAge:120000});});
   if(!pos){CH.locErr='Non riesco a leggere il GPS: controlla che la posizione sia attiva e consentita per LenzApp.';refresh();if(say)render();return;}
   const d={name:C().name(),lat:Math.round(pos.latitude*1000)/1000,lon:Math.round(pos.longitude*1000)/1000,vis:v,friends:friends().map(f=>f.uid),ts:Date.now()};
-  try{await F().setDoc(F().doc(D(),'locations',me().uid),d);CH.locs[me().uid]={id:me().uid,...d};if(say)toast(v==='all'?'🌍 Posizione visibile a tutti':'🤝 Posizione visibile agli amici');CH.locErr='';refresh();if(say&&CH.tab==='mappa')render();}
+  try{await F().setDoc(F().doc(D(),'locations',me().uid),d);CH.locs[me().uid]={id:me().uid,...d};if(CH.locMode!==v)locListen();if(say)toast(v==='all'?'🌍 Posizione visibile a tutti':'🤝 Posizione visibile agli amici');CH.locErr='';refresh();if(say&&CH.tab==='mappa')render();}
   catch(e){CH.locErr='Posizione non condivisa: '+(e.code||e.message);if(say)render();}}
 CH.friendsChanged=()=>{if(locVis()!=='off')pushLoc(false);};
 // ascolto delle posizioni: quelle pubbliche e quelle condivise con me dagli amici
-function locListen(){if(CH.subs._locA||!CH.started)return;const ff=F(),col=ff.collection(D(),'locations'),u=me().uid;
+// reciprocità: con «Non condivisa» non vedo nessuno, con «Solo amici» vedo solo gli amici, con «Tutti» vedo tutti
+// (le regole di Firestore lo impongono anche lato server: per leggere le posizioni degli altri serve avere la propria condivisa)
+function locStop(){['_locA','_locF','_locMe'].forEach(k=>{CH.subs[k]?.();delete CH.subs[k];});CH.locMode=null;
+  const u=me()?.uid;for(const k of Object.keys(CH.locs))if(k!==u)delete CH.locs[k];}
+function locListen(){if(!CH.started)return;const v=locVis();if(CH.locMode===v)return;locStop();CH.locMode=v;
+  const ff=F(),col=ff.collection(D(),'locations'),u=me().uid;
+  CH.subs._locMe=ff.onSnapshot(ff.doc(col,u),s=>{if(s.exists())CH.locs[u]={id:u,...s.data()};else delete CH.locs[u];if(CH.tab==='mappa'&&S.tab==='chat')mapMarkers();},()=>{});
+  if(v==='off'){if(CH.tab==='mappa'&&S.tab==='chat')mapMarkers();return;}
   const on=snap=>{snap.docChanges().forEach(c=>{if(c.type==='removed')delete CH.locs[c.doc.id];else CH.locs[c.doc.id]={id:c.doc.id,...c.doc.data()};});if(CH.tab==='mappa'&&S.tab==='chat'){mapMarkers();const fs=document.getElementById('cfstat');if(fs)fs.innerHTML=friendStatus();}};
-  CH.subs._locA=ff.onSnapshot(ff.query(col,ff.where('vis','==','all')),on,snapErr('posizioni pubbliche'));
-  CH.subs._locF=ff.onSnapshot(ff.query(col,ff.where('friends','array-contains',u)),on,snapErr('posizioni degli amici'));
-  CH.subs._locMe=ff.onSnapshot(ff.doc(col,u),s=>{if(s.exists())CH.locs[u]={id:u,...s.data()};},()=>{});}
+  const err=lab=>e=>{CH.locErr='Non riesco a leggere '+lab+' ('+(e.code||e.message)+'): la tua posizione deve essere condivisa.';delete CH.subs[lab==='le posizioni pubbliche'?'_locA':'_locF'];CH.locMode=null;};
+  CH.subs._locF=ff.onSnapshot(ff.query(col,ff.where('friends','array-contains',u)),on,err('le posizioni degli amici'));
+  if(v==='all')CH.subs._locA=ff.onSnapshot(ff.query(col,ff.where('vis','==','all')),on,err('le posizioni pubbliche'));}
 function friendStatus(){const fr=friends();if(!fr.length)return '<p class="small mut" style="margin:8px 4px 0">Non hai ancora amici: aggiungili nella scheda «Amici» con il loro codice.</p>';
   const now=Date.now();
   return `<div style="margin-top:8px">${fr.map(f=>{const l=CH.locs[f.uid],ok=l&&now-l.ts<=LOC_MAX_H*3600e3;
@@ -530,7 +537,8 @@ const meIcon=()=>L.divIcon({className:'',iconSize:[20,24],iconAnchor:[10,22],pop
 function mapMarkers(){
   if(!CH.map||!CH.mlayer||!document.getElementById('cmap'))return;CH.mlayer.clearLayers();
   const u=me()?.uid,fr=new Set(friends().map(f=>f.uid)),bl=blocked(),now=Date.now(),pts=[];
-  const vis=Object.values(CH.locs).filter(l=>l.lat!=null&&!bl.includes(l.id)&&now-l.ts<=LOC_MAX_H*3600e3);
+  const mode=locVis();
+  const vis=Object.values(CH.locs).filter(l=>l.lat!=null&&!bl.includes(l.id)&&now-l.ts<=LOC_MAX_H*3600e3&&(l.id===u||(mode==='all')||(mode==='friends'&&fr.has(l.id))));
   // stesse coordinate (posizioni arrotondate a 100 m): distanzio gli omini in cerchio, così si vedono tutti
   const groups={};vis.forEach(l=>{(groups[l.lat+','+l.lon]=groups[l.lat+','+l.lon]||[]).push(l);});
   const pos={};for(const g of Object.values(groups)){g.sort((a,b)=>(a.id===u)-(b.id===u));g.forEach((l,i)=>{
