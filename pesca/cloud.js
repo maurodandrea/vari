@@ -32,7 +32,7 @@ async function init(){
     fa.onAuthStateChanged(auth,u=>{C.user=u;C.unsub.forEach(f=>f());C.unsub=[];
       // accesso fatto dalla finestra di login: la chiudo
       if(u&&document.querySelector('#sheetBox #cle'))closeSheet();
-      C.chip();if(u)start();else{C.status='';if(S.tab==='settings'||S.tab==='home')render();}});
+      C.chip();if(u&&!C.mustVerify())start();else if(u)verifyWatch();else{C.status='';if(S.tab==='settings'||S.tab==='home')render();}});
   }catch(e){C.status='Servizio account non raggiungibile';}
   if(S.tab==='settings')render();
 }
@@ -46,7 +46,21 @@ const ERR={'auth/invalid-email':'Email non valida','auth/missing-password':'Inse
 const errMsg=e=>ERR[e?.code]||e?.message||'Operazione non riuscita';
 const form=()=>({email:(document.getElementById('cle')?.value||'').trim(),pw:document.getElementById('clp')?.value||''});
 C.login=async()=>{const {email,pw}=form();try{await fa.signInWithEmailAndPassword(auth,email,pw);toast('✅ Accesso effettuato');}catch(e){toast('⚠️ '+errMsg(e));}};
-C.register=async()=>{const {email,pw}=form();try{const r=await fa.createUserWithEmailAndPassword(auth,email,pw);fa.sendEmailVerification(r.user).catch(()=>{});toast('✅ Account creato');}catch(e){toast('⚠️ '+errMsg(e));}};
+C.register=async()=>{const {email,pw}=form();try{const r=await fa.createUserWithEmailAndPassword(auth,email,pw);await sendVerify(r.user);toast('📧 Account creato: ti ho inviato l\'email di attivazione');}catch(e){toast('⚠️ '+errMsg(e));}};
+/* ---------- attivazione dell'account (solo per chi si registra con email e password) ---------- */
+// finché non apre il link ricevuto per email l'account non entra nell'app; Google e Apple hanno già l'email verificata
+C.mustVerify=()=>{const u=C.user;return !!u&&!u.emailVerified&&(u.providerData||[]).some(p=>p.providerId==='password');};
+// dopo l'attivazione il link riporta all'app
+const sendVerify=u=>fa.sendEmailVerification(u,{url:location.origin+location.pathname}).catch(e=>{
+  if(e?.code==='auth/unauthorized-continue-uri'||e?.code==='auth/invalid-continue-uri')return fa.sendEmailVerification(u);throw e;});
+C.resendVerify=async()=>{if(!C.user)return;try{await sendVerify(C.user);toast('📧 Email di attivazione inviata di nuovo a '+C.user.email);}catch(e){toast('⚠️ '+(e.code==='auth/too-many-requests'?'Troppe richieste: aspetta qualche minuto e controlla anche lo spam':errMsg(e)));}};
+// controllo se l'utente ha aperto il link (al ritorno nell'app, ogni 5 secondi o col pulsante)
+C.checkVerify=async(manual)=>{const u=C.user;if(!u||!C.mustVerify())return;
+  try{await u.reload();}catch(e){}
+  if(u.emailVerified){try{await u.getIdToken(true);}catch(e){}clearInterval(C.vtimer);C.vtimer=null;toast('✅ Account attivato, benvenuto!');C.chip();start();}
+  else if(manual)toast('Non risulta ancora attivato: apri il link nell\'email (guarda anche nello spam)');};
+function verifyWatch(){clearInterval(C.vtimer);C.vtimer=setInterval(()=>{if(!C.mustVerify()){clearInterval(C.vtimer);return;}C.checkVerify();},5000);}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')C.checkVerify();});
 C.reset=async()=>{const {email}=form();if(!email){toast('Scrivi prima la tua email');return;}try{await fa.sendPasswordResetEmail(auth,email);toast('📧 Ti ho inviato un\'email per reimpostare la password');}catch(e){toast('⚠️ '+errMsg(e));}};
 C.google=()=>social(new fa.GoogleAuthProvider());
 C.apple=()=>{const p=new fa.OAuthProvider('apple.com');p.addScope('email');p.addScope('name');p.setCustomParameters({locale:'it'});return social(p);};
@@ -60,6 +74,7 @@ C.logout=async()=>{if(!confirm('Uscire dall\'account? I tuoi dati restano salvat
   C.unsub.forEach(f=>f());C.unsub=[];await fa.signOut(auth);
   try{[...SYNC_KEYS,'diary','cloudts','cloudhash','cloudsent','clouduid'].forEach(k=>localStorage.removeItem('lenza.'+k));}catch(e){}
   location.hash='';location.reload();};
+C.cancelVerify=async()=>{clearInterval(C.vtimer);await fa.signOut(auth);};
 C.syncNow=()=>{SYNC_KEYS.forEach(k=>C.dirty.add(k));C.dirty.add('diary');push();};
 
 /* ---------- sincronizzazione ---------- */
@@ -181,7 +196,7 @@ C.name=()=>{const u=C.user;if(!u)return '';const user=(u.email||'').split('@')[0
   return (social&&nome?nome:user)||'utente';};
 // in alto accanto allo spot: nome dell'utente se è collegato, altrimenti «Accedi»
 C.chip=()=>{C.gate();const el=document.getElementById('userChip');if(!el)return;
-  if(!window.LENZA_FB?.apiKey||!C.ready||!C.user){el.style.display='none';return;}
+  if(!window.LENZA_FB?.apiKey||!C.ready||!C.user||C.mustVerify()){el.style.display='none';return;}
   el.style.display='';const n=C.name(),short=n;
   const king=typeof isPremium==='function'&&isPremium();  // utenti Premium: stellina accanto al nome
   el.innerHTML=C.user?`<i>${esc(n.charAt(0).toUpperCase())}</i><span>${esc(short)}</span>${king?'<em class="crown" title="Premium">⭐</em>':''}`:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Accedi</span>`;
@@ -191,10 +206,21 @@ C.open=()=>{if(C.user){go('settings');return;}openSheet(C.form());};
 C.homeCard=()=>'';const _homeCard_old=()=>`<div class="card loginbox"><div><b>☁️ Accedi o registrati</b><div class="small mut">Salva spot, diario e foto online e ritrovali su telefono e PC.</div></div><button class="btn" onclick="CLOUD.open()">Login</button></div>`;
 // senza accesso: schermata di accesso grande sopra l'app, che resta sfocata sotto
 C.gate=()=>{
-  const on=!!window.LENZA_FB?.apiKey&&C.ready&&!C.user;let g=document.getElementById('gate');
+  const verify=C.mustVerify(),on=!!window.LENZA_FB?.apiKey&&C.ready&&(!C.user||verify);let g=document.getElementById('gate');
   if(!on){if(g)g.remove();document.body.classList.remove('gated');return;}
-  if(g)return;
-  g=document.createElement('div');g.id='gate';
+  if(g&&g.dataset.v===String(verify))return;if(g)g.remove();
+  if(verify){
+    g=document.createElement('div');g.id='gate';g.dataset.v='true';
+    g.innerHTML=`<div class="gbox"><div class="glogo"><div class="mark">${document.querySelector('.logo .mark')?.innerHTML||''}</div><span>Len<b>za</b></span></div>
+      <div style="font-size:46px;text-align:center">📧</div><h2 style="text-align:center;margin:4px 0 8px">Attiva il tuo account</h2>
+      <p class="gsub">Ti ho inviato un'email a <b>${esc(C.user.email||'')}</b> con il link di attivazione. Aprilo e torna qui: l'app si sblocca da sola.</p>
+      <p class="small mut" style="text-align:center;margin:-4px 0 14px">Non la trovi? Guarda nella cartella spam o promozioni.</p>
+      <button class="btn full" style="margin-bottom:10px" onclick="CLOUD.checkVerify(true)">✅ Ho attivato l'account</button>
+      <button class="btn ghost full" style="margin-bottom:10px" onclick="CLOUD.resendVerify()">📧 Invia di nuovo l'email</button>
+      <div class="small" style="text-align:center"><u style="cursor:pointer" onclick="CLOUD.cancelVerify()">Usa un altro account</u></div></div>`;
+    document.body.appendChild(g);document.body.classList.add('gated');return;
+  }
+  g=document.createElement('div');g.id='gate';g.dataset.v='false';
   g.innerHTML=`<div class="gbox"><div class="glogo"><div class="mark">${document.querySelector('.logo .mark')?.innerHTML||''}</div><span>Len<b>za</b></span></div>
     <p class="gsub">Accedi per usare l'app: spot, diario e foto salvati online e sincronizzati su telefono e PC.</p>${C.form(true)}</div>`;
   document.body.appendChild(g);document.body.classList.add('gated');
