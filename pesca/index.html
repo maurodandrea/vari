@@ -1355,7 +1355,7 @@ function saveSpot(id,lat,lon){
 }
 function delSpot(id){
   if(!confirm('Eliminare questo spot? Le uscite del diario restano salvate.'))return;
-  S.spots=S.spots.filter(s=>s.id!==id);if(S.active===id){S.active=S.spots[0]?.id||null;S.wx=null;if(S.active)loadWeather();}
+  S.spots=S.spots.filter(s=>s.id!==id);setTimeout(()=>window.CHAT?.spotsChanged?.(),0);if(S.active===id){S.active=S.spots[0]?.id||null;S.wx=null;if(S.active)loadWeather();}
   LS.set('spots',S.spots);LS.set('active',S.active);closeSheet();render();
 }
 async function searchPlace(){

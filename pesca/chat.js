@@ -55,8 +55,15 @@ async function placeOf(sp){
     if(name)for(const rg of GEO.r)for(const p of rg[2]){if(sig&&p[2]!==sig)continue;const x=p[3].find(c=>norm(c[0])===norm(name));if(x)return {c:x,p,r:rg};}
   }catch(e){}
   return myPlace(sp);}
+// spot cancellato: tolgo dai seguiti il suo comune, se nessun altro spot rimasto è nello stesso comune
+function dropDeleted(){const done=LS.get('chatspotc',{}),ids=new Set((S.spots||[]).filter(s=>!s.here).map(s=>s.id));
+  const gone=Object.keys(done).filter(id=>!ids.has(id));if(!gone.length)return;
+  const keep=new Set(Object.entries(done).filter(([id])=>ids.has(id)).map(([,r])=>r));
+  const drop=new Set(gone.map(id=>done[id]).filter(r=>!keep.has(r)));gone.forEach(id=>delete done[id]);
+  LS.set('chatspotc',done);LS.set('chatfollow',follows().filter(r=>!drop.has(r)));syncSubs();}
+CH.spotsChanged=()=>{if(GEO&&CH.started)dropDeleted();};
 // la posizione attuale non è uno spot vero: non conta per i canali seguiti in automatico
-async function defaultFollow(){if(!GEO||CH._df)return;CH._df=true;
+async function defaultFollow(){if(!GEO||CH._df)return;dropDeleted();CH._df=true;
   try{
     let f=LS.get('chatfollow',null)||[],done=LS.get('chatspotc',{});
     if(!LS.get('chatfollow2',false)){const m=myPlace();if(m){const old=['z_it','r_'+m.r[0],'p_'+m.p[0]];f=f.filter(x=>!old.includes(x));}LS.set('chatfollow2',true);}
