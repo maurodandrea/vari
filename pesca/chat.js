@@ -10,6 +10,7 @@
 const CH={rid:null,tab:'zone',msgs:[],unsubRoom:null,subs:{},rooms:{},mine:{},notifs:[],reply:null,started:false,t0:Date.now(),botBusy:false};
 window.CHAT=CH;
 const C=()=>window.CLOUD,F=()=>C().ff,D=()=>C().db,me=()=>C()?.user;
+const ADMINS=['chesterfieldsoftred@gmail.com'];  // amministratori: vedono e gestiscono le segnalazioni (vedi anche firestore.rules)
 const COND_H=6;  // le condizioni del mare restano visibili 6 ore
 const REP_HIDE=3; // messaggio nascosto dopo 3 segnalazioni
 const uidCode=u=>{let h=7;for(const c of u)h=(h*131+c.charCodeAt(0))>>>0;return h.toString(36).toUpperCase().padStart(6,'0').slice(-6);};
@@ -50,12 +51,20 @@ CH.start=async()=>{
     CH.subs._mine=ff.onSnapshot(ff.query(ff.collection(db,'rooms'),ff.where('members','array-contains',u.uid)),snap=>{
       snap.docChanges().forEach(c=>{const id=c.doc.id;if(c.type==='removed'){delete CH.mine[id];return;}const old=CH.mine[id]?.last?.ts||0;CH.mine[id]={id,...c.doc.data()};onRoom(id,old);});
       refresh();});
+    CH.subs._ban=ff.onSnapshot(ff.doc(db,'banned',u.uid),s=>{CH.banned=s.exists();if(S.tab==='chat'&&CH.rid)render();});
+    if(CH.isAdmin())CH.subs._rep=ff.onSnapshot(ff.collection(db,'reports'),snap=>{
+      snap.docChanges().forEach(c=>{CH.reports=CH.reports.filter(r=>r.id!==c.doc.id);if(c.type!=='removed')CH.reports.push({id:c.doc.id,...c.doc.data()});});
+      CH.badge();if(S.tab==='mod'||S.tab==='altro')render();});
     CH.subs._notif=ff.onSnapshot(ff.collection(db,'notifs',u.uid,'items'),snap=>{
       snap.docChanges().forEach(c=>{if(c.type==='removed')return;const n={id:c.doc.id,...c.doc.data()};if(CH.notifs.some(x=>x.id===n.id))return;CH.notifs.push(n);
         if(n.ts>CH.t0&&!blocked().includes(n.fromUid))notify(`${n.from} ti ha risposto`,clean(n.text),n.rid);});
       CH.notifs.sort((a,b)=>b.ts-a.ts);refresh();});
-  }catch(e){CH.err='Chat non raggiungibile: '+(e.code||e.message);CH.started=false;refresh();}
+  }catch(e){CH.err=e.code==='permission-denied'?'La chat non ha i permessi su Firebase: pubblica le regole aggiornate (file firestore.rules) in Console Firebase › Firestore Database › Regole.':'Chat non raggiungibile: '+(e.code||e.message);
+    CH.started=false;Object.values(CH.subs).forEach(f=>{try{f();}catch(x){}});CH.subs={};if(S.tab==='chat')render();else refresh();}
 };
+CH.isAdmin=()=>{const u=me();return !!u&&u.emailVerified!==false&&ADMINS.includes((u.email||'').toLowerCase());};
+CH.reports=[];
+CH.reportCount=()=>new Set(CH.reports.map(r=>r.rid+'/'+r.mid)).size;
 CH.stop=()=>{Object.values(CH.subs).forEach(f=>{try{f();}catch(e){}});CH.subs={};CH.unsubRoom?.();CH.unsubRoom=null;CH.started=false;};
 // nuova attività in una stanza: avviso se il messaggio è di un altro e non sto già guardando quella stanza
 function onRoom(rid,oldTs){
@@ -77,7 +86,10 @@ function notify(title,body,rid){
 CH.unread=()=>{const s=seen(),u=me()?.uid;let n=0;
   for(const r of [...Object.values(CH.rooms),...Object.values(CH.mine)]){const l=r.last;if(l&&l.uid!==u&&l.ts>(s[r.id]||0)&&!blocked().includes(l.uid))n++;}
   return n+CH.notifs.filter(x=>!x.read).length;};
-CH.badge=()=>{const b=document.querySelector(`#nav button[onclick="go('chat')"]`);if(!b)return;let el=b.querySelector('.cbadge');const n=CH.unread();
+CH.badge=()=>{
+  const a=document.querySelector(`#nav button[onclick="go('altro')"]`),rc=CH.isAdmin()?CH.reportCount():0;
+  if(a){let e=a.querySelector('.cbadge');if(!rc)e?.remove();else{if(!e){e=document.createElement('i');e.className='cbadge';a.appendChild(e);}e.textContent=rc>9?'9+':rc;e.title='Segnalazioni da controllare';}}
+  const b=document.querySelector(`#nav button[onclick="go('chat')"]`);if(!b)return;let el=b.querySelector('.cbadge');const n=CH.unread();
   if(!n){el?.remove();return;}if(!el){el=document.createElement('i');el.className='cbadge';b.appendChild(el);}el.textContent=n>9?'9+':n;};
 function markSeen(rid){const s=seen();s[rid]=Date.now();LS.set('chatseen',s);CH.badge();}
 // aggiorno solo la parte che cambia, così il testo che si sta scrivendo non si perde
@@ -142,9 +154,9 @@ function roomView(v){
   v.innerHTML=`<div class="subhead"><button class="back" onclick="CHAT.back()" aria-label="Indietro">‹</button><div><h2>${esc(roomName(rid))}</h2><p>${sub}</p></div></div>
   <div class="card chatcard"><div id="chatlog" class="chatlog">${logHtml()}</div>
     <div id="creply">${replyHtml()}</div>
-    <div class="ccomp">${bot?'':`<button class="cbtn" title="Condividi una cattura" onclick="CHAT.shareCatch()">📸</button><button class="cbtn" title="Condizioni in diretta" onclick="CHAT.condSheet()">🌊</button>`}
+    ${CH.banned&&!bot?'<div class="banner" style="margin:8px 0 0">🚫 Un amministratore ti ha bloccato: puoi leggere ma non scrivere in chat.</div>':`<div class="ccomp">${bot?'':`<button class="cbtn" title="Condividi una cattura" onclick="CHAT.shareCatch()">📸</button><button class="cbtn" title="Condizioni in diretta" onclick="CHAT.condSheet()">🌊</button>`}
       <textarea id="cmsg" rows="1" maxlength="1000" placeholder="${bot?'Chiedi all\'assistente…':'Scrivi un messaggio…'}" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();CHAT.send();}"></textarea>
-      <button class="cbtn send" onclick="CHAT.send()" aria-label="Invia">➤</button></div></div>`;
+      <button class="cbtn send" onclick="CHAT.send()" aria-label="Invia">➤</button></div>`}</div>`;
   const log=document.getElementById('chatlog');log.scrollTop=log.scrollHeight;
 }
 const hm=ts=>new Date(ts).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
@@ -310,6 +322,41 @@ CH.ask=async q=>{
       (typeof gemKey==='function'&&gemKey()?'':'\n\nPer risposte libere a qualsiasi domanda attiva Gemini nelle Impostazioni.');}
   const h2=LS.get('chatbot',[]);h2.push({me:false,text:ans,ts:Date.now()});LS.set('chatbot',h2.slice(-40));CH.botBusy=false;refresh();
 };
+
+/* ---------- segnalazioni (solo amministratori) ---------- */
+CH.modView=async v=>{
+  if(!CH.isAdmin()){go('altro');return;}
+  CH.start();const ff=F(),db=D();
+  const groups={};for(const r of CH.reports){const k=r.rid+'/'+r.mid;(groups[k]=groups[k]||{rid:r.rid,mid:r.mid,uid:r.uid,name:r.name,text:r.text,list:[]}).list.push(r);}
+  const gs=Object.values(groups).sort((a,b)=>Math.max(...b.list.map(x=>x.ts))-Math.max(...a.list.map(x=>x.ts)));
+  v.innerHTML=subHead('Segnalazioni','Messaggi della chat segnalati dagli utenti')+
+    (gs.length?gs.map((g,i)=>`<div class="card"><div class="row" style="justify-content:space-between;align-items:flex-start;gap:8px"><div><b>${esc(g.name||'Utente')}</b> <span class="small mut">in <span id="mr${i}">${esc(roomName(g.rid))}</span></span></div>
+        <span class="pill" style="background:#ff5a5f22;color:#ff8a8d">🚩 ${g.list.length} ${g.list.length===1?'segnalazione':'segnalazioni'}</span></div>
+      <div class="cb" style="max-width:none;margin:10px 0;cursor:default" id="mt${i}">${esc(g.text||'(cattura o condizioni del mare)')}</div>
+      <div class="small mut">Ultima segnalazione: ${new Date(Math.max(...g.list.map(x=>x.ts))).toLocaleString('it-IT',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})}${g.list.length>=REP_HIDE?' · nascosto in chat':''}</div>
+      <div class="row" style="gap:6px;margin-top:10px;flex-wrap:wrap"><button class="btn" style="flex:1;padding:9px 10px" onclick="CHAT.modDel('${g.rid}','${g.mid}')">🗑️ Elimina</button>
+        <button class="btn ghost" style="flex:1;padding:9px 10px" onclick="CHAT.modOk('${g.rid}','${g.mid}')">✔ Ignora</button>
+        <button class="btn ghost" style="flex:1;padding:9px 10px;color:#ff8a8d" onclick="CHAT.modBan('${g.rid}','${g.mid}','${g.uid}','${esc(g.name||'').replace(/'/g,'')}')">🚫 Blocca utente</button></div></div>`).join('')
+    :`<div class="card" style="text-align:center;padding:28px 18px"><div style="font-size:44px">🛡️</div><h3 style="margin:6px 0 2px">Nessuna segnalazione</h3><p class="small mut">Quando un utente segnala un messaggio lo trovi qui.</p></div>`)+
+    `<div class="card" id="bannedbox"><h3>🚫 Utenti bloccati</h3><p class="small mut">Carico…</p></div>`;
+  // testo attuale del messaggio (potrebbe essere già stato cancellato dal suo autore)
+  gs.forEach(async(g,i)=>{try{const m=await ff.getDoc(ff.doc(db,'rooms',g.rid,'msgs',g.mid));const el=document.getElementById('mt'+i);if(!el)return;
+    if(!m.exists())el.innerHTML='<i class="mut">Messaggio già eliminato</i>';else{const d=m.data();if(d.kind==='catch'&&d.catch?.photo)el.innerHTML=`<img src="${d.catch.photo}" style="width:100%;max-height:200px;object-fit:cover;border-radius:10px;margin-bottom:6px"><div>${esc('🐟 '+(d.catch.sp||'')+(d.text?' · '+d.text:''))}</div>`;}
+    const r=await ff.getDoc(ff.doc(db,'rooms',g.rid));const n=document.getElementById('mr'+i);if(n&&r.exists())n.textContent=r.data().type==='dm'?'messaggio privato':r.data().type==='group'?'gruppo «'+(r.data().name||'')+'»':(r.data().name||'chat');}catch(e){}});
+  try{const b=await ff.getDocs(ff.collection(db,'banned'));const box=document.getElementById('bannedbox');if(!box)return;
+    box.innerHTML='<h3>🚫 Utenti bloccati</h3>'+(b.docs.length?b.docs.map(d=>`<div class="croom" style="cursor:default"><div style="flex:1"><b>${esc(d.data().name||'Utente')}</b><div class="small mut">dal ${new Date(d.data().ts).toLocaleDateString('it-IT')}</div></div><button class="btn ghost" style="padding:7px 12px" onclick="CHAT.modUnban('${d.id}')">Sblocca</button></div>`).join(''):'<p class="small mut">Nessun utente bloccato.</p>');}
+  catch(e){const box=document.getElementById('bannedbox');if(box)box.innerHTML='<h3>🚫 Utenti bloccati</h3><p class="small mut">⚠️ '+esc(e.code||e.message)+'</p>';}
+};
+async function closeReports(rid,mid){const ff=F(),db=D();for(const r of CH.reports.filter(x=>x.rid===rid&&x.mid===mid)){try{await ff.deleteDoc(ff.doc(db,'reports',r.id));}catch(e){}}
+  CH.reports=CH.reports.filter(x=>!(x.rid===rid&&x.mid===mid));CH.badge();render();}
+CH.modDel=async(rid,mid)=>{if(!confirm('Eliminare il messaggio per tutti?'))return;
+  try{await F().deleteDoc(F().doc(D(),'rooms',rid,'msgs',mid));await closeReports(rid,mid);toast('🗑️ Messaggio eliminato');}catch(e){toast('⚠️ '+(e.code||e.message));}};
+CH.modOk=async(rid,mid)=>{
+  try{const ref=F().doc(D(),'rooms',rid,'msgs',mid),m=await F().getDoc(ref);if(m.exists())await F().updateDoc(ref,{rep:0});await closeReports(rid,mid);toast('✔ Segnalazione chiusa, messaggio di nuovo visibile');}catch(e){toast('⚠️ '+(e.code||e.message));}};
+CH.modBan=async(rid,mid,uid,name)=>{if(!confirm(`Bloccare ${name||'questo utente'}? Non potrà più scrivere in chat. Il messaggio segnalato viene eliminato.`))return;
+  try{await F().setDoc(F().doc(D(),'banned',uid),{name,ts:Date.now(),by:me().uid});try{await F().deleteDoc(F().doc(D(),'rooms',rid,'msgs',mid));}catch(e){}await closeReports(rid,mid);toast('🚫 '+(name||'Utente')+' bloccato');}
+  catch(e){toast('⚠️ '+(e.code||e.message));}};
+CH.modUnban=async uid=>{try{await F().deleteDoc(F().doc(D(),'banned',uid));toast('Utente sbloccato');render();}catch(e){toast('⚠️ '+(e.code||e.message));}};
 
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.tab==='chat'&&CH.rid)markSeen(CH.rid);});
 })();
