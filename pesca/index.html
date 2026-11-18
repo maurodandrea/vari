@@ -56,6 +56,8 @@
   .userchip svg{width:16px;height:16px;flex:none;}
   .userchip i{font-style:normal;flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--grad);color:#03282a;font-weight:800;}
   .userchip span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .userchip:has(.crown){max-width:126px;}
+  .userchip .crown{font-style:normal;flex:none;font-size:15px;line-height:1;margin-left:-2px;filter:drop-shadow(0 0 6px rgba(255,200,40,.7));}
   .userchip:not([style*="none"])+.spotchip{margin-left:0;min-width:96px;flex:1 1 auto;justify-content:flex-start;}
   @media (max-width:999px){.userchip{margin-left:4px;}.userchip.in{padding:4px 10px 4px 4px;}}
   header .logo{flex:none;}
