@@ -17,7 +17,7 @@ const uidCode=u=>{let h=7;for(const c of u)h=(h*131+c.charCodeAt(0))>>>0;return 
 const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const seen=()=>LS.get('chatseen',{});
 // errore di un ascolto in tempo reale: lo mostro con il nome dell'operazione rifiutata
-const snapErr=label=>e=>{CH.err=(e.code==='permission-denied'?'La chat non ha i permessi su Firebase: pubblica le regole aggiornate (file firestore.rules) in Console Firebase › Firestore Database › Regole.':'Chat non raggiungibile: '+(e.code||e.message))+` [ascolto: ${label} · ${String(e.message||'').slice(0,120)}]`;if(S.tab==='chat')render();};
+const snapErr=label=>e=>{CH.err=(e.code==='permission-denied'?'Social non ha i permessi su Firebase: pubblica le regole aggiornate (file firestore.rules) in Console Firebase › Firestore Database › Regole.':'Social non raggiungibile: '+(e.code||e.message))+` [ascolto: ${label} · ${String(e.message||'').slice(0,120)}]`;if(S.tab==='chat')render();};
 const friends=()=>LS.get('chatfriends',[]);
 const blocked=()=>LS.get('chatblock',[]);
 const notifOn=()=>LS.get('chatnotif',{on:false}).on;
@@ -147,7 +147,7 @@ CH.start=async()=>{
     // permessi negati: un tentativo con il token rinnovato prima di mostrare l'errore
     if(e.code==='permission-denied'&&!CH.retried){CH.retried=true;CH.started=false;Object.values(CH.subs).forEach(f=>{try{f();}catch(x){}});CH.subs={};
       try{await u.getIdToken(true);}catch(x){}return CH.start();}
-    CH.err=(e.code==='permission-denied'?'La chat non ha i permessi su Firebase: pubblica le regole aggiornate (file firestore.rules) in Console Firebase › Firestore Database › Regole.':'Chat non raggiungibile: '+(e.code||e.message))+
+    CH.err=(e.code==='permission-denied'?'Social non ha i permessi su Firebase: pubblica le regole aggiornate (file firestore.rules) in Console Firebase › Firestore Database › Regole.':'Social non raggiungibile: '+(e.code||e.message))+
       ` [passo: ${step} · accesso: ${(u.providerData||[]).map(p=>p.providerId).join(',')||'?'} · email verificata: ${u.emailVerified?'sì':'no'}]`;
     CH.started=false;Object.values(CH.subs).forEach(f=>{try{f();}catch(x){}});CH.subs={};if(S.tab==='chat')render();else refresh();}
 };
@@ -190,12 +190,12 @@ function refresh(){CH.badge();if(S.tab!=='chat')return;
 /* ---------- pagina ---------- */
 CH.view=v=>{
   // accesso ancora in caricamento (app appena aperta): niente «Accedi», solo l'attesa
-  if(!me()&&window.LENZA_FB?.apiKey&&!C()?.authKnown){v.innerHTML=subHead('Chat','Zone, amici e assistente','home')+`<div class="card" style="text-align:center;padding:30px"><span class="aispin" style="width:28px;height:28px;border-width:3px;display:inline-block"></span><p class="mut">Carico la chat…</p></div>`;return;}
-  if(!me()){v.innerHTML=subHead('Chat','Funzione Premium','home')+`<div class="card"><p class="mut">Accedi con il tuo account per usare la chat.</p><button class="btn" onclick="CLOUD.open()">Accedi</button></div>`;return;}
+  if(!me()&&window.LENZA_FB?.apiKey&&!C()?.authKnown){v.innerHTML=subHead('Social','Canali, messaggi, mappa e amici','home')+`<div class="card" style="text-align:center;padding:30px"><span class="aispin" style="width:28px;height:28px;border-width:3px;display:inline-block"></span><p class="mut">Carico Social…</p></div>`;return;}
+  if(!me()){v.innerHTML=subHead('Social','Funzione Premium','home')+`<div class="card"><p class="mut">Accedi con il tuo account per usare Social.</p><button class="btn" onclick="CLOUD.open()">Accedi</button></div>`;return;}
   CH.start();nearSync();
   if(CH.rid)return roomView(v);
-  const tabs=[['zone','📍 Canali'],['priv','👥 Privati'],['mappa','🗺️ Mappa'],['bot','🤖 Assistente'],['amici','🤝 Amici']];
-  v.innerHTML=subHead('Chat','Zone, amici e assistente','home')+(CH.err?`<div class="banner">⚠️ ${esc(CH.err)}</div>`:'')+
+  const tabs=[['zone','📍 Canali'],['priv','💬 Messaggi'],['mappa','🗺️ Mappa'],['bot','🤖 Assistente'],['amici','🤝 Amici']];
+  v.innerHTML=subHead('Social','Canali, messaggi, mappa e amici','home')+(CH.err?`<div class="banner">⚠️ ${esc(CH.err)}</div>`:'')+
     `<div class="chips" style="margin-bottom:12px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none">${tabs.map(([k,n])=>`<span class="chip ${CH.tab===k?'on':''}" style="flex:none;white-space:nowrap" onclick="CHAT.tab='${k}';render()">${n}</span>`).join('')}</div><div id="chatlist">${listHtml()}</div>`;
   if(CH.tab==='mappa')setTimeout(mapInit,0);
 };
@@ -210,7 +210,7 @@ function listHtml(){
   if(CH.tab==='zone')return chanHtml()+notifCard()+(CH.diag?`<p class="small mut" style="text-align:center;opacity:.6">Diagnosi: ${esc(CH.diag)}</p>`:'');
   if(CH.tab==='mappa')return mapHtml();
   if(CH.tab==='priv'){const rs=Object.values(CH.mine).sort((a,b)=>(b.last?.ts||b.t||0)-(a.last?.ts||a.t||0));
-    return `<div class="card"><h3>👥 Messaggi privati e gruppi</h3>${rs.length?rs.map(r=>roomRow(r.id,r.type==='group'?'👥':'💬','')).join(''):'<p class="small mut">Nessuna conversazione. Aggiungi un amico nella scheda «Amici» e scrivigli.</p>'}
+    return `<div class="card"><h3>💬 Messaggi privati e gruppi</h3>${rs.length?rs.map(r=>roomRow(r.id,r.type==='group'?'👥':'💬','')).join(''):'<p class="small mut">Nessuna conversazione. Aggiungi un amico nella scheda «Amici» e scrivigli.</p>'}
       <button class="btn ghost full" style="margin-top:10px" onclick="CHAT.newGroup()">➕ Nuovo gruppo di pesca</button></div>`;}
   if(CH.tab==='bot')return `<div class="card"><h3>🤖 Assistente in chat</h3><p class="small mut">Chiedi esche, montature, tecniche e orari migliori: risponde con il meteo, il mare e l'indice di pescosità del tuo spot attivo${typeof gemKey==='function'&&gemKey()?' (con Gemini)':''}.</p>${roomRow('bot','🤖','Fai una domanda')}</div>`;
   const fr=friends(),bl=blocked(),code=uidCode(me().uid);
@@ -366,7 +366,7 @@ function gotFriend(n){const ff=F(),del=()=>ff.deleteDoc(ff.doc(D(),'notifs',me()
   if(blocked().includes(n.fromUid)){del();return;}
   if(friends().some(f=>f.uid===n.fromUid)){del();return;}
   if(n.viaCode){LS.set('chatfriends',[...friends(),{uid:n.fromUid,name:n.from}]);CH.friendsChanged();del();toast('🤝 '+n.from+' ti ha aggiunto con il tuo codice: ora siete amici');refresh();return;}
-  if(!CH.friendReqs.some(x=>x.id===n.id))CH.friendReqs.push(n);if(n.ts>CH.t0)notify(n.from+' ti ha aggiunto agli amici','Aggiungilo anche tu dalla chat','friends');refresh();}
+  if(!CH.friendReqs.some(x=>x.id===n.id))CH.friendReqs.push(n);if(n.ts>CH.t0)notify(n.from+' ti ha aggiunto agli amici','Aggiungilo anche tu da Social','friends');refresh();}
 CH.acceptFriend=id=>{const n=CH.friendReqs.find(x=>x.id===id);if(!n)return;CH.friendReqs=CH.friendReqs.filter(x=>x.id!==id);
   if(!friends().some(f=>f.uid===n.fromUid)){LS.set('chatfriends',[...friends(),{uid:n.fromUid,name:n.from}]);CH.friendsChanged();}
   F().deleteDoc(F().doc(D(),'notifs',me().uid,'items',id)).catch(()=>{});toast('🤝 '+n.from+' aggiunto agli amici');render();};

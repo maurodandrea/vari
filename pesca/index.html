@@ -540,7 +540,7 @@ const MODES = {
   river:{n:'River',e:'🌊',d:'Fiumi e acque correnti'}
 };
 const TABS = [
-  {id:'home',n:'Oggi'},{id:'meteo',n:'Settimana'},{id:'pesce',n:'Riconosci'},{id:'fab'},{id:'spot',n:'Spot'},{id:'chat',n:'Chat'},{id:'altro',n:'Altro'}
+  {id:'home',n:'Oggi'},{id:'meteo',n:'Settimana'},{id:'pesce',n:'Riconosci'},{id:'fab'},{id:'spot',n:'Spot'},{id:'chat',n:'Social'},{id:'altro',n:'Altro'}
 ];
 const TECH = {
   coast:['Surfcasting','Spinning','Bolognese','Beach ledgering','Eging','Rockfishing','Canna fissa'],
@@ -634,12 +634,12 @@ function activatePremium(){
 // finestra che spiega che la funzione è riservata ai Premium
 function needPremium(what){
   openSheet(`<div style="text-align:center"><div style="font-size:46px">⭐</div><h2>Funzione Premium</h2><p class="mut">${esc(what)} è riservato agli utenti Premium.</p>
-    <p class="small mut" style="margin:10px 0 16px">Con Premium: riconoscimento dei pesci, spot illimitati, previsioni per tutta la settimana e chat (in arrivo). Attivalo inserendo il codice nelle Impostazioni.</p>
+    <p class="small mut" style="margin:10px 0 16px">Con Premium: riconoscimento dei pesci, spot illimitati, previsioni per tutta la settimana e Social. Attivalo inserendo il codice nelle Impostazioni.</p>
     <button class="btn full" onclick="closeSheet();go('settings')">Inserisci il codice</button><button class="btn ghost full" style="margin-top:8px" onclick="closeSheet()">Non ora</button></div>`);
   return false;
 }
 // pagine riservate ai Premium (titolo, descrizione)
-const PREMIUM_TABS={chat:['Chat','La chat tra pescatori è riservata agli utenti Premium.'],pesce:['Riconosci e misura','Il riconoscimento della specie e la misura di lunghezza e peso dalla foto sono riservati agli utenti Premium.'],
+const PREMIUM_TABS={chat:['Social','Social (canali, messaggi, mappa e amici tra pescatori) è riservato agli utenti Premium.'],pesce:['Riconosci e misura','Il riconoscimento della specie e la misura di lunghezza e peso dalla foto sono riservati agli utenti Premium.'],
   compare:['Dove pescare','La classifica dei tuoi spot per indice di pesca è riservata agli utenti Premium.'],ai:['Assistente','I consigli su misura e le specie di stagione sono riservati agli utenti Premium.'],guide:['Guida','La guida a nodi, montature ed esche è riservata agli utenti Premium.']};
 const lockedTab=t=>!!PREMIUM_TABS[t]&&!isPremium();
 // anteprima sfocata di Riconosci: un pesce disegnato, riconosciuto e misurato
@@ -655,7 +655,7 @@ function premiumPage(v,t){const [title,what]=PREMIUM_TABS[t];
   v.innerHTML=subHead(title,'Funzione Premium',t==='pesce'||t==='compare'?'home':'altro')+(t==='pesce'?`<div class="pvhost">${premiumPreview()}</div>`:'')+`<div class="card" style="text-align:center;padding:28px 18px">
     <div style="font-size:52px">⭐</div><h2 style="margin:6px 0">Funzione Premium</h2>
     <p class="mut">${what}</p>
-    <p class="small mut" style="margin:10px 0 16px">Con Premium: riconoscimento dei pesci, dove pescare, assistente, guida, spot illimitati, previsioni per tutta la settimana e chat (in arrivo).</p>
+    <p class="small mut" style="margin:10px 0 16px">Con Premium: riconoscimento dei pesci, dove pescare, assistente, guida, spot illimitati, previsioni per tutta la settimana e Social.</p>
     <button class="btn full" onclick="go('settings')">⭐ Inserisci il codice Premium</button></div>`;}
 const savedSpots=()=>S.spots.filter(s=>!s.here).length;
 function uid(){return Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);}
@@ -997,7 +997,7 @@ function render(){
   if(S.tab==='settings')modelStatus();
 }
 // Chat (Premium): canali per zona, catture, condizioni, amici, assistente… (chat.js)
-function vChat(v){if(window.CHAT)CHAT.view(v);else v.innerHTML=subHead('Chat','Funzione Premium','home')+'<div class="card"><p class="mut">Chat non disponibile.</p></div>';}
+function vChat(v){if(window.CHAT)CHAT.view(v);else v.innerHTML=subHead('Social','Funzione Premium','home')+'<div class="card"><p class="mut">Social non disponibile.</p></div>';}
 function countUp(root){
   root.querySelectorAll('[data-count]').forEach(el=>{
     const to=+el.dataset.count,t0=performance.now(),dur=1300;
@@ -1914,8 +1914,8 @@ function vSettings(v){
   let bytes=0;try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k.startsWith('lenza.'))bytes+=(localStorage.getItem(k)||'').length*2;}}catch(e){}
   v.innerHTML=subHead('Impostazioni','Account, dati, backup e informazioni')+`
   ${window.CLOUD?CLOUD.card():''}
-  <div class="card"><h3>⭐ Premium</h3>${isPremium()?`<p style="color:var(--ok);font-weight:700;margin:0 0 6px">● Premium attivo</p><p class="small mut">Attivato il ${new Date(LS.get('premium',{}).since||Date.now()).toLocaleDateString('it-IT')}. Hai accesso a riconoscimento dei pesci, spot illimitati, previsioni per tutta la settimana e chat (in arrivo).</p>`
-    :`<p class="small mut" style="margin:0 0 10px">Con Premium: riconoscimento dei pesci, più di ${FREE_SPOTS} spot, previsioni oltre ${FREE_DAYS} giorni e chat (in arrivo).</p>
+  <div class="card"><h3>⭐ Premium</h3>${isPremium()?`<p style="color:var(--ok);font-weight:700;margin:0 0 6px">● Premium attivo</p><p class="small mut">Attivato il ${new Date(LS.get('premium',{}).since||Date.now()).toLocaleDateString('it-IT')}. Hai accesso a riconoscimento dei pesci, spot illimitati, previsioni per tutta la settimana e Social.</p>`
+    :`<p class="small mut" style="margin:0 0 10px">Con Premium: riconoscimento dei pesci, più di ${FREE_SPOTS} spot, previsioni oltre ${FREE_DAYS} giorni e Social.</p>
     <div class="row" style="gap:8px"><input id="pcode" inputmode="numeric" placeholder="Codice Premium" style="flex:1" autocomplete="off"><button class="btn" onclick="activatePremium()">Attiva</button></div>`}</div>
   <div class="card"><h3>I tuoi dati</h3>
     <div class="kv"><span>Spot salvati</span><b>${S.spots.length}</b></div><div class="kv"><span>Uscite nel diario</span><b>${S.diary.length}</b></div>
@@ -2268,7 +2268,7 @@ function aiCard(st,target){
     <div class="small mut">${pick?'':`<i>${esc(r.scientific_name)}</i>`}${!pick&&pc<40?' · poco sicuro, controlla le alternative':''}</div>
     ${r.alternatives?.length?`<div class="small" style="margin-top:6px">Oppure: ${r.alternatives.map(a=>`<span class="chip" style="padding:3px 9px;font-size:12px" onclick="aiPick('${target}','${esc(a.species).replace(/'/g,"\\'")}')">${esc(a.species)} ${Math.round(a.confidence*100)}%</span>`).join(' ')}</div>`:''}
     ${measBlock(st,target)}
-    ${target==='assist'&&window.CHAT&&window.CLOUD?.user&&isPremium()?`<button class="btn ghost" style="margin-top:10px;width:100%" onclick="CHAT.shareCatch()">💬 Condividi in chat</button>`:''}
+    ${target==='assist'&&window.CHAT&&window.CLOUD?.user&&isPremium()?`<button class="btn ghost" style="margin-top:10px;width:100%" onclick="CHAT.shareCatch()">💬 Condividi su Social</button>`:''}
   </div></div>`;
 }
 /* Sessione live */
