@@ -187,25 +187,33 @@ function listHtml(){
   <div class="card"><h3>Amici</h3>${fr.length?fr.map(f=>`<div class="croom"><div class="cri">🎣</div><div style="flex:1"><b>${esc(f.name)}</b></div><button class="btn" style="padding:7px 12px" onclick="CHAT.dm('${f.uid}')">Scrivi</button><button class="btn ghost" style="padding:7px 10px" onclick="CHAT.unfriend('${f.uid}')">✕</button></div>`).join(''):'<p class="small mut">Nessun amico ancora.</p>'}</div>
   ${bl.length?`<div class="card"><h3>🚫 Utenti bloccati</h3><p class="small mut">Non vedi i loro messaggi.</p>${bl.map(u=>`<div class="croom"><div style="flex:1">${esc((LS.get('chatblocknames',{})[u])||'Utente')}</div><button class="btn ghost" style="padding:7px 12px" onclick="CHAT.unblock('${u}')">Sblocca</button></div>`).join('')}</div>`:''}`;
 }
-CH.nav={r:null,p:null,q:''};
-CH.navTo=(r,p)=>{CH.nav={r:r||null,p:p||null,q:''};refresh();document.getElementById('chbrowse')?.scrollIntoView({block:'start',behavior:'smooth'});};
-CH.navQ=q=>{CH.nav.q=q;const el=document.getElementById('comlist');if(el)el.innerHTML=comRows();};
-const norm=t=>String(t).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-function comRows(){const q=prov(CH.nav.p);if(!q)return '';const f=norm(CH.nav.q||'');
+// albero dei canali: Italia ▸ regioni ▸ province ▸ comuni; la freccia apre il livello sotto, il nome apre il canale
+CH.exp={it:false,r:{},p:{},q:{}};
+CH.tog=k=>{const [t,c]=k.split(':');if(t==='it')CH.exp.it=!CH.exp.it;else CH.exp[t][c]=!CH.exp[t][c];refresh();};
+CH.navQ=(p,q)=>{CH.exp.q[p]=q;const el=document.getElementById('com_'+p);if(el)el.innerHTML=comRows(p);};
+const norm=t=>String(t).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
+function tRow(rid,icon,name,sub,key,open,depth){
+  const r=CH.rooms[rid],l=r?.last,s=seen(),un=l&&l.uid!==me()?.uid&&l.ts>(s[rid]||0)&&!blocked().includes(l.uid);
+  return `<div class="croom ctree" style="padding-left:${depth*18}px" onclick="CHAT.open('${rid}')">
+    ${key?`<button class="ctog" onclick="event.stopPropagation();CHAT.tog('${key}')" aria-label="${open?'Chiudi':'Apri'}">${open?'▾':'▸'}</button>`:'<span class="ctog sp"></span>'}
+    <div class="cri">${icon}</div><div style="flex:1;min-width:0"><b>${esc(name)}</b>${sub?`<div class="small mut cprev">${esc(sub)}</div>`:''}</div>
+    ${follows().includes(rid)?'<span class="small" title="Segui">⭐</span>':''}${un?'<i class="cdot"></i>':''}</div>`;}
+function comRows(pc){const q=prov(pc);if(!q)return '';const f=norm(CH.exp.q[pc]||'');
   const l=q[0][3].filter(x=>!f||norm(x[0]).includes(f));
-  return l.map(x=>`<div class="croom" onclick="CHAT.open('c_${x[1]}')"><div class="cri">🏘️</div><div style="flex:1"><b>${esc(x[0])}</b></div>${follows().includes('c_'+x[1])?'<span class="small mut">⭐</span>':''}<span class="mut">›</span></div>`).join('')||'<p class="small mut">Nessun comune trovato.</p>';}
+  return l.map(x=>tRow('c_'+x[1],'🏘️',x[0],'',null,false,3)).join('')||'<p class="small mut" style="padding-left:72px">Nessun comune trovato.</p>';}
+function treeHtml(){
+  if(!GEO)return '<p class="small mut">Carico regioni e comuni…</p>';
+  const e=CH.exp;let h=tRow('z_it','🇮🇹','Tutta Italia','Tutti i pescatori di LenzApp','it',e.it,0);
+  if(e.it)for(const r of GEO.r){h+=tRow('r_'+r[0],'🗺️',r[1],'','r:'+r[0],!!e.r[r[0]],1);
+    if(e.r[r[0]])for(const p of r[2]){h+=tRow('p_'+p[0],'🏙️','Provincia di '+p[1],`${p[2]} · ${p[3].length} comuni`,'p:'+p[0],!!e.p[p[0]],2);
+      if(e.p[p[0]])h+=`<div style="padding-left:54px"><input placeholder="Cerca un comune" value="${esc(e.q[p[0]]||'')}" oninput="CHAT.navQ('${p[0]}',this.value)" onclick="event.stopPropagation()" style="margin:6px 0"></div><div id="com_${p[0]}">${comRows(p[0])}</div>`;}}
+  return h;}
 function chanHtml(){
   loadGeo();defaultFollow();const sp=activeSpot(),fol=follows();
   const near=sp?roomRow('near','🎣',`Pescatori con lo spot entro ${NEAR_KM} km da «${placeName(sp)}»`):'<p class="small mut">Scegli uno spot per vedere chi pesca vicino a te.</p>';
-  let browse='<p class="small mut">Carico regioni e comuni…</p>';
-  if(GEO){const n=CH.nav,r=n.r&&reg(n.r),pq=n.p&&prov(n.p);
-    const crumb=`<div class="ccrumb"><u onclick="CHAT.navTo()">Italia</u>${r?` › <u onclick="CHAT.navTo('${r[0]}')">${esc(r[1])}</u>`:''}${pq?` › <b>${esc(pq[0][1])}</b>`:''}</div>`;
-    if(pq)browse=crumb+roomRow('p_'+pq[0][0],'🏙️','Canale di tutta la provincia')+`<input id="comq" placeholder="Cerca un comune della provincia" value="${esc(n.q)}" oninput="CHAT.navQ(this.value)" style="margin:10px 0 4px"><div id="comlist">${comRows()}</div>`;
-    else if(r)browse=crumb+roomRow('r_'+r[0],'🗺️','Canale di tutta la regione')+`<div class="small mut" style="margin:10px 0 2px">Scegli la provincia</div>`+r[2].map(p=>`<div class="croom" onclick="CHAT.navTo('${r[0]}','${p[0]}')"><div class="cri">🏙️</div><div style="flex:1"><b>${esc(p[1])}</b> <span class="small mut">${esc(p[2])} · ${p[3].length} comuni</span></div><span class="mut">›</span></div>`).join('');
-    else browse=crumb+roomRow('z_it','🇮🇹','Tutti i pescatori di LenzApp')+`<div class="small mut" style="margin:10px 0 2px">Scegli la regione</div>`+GEO.r.map(r=>`<div class="croom" onclick="CHAT.navTo('${r[0]}')"><div class="cri">🗺️</div><div style="flex:1"><b>${esc(r[1])}</b></div><span class="mut">›</span></div>`).join('');}
   return `<div class="card"><h3>🎣 Il tuo spot</h3><p class="small mut" style="margin:-4px 0 6px">Ci sono solo i pescatori che hanno lo spot attivo a meno di ${NEAR_KM} km dal tuo. La tua posizione non viene mai mostrata.</p>${near}</div>
   <div class="card"><h3>⭐ Canali che segui</h3>${fol.map(rid=>roomRow(rid,chIcon(rid),'')).join('')||'<p class="small mut" style="margin:0 0 6px">Nessun canale seguito.</p>'}<p class="small mut" style="margin:8px 0 0">Per seguire o smettere di seguire un canale aprilo e tocca ⭐ in alto.</p></div>
-  <div class="card" id="chbrowse"><h3>🇮🇹 Tutti i canali</h3>${browse}</div>`;
+  <div class="card" id="chbrowse"><h3>🇮🇹 Tutti i canali</h3><p class="small mut" style="margin:-4px 0 6px">Tocca ▸ per aprire regioni, province e comuni; tocca il nome per entrare nel canale.</p>${treeHtml()}</div>`;
 }
 function notifCard(){
   const n=LS.get('chatnotif',{on:false,zones:true}),perm='Notification' in window?Notification.permission:'unsupported';
