@@ -30,7 +30,7 @@ async function init(){
     C.ff=ff;C.db=db;  // usati anche dalla chat (chat.js)
     C.ready=true;
     fa.getRedirectResult(auth).catch(e=>toast('⚠️ '+errMsg(e)));
-    fa.onAuthStateChanged(auth,u=>{C.user=u;C.unsub.forEach(f=>f());C.unsub=[];
+    fa.onAuthStateChanged(auth,u=>{C.user=u;C.authKnown=true;C.unsub.forEach(f=>f());C.unsub=[];if(S.tab==='chat')setTimeout(()=>render(),0);
       // accesso fatto dalla finestra di login: la chiudo
       if(u&&document.querySelector('#sheetBox #cle'))closeSheet();
       C.chip();if(u&&!C.mustVerify())start();else if(u)verifyWatch();else{C.status='';if(S.tab==='settings'||S.tab==='home')render();}});
