@@ -23,7 +23,10 @@ async function init(){
     auth=fa.getAuth(app);auth.languageCode='it';db=ff.getFirestore(app);
     C.ready=true;
     fa.getRedirectResult(auth).catch(e=>toast('⚠️ '+errMsg(e)));
-    fa.onAuthStateChanged(auth,u=>{C.user=u;C.unsub.forEach(f=>f());C.unsub=[];if(u)start();else{C.status='';if(S.tab==='settings')render();}});
+    fa.onAuthStateChanged(auth,u=>{C.user=u;C.unsub.forEach(f=>f());C.unsub=[];
+      // accesso fatto dalla finestra di login: la chiudo
+      if(u&&document.getElementById('sheet').classList.contains('on')&&document.getElementById('cle'))closeSheet();
+      C.chip();if(u)start();else{C.status='';if(S.tab==='settings'||S.tab==='home')render();}});
   }catch(e){C.status='Servizio account non raggiungibile';}
   if(S.tab==='settings')render();
 }
@@ -147,6 +150,17 @@ function listen(){
 }
 
 /* ---------- riquadro nelle Impostazioni ---------- */
+// nome da mostrare: quello dell'account Google, altrimenti la parte dell'email prima della @
+C.name=()=>{const u=C.user;if(!u)return '';return (u.displayName||(u.email||'').split('@')[0]||'utente').trim();};
+// in alto accanto allo spot: nome dell'utente se è collegato, altrimenti «Accedi»
+C.chip=()=>{const el=document.getElementById('userChip');if(!el)return;
+  if(!window.LENZA_FB?.apiKey||!C.ready){el.style.display='none';return;}
+  el.style.display='';const n=C.name(),short=innerWidth<1000?n.split(/[ ._\-]/)[0]:n;  // sul telefono solo il primo nome
+  el.innerHTML=C.user?`<i>${esc(n.charAt(0).toUpperCase())}</i><span>${esc(short)}</span>`:`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg><span>Accedi</span>`;
+  el.title=C.user?(C.user.email||n):'Accedi o registrati';el.classList.toggle('in',!!C.user);};
+C.open=()=>{if(C.user){go('settings');return;}openSheet(C.form());};
+// riquadro nella Home per chi non ha fatto l'accesso
+C.homeCard=()=>!window.LENZA_FB?.apiKey||!C.ready||C.user?'':`<div class="card loginbox"><div><b>☁️ Accedi o registrati</b><div class="small mut">Salva spot, diario e foto online e ritrovali su telefono e PC.</div></div><button class="btn" onclick="CLOUD.open()">Login</button></div>`;
 C.card=()=>{
   if(!window.LENZA_FB?.apiKey)return '';
   if(!C.ready)return `<div class="card"><h3>☁️ Account</h3><p class="small mut">${esc(C.status||'Carico…')}</p></div>`;
@@ -155,7 +169,9 @@ C.card=()=>{
     <p class="small" id="cloudst" style="margin:8px 0;color:var(--ok)">${esc(C.status||'')}</p>
     <p class="small mut">Spot, diario con le foto, catture, trofei e impostazioni sono salvati online e sincronizzati su tutti i dispositivi in cui accedi con questo account.</p>
     <div class="row" style="gap:8px;margin-top:8px"><button class="btn ghost" style="flex:1" onclick="CLOUD.syncNow()">↻ Sincronizza ora</button><button class="btn ghost" style="flex:1" onclick="CLOUD.logout()">Esci</button></div></div>`;
-  return `<div class="card"><h3>☁️ Accedi o registrati</h3>
+  return `<div class="card">${C.form().replace('<h2>','<h3>').replace('</h2>','</h3>')}</div>`;
+};
+C.form=()=>`<h2>☁️ Accedi o registrati</h2>
     <p class="small mut" style="margin-bottom:10px">Con un account i tuoi dati sono salvati online e li ritrovi su telefono e PC.</p>
     <button class="btn full" style="margin-bottom:12px;background:#fff;color:#1f1f1f" onclick="CLOUD.google()"><svg viewBox="0 0 48 48" width="18" height="18" style="vertical-align:-3px;margin-right:6px"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>Accedi con Google</button>
     <div class="small mut" style="text-align:center;margin-bottom:8px">oppure con email e password</div>
@@ -163,7 +179,6 @@ C.card=()=>{
     <input id="clp" type="password" placeholder="Password (almeno 6 caratteri)" autocomplete="current-password">
     <div class="row" style="gap:8px;margin-top:10px"><button class="btn" style="flex:1" onclick="CLOUD.login()">Accedi</button><button class="btn ghost" style="flex:1" onclick="CLOUD.register()">Registrati</button></div>
     <div class="small" style="margin-top:8px;text-align:center"><u style="cursor:pointer" onclick="CLOUD.reset()">Password dimenticata?</u></div>
-    ${C.status?`<p class="small" style="margin-top:8px;color:var(--acc2)">${esc(C.status)}</p>`:''}</div>`;
-};
+    ${C.status?`<p class="small" style="margin-top:8px;color:var(--acc2)">${esc(C.status)}</p>`:''}`;
 init();
 })();
