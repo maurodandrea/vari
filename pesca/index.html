@@ -968,8 +968,8 @@ function bestWindows(X,date,n=3){
 }
 
 /* ===================== Render ===================== */
-const PAGES=['home','meteo','spot','chat','diario','altro','stats','ai','pesce','live','trofei','cal','compare','guide','settings'];
-const SUBS=['stats','ai','diario','trofei','cal','compare','guide','settings'];
+const PAGES=['home','meteo','spot','chat','mod','diario','altro','stats','ai','pesce','live','trofei','cal','compare','guide','settings'];
+const SUBS=['mod','stats','ai','diario','trofei','cal','compare','guide','settings'];
 function go(t){if(location.hash.slice(1)!==t)location.hash=t;else{S.tab=t;window.scrollTo(0,0);render();}}
 window.addEventListener('hashchange',()=>{const t=location.hash.slice(1)||'home';if(!PAGES.includes(t))return;closeSheet();S.tab=t;window.scrollTo(0,0);render();});
 function setMode(m){}
@@ -985,7 +985,7 @@ function render(){
   const v=document.getElementById('view');
   if(S.tab!=='spot'&&MAP){MAP.remove();MAP=null;NEWPIN=null;}
   if(PREMIUM_TABS[S.tab]&&!isPremium()){premiumPage(v,S.tab);countUp(v);return;}
-  ({home:vHome,meteo:vMeteo,spot:vSpot,diario:vDiario,stats:vStats,ai:vAI,pesce:vPesce,altro:vAltro,live:vLive,trofei:vTrofei,cal:vCal,compare:vCompare,guide:vGuide,settings:vSettings,chat:vChat}[S.tab]||vHome)(v);
+  ({home:vHome,meteo:vMeteo,spot:vSpot,diario:vDiario,stats:vStats,ai:vAI,pesce:vPesce,altro:vAltro,live:vLive,trofei:vTrofei,cal:vCal,compare:vCompare,guide:vGuide,settings:vSettings,chat:vChat,mod:v=>window.CHAT?CHAT.modView(v):vHome(v)}[S.tab]||vHome)(v);
   countUp(v);bindCharts(v);
   window.CHAT?.start();window.CHAT?.badge();
   if(S.tab==='home'&&!COMP_ON)compassStart();
@@ -1898,6 +1898,7 @@ function vAltro(v){
     ['guide','🪢','Guida','Nodi, montature, esche','linear-gradient(140deg,#b8436e,#5a1d3a)'],
     ['settings','⚙️','Impostazioni',window.LENZA_FB?.apiKey?(window.CLOUD?.user?'Account attivo · dati online':'Accedi · backup e dati'):'Backup e dati','linear-gradient(140deg,#3d5671,#1b2a3c)']
   ];
+  if(window.CHAT?.isAdmin())hub.unshift(['mod','🛡️','Segnalazioni',(n=>n?`${n} da controllare`:'Nessuna in attesa')(CHAT.reportCount()),'linear-gradient(140deg,#d94b4b,#6e1a1a)']);
   if(!standalone())hub.push(['install','📲','Installa app','Sulla schermata Home','linear-gradient(140deg,#2fe0cf,#3b8cff)']);
   v.innerHTML=`<div class="card"><div class="profile">${lvlRing(c)}<div style="flex:1"><div class="small mut" style="text-transform:uppercase;letter-spacing:1.2px;font-weight:700">Il tuo livello</div><h2>${c.lvl.name}</h2>
     <div class="xpbar"><div style="width:${c.lvl.pct*100}%"></div></div><div class="small mut">${fmt0(c.xp)} XP${c.lvl.to?` · prossimo a ${fmt0(c.lvl.to)}`:''}</div></div></div>

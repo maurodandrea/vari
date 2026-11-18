@@ -11,6 +11,12 @@ service cloud.firestore {
         && (request.auth.token.email_verified == true
             || request.auth.token.firebase.sign_in_provider != 'password');
     }
+    // amministratori: vedono e gestiscono le segnalazioni
+    function admin() {
+      return attivo() && request.auth.token.email_verified == true
+        && request.auth.token.email in ['chesterfieldsoftred@gmail.com'];
+    }
+    function bloccato() { return exists(/databases/$(database)/documents/banned/$(request.auth.uid)); }
     function stanza(rid) { return get(/databases/$(database)/documents/rooms/$(rid)).data; }
     function membro(r) { return r.type == 'zone' || request.auth.uid in r.members; }
 
@@ -34,12 +40,12 @@ service cloud.firestore {
 
       match /msgs/{mid} {
         allow read: if attivo() && membro(stanza(rid));
-        allow create: if attivo() && membro(stanza(rid)) && request.resource.data.uid == request.auth.uid;
-        allow delete: if attivo() && resource.data.uid == request.auth.uid;
+        allow create: if attivo() && !bloccato() && membro(stanza(rid)) && request.resource.data.uid == request.auth.uid;
+        allow delete: if attivo() && (resource.data.uid == request.auth.uid || admin());
         // gli altri possono solo aumentare di 1 il contatore delle segnalazioni
         allow update: if attivo() && membro(stanza(rid))
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rep'])
-          && request.resource.data.rep == resource.data.get('rep', 0) + 1;
+          && (request.resource.data.rep == resource.data.get('rep', 0) + 1 || admin());
       }
     }
 
@@ -49,9 +55,16 @@ service cloud.firestore {
       allow create: if attivo() && request.resource.data.fromUid == request.auth.uid;
     }
 
-    // segnalazioni: si possono solo inviare (le legge l'amministratore dalla console)
+    // segnalazioni: tutti possono inviarle, solo gli amministratori le leggono e le chiudono
     match /reports/{id} {
       allow create: if attivo() && request.resource.data.by == request.auth.uid;
+      allow read, delete: if admin();
+    }
+
+    // utenti bloccati dagli amministratori: possono leggere ma non scrivere in chat
+    match /banned/{uid} {
+      allow read: if attivo() && (request.auth.uid == uid || admin());
+      allow write: if admin();
     }
   }
 }
