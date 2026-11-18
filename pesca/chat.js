@@ -212,7 +212,7 @@ function chanHtml(){
   loadGeo();defaultFollow();const sp=activeSpot(),fol=follows();
   const near=sp?roomRow('near','🎣',`Pescatori con lo spot entro ${NEAR_KM} km da «${placeName(sp)}»`):'<p class="small mut">Scegli uno spot per vedere chi pesca vicino a te.</p>';
   return `<div class="card"><h3>🎣 Il tuo spot</h3><p class="small mut" style="margin:-4px 0 6px">Ci sono solo i pescatori che hanno lo spot attivo a meno di ${NEAR_KM} km dal tuo. La tua posizione non viene mai mostrata.</p>${near}</div>
-  <div class="card"><h3>⭐ Canali che segui</h3>${fol.map(rid=>roomRow(rid,chIcon(rid),'')).join('')||'<p class="small mut" style="margin:0 0 6px">Nessun canale seguito.</p>'}<p class="small mut" style="margin:8px 0 0">Per seguire o smettere di seguire un canale aprilo e tocca ⭐ in alto.</p></div>
+  <div class="card"><h3><span>⭐ Canali che segui <span style="text-transform:none;letter-spacing:0;font-weight:600;opacity:.75;white-space:nowrap">(Default: Comuni dei tuoi Spot)</span></span></h3>${fol.map(rid=>roomRow(rid,chIcon(rid),'')).join('')||'<p class="small mut" style="margin:0 0 6px">Nessun canale seguito.</p>'}<p class="small mut" style="margin:8px 0 0">Per seguire o smettere di seguire un canale aprilo e tocca ⭐ in alto.</p></div>
   <div class="card" id="chbrowse"><h3>🇮🇹 Tutti i canali</h3><p class="small mut" style="margin:-4px 0 6px">Tocca ▸ per aprire regioni, province e comuni; tocca il nome per entrare nel canale.</p>${treeHtml()}</div>`;
 }
 function notifCard(){
