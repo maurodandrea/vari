@@ -1,0 +1,169 @@
+// Account e sincronizzazione dei dati di Lenza con Firebase (Authentication + Firestore).
+// Si attiva solo se firebase-config.js contiene la configurazione del progetto. I dati restano anche sul dispositivo:
+// Firestore tiene una copia per utente (users/{uid}/data/{chiave} e users/{uid}/diary/{id}) e la sincronizza tra telefono e PC.
+(function(){
+const FBV='10.14.1',FB=`https://www.gstatic.com/firebasejs/${FBV}/`;
+const SYNC_KEYS=['spots','active','shoesize','gemkey','badges','myfish','live'];  // il diario va a parte, un documento per uscita
+const MAX_DOC=900000;  // Firestore accetta documenti fino a 1 MB
+const C={ready:false,user:null,status:'',busy:false,applying:false,dirty:new Set(),timer:null,unsub:[]};
+window.CLOUD=C;
+let fa,ff,auth,db;
+const raw={get:k=>{try{const v=localStorage.getItem('lenza.'+k);return v?JSON.parse(v):null;}catch(e){return null;}},
+  set:(k,v)=>{try{localStorage.setItem('lenza.'+k,JSON.stringify(v));}catch(e){}}};
+
+// ogni salvataggio locale di una chiave sincronizzata viene inviato dopo 2 secondi
+const set0=LS.set;
+LS.set=function(k,v){const r=set0.call(LS,k,v);if(C.user&&!C.applying&&(k==='diary'||SYNC_KEYS.includes(k))){C.dirty.add(k);clearTimeout(C.timer);C.timer=setTimeout(push,2000);}return r;};
+
+async function init(){
+  const cfg=window.LENZA_FB;if(!cfg||!cfg.apiKey)return;
+  try{
+    const app=(await import(FB+'firebase-app.js')).initializeApp(cfg);
+    fa=await import(FB+'firebase-auth.js');ff=await import(FB+'firebase-firestore.js');
+    auth=fa.getAuth(app);auth.languageCode='it';db=ff.getFirestore(app);
+    C.ready=true;
+    fa.getRedirectResult(auth).catch(e=>toast('⚠️ '+errMsg(e)));
+    fa.onAuthStateChanged(auth,u=>{C.user=u;C.unsub.forEach(f=>f());C.unsub=[];if(u)start();else{C.status='';if(S.tab==='settings')render();}});
+  }catch(e){C.status='Servizio account non raggiungibile';}
+  if(S.tab==='settings')render();
+}
+
+/* ---------- accesso ---------- */
+const ERR={'auth/invalid-email':'Email non valida','auth/missing-password':'Inserisci la password','auth/weak-password':'Password troppo corta (almeno 6 caratteri)',
+  'auth/email-already-in-use':'Esiste già un account con questa email: accedi','auth/invalid-credential':'Email o password sbagliate','auth/wrong-password':'Email o password sbagliate',
+  'auth/user-not-found':'Nessun account con questa email','auth/too-many-requests':'Troppi tentativi: riprova tra qualche minuto','auth/network-request-failed':'Connessione assente',
+  'auth/popup-closed-by-user':'Accesso con Google annullato','auth/unauthorized-domain':'Dominio non autorizzato nel progetto Firebase','auth/operation-not-allowed':'Metodo di accesso non attivato nel progetto Firebase',
+  'auth/account-exists-with-different-credential':'Questa email usa un altro metodo di accesso'};
+const errMsg=e=>ERR[e?.code]||e?.message||'Operazione non riuscita';
+const form=()=>({email:(document.getElementById('cle')?.value||'').trim(),pw:document.getElementById('clp')?.value||''});
+C.login=async()=>{const {email,pw}=form();try{await fa.signInWithEmailAndPassword(auth,email,pw);toast('✅ Accesso effettuato');}catch(e){toast('⚠️ '+errMsg(e));}};
+C.register=async()=>{const {email,pw}=form();try{const r=await fa.createUserWithEmailAndPassword(auth,email,pw);fa.sendEmailVerification(r.user).catch(()=>{});toast('✅ Account creato');}catch(e){toast('⚠️ '+errMsg(e));}};
+C.reset=async()=>{const {email}=form();if(!email){toast('Scrivi prima la tua email');return;}try{await fa.sendPasswordResetEmail(auth,email);toast('📧 Ti ho inviato un\'email per reimpostare la password');}catch(e){toast('⚠️ '+errMsg(e));}};
+C.google=async()=>{const p=new fa.GoogleAuthProvider();
+  // nell'app installata le finestre a comparsa spesso non funzionano: uso il reindirizzamento
+  if(standalone())return fa.signInWithRedirect(auth,p);
+  try{await fa.signInWithPopup(auth,p);toast('✅ Accesso effettuato');}
+  catch(e){if(e.code==='auth/popup-blocked'||e.code==='auth/operation-not-supported-in-this-environment')return fa.signInWithRedirect(auth,p);toast('⚠️ '+errMsg(e));}};
+C.logout=async()=>{if(!confirm('Uscire dall\'account? I dati restano su questo dispositivo, ma non verranno più sincronizzati.'))return;clearTimeout(C.timer);await fa.signOut(auth);raw.set('clouduid',null);toast('Sei uscito');render();};
+C.syncNow=()=>{SYNC_KEYS.forEach(k=>C.dirty.add(k));C.dirty.add('diary');push();};
+
+/* ---------- sincronizzazione ---------- */
+const uref=()=>ff.doc(db,'users',C.user.uid);
+const dataCol=()=>ff.collection(db,'users',C.user.uid,'data');
+const diaryCol=()=>ff.collection(db,'users',C.user.uid,'diary');
+const hash=s=>{let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;return s.length+':'+h;};
+function setStatus(t){C.status=t;const el=document.getElementById('cloudst');if(el)el.textContent=t;}
+
+async function start(){
+  const uid=C.user.uid,first=raw.get('clouduid')!==uid;
+  setStatus('Sincronizzo…');C.busy=true;
+  try{
+    const [ds,es]=await Promise.all([ff.getDocs(dataCol()),ff.getDocs(diaryCol())]);
+    C.applying=true;
+    // impostazioni e spot: al primo accesso unisco quelli del dispositivo con quelli dell'account; poi vince il più recente
+    const ts=raw.get('cloudts')||{};
+    ds.forEach(d=>{const k=d.id,o=d.data();if(!SYNC_KEYS.includes(k))return;let v=JSON.parse(o.v);
+      if(first&&k==='spots'){const loc=raw.get('spots')||[],same=(a,b)=>a.id===b.id||(a.name===b.name&&Math.abs(a.lat-b.lat)<.002&&Math.abs(a.lon-b.lon)<.002);
+        // stesso spot (stesso id, o stesso nome e posizione, come lo spot di esempio creato su ogni dispositivo): uno solo
+        v=[...v,...loc.filter(s=>!v.some(r=>same(r,s)))];const act=raw.get('active'),dup=loc.find(s=>s.id===act);if(dup&&!v.some(r=>r.id===act)){const r=v.find(x=>same(x,dup));if(r)raw.set('active',r.id);}C.dirty.add('spots');}
+      else if(first&&k==='myfish'){v=[...v,...(raw.get('myfish')||[])].slice(-200);C.dirty.add('myfish');}
+      else if(!first&&(ts[k]||0)>(o.t||0))return;  // il dispositivo ha una modifica più recente ancora da inviare
+      raw.set(k,v);ts[k]=o.t||Date.now();});
+    if(first)SYNC_KEYS.forEach(k=>{if(!ds.docs.some(d=>d.id===k)&&raw.get(k)!=null)C.dirty.add(k);});
+    // diario: unione per uscita; le uscite cancellate restano come «tombstone»
+    const loc=raw.get('diary')||[],hs=first?{}:(raw.get('cloudhash')||{}),byId=new Map(loc.map(e=>[e.id,e]));
+    es.forEach(d=>{const o=d.data();if(o.deleted){byId.delete(d.id);delete hs[d.id];return;}
+      const e=JSON.parse(o.v),l=byId.get(d.id);if(l&&hs[d.id]&&hash(JSON.stringify(l))!==hs[d.id])return;  // modificata qui e non ancora inviata
+      byId.set(d.id,e);hs[d.id]=hash(JSON.stringify(e));});
+    const merged=[...byId.values()].sort((a,b)=>(a.start||0)-(b.start||0));
+    raw.set('diary',merged);raw.set('cloudhash',hs);raw.set('cloudts',ts);raw.set('clouduid',uid);
+    if(merged.some(e=>!hs[e.id])||first)C.dirty.add('diary');
+    C.applying=false;reload();
+    setStatus('Dati sincronizzati');
+    if(C.dirty.size)await push();
+    listen();
+  }catch(e){C.applying=false;setStatus('Sincronizzazione non riuscita: '+(e.code||e.message));}
+  C.busy=false;if(S.tab==='settings')render();
+}
+// i dati letti dal cloud entrano nello stato dell'app
+function reload(){
+  S.spots=LS.get('spots',S.spots);S.active=LS.get('active',S.active);if(!S.spots.find(s=>s.id===S.active))S.active=S.spots[0]?.id||null;
+  S.diary=LS.get('diary',[]);S.live=LS.get('live',null);
+  try{buildProfile();checkBadges();}catch(e){}
+  if(!document.getElementById('sheet').classList.contains('on'))render();
+}
+
+async function push(){
+  if(!C.user||!C.dirty.size)return;
+  const keys=[...C.dirty];C.dirty.clear();setStatus('Salvo online…');
+  try{
+    const ts=raw.get('cloudts')||{},now=Date.now();
+    for(const k of keys.filter(k=>k!=='diary')){
+      const s=JSON.stringify(raw.get(k));ts[k]=now;
+      await ff.setDoc(ff.doc(dataCol(),k),{v:s,t:now});
+    }
+    raw.set('cloudts',ts);
+    if(keys.includes('diary'))await pushDiary();
+    await ff.setDoc(uref(),{email:C.user.email||'',t:now},{merge:true});
+    setStatus('Dati salvati online · '+new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}));
+  }catch(e){keys.forEach(k=>C.dirty.add(k));setStatus('Non salvato online ('+(e.code||e.message)+'): riprovo');clearTimeout(C.timer);C.timer=setTimeout(push,30000);}
+}
+async function pushDiary(){
+  const loc=raw.get('diary')||[],hs=raw.get('cloudhash')||{},ids=new Set(loc.map(e=>e.id));
+  for(const e of loc){
+    const s=JSON.stringify(e),h=hash(s);if(hs[e.id]===h)continue;
+    const v=s.length>MAX_DOC?JSON.stringify(await shrink(e)):s;
+    await ff.setDoc(ff.doc(diaryCol(),e.id),{v,t:Date.now(),deleted:false});hs[e.id]=h;
+  }
+  for(const id of Object.keys(hs))if(!ids.has(id)){await ff.setDoc(ff.doc(diaryCol(),id),{deleted:true,t:Date.now()});delete hs[id];}
+  raw.set('cloudhash',hs);
+}
+// uscita troppo grande per un documento: riduco le foto finché ci sta
+async function shrink(e){
+  const c=JSON.parse(JSON.stringify(e));let q=480;
+  const red=async src=>{if(!src||!src.startsWith('data:image'))return src;const img=await new Promise((ok,ko)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=ko;i.src=src;});
+    const k=Math.min(1,q/Math.max(img.width,img.height)),cv=document.createElement('canvas');cv.width=Math.round(img.width*k);cv.height=Math.round(img.height*k);
+    cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);return cv.toDataURL('image/jpeg',.6);};
+  while(JSON.stringify(c).length>MAX_DOC&&q>=120){if(c.photo)c.photo=await red(c.photo);for(const x of c.catches||[])if(x.photo)x.photo=await red(x.photo);q=Math.round(q*.7);}
+  if(JSON.stringify(c).length>MAX_DOC){delete c.photo;(c.catches||[]).forEach(x=>delete x.photo);}
+  return c;
+}
+// modifiche fatte su un altro dispositivo arrivano in tempo reale
+function listen(){
+  C.unsub.push(ff.onSnapshot(dataCol(),snap=>{
+    if(snap.metadata.hasPendingWrites)return;let ch=false;const ts=raw.get('cloudts')||{};
+    snap.docChanges().forEach(c=>{const k=c.doc.id,o=c.doc.data();if(!SYNC_KEYS.includes(k)||C.dirty.has(k)||(ts[k]||0)>=(o.t||0))return;
+      C.applying=true;raw.set(k,JSON.parse(o.v));C.applying=false;ts[k]=o.t;ch=true;});
+    if(ch){raw.set('cloudts',ts);reload();}
+  }));
+  C.unsub.push(ff.onSnapshot(diaryCol(),snap=>{
+    if(snap.metadata.hasPendingWrites||C.dirty.has('diary'))return;let ch=false;
+    const loc=raw.get('diary')||[],hs=raw.get('cloudhash')||{},byId=new Map(loc.map(e=>[e.id,e]));
+    snap.docChanges().forEach(c=>{const id=c.doc.id,o=c.doc.data();
+      if(o.deleted){if(byId.has(id)){byId.delete(id);ch=true;}delete hs[id];return;}
+      const e=JSON.parse(o.v),h=hash(JSON.stringify(e));if(hs[id]===h&&byId.has(id))return;byId.set(id,e);hs[id]=h;ch=true;});
+    if(ch){C.applying=true;raw.set('diary',[...byId.values()].sort((a,b)=>(a.start||0)-(b.start||0)));raw.set('cloudhash',hs);C.applying=false;reload();}
+  }));
+}
+
+/* ---------- riquadro nelle Impostazioni ---------- */
+C.card=()=>{
+  if(!window.LENZA_FB?.apiKey)return '';
+  if(!C.ready)return `<div class="card"><h3>☁️ Account</h3><p class="small mut">${esc(C.status||'Carico…')}</p></div>`;
+  if(C.user)return `<div class="card"><h3>☁️ Account</h3>
+    <div class="kv"><span>Accesso come</span><b style="word-break:break-all">${esc(C.user.email||C.user.displayName||'utente')}</b></div>
+    <p class="small" id="cloudst" style="margin:8px 0;color:var(--ok)">${esc(C.status||'')}</p>
+    <p class="small mut">Spot, diario con le foto, catture, trofei e impostazioni sono salvati online e sincronizzati su tutti i dispositivi in cui accedi con questo account.</p>
+    <div class="row" style="gap:8px;margin-top:8px"><button class="btn ghost" style="flex:1" onclick="CLOUD.syncNow()">↻ Sincronizza ora</button><button class="btn ghost" style="flex:1" onclick="CLOUD.logout()">Esci</button></div></div>`;
+  return `<div class="card"><h3>☁️ Accedi o registrati</h3>
+    <p class="small mut" style="margin-bottom:10px">Con un account i tuoi dati sono salvati online e li ritrovi su telefono e PC.</p>
+    <button class="btn full" style="margin-bottom:12px;background:#fff;color:#1f1f1f" onclick="CLOUD.google()"><svg viewBox="0 0 48 48" width="18" height="18" style="vertical-align:-3px;margin-right:6px"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3 0 5.8 1.1 7.9 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C36.9 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z"/></svg>Accedi con Google</button>
+    <div class="small mut" style="text-align:center;margin-bottom:8px">oppure con email e password</div>
+    <input id="cle" type="email" placeholder="Email" autocomplete="email" style="margin-bottom:8px">
+    <input id="clp" type="password" placeholder="Password (almeno 6 caratteri)" autocomplete="current-password">
+    <div class="row" style="gap:8px;margin-top:10px"><button class="btn" style="flex:1" onclick="CLOUD.login()">Accedi</button><button class="btn ghost" style="flex:1" onclick="CLOUD.register()">Registrati</button></div>
+    <div class="small" style="margin-top:8px;text-align:center"><u style="cursor:pointer" onclick="CLOUD.reset()">Password dimenticata?</u></div>
+    ${C.status?`<p class="small" style="margin-top:8px;color:var(--acc2)">${esc(C.status)}</p>`:''}</div>`;
+};
+init();
+})();

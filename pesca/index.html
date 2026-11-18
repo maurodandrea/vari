@@ -1776,7 +1776,7 @@ function vAltro(v){
     ['cal','🌙','Calendario','Luna e solunare','linear-gradient(140deg,#6a4bd6,#2c1f6e)'],
     ['ai','🤖','Assistente','Consigli e specie','linear-gradient(140deg,#159a6b,#0b4a3a)'],
     ['guide','🪢','Guida','Nodi, montature, esche','linear-gradient(140deg,#b8436e,#5a1d3a)'],
-    ['settings','⚙️','Impostazioni','Backup e dati','linear-gradient(140deg,#3d5671,#1b2a3c)']
+    ['settings','⚙️','Impostazioni',window.LENZA_FB?.apiKey?(window.CLOUD?.user?'Account attivo · dati online':'Accedi · backup e dati'):'Backup e dati','linear-gradient(140deg,#3d5671,#1b2a3c)']
   ];
   if(!standalone())hub.push(['install','📲','Installa app','Sulla schermata Home','linear-gradient(140deg,#2fe0cf,#3b8cff)']);
   v.innerHTML=`<div class="card"><div class="profile">${lvlRing(c)}<div style="flex:1"><div class="small mut" style="text-transform:uppercase;letter-spacing:1.2px;font-weight:700">Il tuo livello</div><h2>${c.lvl.name}</h2>
@@ -1786,7 +1786,8 @@ function vAltro(v){
 }
 function vSettings(v){
   let bytes=0;try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k.startsWith('lenza.'))bytes+=(localStorage.getItem(k)||'').length*2;}}catch(e){}
-  v.innerHTML=subHead('Impostazioni','Dati, backup e informazioni')+`
+  v.innerHTML=subHead('Impostazioni','Account, dati, backup e informazioni')+`
+  ${window.CLOUD?CLOUD.card():''}
   <div class="card"><h3>I tuoi dati</h3>
     <div class="kv"><span>Spot salvati</span><b>${S.spots.length}</b></div><div class="kv"><span>Uscite nel diario</span><b>${S.diary.length}</b></div>
     <div class="kv"><span>Spazio usato sul dispositivo</span><b>${fmt0(bytes/1024)} KB</b></div>
@@ -2222,5 +2223,7 @@ if('serviceWorker' in navigator&&location.protocol.startsWith('http')){
   navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!had||reloaded||S.live)return;reloaded=true;toast('Nuova versione di Lenza: ricarico…');setTimeout(()=>location.reload(),800);});
 }
 </script>
+<script src="firebase-config.js"></script>
+<script src="cloud.js"></script>
 </body>
 </html>
