@@ -1,4 +1,4 @@
-// Motore di riconoscimento e misura di Lenza, usato dall'app (pesca/) e dalla pagina misurazione/.
+// Motore di riconoscimento e misura di LenzApp, usato dall'app (pesca/) e dalla pagina misurazione/.
 // window.LENZA_BASE: percorso di pesca/ rispetto alla pagina. Stesse chiavi di cache: i modelli si scaricano una volta sola.
 const BASE=window.LENZA_BASE||'';
 const LS = {

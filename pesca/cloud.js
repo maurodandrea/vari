@@ -1,4 +1,4 @@
-// Account e sincronizzazione dei dati di Lenza con Firebase (Authentication + Firestore).
+// Account e sincronizzazione dei dati di LenzApp con Firebase (Authentication + Firestore).
 // Si attiva solo se firebase-config.js contiene la configurazione del progetto. I dati restano anche sul dispositivo:
 // Firestore tiene una copia per utente (users/{uid}/data/{chiave} e users/{uid}/diary/{id}) e la sincronizza tra telefono e PC.
 (function(){
@@ -213,7 +213,7 @@ C.gate=()=>{
   if(g&&g.dataset.v===String(verify))return;if(g)g.remove();
   if(verify){
     g=document.createElement('div');g.id='gate';g.dataset.v='true';
-    g.innerHTML=`<div class="gbox"><div class="glogo"><div class="mark">${document.querySelector('.logo .mark')?.innerHTML||''}</div><span>Len<b>za</b></span></div>
+    g.innerHTML=`<div class="gbox"><div class="glogo"><div class="mark">${document.querySelector('.logo .mark')?.innerHTML||''}</div><span>Lenz<b>App</b></span></div>
       <div style="font-size:46px;text-align:center">📧</div><h2 style="text-align:center;margin:4px 0 8px">Attiva il tuo account</h2>
       <p class="gsub">Ti ho inviato un'email a <b>${esc(C.user.email||'')}</b> con il link di attivazione. Aprilo e torna qui: l'app si sblocca da sola.</p>
       <p class="small mut" style="text-align:center;margin:-4px 0 14px">Non la trovi? Guarda nella cartella spam o promozioni.</p>
@@ -223,7 +223,7 @@ C.gate=()=>{
     document.body.appendChild(g);document.body.classList.add('gated');return;
   }
   g=document.createElement('div');g.id='gate';g.dataset.v='false';
-  g.innerHTML=`<div class="gbox"><div class="glogo"><div class="mark">${document.querySelector('.logo .mark')?.innerHTML||''}</div><span>Len<b>za</b></span></div>
+  g.innerHTML=`<div class="gbox"><div class="glogo"><div class="mark">${document.querySelector('.logo .mark')?.innerHTML||''}</div><span>Lenz<b>App</b></span></div>
     <p class="gsub">Accedi per usare l'app: spot, diario e foto salvati online e sincronizzati su telefono e PC.</p>${C.form(true)}</div>`;
   document.body.appendChild(g);document.body.classList.add('gated');
 };

@@ -6,12 +6,12 @@
 <meta name="theme-color" content="#030d1a">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Lenza">
+<meta name="apple-mobile-web-app-title" content="LenzApp">
 <meta name="description" content="Indice di pesca, meteo e mare, spot, diario e statistiche.">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-180.png">
-<title>Lenza · Indice di Pesca</title>
+<title>LenzApp · Indice di Pesca</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -516,7 +516,7 @@
 <div class="ocean"><div class="rays"></div><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div id="bubbles"></div></div>
 <div id="app">
   <header>
-    <div class="logo"><div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#03282a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v9.5a4.5 4.5 0 1 1-9 0V10l3 3"/><circle cx="14" cy="3" r="1"/></svg></div><div><span class="word">Len<b>za</b></span><div class="ver" id="ver" data-build="__BUILD__"></div></div></div>
+    <div class="logo"><div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#03282a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v9.5a4.5 4.5 0 1 1-9 0V10l3 3"/><circle cx="14" cy="3" r="1"/></svg></div><div><span class="word">Lenz<b>App</b></span><div class="ver" id="ver" data-build="__BUILD__"></div></div></div>
     <button class="userchip" id="userChip" style="display:none" onclick="CLOUD.open()"></button>
     <button class="spotchip" id="spotChip" onclick="pickSpot()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 0 0-7 7c0 5.3 7 13 7 13s7-7.7 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg><span id="spotName">—</span></button>
   </header>
@@ -1882,7 +1882,7 @@ window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();DEFERRED=e;
 const standalone=()=>matchMedia('(display-mode: standalone)').matches||navigator.standalone;
 function installApp(){
   if(DEFERRED){DEFERRED.prompt();DEFERRED=null;return;}
-  openSheet(`<h2>📲 Installa Lenza</h2><p class="mut" style="margin:8px 0 14px">Aggiungila alla schermata Home: si apre a schermo intero e funziona anche offline.</p>
+  openSheet(`<h2>📲 Installa LenzApp</h2><p class="mut" style="margin:8px 0 14px">Aggiungila alla schermata Home: si apre a schermo intero e funziona anche offline.</p>
   <div class="kv"><span>iPhone (Safari)</span><span class="mut">Condividi → Aggiungi a Home</span></div>
   <div class="kv"><span>Android (Chrome)</span><span class="mut">Menu ⋮ → Installa app</span></div>
   <button class="btn full" style="margin-top:16px" onclick="closeSheet()">Ok</button>`);
@@ -1915,7 +1915,7 @@ function vSettings(v){
   <div class="card"><h3>I tuoi dati</h3>
     <div class="kv"><span>Spot salvati</span><b>${S.spots.length}</b></div><div class="kv"><span>Uscite nel diario</span><b>${S.diary.length}</b></div>
     ${window.CLOUD?.user?`<div class="kv"><span>Dove sono salvati</span><b>Online nel tuo account</b></div>
-    <p class="small mut" style="margin:10px 0">Spot, diario con le foto, catture, trofei e impostazioni sono salvati nel tuo account Lenza (Firebase) e li ritrovi su ogni dispositivo in cui accedi. Sul telefono resta solo una copia temporanea per usare l'app anche senza internet, che viene cancellata quando esci dall'account. Puoi anche esportare un file di backup.</p>`:`<div class="kv"><span>Spazio usato sul dispositivo</span><b>${fmt0(bytes/1024)} KB</b></div>
+    <p class="small mut" style="margin:10px 0">Spot, diario con le foto, catture, trofei e impostazioni sono salvati nel tuo account LenzApp (Firebase) e li ritrovi su ogni dispositivo in cui accedi. Sul telefono resta solo una copia temporanea per usare l'app anche senza internet, che viene cancellata quando esci dall'account. Puoi anche esportare un file di backup.</p>`:`<div class="kv"><span>Spazio usato sul dispositivo</span><b>${fmt0(bytes/1024)} KB</b></div>
     <p class="small mut" style="margin:10px 0">Accedi per salvare i dati online. Esporta un backup per non perderli.</p>`}
     <div class="row" style="gap:8px"><button class="btn ghost" style="flex:1" onclick="exportData()">⬇️ Esporta</button><label class="btn ghost" style="flex:1;text-align:center;margin:0;color:var(--txt);font-size:14px">⬆️ Importa<input type="file" accept="application/json" style="display:none" onchange="importData(this)"></label></div></div>
   <div class="card"><h3>🧠 Riconoscimento dei pesci</h3>
@@ -1951,7 +1951,7 @@ function wipeAll(){
 /* ===================== Benvenuto ===================== */
 function welcome(){
   openSheet(`<div class="welcome"><div class="wl"><svg viewBox="0 0 24 24" fill="none" stroke="#03282a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v9.5a4.5 4.5 0 1 1-9 0V10l3 3"/><circle cx="14" cy="3" r="1"/></svg></div>
-  <h2>Benvenuto su Lenza</h2><p class="mut">Sapere quando e dove pescare, ogni volta.</p>
+  <h2>Benvenuto su LenzApp</h2><p class="mut">Sapere quando e dove pescare, ogni volta.</p>
   <div class="feat"><div><span>🎯</span>Indice di pesca ora per ora, da meteo, mare, luna e marea reali</div>
   <div><span>📍</span>I tuoi spot sulla mappa e la classifica di dove andare oggi</div>
   <div><span>⏱️</span>Sessione live: cronometro e catture con un tocco</div>
@@ -2000,7 +2000,7 @@ async function shareEntry(id){
   g.fillText(`${e.catches?.length||0} catture · ${e.tech||''}`,px,py+ph+290);
   g.fillText(`📍 ${sp?.name||''} · ${parseLocal(e.start).toLocaleDateString('it-IT',{day:'numeric',month:'long',year:'numeric'})}`,px,py+ph+350);
   g.fillStyle=tg;rrect(g,px,H-110,64,64,18);g.fill();g.save();g.translate(px+12,H-98);g.scale(1.7,1.7);g.strokeStyle='#03282a';g.lineWidth=2.4;g.lineCap='round';g.lineJoin='round';g.stroke(new Path2D('M14 3v9.5a4.5 4.5 0 1 1-9 0V10l3 3'));g.restore();
-  g.textAlign='left';g.fillStyle='#fff';g.font='800 46px Outfit, sans-serif';g.fillText('Lenza',px+84,H-62);
+  g.textAlign='left';g.fillStyle='#fff';g.font='800 46px Outfit, sans-serif';g.fillText('LenzApp',px+84,H-62);
   if(e.cond?.idx!=null){g.textAlign='right';g.fillStyle=idxColor(e.cond.idx);g.font='700 38px Outfit, sans-serif';g.fillText(`Indice ${e.cond.idx} · ${idxLabel(e.cond.idx)[0]}`,W-px,H-64);}
   const blob=await new Promise(r=>c.toBlob(r,'image/png'));
   const file=new File([blob],'lenza-cattura.png',{type:'image/png'});
@@ -2352,7 +2352,7 @@ if('serviceWorker' in navigator&&location.protocol.startsWith('http')){
   const had=!!navigator.serviceWorker.controller;
   navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(r=>{r.update();document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible')r.update();});}).catch(()=>{});
   let reloaded=false;
-  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!had||reloaded||S.live)return;reloaded=true;toast('Nuova versione di Lenza: ricarico…');setTimeout(()=>location.reload(),800);});
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!had||reloaded||S.live)return;reloaded=true;toast('Nuova versione di LenzApp: ricarico…');setTimeout(()=>location.reload(),800);});
 }
 </script>
 <script src="firebase-config.js"></script>
