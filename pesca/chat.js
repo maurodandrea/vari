@@ -17,7 +17,7 @@ const uidCode=u=>{let h=7;for(const c of u)h=(h*131+c.charCodeAt(0))>>>0;return 
 const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const seen=()=>LS.get('chatseen',{});
 // errore di un ascolto in tempo reale: lo mostro con il nome dell'operazione rifiutata
-const snapErr=label=>e=>{CH.err=(e.code==='permission-denied'?'La chat non ha i permessi su Firebase: pubblica le regole aggiornate (file firestore.rules) in Console Firebase › Firestore Database › Regole.':'Chat non raggiungibile: '+(e.code||e.message))+` [ascolto: ${label}]`;if(S.tab==='chat')render();};
+const snapErr=label=>e=>{CH.err=(e.code==='permission-denied'?'La chat non ha i permessi su Firebase: pubblica le regole aggiornate (file firestore.rules) in Console Firebase › Firestore Database › Regole.':'Chat non raggiungibile: '+(e.code||e.message))+` [ascolto: ${label} · ${String(e.message||'').slice(0,120)}]`;if(S.tab==='chat')render();};
 const friends=()=>LS.get('chatfriends',[]);
 const blocked=()=>LS.get('chatblock',[]);
 const notifOn=()=>LS.get('chatnotif',{on:false}).on;
@@ -55,7 +55,14 @@ async function syncSubs(){if(!CH.started)return;const ff=F(),want=new Set(follow
   for(const k of Object.keys(CH.subs))if(k.startsWith('f:')&&!want.has(k.slice(2))){CH.subs[k]();delete CH.subs[k];}
   for(const rid of want){const k='f:'+rid;if(CH.subs[k])continue;CH.subs[k]=()=>{};
     try{await ensureRoom(rid);}catch(e){}
-    CH.subs[k]=ff.onSnapshot(ff.doc(D(),'rooms',rid),s=>{if(!s.exists())return;const old=CH.rooms[rid]?.last?.ts||0;CH.rooms[rid]={id:rid,...s.data()};onRoom(rid,old);},snapErr('canale '+rid));}}
+    listenChan(rid,0);}}
+// ascolto di un canale: se viene rifiutato (per esempio perché la stanza non esisteva ancora) la creo e riprovo;
+// al secondo rifiuto lascio perdere quel canale senza bloccare il resto della chat
+function listenChan(rid,n){const ff=F(),k='f:'+rid;
+  CH.subs[k]=ff.onSnapshot(ff.doc(D(),'rooms',rid),s=>{if(!s.exists())return;const old=CH.rooms[rid]?.last?.ts||0;CH.rooms[rid]={id:rid,...s.data()};onRoom(rid,old);},
+    async e=>{CH.diag=`${rid}: ${e.code||''} ${e.message||''}`.slice(0,300);console.warn('LenzApp chat',CH.diag);
+      if(n>=1||!follows().includes(rid)){delete CH.subs[k];return;}
+      try{await ensureRoom(rid);}catch(x){}await new Promise(r=>setTimeout(r,2000));if(CH.started&&follows().includes(rid))listenChan(rid,n+1);});}
 
 /* ---------- canale dello spot: solo chi ha lo spot attivo entro 5 km ---------- */
 // i messaggi portano una posizione approssimata (circa 1 km) e una cella geohash di 4 caratteri per cercarli;
@@ -162,7 +169,7 @@ function roomRow(rid,icon,sub){
     <div style="text-align:right">${l?`<div class="small mut">${ago(l.ts)}</div>`:''}${un?'<i class="cdot"></i>':''}</div></div>`;
 }
 function listHtml(){
-  if(CH.tab==='zone')return chanHtml()+notifCard();
+  if(CH.tab==='zone')return chanHtml()+notifCard()+(CH.diag?`<p class="small mut" style="text-align:center;opacity:.6">Diagnosi: ${esc(CH.diag)}</p>`:'');
   if(CH.tab==='priv'){const rs=Object.values(CH.mine).sort((a,b)=>(b.last?.ts||b.t||0)-(a.last?.ts||a.t||0));
     return `<div class="card"><h3>👥 Messaggi privati e gruppi</h3>${rs.length?rs.map(r=>roomRow(r.id,r.type==='group'?'👥':'💬','')).join(''):'<p class="small mut">Nessuna conversazione. Aggiungi un amico nella scheda «Amici» e scrivigli.</p>'}
       <button class="btn ghost full" style="margin-top:10px" onclick="CHAT.newGroup()">➕ Nuovo gruppo di pesca</button></div>`;}
@@ -215,9 +222,9 @@ CH.open=rid=>{CH.rid=rid;CH.reply=null;CH.msgs=[];CH.unsubRoom?.();CH.unsubRoom=
     // il canale va creato prima di leggerne i messaggi (le regole controllano la stanza)
     (/^(z_it|r_|p_|c_)/.test(rid)?ensureRoom(rid).catch(()=>{}):Promise.resolve()).then(()=>{if(CH.rid!==rid)return;CH.unsubRoom=ff.onSnapshot(ff.query(ff.collection(D(),'rooms',rid,'msgs'),ff.orderBy('ts','desc'),ff.limit(80)),snap=>{
     const m=new Map(CH.msgs.map(x=>[x.id,x]));snap.docChanges().forEach(c=>{if(c.type==='removed')m.delete(c.doc.id);else m.set(c.doc.id,{id:c.doc.id,...c.doc.data()});});
-    CH.msgs=[...m.values()].sort((a,b)=>a.ts-b.ts).slice(-80);if(S.tab==='chat'&&CH.rid===rid)markSeen(rid);refresh();},snapErr('messaggi'));});}
+    CH.msgs=[...m.values()].sort((a,b)=>a.ts-b.ts).slice(-80);if(S.tab==='chat'&&CH.rid===rid)markSeen(rid);refresh();},e=>{if(!CH._rtry){CH._rtry=1;ensureRoom(rid).catch(()=>{}).then(()=>setTimeout(()=>{if(CH.rid===rid){CH._rtry=1;CH.open(rid);}},1500));return;}snapErr('messaggi di '+rid)(e);});});}
   if(S.tab!=='chat')go('chat');else render();};
-CH.back=()=>{CH.unsubRoom?.();CH.unsubRoom=null;CH.rid=null;CH.reply=null;render();};
+CH.back=()=>{CH._rtry=0;CH.unsubRoom?.();CH.unsubRoom=null;CH.rid=null;CH.reply=null;render();};
 function roomView(v){
   const rid=CH.rid,r=CH.rooms[rid]||CH.mine[rid],bot=rid==='bot';
   const sub=bot?'Consigli su misura per il tuo spot':rid==='near'?`Chi pesca entro ${NEAR_KM} km da «${esc(placeName(activeSpot()||{}))}»`:rid==='z_it'?'Canale nazionale':rid.startsWith('r_')?'Canale regionale':rid.startsWith('p_')?'Canale provinciale':rid.startsWith('c_')?'Canale comunale':r?.type==='zone'?'Canale pubblico':r?.type==='group'?`Gruppo · ${(r.members||[]).length} persone`:'Messaggio privato';
