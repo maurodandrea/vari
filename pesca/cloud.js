@@ -78,31 +78,6 @@ C.logout=async()=>{if(!confirm('Uscire dall\'account? I tuoi dati restano salvat
   C.unsub.forEach(f=>f());C.unsub=[];window.CHAT?.stop();await fa.signOut(auth);
   try{[...SYNC_KEYS,'diary','cloudts','cloudhash','cloudsent','clouduid','chatbot','chatseen','chatreported'].forEach(k=>localStorage.removeItem('lenza.'+k));}catch(e){}
   location.hash='';location.reload();};
-/* ---------- cancellazione dell'account ---------- */
-// cancella dati online (impostazioni, spot, diario, profilo della chat, avvisi), l'account di accesso e la copia sul dispositivo
-C.deleteAccount=async()=>{
-  const u=C.user;if(!u)return;
-  const t=prompt('Eliminare definitivamente l\'account '+(u.email||'')+'?\n\nVerranno cancellati spot, diario con le foto, catture, trofei, Premium, amici e profilo della chat. I messaggi già inviati in chat restano, senza possibilità di modificarli.\n\nPer confermare scrivi ELIMINA');
-  if(t==null)return;if(t.trim().toUpperCase()!=='ELIMINA'){toast('Cancellazione annullata: non hai scritto ELIMINA');return;}
-  // Firebase chiede un accesso recente prima di eliminare l'account
-  try{
-    const pw=(u.providerData||[]).some(p=>p.providerId==='password');
-    if(pw){const p=prompt('Per sicurezza inserisci la password del tuo account');if(!p)return;await fa.reauthenticateWithCredential(u,fa.EmailAuthProvider.credential(u.email,p));}
-    else await fa.reauthenticateWithPopup(u,new fa.GoogleAuthProvider());
-  }catch(e){toast('⚠️ '+(e.code==='auth/wrong-password'||e.code==='auth/invalid-credential'?'Password sbagliata':errMsg(e)));return;}
-  toast('Cancello i tuoi dati…');clearTimeout(C.timer);C.unsub.forEach(f=>f());C.unsub=[];window.CHAT?.stop();
-  try{
-    const del=async col=>{const s=await ff.getDocs(col);for(const d of s.docs)await ff.deleteDoc(ff.doc(col,d.id));};
-    await del(dataCol());await del(diaryCol());
-    try{await del(ff.collection(db,'notifs',u.uid,'items'));}catch(e){}
-    try{await ff.deleteDoc(ff.doc(db,'profiles',u.uid));}catch(e){}
-    try{await ff.deleteDoc(ff.doc(db,'locations',u.uid));}catch(e){}
-    await ff.deleteDoc(uref());
-    await fa.deleteUser(u);
-  }catch(e){toast('⚠️ Cancellazione non completata: '+(e.code||e.message));return;}
-  try{Object.keys(localStorage).filter(k=>k.startsWith('lenza.')).forEach(k=>localStorage.removeItem(k));}catch(e){}
-  alert('Il tuo account e i tuoi dati sono stati eliminati.');location.hash='';location.reload();
-};
 C.cancelVerify=async()=>{window.CHAT?.stop();clearInterval(C.vtimer);await fa.signOut(auth);};
 C.syncNow=()=>{SYNC_KEYS.forEach(k=>C.dirty.add(k));C.dirty.add('diary');push();};
 
@@ -273,8 +248,7 @@ C.card=()=>{
     <div class="kv"><span>Accesso come</span><b style="word-break:break-all">${esc(C.user.email||C.user.displayName||'utente')}${typeof isPremium==='function'&&isPremium()?' ⭐':''}</b></div>
     <p class="small" id="cloudst" style="margin:8px 0;color:var(--ok)">${esc(C.status||'')}</p>
     <p class="small mut">Spot, diario con le foto, catture, trofei e impostazioni sono salvati online e sincronizzati su tutti i dispositivi in cui accedi con questo account.</p>
-    <div class="row" style="gap:8px;margin-top:8px"><button class="btn ghost" style="flex:1" onclick="CLOUD.syncNow()">↻ Sincronizza ora</button><button class="btn ghost" style="flex:1" onclick="CLOUD.logout()">Esci</button></div>
-    <button class="btn ghost full" style="margin-top:10px;color:#ff8a8d;border-color:rgba(255,90,95,.35)" onclick="CLOUD.deleteAccount()">🗑️ Elimina account</button></div>`;
+    <div class="row" style="gap:8px;margin-top:8px"><button class="btn ghost" style="flex:1" onclick="CLOUD.syncNow()">↻ Sincronizza ora</button><button class="btn ghost" style="flex:1" onclick="CLOUD.logout()">Esci</button></div></div>`;
   return `<div class="card">${C.form().replace('<h2>','<h3>').replace('</h2>','</h3>')}</div>`;
 };
 C.form=(big)=>`${big?'':'<h2>☁️ Accedi o registrati</h2>'}
