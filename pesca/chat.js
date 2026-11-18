@@ -162,7 +162,7 @@ CH.view=v=>{
   if(CH.rid)return roomView(v);
   const tabs=[['zone','📍 Canali'],['priv','👥 Privati'],['bot','🤖 Assistente'],['amici','🤝 Amici']];
   v.innerHTML=subHead('Chat','Zone, amici e assistente','home')+(CH.err?`<div class="banner">⚠️ ${esc(CH.err)}</div>`:'')+
-    `<div class="chips" style="margin-bottom:12px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none">${tabs.map(([k,n])=>`<span class="chip ${CH.tab===k?'on':''}" onclick="CHAT.tab='${k}';render()">${n}</span>`).join('')}</div><div id="chatlist">${listHtml()}</div>`;
+    `<div class="chips" style="margin-bottom:12px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none">${tabs.map(([k,n])=>`<span class="chip ${CH.tab===k?'on':''}" style="flex:none;white-space:nowrap" onclick="CHAT.tab='${k}';render()">${n}</span>`).join('')}</div><div id="chatlist">${listHtml()}</div>`;
 };
 const ago=ts=>{const m=Math.round((Date.now()-ts)/60000);return m<1?'ora':m<60?m+' min':m<1440?Math.round(m/60)+' h':new Date(ts).toLocaleDateString('it-IT',{day:'numeric',month:'short'});};
 function roomRow(rid,icon,sub){
