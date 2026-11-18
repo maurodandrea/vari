@@ -1,4 +1,4 @@
-// Chat di Lenza (funzione Premium): canali per zona, catture condivise, condizioni in diretta, amici e messaggi privati,
+// Chat di LenzApp (funzione Premium): canali per zona, catture condivise, condizioni in diretta, amici e messaggi privati,
 // assistente in chat, spot protetti, moderazione e notifiche. Usa lo stesso progetto Firebase degli account (cloud.js).
 // Firestore:
 //   profiles/{uid}              nome e codice amico di ogni utente
@@ -115,7 +115,7 @@ function roomRow(rid,icon,sub){
 }
 function listHtml(){
   if(CH.tab==='zone')return `<div class="card"><h3>📍 Canali per zona</h3><p class="small mut" style="margin:-4px 0 6px">Una stanza per ogni zona dei tuoi spot (circa 25 km). Le coordinate dei tuoi spot non vengono mai mostrate.</p>
-    ${zones().map(z=>roomRow(z.rid,z.rid==='z_it'?'🇮🇹':'📍',z.rid==='z_it'?'Tutti i pescatori di Lenza':'')).join('')}</div>${notifCard()}`;
+    ${zones().map(z=>roomRow(z.rid,z.rid==='z_it'?'🇮🇹':'📍',z.rid==='z_it'?'Tutti i pescatori di LenzApp':'')).join('')}</div>${notifCard()}`;
   if(CH.tab==='priv'){const rs=Object.values(CH.mine).sort((a,b)=>(b.last?.ts||b.t||0)-(a.last?.ts||a.t||0));
     return `<div class="card"><h3>👥 Messaggi privati e gruppi</h3>${rs.length?rs.map(r=>roomRow(r.id,r.type==='group'?'👥':'💬','')).join(''):'<p class="small mut">Nessuna conversazione. Aggiungi un amico nella scheda «Amici» e scrivigli.</p>'}
       <button class="btn ghost full" style="margin-top:10px" onclick="CHAT.newGroup()">➕ Nuovo gruppo di pesca</button></div>`;}
@@ -133,7 +133,7 @@ function notifCard(){
   <div class="card"><h3>🔔 Notifiche</h3>
     <label class="crow"><input type="checkbox" ${n.on?'checked':''} onchange="CHAT.setNotif(this.checked)"> Avvisami dei nuovi messaggi</label>
     <label class="crow"><input type="checkbox" ${n.zones!==false?'checked':''} onchange="CHAT.setNotifZones(this.checked)"> Anche per i canali delle zone</label>
-    <p class="small mut" style="margin:6px 0 0">${perm==='denied'?'⚠️ Le notifiche sono bloccate nelle impostazioni del browser.':perm==='unsupported'?'Questo browser non supporta le notifiche: vedrai gli avvisi dentro l\'app.':'Arrivano mentre Lenza è aperta, anche in un\'altra scheda o in secondo piano. Messaggi privati e risposte ti avvisano sempre.'}</p></div>`;
+    <p class="small mut" style="margin:6px 0 0">${perm==='denied'?'⚠️ Le notifiche sono bloccate nelle impostazioni del browser.':perm==='unsupported'?'Questo browser non supporta le notifiche: vedrai gli avvisi dentro l\'app.':'Arrivano mentre LenzApp è aperta, anche in un\'altra scheda o in secondo piano. Messaggi privati e risposte ti avvisano sempre.'}</p></div>`;
 }
 CH.setNotif=async on=>{const n=LS.get('chatnotif',{zones:true});n.on=on;
   if(on&&'Notification' in window&&Notification.permission==='default'){try{await Notification.requestPermission();}catch(e){}}
@@ -311,7 +311,7 @@ CH.ask=async q=>{
   const h=LS.get('chatbot',[]);h.push({me:true,text:q,ts:Date.now()});LS.set('chatbot',h.slice(-40));CH.botBusy=true;refresh();
   let ans='';
   if(typeof gemKey==='function'&&gemKey()){
-    try{const sys=`Sei l'assistente di pesca dell'app Lenza. Rispondi in italiano, in modo pratico e breve (massimo 8 righe), con esche, montature, tecniche e orari adatti alle condizioni. Usa le unità metriche. Se la domanda non riguarda la pesca, riporta gentilmente il discorso sulla pesca. Ricorda di rispettare le misure minime e la normativa locale quando parli di trattenere il pesce. Rispondi in JSON: {"risposta":"testo"}.\nDati attuali:\n${context()}`;
+    try{const sys=`Sei l'assistente di pesca dell'app LenzApp. Rispondi in italiano, in modo pratico e breve (massimo 8 righe), con esche, montature, tecniche e orari adatti alle condizioni. Usa le unità metriche. Se la domanda non riguarda la pesca, riporta gentilmente il discorso sulla pesca. Ricorda di rispettare le misure minime e la normativa locale quando parli di trattenere il pesce. Rispondi in JSON: {"risposta":"testo"}.\nDati attuali:\n${context()}`;
       const hist=LS.get('chatbot',[]).slice(-10).map(m=>({role:m.me?'user':'model',parts:[{text:m.text}]}));
       const j=await gemCall({systemInstruction:{parts:[{text:sys}]},contents:hist,generationConfig:{responseMimeType:'application/json',temperature:.6}});
       ans=String(j.risposta||j.answer||'').trim();}
