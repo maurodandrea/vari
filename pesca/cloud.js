@@ -3,7 +3,7 @@
 // Firestore tiene una copia per utente (users/{uid}/data/{chiave} e users/{uid}/diary/{id}) e la sincronizza tra telefono e PC.
 (function(){
 const FBV='10.14.1',FB=`https://www.gstatic.com/firebasejs/${FBV}/`;
-const SYNC_KEYS=['spots','active','shoesize','gemkey','badges','myfish','live','premium','chatfriends','chatblock','chatblocknames','chatnotif','chatfollow','chatfollow2'];  // il diario va a parte, un documento per uscita
+const SYNC_KEYS=['spots','active','shoesize','gemkey','badges','myfish','live','premium','chatfriends','chatblock','chatblocknames','chatnotif','chatfollow','chatfollow2','chatspotc'];  // il diario va a parte, un documento per uscita
 const MAX_DOC=900000;  // Firestore accetta documenti fino a 1 MB
 const C={ready:false,user:null,status:'',busy:false,applying:false,dirty:new Set(),timer:null,unsub:[]};
 window.CLOUD=C;
