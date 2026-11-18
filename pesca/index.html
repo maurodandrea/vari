@@ -51,12 +51,13 @@
   .logo .ver{font-size:10.5px;font-weight:600;color:var(--mut);letter-spacing:.2px;margin-top:-2px;white-space:nowrap;}
   .logo .word b{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;}
   .spotchip{margin-left:auto;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:999px;padding:8px 14px 8px 10px;color:var(--txt);font:600 13px 'Outfit',sans-serif;cursor:pointer;max-width:58%;backdrop-filter:blur(10px);transition:.2s;}
-  .userchip{margin-left:auto;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:999px;padding:5px 12px 5px 5px;color:var(--txt);font:600 13px 'Outfit',sans-serif;cursor:pointer;flex:0 0 auto;max-width:130px;min-width:0;}
+  .userchip{margin-left:auto;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:999px;padding:5px 12px 5px 5px;color:var(--txt);font:600 13px 'Outfit',sans-serif;cursor:pointer;flex:0 0 auto;max-width:86px;min-width:0;font-size:12px;}
   .userchip:not(.in){padding:8px 12px 8px 10px;background:var(--grad);color:#03282a;border:0;}
   .userchip svg{width:16px;height:16px;flex:none;}
-  .userchip i{font-style:normal;flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--grad);color:#03282a;font-weight:800;}
+  .userchip i{font-style:normal;flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--grad);color:#03282a;font-weight:800;}
   .userchip span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .userchip:not([style*="none"])+.spotchip{margin-left:0;min-width:0;flex:0 1 auto;}
+  @media (max-width:999px){.userchip.in{padding:4px;}.userchip.in span{display:none;}}  /* telefono: solo l'iniziale, più spazio allo spot */
+  .userchip:not([style*="none"])+.spotchip{margin-left:0;min-width:110px;flex:1 1 auto;justify-content:flex-start;}
   header .logo{flex:none;}
   #gate{position:fixed;inset:0;z-index:1100;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(1,8,18,.55);backdrop-filter:blur(14px) saturate(1.2);-webkit-backdrop-filter:blur(14px) saturate(1.2);animation:fadein .3s both;overflow:auto;}
   #gate .gbox{width:100%;max-width:420px;background:linear-gradient(180deg,rgba(14,42,72,.96),rgba(8,26,46,.96));border:1px solid rgba(255,255,255,.12);border-radius:30px;padding:26px 22px 22px;box-shadow:0 30px 70px -20px rgba(0,0,0,.8);}
@@ -444,7 +445,7 @@
     #app{max-width:1320px;padding-left:250px;}
     header{padding:18px 28px 12px;}
     header .spotchip{max-width:420px;}
-    header .userchip{max-width:260px;}
+    header .userchip{max-width:260px;font-size:13px;}
     nav{left:max(16px,calc((100vw - 1320px)/2 + 16px));top:92px;bottom:auto;transform:none;width:218px;max-width:none;flex-direction:column;align-items:stretch;gap:4px;padding:10px;border-radius:24px;}
     nav button{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;padding:12px 14px;font-size:15px;border-radius:16px;}
     nav button:hover{background:rgba(255,255,255,.06);color:var(--txt);}
@@ -890,7 +891,8 @@ function go(t){if(location.hash.slice(1)!==t)location.hash=t;else{S.tab=t;window
 window.addEventListener('hashchange',()=>{const t=location.hash.slice(1)||'home';if(!PAGES.includes(t))return;closeSheet();S.tab=t;window.scrollTo(0,0);render();});
 function setMode(m){}
 function render(){
-  document.getElementById('spotName').textContent=activeSpot()?.name||'Nessuno spot';
+  // posizione attuale: nel pulsante solo la località (il mirino dice già che è la posizione attuale)
+  {const sp=activeSpot();document.getElementById('spotName').textContent=sp?(sp.here?'🎯 '+(sp.name.replace(/^Posizione attuale( · )?/,'')||'Posizione attuale'):sp.name):'Nessuno spot';}
   window.CLOUD?.chip();
   const mk=Object.keys(MODES),mi=mk.indexOf(S.mode);
   document.getElementById('modes').innerHTML=`<div class="slider" style="transform:translateX(calc(${mi*100}% + ${mi*4}px))"></div>`+mk.map(k=>`<button class="mode ${S.mode===k?'on':''}" onclick="setMode('${k}')">${svgI(k,2)}${MODES[k].n}</button>`).join('');
@@ -1813,8 +1815,9 @@ function vSettings(v){
   ${window.CLOUD?CLOUD.card():''}
   <div class="card"><h3>I tuoi dati</h3>
     <div class="kv"><span>Spot salvati</span><b>${S.spots.length}</b></div><div class="kv"><span>Uscite nel diario</span><b>${S.diary.length}</b></div>
-    <div class="kv"><span>Spazio usato sul dispositivo</span><b>${fmt0(bytes/1024)} KB</b></div>
-    <p class="small mut" style="margin:10px 0">I dati restano solo su questo dispositivo. Esporta un backup per non perderli o per spostarli su un altro telefono.</p>
+    ${window.CLOUD?.user?`<div class="kv"><span>Dove sono salvati</span><b>Online nel tuo account</b></div>
+    <p class="small mut" style="margin:10px 0">Spot, diario con le foto, catture, trofei e impostazioni sono salvati nel tuo account Lenza (Firebase) e li ritrovi su ogni dispositivo in cui accedi. Sul telefono resta solo una copia temporanea per usare l'app anche senza internet, che viene cancellata quando esci dall'account. Puoi anche esportare un file di backup.</p>`:`<div class="kv"><span>Spazio usato sul dispositivo</span><b>${fmt0(bytes/1024)} KB</b></div>
+    <p class="small mut" style="margin:10px 0">Accedi per salvare i dati online. Esporta un backup per non perderli.</p>`}
     <div class="row" style="gap:8px"><button class="btn ghost" style="flex:1" onclick="exportData()">⬇️ Esporta</button><label class="btn ghost" style="flex:1;text-align:center;margin:0;color:var(--txt);font-size:14px">⬆️ Importa<input type="file" accept="application/json" style="display:none" onchange="importData(this)"></label></div></div>
   <div class="card"><h3>🧠 Riconoscimento dei pesci</h3>
     <p class="small" style="margin-bottom:8px">Il riconoscimento della specie funziona <b>sul telefono</b>, gratis e anche senza internet, con BioCLIP: un modello open source addestrato su milioni di foto di animali e piante. Lunghezza e peso si calcolano da soli con SlimSAM, che ritaglia pesce e oggetto di riferimento nella foto. I modelli si scaricano una volta (circa 155 MB).</p>
