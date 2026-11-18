@@ -459,7 +459,7 @@
     nav{left:max(16px,calc((100vw - 1320px)/2 + 16px));top:92px;bottom:auto;transform:none;width:218px;max-width:none;flex-direction:column;align-items:stretch;gap:4px;padding:10px;border-radius:24px;}
     nav button{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;padding:12px 14px;font-size:15px;border-radius:16px;}
     nav button:hover{background:rgba(255,255,255,.06);color:var(--txt);}
-    nav button .lk{position:static;margin-left:auto;font-size:13px;}
+    nav button .lk{position:static;margin-left:-6px;font-size:13px;line-height:1;}
     nav .fab{order:-1;margin:0 0 8px;padding:0;flex-direction:row;}
     nav .fab .fb{width:100%;height:50px;border-radius:16px;box-shadow:0 10px 24px -10px rgba(47,224,207,.9);}
     nav .fab em{display:none;}
@@ -608,17 +608,20 @@ const PREMIUM_TABS={pesce:['Riconosci e misura','Il riconoscimento della specie 
   compare:['Dove pescare','La classifica dei tuoi spot per indice di pesca è riservata agli utenti Premium.'],ai:['Assistente','I consigli su misura e le specie di stagione sono riservati agli utenti Premium.'],guide:['Guida','La guida a nodi, montature ed esche è riservata agli utenti Premium.']};
 const lockedTab=t=>!!PREMIUM_TABS[t]&&!isPremium();
 // anteprima sfocata di Riconosci: un pesce disegnato, riconosciuto e misurato
-// foto reale: orata (Sparus aurata) di Paulius Rupšas su iNaturalist, licenza CC BY 4.0; linea di misura dal muso alla coda
-const FISH_PREVIEW=`<div style="position:relative"><img src="img/orata-preview.jpg" alt="Orata" style="display:block;width:100%;border-radius:16px">
-  <svg viewBox="0 0 800 600" style="position:absolute;inset:0;width:100%;height:100%">
-  <line x1="656" y1="309" x2="29" y2="419" stroke="rgba(0,0,0,.6)" stroke-width="11" stroke-linecap="round"/><line x1="656" y1="309" x2="29" y2="419" stroke="#2fe0cf" stroke-width="6" stroke-linecap="round"/>
-  <circle cx="656" cy="309" r="10" fill="#2fe0cf" stroke="#fff" stroke-width="3"/><circle cx="29" cy="419" r="10" fill="#2fe0cf" stroke="#fff" stroke-width="3"/></svg></div>`;
+// fotomontaggio da foto reali: orata di Alidz31 su iNaturalist (CC BY 4.0) e scarpe di Freestocks.org (CC0)
+// linea azzurra: lunghezza dell'orata dal muso alla coda; linea arancione: scarpa usata come riferimento, dal tallone alla punta
+const FISH_PREVIEW=`<div style="position:relative"><img src="img/orata-preview.jpg" alt="Orata accanto a una scarpa" style="display:block;width:100%;border-radius:16px">
+  <svg viewBox="0 0 800 646" style="position:absolute;inset:0;width:100%;height:100%">
+  <line x1="698" y1="198" x2="128" y2="161" stroke="rgba(0,0,0,.6)" stroke-width="11" stroke-linecap="round"/><line x1="698" y1="198" x2="128" y2="161" stroke="#2fe0cf" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="698" cy="198" r="10" fill="#2fe0cf" stroke="#fff" stroke-width="3"/><circle cx="128" cy="161" r="10" fill="#2fe0cf" stroke="#fff" stroke-width="3"/>
+  <line x1="211" y1="552" x2="609" y2="552" stroke="rgba(0,0,0,.6)" stroke-width="11" stroke-linecap="round"/><line x1="211" y1="552" x2="609" y2="552" stroke="#ffb547" stroke-width="6" stroke-linecap="round"/>
+  <circle cx="211" cy="552" r="10" fill="#ffb547" stroke="#fff" stroke-width="3"/><circle cx="609" cy="552" r="10" fill="#ffb547" stroke="#fff" stroke-width="3"/></svg></div>`;
 function premiumPreview(){return `<div class="pvwrap"><div class="pvblur">
   <div class="cphoto big" style="margin-bottom:10px">${FISH_PREVIEW}</div>
   <div class="aibox ok"><div style="flex:1"><div class="small mut" style="text-transform:uppercase;letter-spacing:1px;font-weight:700">✨ Riconosciuto</div>
     <div style="font-size:19px;font-weight:800;margin-top:2px">Orata <span class="pill" style="background:#5ee08a22;color:var(--ok)">94%</span></div><div class="small mut"><i>Sparus aurata</i></div>
-    <div class="aigrid" style="margin-top:10px"><div><b>36 cm</b><span>lunghezza</span></div><div><b>0,7 kg</b><span>peso stimato</span></div><div><b style="font-size:12px">Stima</b><span>dalla foto</span></div></div></div></div>
-  </div><div class="small mut" style="margin-top:6px;font-size:11px">Foto: Paulius Rupšas, iNaturalist (CC BY)</div></div>`;}
+    <div class="aigrid" style="margin-top:10px"><div><b>41 cm</b><span>lunghezza</span></div><div><b>1,1 kg</b><span>peso stimato</span></div><div><b style="font-size:12px">Scarpa n. 43</b><span>riferimento trovato</span></div></div></div></div>
+  </div><div class="small mut" style="margin-top:6px;font-size:11px">Fotomontaggio da foto di Alidz31 (iNaturalist, CC BY) e Freestocks.org (CC0)</div></div>`;}
 function premiumPage(v,t){const [title,what]=PREMIUM_TABS[t];
   v.innerHTML=subHead(title,'Funzione Premium',t==='pesce'||t==='compare'?'home':'altro')+(t==='pesce'?`<div class="pvhost">${premiumPreview()}</div>`:'')+`<div class="card" style="text-align:center;padding:28px 18px">
     <div style="font-size:52px">⭐</div><h2 style="margin:6px 0">Funzione Premium</h2>
@@ -1185,11 +1188,17 @@ function waveChart(hs){
 }
 // Home: altezza massima dell'onda giorno per giorno nella settimana
 function weekWave(X){
-  const ds=X.fdays.slice(0,isPremium()?99:FREE_DAYS).map(d=>{const v=dayHours(X,d.date).map(h=>h.wave).filter(q=>q!=null);return {d,mx:v.length?Math.max(...v):null,mn:v.length?Math.min(...v):null};}).filter(o=>o.mx!=null);
+  // i giorni oltre FREE_DAYS restano visibili ma bloccati per chi non è Premium (nessun dato mostrato)
+  const ds=X.fdays.map((d,k)=>{const v=dayHours(X,d.date).map(h=>h.wave).filter(q=>q!=null);return {d,lock:k>=FREE_DAYS&&!isPremium(),mx:v.length?Math.max(...v):null,mn:v.length?Math.min(...v):null};}).filter(o=>o.mx!=null);
   if(!ds.length)return '';
-  const W=500,H=230,p=16,bw=(W-2*p)/ds.length,top=Math.max(.5,...ds.map(o=>o.mx))*1.12,y=q=>H-34-q/top*(H-34-46);
+  const W=Math.max(500,ds.length*86),H=230,p=16,bw=(W-2*p)/ds.length,top=Math.max(.5,...ds.filter(o=>!o.lock).map(o=>o.mx))*1.12,y=q=>H-34-q/top*(H-34-46);
   const col=q=>q>=1.5?'#ff6b6b':q>=1?'#ffb547':q>=.5?'#2fe0cf':'#5aa8ff';
   const bars=ds.map((o,k)=>{const x0=p+k*bw+bw*.18,w=bw*.64,yt=y(o.mx),yb=y(o.mn);
+    if(o.lock){const yl=H-34-(H-34-46)*.55;
+      return `<g style="cursor:pointer" onclick="needPremium('Vedere l\\'onda oltre ${FREE_DAYS} giorni')"><rect x="${x0}" y="${yl}" width="${w}" height="${H-34-yl}" rx="10" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.18)" stroke-width="2" stroke-dasharray="6 5"/>
+      <text x="${x0+w/2}" y="${(yl+H-34)/2+9}" font-size="26" text-anchor="middle">🔒</text>
+      <text x="${x0+w/2}" y="${yl-10}" fill="#8aa0b4" font-size="15" font-weight="700" text-anchor="middle">Premium</text>
+      <text x="${x0+w/2}" y="${H-8}" fill="#8aa0b4" font-size="19" font-weight="700" text-anchor="middle">${dayName(o.d.date)}</text></g>`;}
     return `<rect x="${x0}" y="${yt}" width="${w}" height="${H-34-yt}" rx="10" fill="${col(o.mx)}" opacity=".9"/>
       <rect x="${x0}" y="${yb}" width="${w}" height="${H-34-yb}" rx="10" fill="rgba(6,20,28,.35)"/>
       <text x="${x0+w/2}" y="${yt-10}" fill="#fff" font-size="17" font-weight="800" text-anchor="middle">${o.mx<1?Math.round(o.mx*100)+' cm':fmt1(o.mx)+' m'}</text>
