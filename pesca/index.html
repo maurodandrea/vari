@@ -51,6 +51,16 @@
   .logo .ver{font-size:10.5px;font-weight:600;color:var(--mut);letter-spacing:.2px;margin-top:-2px;white-space:nowrap;}
   .logo .word b{background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;}
   .spotchip{margin-left:auto;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:999px;padding:8px 14px 8px 10px;color:var(--txt);font:600 13px 'Outfit',sans-serif;cursor:pointer;max-width:58%;backdrop-filter:blur(10px);transition:.2s;}
+  .userchip{margin-left:auto;display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.07);border:1px solid var(--line);border-radius:999px;padding:5px 12px 5px 5px;color:var(--txt);font:600 13px 'Outfit',sans-serif;cursor:pointer;flex:0 0 auto;max-width:112px;min-width:0;}
+  .userchip:not(.in){padding:8px 12px 8px 10px;background:var(--grad);color:#03282a;border:0;}
+  .userchip svg{width:16px;height:16px;flex:none;}
+  .userchip i{font-style:normal;flex:none;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;background:var(--grad);color:#03282a;font-weight:800;}
+  .userchip span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .userchip:not([style*="none"])+.spotchip{margin-left:0;min-width:0;flex:0 1 auto;}
+  header .logo{flex:none;}
+  .loginbox{display:flex;align-items:center;gap:12px;}
+  .loginbox>div{flex:1;min-width:0;}
+  .loginbox .btn{flex:none;padding:10px 20px;}
   .spotchip:hover{background:rgba(255,255,255,.12);}
   .spotchip svg{width:16px;height:16px;flex:none;color:var(--acc);}
   .spotchip span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -424,6 +434,7 @@
     #app{max-width:1320px;padding-left:250px;}
     header{padding:18px 28px 12px;}
     header .spotchip{max-width:420px;}
+    header .userchip{max-width:260px;}
     nav{left:max(16px,calc((100vw - 1320px)/2 + 16px));top:92px;bottom:auto;transform:none;width:218px;max-width:none;flex-direction:column;align-items:stretch;gap:4px;padding:10px;border-radius:24px;}
     nav button{flex:none;flex-direction:row;justify-content:flex-start;gap:12px;padding:12px 14px;font-size:15px;border-radius:16px;}
     nav button:hover{background:rgba(255,255,255,.06);color:var(--txt);}
@@ -455,6 +466,7 @@
 <div id="app">
   <header>
     <div class="logo"><div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#03282a" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3v9.5a4.5 4.5 0 1 1-9 0V10l3 3"/><circle cx="14" cy="3" r="1"/></svg></div><div><span class="word">Len<b>za</b></span><div class="ver" id="ver" data-build="__BUILD__"></div></div></div>
+    <button class="userchip" id="userChip" style="display:none" onclick="CLOUD.open()"></button>
     <button class="spotchip" id="spotChip" onclick="pickSpot()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 0 0-7 7c0 5.3 7 13 7 13s7-7.7 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg><span id="spotName">—</span></button>
   </header>
   <div class="modes" id="modes"></div>
@@ -869,6 +881,7 @@ window.addEventListener('hashchange',()=>{const t=location.hash.slice(1)||'home'
 function setMode(m){}
 function render(){
   document.getElementById('spotName').textContent=activeSpot()?.name||'Nessuno spot';
+  window.CLOUD?.chip();
   const mk=Object.keys(MODES),mi=mk.indexOf(S.mode);
   document.getElementById('modes').innerHTML=`<div class="slider" style="transform:translateX(calc(${mi*100}% + ${mi*4}px))"></div>`+mk.map(k=>`<button class="mode ${S.mode===k?'on':''}" onclick="setMode('${k}')">${svgI(k,2)}${MODES[k].n}</button>`).join('');
   document.getElementById('modes').style.display='none';  // barra Costa/Mare/Lago/Fiume nascosta: resta l'ambiente salvato (costa di default)
@@ -971,7 +984,7 @@ function vHome(v){
   const today=new Date();today.setHours(0,0,0,0);
   const D=X.days.find(d=>d.date.toDateString()===today.toDateString())||X.days[1];
   const wins=bestWindows(X,today),sol=X.sol[today.toDateString()]||[],sky=skyPhase(D,now);
-  v.innerHTML=simBanner()+`
+  v.innerHTML=simBanner()+(window.CLOUD?CLOUD.homeCard():'')+`
   <section class="hero sky-${sky} ${SWIPE_DIR?'in-'+SWIPE_DIR:''}">${S.spots.length>1?'<button class="hnav l" onclick="stepSpot(-1)" aria-label="Spot precedente">‹</button><button class="hnav r" onclick="stepSpot(1)" aria-label="Spot successivo">›</button>':''}${sky==='night'?'<div class="stars"></div>':''}<div class="orb"></div>
     <div class="hero-top"><div><div class="hero-loc"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 0 0-7 7c0 5.3 7 13 7 13s7-7.7 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>${esc(activeSpot()?.name||'')}</div>
       <div class="hero-date">${now.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'})} · ${hhmm(now)}</div></div>
