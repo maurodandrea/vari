@@ -128,6 +128,8 @@ CH.start=async()=>{
     ff.setDoc(ff.doc(db,'profiles',u.uid),{name:C().name(),code:uidCode(u.uid),t:Date.now()},{merge:true}).catch(e=>{CH.diag='profilo: '+(e.code||e.message);});
     step='ascolti';
     loadGeo();if(GEO)defaultFollow();syncSubs();nearSync();if(locVis()!=='off'){pushLoc(false);startLocTimer();}
+    // amicizie fatte prima che esistessero le richieste: avviso una volta gli amici, così possono ricambiare
+    if(!LS.get('chatfriendsync',false)){friends().forEach(f=>tellFriend(f.uid,false));LS.set('chatfriendsync',true);}
     CH.subs._mine=ff.onSnapshot(ff.query(ff.collection(db,'rooms'),ff.where('members','array-contains',u.uid)),snap=>{
       snap.docChanges().forEach(c=>{const id=c.doc.id;if(c.type==='removed'){delete CH.mine[id];return;}const old=CH.mine[id]?.last?.ts||0;CH.mine[id]={id,...c.doc.data()};onRoom(id,old);});
       refresh();},snapErr('stanze private'));
@@ -136,7 +138,9 @@ CH.start=async()=>{
       snap.docChanges().forEach(c=>{CH.reports=CH.reports.filter(r=>r.id!==c.doc.id);if(c.type!=='removed')CH.reports.push({id:c.doc.id,...c.doc.data()});});
       CH.badge();if(S.tab==='mod'||S.tab==='altro')render();},snapErr('segnalazioni'));
     CH.subs._notif=ff.onSnapshot(ff.collection(db,'notifs',u.uid,'items'),snap=>{
-      snap.docChanges().forEach(c=>{if(c.type==='removed')return;const n={id:c.doc.id,...c.doc.data()};if(CH.notifs.some(x=>x.id===n.id))return;CH.notifs.push(n);
+      snap.docChanges().forEach(c=>{if(c.type==='removed')return;const n={id:c.doc.id,...c.doc.data()};if(CH.notifs.some(x=>x.id===n.id))return;
+        if(n.kind==='friend'){gotFriend(n);return;}
+        CH.notifs.push(n);
         if(n.ts>CH.t0&&!blocked().includes(n.fromUid))notify(`${n.from} ti ha risposto`,clean(n.text),n.rid);});
       CH.notifs.sort((a,b)=>b.ts-a.ts);refresh();},snapErr('avvisi'));
   }catch(e){
@@ -210,7 +214,8 @@ function listHtml(){
       <button class="btn ghost full" style="margin-top:10px" onclick="CHAT.newGroup()">➕ Nuovo gruppo di pesca</button></div>`;}
   if(CH.tab==='bot')return `<div class="card"><h3>🤖 Assistente in chat</h3><p class="small mut">Chiedi esche, montature, tecniche e orari migliori: risponde con il meteo, il mare e l'indice di pescosità del tuo spot attivo${typeof gemKey==='function'&&gemKey()?' (con Gemini)':''}.</p>${roomRow('bot','🤖','Fai una domanda')}</div>`;
   const fr=friends(),bl=blocked(),code=uidCode(me().uid);
-  return `<div class="card"><h3>🤝 Il tuo codice amico</h3><div class="ccode">${code}</div><p class="small mut" style="text-align:center">Dallo ai tuoi compagni di pesca: con questo codice ti aggiungono agli amici.</p>
+  const req=CH.friendReqs.length?`<div class="card"><h3>📩 Ti hanno aggiunto agli amici</h3>${CH.friendReqs.map(x=>`<div class="croom" style="cursor:default"><div class="cri">🎣</div><div style="flex:1"><b>${esc(x.from)}</b><div class="small mut">Aggiungilo anche tu per vedervi sulla mappa</div></div><button class="btn" style="padding:7px 12px" onclick="CHAT.acceptFriend('${x.id}')">Aggiungi</button><button class="btn ghost" style="padding:7px 10px" onclick="CHAT.ignoreFriend('${x.id}')">✕</button></div>`).join('')}</div>`:'';
+  return req+`<div class="card"><h3>🤝 Il tuo codice amico</h3><div class="ccode">${code}</div><p class="small mut" style="text-align:center">Dallo ai tuoi compagni di pesca: con questo codice ti aggiungono agli amici.</p>
     <div class="row" style="gap:8px;margin-top:8px"><input id="fcode" placeholder="Codice di un amico" maxlength="6" style="flex:1;text-transform:uppercase"><button class="btn" onclick="CHAT.addByCode()">Aggiungi</button></div></div>
   <div class="card"><h3>Amici</h3>${fr.length?fr.map(f=>`<div class="croom"><div class="cri">🎣</div><div style="flex:1"><b>${esc(f.name)}</b></div><button class="btn" style="padding:7px 12px" onclick="CHAT.dm('${f.uid}')">Scrivi</button><button class="btn ghost" style="padding:7px 10px" onclick="CHAT.unfriend('${f.uid}')">✕</button></div>`).join(''):'<p class="small mut">Nessun amico ancora.</p>'}</div>
   ${bl.length?`<div class="card"><h3>🚫 Utenti bloccati</h3><p class="small mut">Non vedi i loro messaggi.</p>${bl.map(u=>`<div class="croom"><div style="flex:1">${esc((LS.get('chatblocknames',{})[u])||'Utente')}</div><button class="btn ghost" style="padding:7px 12px" onclick="CHAT.unblock('${u}')">Sblocca</button></div>`).join('')}</div>`:''}`;
@@ -353,14 +358,27 @@ CH.block=(uid,name)=>{closeSheet();if(!confirm(`Bloccare ${name}? Non vedrai pi�
 CH.unblock=uid=>{LS.set('chatblock',blocked().filter(u=>u!==uid));render();};
 
 /* ---------- amici, privati e gruppi ---------- */
-CH.befriend=(uid,name)=>{closeSheet();if(friends().some(f=>f.uid===uid))return;LS.set('chatfriends',[...friends(),{uid,name}]);CH.friendsChanged();toast('🤝 '+name+' aggiunto agli amici');};
+// amicizia: se aggiungo qualcuno con il suo codice, lui aggiunge me in automatico (il codice me l'ha dato lui);
+// se lo aggiungo da un messaggio, gli arriva una richiesta da accettare
+function tellFriend(uid,viaCode){const ff=F();ff.setDoc(ff.doc(D(),'notifs',uid,'items','f_'+me().uid),{kind:'friend',viaCode:!!viaCode,from:C().name(),fromUid:me().uid,ts:Date.now()}).catch(()=>{});}
+CH.friendReqs=[];
+function gotFriend(n){const ff=F(),del=()=>ff.deleteDoc(ff.doc(D(),'notifs',me().uid,'items',n.id)).catch(()=>{});
+  if(blocked().includes(n.fromUid)){del();return;}
+  if(friends().some(f=>f.uid===n.fromUid)){del();return;}
+  if(n.viaCode){LS.set('chatfriends',[...friends(),{uid:n.fromUid,name:n.from}]);CH.friendsChanged();del();toast('🤝 '+n.from+' ti ha aggiunto con il tuo codice: ora siete amici');refresh();return;}
+  if(!CH.friendReqs.some(x=>x.id===n.id))CH.friendReqs.push(n);if(n.ts>CH.t0)notify(n.from+' ti ha aggiunto agli amici','Aggiungilo anche tu dalla chat','friends');refresh();}
+CH.acceptFriend=id=>{const n=CH.friendReqs.find(x=>x.id===id);if(!n)return;CH.friendReqs=CH.friendReqs.filter(x=>x.id!==id);
+  if(!friends().some(f=>f.uid===n.fromUid)){LS.set('chatfriends',[...friends(),{uid:n.fromUid,name:n.from}]);CH.friendsChanged();}
+  F().deleteDoc(F().doc(D(),'notifs',me().uid,'items',id)).catch(()=>{});toast('🤝 '+n.from+' aggiunto agli amici');render();};
+CH.ignoreFriend=id=>{CH.friendReqs=CH.friendReqs.filter(x=>x.id!==id);F().deleteDoc(F().doc(D(),'notifs',me().uid,'items',id)).catch(()=>{});render();};
+CH.befriend=(uid,name)=>{closeSheet();if(friends().some(f=>f.uid===uid))return;LS.set('chatfriends',[...friends(),{uid,name}]);CH.friendsChanged();tellFriend(uid,false);toast('🤝 '+name+' aggiunto agli amici');};
 CH.unfriend=uid=>{if(!confirm('Togliere dagli amici?'))return;LS.set('chatfriends',friends().filter(f=>f.uid!==uid));CH.friendsChanged();render();};
 CH.addByCode=async()=>{const code=(document.getElementById('fcode')?.value||'').trim().toUpperCase();if(code.length!==6){toast('Il codice ha 6 caratteri');return;}
   if(code===uidCode(me().uid)){toast('Questo è il tuo codice 🙂');return;}
   try{const ff=F(),s=await ff.getDocs(ff.query(ff.collection(D(),'profiles'),ff.where('code','==',code)));
     if(!s.docs.length){toast('Nessun pescatore con questo codice');return;}
     const d=s.docs[0],p=d.data();if(friends().some(f=>f.uid===d.id)){toast('È già tra i tuoi amici');return;}
-    LS.set('chatfriends',[...friends(),{uid:d.id,name:p.name||'Amico'}]);CH.friendsChanged();toast('🤝 '+(p.name||'Amico')+' aggiunto agli amici');render();}
+    LS.set('chatfriends',[...friends(),{uid:d.id,name:p.name||'Amico'}]);CH.friendsChanged();tellFriend(d.id,true);toast('🤝 '+(p.name||'Amico')+' aggiunto agli amici');render();}
   catch(e){toast('⚠️ '+(e.code||e.message));}};
 CH.dm=async(uid,name)=>{const u=me();name=name||friends().find(f=>f.uid===uid)?.name||'Amico';
   const rid='d_'+[u.uid,uid].sort().join('_'),ff=F();
@@ -469,6 +487,7 @@ function mapHtml(){
   return `<div class="card"><h3>📡 La mia posizione</h3>${opt.map(([k,n,d])=>`<label class="crow" style="align-items:flex-start"><input type="radio" name="cloc" ${v===k?'checked':''} onchange="CHAT.setLoc('${k}')" style="margin-top:3px"><span><b>${n}</b><br><span class="small mut">${d}</span></span></label>`).join('')}
     <p class="small mut" style="margin:6px 0 0">La posizione viene presa dal GPS del telefono, arrotondata a circa 100 m, e aggiornata ogni 5 minuti mentre LenzApp è aperta. Dopo ${LOC_MAX_H} ore senza aggiornamenti sparisce dalla mappa.${CH.locErr?`<br>⚠️ ${esc(CH.locErr)}`:''}</p></div>
   <div class="card" style="padding:10px"><div id="cmap" style="height:58vh;min-height:320px;border-radius:16px;overflow:hidden"></div>
+    <div id="cfstat">${friendStatus()}</div>
     <div class="small" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;justify-content:center"><span>${manSvg('#3b8cff')} Tu</span><span>${manSvg('#2ecc71')} Amici</span><span>${manSvg('#ff5a5f')} Altri utenti</span></div></div>`;
 }
 CH.setLoc=async v=>{LS.set('chatloc',v);CH.locErr='';
@@ -485,10 +504,15 @@ async function pushLoc(say){
 CH.friendsChanged=()=>{if(locVis()!=='off')pushLoc(false);};
 // ascolto delle posizioni: quelle pubbliche e quelle condivise con me dagli amici
 function locListen(){if(CH.subs._locA||!CH.started)return;const ff=F(),col=ff.collection(D(),'locations'),u=me().uid;
-  const on=snap=>{snap.docChanges().forEach(c=>{if(c.type==='removed')delete CH.locs[c.doc.id];else CH.locs[c.doc.id]={id:c.doc.id,...c.doc.data()};});if(CH.tab==='mappa'&&S.tab==='chat')mapMarkers();};
+  const on=snap=>{snap.docChanges().forEach(c=>{if(c.type==='removed')delete CH.locs[c.doc.id];else CH.locs[c.doc.id]={id:c.doc.id,...c.doc.data()};});if(CH.tab==='mappa'&&S.tab==='chat'){mapMarkers();const fs=document.getElementById('cfstat');if(fs)fs.innerHTML=friendStatus();}};
   CH.subs._locA=ff.onSnapshot(ff.query(col,ff.where('vis','==','all')),on,snapErr('posizioni pubbliche'));
   CH.subs._locF=ff.onSnapshot(ff.query(col,ff.where('friends','array-contains',u)),on,snapErr('posizioni degli amici'));
   CH.subs._locMe=ff.onSnapshot(ff.doc(col,u),s=>{if(s.exists())CH.locs[u]={id:u,...s.data()};},()=>{});}
+function friendStatus(){const fr=friends();if(!fr.length)return '<p class="small mut" style="margin:8px 4px 0">Non hai ancora amici: aggiungili nella scheda «Amici» con il loro codice.</p>';
+  const now=Date.now();
+  return `<div style="margin-top:8px">${fr.map(f=>{const l=CH.locs[f.uid],ok=l&&now-l.ts<=LOC_MAX_H*3600e3;
+    return `<div class="small" style="display:flex;gap:6px;align-items:center;padding:3px 4px">${manSvg(ok?'#2ecc71':'#7f8c99')}<b>${esc(f.name)}</b><span class="mut">${ok?'sulla mappa · '+ago(l.ts)+' fa':l?'posizione vecchia (più di '+LOC_MAX_H+' ore)':'non condivide la posizione con te'}</span></div>`;}).join('')}
+    <p class="small mut" style="margin:4px 4px 0">Per vedere un amico deve avere la posizione su «Solo amici» o «Tutti», averti tra i suoi amici e aver aperto LenzApp da poco.</p></div>`;}
 function mapInit(){
   const el=document.getElementById('cmap');if(!el||!window.L)return;
   CH.map?.remove();CH._fitted=false;const me0=CH.locs[me()?.uid],sp=activeSpot();
