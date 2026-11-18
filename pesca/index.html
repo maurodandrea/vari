@@ -627,6 +627,8 @@ function activatePremium(){
   const el=document.getElementById('pcode'),c=(el?.value||'').trim();
   if(!premiumCodeOk(c)){toast('⚠️ Codice non valido');return;}
   LS.set('premium',{ok:true,since:Date.now()});toast('⭐ Premium attivato');render();
+  // salvo subito nell'account, così il Premium resta anche cambiando dispositivo o uscendo
+  window.CLOUD?.flush?.().then(ok=>{if(ok===false)toast('⚠️ Premium attivo qui, ma non ancora salvato online: riprovo tra poco');});
 }
 // finestra che spiega che la funzione è riservata ai Premium
 function needPremium(what){

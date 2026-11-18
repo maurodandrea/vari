@@ -71,7 +71,9 @@ async function social(p){
   catch(e){if(e.code==='auth/popup-blocked'||e.code==='auth/operation-not-supported-in-this-environment')return fa.signInWithRedirect(auth,p);toast('⚠️ '+errMsg(e));}}
 // all'uscita i dati restano solo nell'account: tolgo la copia dal dispositivo (prima invio le ultime modifiche)
 C.logout=async()=>{if(!confirm('Uscire dall\'account? I tuoi dati restano salvati online e li ritrovi al prossimo accesso; da questo dispositivo vengono tolti.'))return;
-  clearTimeout(C.timer);try{await push();}catch(e){}
+  clearTimeout(C.timer);let ok=false;try{ok=await push();}catch(e){}
+  // se qualcosa non è stato salvato online (per esempio il Premium) non cancello i dati dal dispositivo senza chiedere
+  if(!ok||C.dirty.size){if(!confirm('Attenzione: alcune modifiche (per esempio il Premium) non sono ancora salvate online e uscendo andrebbero perse. Uscire comunque?'))return;}
   C.unsub.forEach(f=>f());C.unsub=[];window.CHAT?.stop();await fa.signOut(auth);
   try{[...SYNC_KEYS,'diary','cloudts','cloudhash','cloudsent','clouduid','chatbot','chatseen','chatreported'].forEach(k=>localStorage.removeItem('lenza.'+k));}catch(e){}
   location.hash='';location.reload();};
@@ -136,8 +138,8 @@ function reload(){
   if(!document.getElementById('sheet').classList.contains('on'))render();
 }
 
-async function push(){
-  if(!C.user||!C.dirty.size)return;
+async function push(retry){
+  if(!C.user||!C.dirty.size)return true;
   const keys=[...C.dirty];C.dirty.clear();setStatus('Salvo online…');
   try{
     const ts=raw.get('cloudts')||{},now=Date.now();
@@ -151,8 +153,15 @@ async function push(){
     if(keys.includes('diary'))await pushDiary();
     await ff.setDoc(uref(),{email:C.user.email||'',t:now},{merge:true});
     setStatus('Dati salvati online · '+new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}));
-  }catch(e){keys.forEach(k=>C.dirty.add(k));setStatus('Non salvato online ('+(e.code||e.message)+'): riprovo');clearTimeout(C.timer);C.timer=setTimeout(push,30000);}
+    return true;
+  }catch(e){keys.forEach(k=>C.dirty.add(k));
+    // permesso negato: di solito il token è ancora quello di prima dell'attivazione dell'email; lo rinnovo e riprovo subito
+    if(e.code==='permission-denied'&&!retry){try{await C.user.getIdToken(true);}catch(x){}return push(true);}
+    setStatus('Non salvato online ('+(e.code||e.message)+'): riprovo');clearTimeout(C.timer);C.timer=setTimeout(push,30000);return false;}
 }
+// invio subito le modifiche in attesa (attivazione Premium, app che va in secondo piano)
+C.flush=()=>{clearTimeout(C.timer);return push();};
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'&&C.dirty.size)C.flush();});
 async function pushDiary(){
   const loc=raw.get('diary')||[],hs=raw.get('cloudhash')||{},ids=new Set(loc.map(e=>e.id));
   for(const e of loc){
