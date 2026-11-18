@@ -47,13 +47,28 @@ const chIcon=rid=>rid==='z_it'?'🇮🇹':rid==='near'?'🎣':rid.startsWith('r_
 // canali seguiti (avvisi e anteprima): in automatico il comune di ogni spot, uno per comune; Italia, regione e provincia a scelta.
 // Ogni spot viene considerato una volta sola (chatspotc): se poi smetti di seguire quel comune, non lo riaggiungo.
 const follows=()=>LS.get('chatfollow',null)||[];
-function defaultFollow(){if(!GEO)return;
-  let f=LS.get('chatfollow',null)||[];const done=LS.get('chatspotc',{});let ch=false;
-  // chi aveva i vecchi preferiti automatici (Italia, regione e provincia dello spot attivo) li perde e tiene i comuni
-  if(!LS.get('chatfollow2',false)){const m=myPlace();if(m){const old=['z_it','r_'+m.r[0],'p_'+m.p[0]];f=f.filter(x=>!old.includes(x));}LS.set('chatfollow2',true);ch=true;}
-  for(const sp of S.spots||[]){if(sp.lat==null||done[sp.id])continue;const m=myPlace(sp);if(!m)continue;
-    const rid='c_'+m.c[1];done[sp.id]=rid;ch=true;if(!f.includes(rid))f.push(rid);}
-  if(ch){LS.set('chatfollow',f);LS.set('chatspotc',done);syncSubs();}}
+// comune di uno spot: lo chiedo a OpenStreetMap (Ostia → Roma, non il comune col centro più vicino);
+// senza rete uso il comune con il centro più vicino
+async function placeOf(sp){
+  try{const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${sp.lat}&lon=${sp.lon}&zoom=10&accept-language=it`);
+    const a=(await r.json()).address||{},name=a.city||a.town||a.village||a.municipality||'',sig=(a['ISO3166-2-lvl6']||'').replace('IT-','');
+    if(name)for(const rg of GEO.r)for(const p of rg[2]){if(sig&&p[2]!==sig)continue;const x=p[3].find(c=>norm(c[0])===norm(name));if(x)return {c:x,p,r:rg};}
+  }catch(e){}
+  return myPlace(sp);}
+// la posizione attuale non è uno spot vero: non conta per i canali seguiti in automatico
+async function defaultFollow(){if(!GEO||CH._df)return;CH._df=true;
+  try{
+    let f=LS.get('chatfollow',null)||[],done=LS.get('chatspotc',{});
+    if(!LS.get('chatfollow2',false)){const m=myPlace();if(m){const old=['z_it','r_'+m.r[0],'p_'+m.p[0]];f=f.filter(x=>!old.includes(x));}LS.set('chatfollow2',true);}
+    // versione 3: i comuni scelti prima col centro più vicino possono essere sbagliati: li ricalcolo
+    if(!LS.get('chatspotc3',false)){const auto=new Set(Object.values(done));f=f.filter(x=>!auto.has(x));done={};LS.set('chatspotc3',true);LS.set('chatfollow',f);LS.set('chatspotc',done);}
+    for(const sp of S.spots||[]){if(sp.here||sp.lat==null||done[sp.id])continue;
+      const m=await placeOf(sp);if(!m)continue;const rid='c_'+m.c[1];
+      f=LS.get('chatfollow',null)||[];done=LS.get('chatspotc',{});done[sp.id]=rid;if(!f.includes(rid))f.push(rid);
+      LS.set('chatfollow',f);LS.set('chatspotc',done);syncSubs();refresh();
+      await new Promise(r=>setTimeout(r,1100));}  // OpenStreetMap chiede al massimo una richiesta al secondo
+  }finally{CH._df=false;}
+}
 CH.follow=rid=>{const f=follows();LS.set('chatfollow',f.includes(rid)?f.filter(x=>x!==rid):[...f,rid]);syncSubs();render();};
 async function ensureRoom(rid){const ff=F(),ref=ff.doc(D(),'rooms',rid);const s=await ff.getDoc(ref);
   if(!s.exists())await ff.setDoc(ref,{type:'zone',name:chName(rid)||'Canale',t:Date.now()});}
