@@ -17,6 +17,7 @@ service cloud.firestore {
         && request.auth.token.email in ['chesterfieldsoftred@gmail.com'];
     }
     function bloccato() { return exists(/databases/$(database)/documents/banned/$(request.auth.uid)); }
+    function miaPosizione() { return exists(/databases/$(database)/documents/locations/$(request.auth.uid)); }
     function stanza(rid) { return get(/databases/$(database)/documents/rooms/$(rid)).data; }
     function membro(r) { return r.type == 'zone' || request.auth.uid in r.members; }
 
@@ -63,7 +64,11 @@ service cloud.firestore {
 
     // posizione condivisa sulla mappa della chat: visibile a tutti (vis 'all') o solo agli amici scelti
     match /locations/{uid} {
-      allow read: if attivo() && (request.auth.uid == uid || resource.data.vis == 'all' || request.auth.uid in resource.data.friends);
+      // per vedere gli altri bisogna condividere la propria posizione: «Tutti» per vedere le posizioni pubbliche,
+      // «Solo amici» o «Tutti» per vedere quelle condivise con me dagli amici
+      allow read: if attivo() && (request.auth.uid == uid
+        || (resource.data.vis == 'all' && miaPosizione() && get(/databases/$(database)/documents/locations/$(request.auth.uid)).data.vis == 'all')
+        || (request.auth.uid in resource.data.friends && miaPosizione()));
       allow write: if attivo() && request.auth.uid == uid;
     }
 
