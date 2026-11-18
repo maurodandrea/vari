@@ -36,7 +36,7 @@ const prov=c=>{for(const r of GEO?.r||[])for(const p of r[2])if(p[0]===c)return 
 const com=c=>{for(const r of GEO?.r||[])for(const p of r[2])for(const x of p[3])if(x[1]===c)return [x,p,r];return null;};
 const km=(a,b,c,d)=>{const R=6371,t=Math.PI/180,x=Math.sin((c-a)*t/2)**2+Math.cos(a*t)*Math.cos(c*t)*Math.sin((d-b)*t/2)**2;return 2*R*Math.asin(Math.sqrt(x));};
 // comune dello spot attivo: il più vicino tra quelli con coordinate
-function myPlace(){const sp=activeSpot();if(!GEO||!sp||sp.lat==null)return null;let best=null,bd=1e9;
+function myPlace(sp=activeSpot()){if(!GEO||!sp||sp.lat==null)return null;let best=null,bd=1e9;
   for(const r of GEO.r)for(const p of r[2])for(const x of p[3]){if(x.length<4)continue;const d=(x[2]-sp.lat)**2+((x[3]-sp.lon)*Math.cos(sp.lat*Math.PI/180))**2;if(d<bd){bd=d;best={c:x,p,r};}}
   return best;}
 const chName=rid=>{if(rid==='z_it')return 'Tutta Italia';if(rid==='near')return 'Spot vicini · 5 km';const t=rid.slice(0,2),c=rid.slice(2);
@@ -44,12 +44,16 @@ const chName=rid=>{if(rid==='z_it')return 'Tutta Italia';if(rid==='near')return 
   if(t==='p_'){const q=prov(c);return q?'Provincia di '+q[0][1]:null;}
   if(t==='c_'){const q=com(c);return q?`${q[0][0]} (${q[1][2]})`:null;}return null;};
 const chIcon=rid=>rid==='z_it'?'🇮🇹':rid==='near'?'🎣':rid.startsWith('r_')?'🗺️':rid.startsWith('p_')?'🏙️':rid.startsWith('c_')?'🏘️':'📍';
-// canali seguiti (avvisi e anteprima): all'inizio solo il comune dello spot attivo; Italia, regione e provincia si seguono a scelta
+// canali seguiti (avvisi e anteprima): in automatico il comune di ogni spot, uno per comune; Italia, regione e provincia a scelta.
+// Ogni spot viene considerato una volta sola (chatspotc): se poi smetti di seguire quel comune, non lo riaggiungo.
 const follows=()=>LS.get('chatfollow',null)||[];
-function defaultFollow(){const m=myPlace(),f=LS.get('chatfollow',null);
-  // chi aveva i vecchi preferiti automatici (Italia, regione, provincia e comune) tiene solo il comune
-  if(f&&!LS.get('chatfollow2',false)&&m){const old=['z_it','r_'+m.r[0],'p_'+m.p[0]];LS.set('chatfollow',f.filter(x=>!old.includes(x)));LS.set('chatfollow2',true);return;}
-  if(f||!m)return;LS.set('chatfollow',['c_'+m.c[1]]);LS.set('chatfollow2',true);}
+function defaultFollow(){if(!GEO)return;
+  let f=LS.get('chatfollow',null)||[];const done=LS.get('chatspotc',{});let ch=false;
+  // chi aveva i vecchi preferiti automatici (Italia, regione e provincia dello spot attivo) li perde e tiene i comuni
+  if(!LS.get('chatfollow2',false)){const m=myPlace();if(m){const old=['z_it','r_'+m.r[0],'p_'+m.p[0]];f=f.filter(x=>!old.includes(x));}LS.set('chatfollow2',true);ch=true;}
+  for(const sp of S.spots||[]){if(sp.lat==null||done[sp.id])continue;const m=myPlace(sp);if(!m)continue;
+    const rid='c_'+m.c[1];done[sp.id]=rid;ch=true;if(!f.includes(rid))f.push(rid);}
+  if(ch){LS.set('chatfollow',f);LS.set('chatspotc',done);syncSubs();}}
 CH.follow=rid=>{const f=follows();LS.set('chatfollow',f.includes(rid)?f.filter(x=>x!==rid):[...f,rid]);syncSubs();render();};
 async function ensureRoom(rid){const ff=F(),ref=ff.doc(D(),'rooms',rid);const s=await ff.getDoc(ref);
   if(!s.exists())await ff.setDoc(ref,{type:'zone',name:chName(rid)||'Canale',t:Date.now()});}
@@ -191,7 +195,7 @@ function comRows(){const q=prov(CH.nav.p);if(!q)return '';const f=norm(CH.nav.q|
   const l=q[0][3].filter(x=>!f||norm(x[0]).includes(f));
   return l.map(x=>`<div class="croom" onclick="CHAT.open('c_${x[1]}')"><div class="cri">🏘️</div><div style="flex:1"><b>${esc(x[0])}</b></div>${follows().includes('c_'+x[1])?'<span class="small mut">⭐</span>':''}<span class="mut">›</span></div>`).join('')||'<p class="small mut">Nessun comune trovato.</p>';}
 function chanHtml(){
-  loadGeo();const sp=activeSpot(),fol=follows();
+  loadGeo();defaultFollow();const sp=activeSpot(),fol=follows();
   const near=sp?roomRow('near','🎣',`Pescatori con lo spot entro ${NEAR_KM} km da «${placeName(sp)}»`):'<p class="small mut">Scegli uno spot per vedere chi pesca vicino a te.</p>';
   let browse='<p class="small mut">Carico regioni e comuni…</p>';
   if(GEO){const n=CH.nav,r=n.r&&reg(n.r),pq=n.p&&prov(n.p);
