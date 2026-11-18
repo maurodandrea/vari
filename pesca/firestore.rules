@@ -61,6 +61,12 @@ service cloud.firestore {
       allow read, delete: if admin();
     }
 
+    // posizione condivisa sulla mappa della chat: visibile a tutti (vis 'all') o solo agli amici scelti
+    match /locations/{uid} {
+      allow read: if attivo() && (request.auth.uid == uid || resource.data.vis == 'all' || request.auth.uid in resource.data.friends);
+      allow write: if attivo() && request.auth.uid == uid;
+    }
+
     // utenti bloccati dagli amministratori: possono leggere ma non scrivere in chat
     match /banned/{uid} {
       allow read: if attivo() && (request.auth.uid == uid || admin());
