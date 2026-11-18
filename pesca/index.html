@@ -508,7 +508,7 @@ const MODES = {
   river:{n:'River',e:'🌊',d:'Fiumi e acque correnti'}
 };
 const TABS = [
-  {id:'home',n:'Oggi'},{id:'meteo',n:'Settimana'},{id:'pesce',n:'Riconosci'},{id:'fab'},{id:'spot',n:'Spot'},{id:'altro',n:'Altro'}
+  {id:'home',n:'Oggi'},{id:'meteo',n:'Settimana'},{id:'pesce',n:'Riconosci'},{id:'fab'},{id:'spot',n:'Spot'},{id:'chat',n:'Chat'},{id:'altro',n:'Altro'}
 ];
 const TECH = {
   coast:['Surfcasting','Spinning','Bolognese','Beach ledgering','Eging','Rockfishing','Canna fissa'],
@@ -560,6 +560,7 @@ const ICON={
   coast:'<path d="M2 19c2 0 2-1.4 4-1.4s2 1.4 4 1.4 2-1.4 4-1.4 2 1.4 4 1.4 2-1.4 4-1.4"/><path d="M13 15 9.5 6"/><path d="M4.5 9.4a7 7 0 0 1 13.2-5z"/>',
   sea:'<path d="M2 20c2 0 2-1.4 4-1.4s2 1.4 4 1.4 2-1.4 4-1.4 2 1.4 4 1.4 2-1.4 4-1.4"/><path d="M4 14h16l-2.5 3.5h-11z"/><path d="M11 14V3l6 8h-6"/>',
   lake:'<path d="M2 20c2 0 2-1.4 4-1.4s2 1.4 4 1.4 2-1.4 4-1.4 2 1.4 4 1.4 2-1.4 4-1.4"/><path d="m2 15 6-9 4 5.5 3-3.5 7 7"/>',
+  chat:'<path d="M20 12.5a7.5 7.5 0 0 1-11 6.6L4 20.5l1.4-4.6A7.5 7.5 0 1 1 20 12.5z"/><path d="M9 12.5h.01M12.5 12.5h.01M16 12.5h.01" stroke-width="2.6"/>',
   altro:'<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/>',
   plus:'<path d="M12 5v14M5 12h14"/>',
   fish:'<path d="M7 12c2.8-4 6-6 9.5-6 2.8 0 4.8 2.6 5.5 6-.7 3.4-2.7 6-5.5 6-3.5 0-6.7-2-9.5-6z"/><path d="M7 12 2 7.5v9z"/><circle cx="17.5" cy="10.8" r="1.1" fill="currentColor"/>',
@@ -604,12 +605,12 @@ function needPremium(what){
   return false;
 }
 // pagine riservate ai Premium (titolo, descrizione)
-const PREMIUM_TABS={pesce:['Riconosci e misura','Il riconoscimento della specie e la misura di lunghezza e peso dalla foto sono riservati agli utenti Premium.'],
+const PREMIUM_TABS={chat:['Chat','La chat tra pescatori è riservata agli utenti Premium.'],pesce:['Riconosci e misura','Il riconoscimento della specie e la misura di lunghezza e peso dalla foto sono riservati agli utenti Premium.'],
   compare:['Dove pescare','La classifica dei tuoi spot per indice di pesca è riservata agli utenti Premium.'],ai:['Assistente','I consigli su misura e le specie di stagione sono riservati agli utenti Premium.'],guide:['Guida','La guida a nodi, montature ed esche è riservata agli utenti Premium.']};
 const lockedTab=t=>!!PREMIUM_TABS[t]&&!isPremium();
 // anteprima sfocata di Riconosci: un pesce disegnato, riconosciuto e misurato
 // foto reale fornita dall'utente, con le linee di misura già disegnate (azzurra sul sarago, arancione sulla scarpa)
-const FISH_PREVIEW=`<img src="img/sarago-preview.jpg" alt="Sarago maggiore accanto a una scarpa, con le linee di misura" style="display:block;width:100%;max-height:none;border-radius:16px;cursor:default">`;
+const FISH_PREVIEW=`<img src="img/sarago-misura.jpg" alt="Sarago maggiore accanto a una scarpa, con le linee di misura" style="display:block;width:100%;max-height:none;border-radius:16px;cursor:default">`;
 function premiumPreview(){return `<div class="pvwrap"><div class="pvblur">
   <div class="cphoto big" style="margin-bottom:10px">${FISH_PREVIEW}</div>
   <div class="aibox ok"><div style="flex:1"><div class="small mut" style="text-transform:uppercase;letter-spacing:1px;font-weight:700">✨ Riconosciuto</div>
@@ -938,7 +939,7 @@ function bestWindows(X,date,n=3){
 }
 
 /* ===================== Render ===================== */
-const PAGES=['home','meteo','spot','diario','altro','stats','ai','pesce','live','trofei','cal','compare','guide','settings'];
+const PAGES=['home','meteo','spot','chat','diario','altro','stats','ai','pesce','live','trofei','cal','compare','guide','settings'];
 const SUBS=['stats','ai','diario','trofei','cal','compare','guide','settings'];
 function go(t){if(location.hash.slice(1)!==t)location.hash=t;else{S.tab=t;window.scrollTo(0,0);render();}}
 window.addEventListener('hashchange',()=>{const t=location.hash.slice(1)||'home';if(!PAGES.includes(t))return;closeSheet();S.tab=t;window.scrollTo(0,0);render();});
@@ -955,10 +956,21 @@ function render(){
   const v=document.getElementById('view');
   if(S.tab!=='spot'&&MAP){MAP.remove();MAP=null;NEWPIN=null;}
   if(PREMIUM_TABS[S.tab]&&!isPremium()){premiumPage(v,S.tab);countUp(v);return;}
-  ({home:vHome,meteo:vMeteo,spot:vSpot,diario:vDiario,stats:vStats,ai:vAI,pesce:vPesce,altro:vAltro,live:vLive,trofei:vTrofei,cal:vCal,compare:vCompare,guide:vGuide,settings:vSettings}[S.tab]||vHome)(v);
+  ({home:vHome,meteo:vMeteo,spot:vSpot,diario:vDiario,stats:vStats,ai:vAI,pesce:vPesce,altro:vAltro,live:vLive,trofei:vTrofei,cal:vCal,compare:vCompare,guide:vGuide,settings:vSettings,chat:vChat}[S.tab]||vHome)(v);
   countUp(v);bindCharts(v);
   if(S.tab==='home'&&!COMP_ON)compassStart();
   if(S.tab==='settings')modelStatus();
+}
+// Chat (Premium): per ora pagina di presentazione, la chat vera e propria è in sviluppo
+function vChat(v){
+  const F=[['💬','Canali per zona','Una chat per ogni zona di pesca vicina ai tuoi spot.'],
+    ['📸','Catture condivise','Pubblica la cattura riconosciuta con specie, misura e foto.'],
+    ['🌊','Condizioni in diretta','Chi è sul posto racconta mare, vento e mangianza.'],
+    ['👥','Amici e messaggi privati','Scrivi ai tuoi compagni di pesca e organizza le uscite.'],
+    ['🤖','Assistente in chat','Chiedi consigli su esche, montature e orari migliori.'],
+    ['🛡️','Spot protetti','Le coordinate restano private: condividi solo la zona, se vuoi.']];
+  v.innerHTML=subHead('Chat','Funzione Premium · in arrivo','home')+`<div class="card" style="text-align:center;padding:24px 18px"><div style="font-size:46px">💬</div><h2 style="margin:6px 0">La chat dei pescatori</h2><p class="mut" style="margin:0">Stiamo preparando la chat di Lenza. Ecco cosa troverai:</p></div>
+  <div class="card">${F.map(([e,t,d])=>`<div style="display:flex;gap:12px;align-items:flex-start;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)"><div style="font-size:24px;line-height:1">${e}</div><div><b>${t}</b><div class="small mut">${d}</div></div></div>`).join('')}</div>`;
 }
 function countUp(root){
   root.querySelectorAll('[data-count]').forEach(el=>{
