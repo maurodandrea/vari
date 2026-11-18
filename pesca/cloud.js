@@ -97,16 +97,18 @@ async function start(){
     C.applying=true;
     // impostazioni e spot: al primo accesso unisco quelli del dispositivo con quelli dell'account; poi vince il più recente
     const ts=raw.get('cloudts')||{};
-    ds.forEach(d=>{const k=d.id,o=d.data();if(!SYNC_KEYS.includes(k))return;let v=JSON.parse(o.v);
-      if(first&&k==='spots'){const loc=raw.get('spots')||[],same=(a,b)=>a.id===b.id||(a.name===b.name&&Math.abs(a.lat-b.lat)<.002&&Math.abs(a.lon-b.lon)<.002);
+    ds.forEach(d=>{const k=d.id,o=d.data();if(!SYNC_KEYS.includes(k))return;let v;try{v=JSON.parse(o.v);}catch(e){return;}
+      // elenchi salvati vuoti (null) da versioni precedenti: li tratto come elenchi vuoti, altrimenti la sincronizzazione si blocca
+      if((k==='spots'||k==='myfish')&&!Array.isArray(v))v=[];
+      if(first&&k==='spots'){const loc=Array.isArray(raw.get('spots'))?raw.get('spots'):[],same=(a,b)=>a.id===b.id||(a.name===b.name&&Math.abs(a.lat-b.lat)<.002&&Math.abs(a.lon-b.lon)<.002);
         // stesso spot (stesso id, o stesso nome e posizione, come lo spot di esempio creato su ogni dispositivo): uno solo
         v=[...v,...loc.filter(s=>!v.some(r=>same(r,s)))];const act=raw.get('active'),dup=loc.find(s=>s.id===act);if(dup&&!v.some(r=>r.id===act)){const r=v.find(x=>same(x,dup));if(r)raw.set('active',r.id);}C.dirty.add('spots');}
-      else if(first&&k==='myfish'){v=[...v,...(raw.get('myfish')||[])].slice(-200);C.dirty.add('myfish');}
+      else if(first&&k==='myfish'){v=[...v,...(Array.isArray(raw.get('myfish'))?raw.get('myfish'):[])].slice(-200);C.dirty.add('myfish');}
       else if(!first&&(ts[k]||0)>(o.t||0))return;  // il dispositivo ha una modifica più recente ancora da inviare
       raw.set(k,v);ts[k]=o.t||Date.now();});
     if(first)SYNC_KEYS.forEach(k=>{if(!ds.docs.some(d=>d.id===k)&&raw.get(k)!=null)C.dirty.add(k);});
     // diario: unione per uscita; le uscite cancellate restano come «tombstone»
-    const loc=raw.get('diary')||[],hs=first?{}:(raw.get('cloudhash')||{}),byId=new Map(loc.map(e=>[e.id,e]));
+    const loc=Array.isArray(raw.get('diary'))?raw.get('diary'):[],hs=first?{}:(raw.get('cloudhash')||{}),byId=new Map(loc.map(e=>[e.id,e]));
     es.forEach(d=>{const o=d.data();if(o.deleted){byId.delete(d.id);delete hs[d.id];return;}
       const e=JSON.parse(o.v),l=byId.get(d.id);if(l&&hs[d.id]&&hash(JSON.stringify(l))!==hs[d.id])return;  // modificata qui e non ancora inviata
       byId.set(d.id,e);hs[d.id]=hash(JSON.stringify(e));});
@@ -131,7 +133,7 @@ function reloadSoon(){  // modifiche arrivate da un altro dispositivo: ridisegno
 }
 function reload(){
   lastReload=Date.now();C.applying=true;  // i calcoli fatti qui (trofei, profilo) non vanno rimandati online
-  S.spots=LS.get('spots',S.spots);S.active=LS.get('active',S.active);if(!S.spots.find(s=>s.id===S.active))S.active=S.spots[0]?.id||null;
+  S.spots=LS.get('spots',S.spots);if(!Array.isArray(S.spots))S.spots=[];S.active=LS.get('active',S.active);if(!S.spots.find(s=>s.id===S.active))S.active=S.spots[0]?.id||null;
   S.diary=LS.get('diary',[]);S.live=LS.get('live',null);
   try{buildProfile();checkBadges();}catch(e){}
   C.applying=false;
@@ -187,7 +189,7 @@ function listen(){
   C.unsub.push(ff.onSnapshot(dataCol(),snap=>{
     if(snap.metadata.hasPendingWrites)return;let ch=false;const ts=raw.get('cloudts')||{};
     snap.docChanges().forEach(c=>{const k=c.doc.id,o=c.doc.data();if(!SYNC_KEYS.includes(k)||C.dirty.has(k)||(ts[k]||0)>=(o.t||0))return;
-      ts[k]=o.t;if(JSON.stringify(raw.get(k))===o.v)return;raw.set(k,JSON.parse(o.v));ch=true;});
+      ts[k]=o.t;if(JSON.stringify(raw.get(k))===o.v)return;let v;try{v=JSON.parse(o.v);}catch(e){return;}if((k==='spots'||k==='myfish')&&!Array.isArray(v))v=[];raw.set(k,v);ch=true;});
     raw.set('cloudts',ts);if(ch)reloadSoon();
   }));
   C.unsub.push(ff.onSnapshot(diaryCol(),snap=>{
