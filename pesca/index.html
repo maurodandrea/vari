@@ -608,12 +608,8 @@ const PREMIUM_TABS={pesce:['Riconosci e misura','Il riconoscimento della specie 
   compare:['Dove pescare','La classifica dei tuoi spot per indice di pesca è riservata agli utenti Premium.'],ai:['Assistente','I consigli su misura e le specie di stagione sono riservati agli utenti Premium.'],guide:['Guida','La guida a nodi, montature ed esche è riservata agli utenti Premium.']};
 const lockedTab=t=>!!PREMIUM_TABS[t]&&!isPremium();
 // anteprima sfocata di Riconosci: un pesce disegnato, riconosciuto e misurato
-// foto reale fornita dall'utente: sarago maggiore sulla sabbia accanto a una scarpa
-// linea azzurra: lunghezza del pesce dal muso alla coda; linea arancione: la scarpa usata come riferimento
-const FISH_PREVIEW=`<div style="position:relative"><img src="img/sarago-preview.jpg" alt="Sarago maggiore accanto a una scarpa" style="display:block;width:100%;border-radius:16px">
-  <svg viewBox="0 0 800 700" style="position:absolute;inset:0;width:100%;height:100%">
-  <line x1="78" y1="205" x2="662" y2="150" stroke="rgba(0,0,0,.6)" stroke-width="11" stroke-linecap="round"/><line x1="78" y1="205" x2="662" y2="150" stroke="#2fe0cf" stroke-width="6" stroke-linecap="round"/><circle cx="78" cy="205" r="10" fill="#2fe0cf" stroke="#fff" stroke-width="3"/><circle cx="662" cy="150" r="10" fill="#2fe0cf" stroke="#fff" stroke-width="3"/>
-  <line x1="60" y1="505" x2="540" y2="460" stroke="rgba(0,0,0,.6)" stroke-width="11" stroke-linecap="round"/><line x1="60" y1="505" x2="540" y2="460" stroke="#ffb547" stroke-width="6" stroke-linecap="round"/><circle cx="60" cy="505" r="10" fill="#ffb547" stroke="#fff" stroke-width="3"/><circle cx="540" cy="460" r="10" fill="#ffb547" stroke="#fff" stroke-width="3"/></svg></div>`;
+// foto reale fornita dall'utente, con le linee di misura già disegnate (azzurra sul sarago, arancione sulla scarpa)
+const FISH_PREVIEW=`<img src="img/sarago-preview.jpg" alt="Sarago maggiore accanto a una scarpa, con le linee di misura" style="display:block;width:100%;max-height:none;border-radius:16px;cursor:default">`;
 function premiumPreview(){return `<div class="pvwrap"><div class="pvblur">
   <div class="cphoto big" style="margin-bottom:10px">${FISH_PREVIEW}</div>
   <div class="aibox ok"><div style="flex:1"><div class="small mut" style="text-transform:uppercase;letter-spacing:1px;font-weight:700">✨ Riconosciuto</div>
