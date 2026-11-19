@@ -584,6 +584,10 @@ const manIcon=col=>L.divIcon({className:'',iconSize:[34,42],iconAnchor:[17,40],p
 // tu: omino piccolo senza goccia, sotto gli altri
 const meIcon=(col='#3b8cff')=>L.divIcon({className:'',iconSize:[20,24],iconAnchor:[10,22],popupAnchor:[0,-20],
   html:`<svg width="20" height="24" viewBox="0 0 20 24"><circle cx="10" cy="6" r="4.6" fill="${col}" stroke="#fff" stroke-width="1.8"/><path d="M2.5 22.5c0-5 3.4-8.6 7.5-8.6s7.5 3.6 7.5 8.6z" fill="${col}" stroke="#fff" stroke-width="1.8"/></svg>`});
+// nome sotto ogni omino, semitrasparente; si nasconde mentre è aperta la sua scheda
+function nameTag(m,name,mine){
+  m.bindTooltip(esc(name),{permanent:true,direction:'bottom',offset:[0,mine?2:4],className:'mlabel'+(mine?' me':''),interactive:false});
+  m.on('popupopen',()=>m.closeTooltip());m.on('popupclose',()=>m.openTooltip());}
 function mapMarkers(){
   if(!CH.map||!CH.mlayer||!document.getElementById('cmap'))return;CH.mlayer.clearLayers();
   const u=me()?.uid,fr=new Set(friends().map(f=>f.uid)),bl=blocked(),now=Date.now(),pts=[];
@@ -596,11 +600,12 @@ function mapMarkers(){
   for(const l of vis){
     const mine=l.id===u,col=mine?'#3b8cff':fr.has(l.id)?'#2ecc71':'#ff5a5f';
     const m=L.marker(pos[l.id],{icon:mine?meIcon():manIcon(col),zIndexOffset:mine?-1000:0}).addTo(CH.mlayer);pts.push(pos[l.id]);
+    nameTag(m,mine?'Io':(l.name||'Pescatore'),mine);
     m.bindPopup(`<b>${esc(mine?'Tu':l.name||'Pescatore')}</b><br><span style="font-size:12px">aggiornata ${ago(l.ts)} fa${mine?' · '+(l.vis==='all'?'visibile a tutti':'visibile agli amici'):fr.has(l.id)?' · amico':''}</span>${mine?'':`<br><button class="btn" style="margin-top:6px;padding:6px 12px" onclick="CHAT.dm('${l.id}','${esc(l.name||'').replace(/'/g,'')}')">💬 Scrivi</button>`}`);
   }
   // posizione non condivisa: mi mostro lo stesso, in rosso, con il GPS letto solo sul telefono (non viene inviato)
   if(mode==='off'&&CH.myLocal){const p0=[CH.myLocal.lat,CH.myLocal.lon];
-    L.marker(p0,{icon:meIcon('#ff5a5f')}).addTo(CH.mlayer).bindPopup('<b>Tu</b><br><span style="font-size:12px">posizione non condivisa: la vedi solo tu</span>');pts.push(p0);}
+    const mm=L.marker(p0,{icon:meIcon('#ff5a5f')}).addTo(CH.mlayer);nameTag(mm,'Io',true);mm.bindPopup('<b>Tu</b><br><span style="font-size:12px">posizione non condivisa: la vedi solo tu</span>');pts.push(p0);}
   if(pts.length&&!CH._fitted){CH._fitted=true;if(pts.length>1)CH.map.fitBounds(pts,{padding:[40,40],maxZoom:13});else CH.map.setView(pts[0],12);}
 }
 
