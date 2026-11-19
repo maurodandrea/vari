@@ -2033,10 +2033,10 @@ function vSettings(v){
     <button class="btn ghost full" style="margin-bottom:8px" onclick="welcome()">👋 Rivedi l'introduzione</button>
     ${standalone()?'':'<button class="btn ghost full" style="margin-bottom:8px" onclick="installApp()">📲 Installa sulla schermata Home</button>'}
     <button class="btn danger full" onclick="wipeAll()">🗑️ Cancella tutti i dati</button></div>
-  <div class="card"><h3>Informazioni</h3>
-    <p class="small mut">Riconoscimento: BioCLIP, Imageomics Institute (licenza MIT). Misura: SlimSAM (licenza Apache 2.0). Eseguiti con ONNX Runtime Web. Linea di costa: © OpenStreetMap contributors (ODbL). Località: GeoNames (CC BY 4.0). Dati meteo e marini: Open-Meteo.com (CC BY 4.0). Mappe: © OpenStreetMap contributors. Fasi lunari, periodi solunari e alba/tramonto del calendario sono calcolati sul dispositivo.</p>
-    <p class="small mut" style="margin-top:8px">L'indice di pesca è una stima basata su regole: un aiuto per scegliere, non una garanzia. Misure minime indicative: verifica sempre la normativa vigente. Unità di misura metriche.</p></div>`;
+  <p class="small mut" style="text-align:center;margin:4px 0 14px"><u style="cursor:pointer" onclick="openSheet(INFO_HTML)">ℹ️ Fonti dei dati e licenze</u></p>`;
 }
+const INFO_HTML=`<h2>Fonti dei dati e licenze</h2><p class="small mut">Riconoscimento: BioCLIP, Imageomics Institute (licenza MIT). Misura: SlimSAM (licenza Apache 2.0). Eseguiti con ONNX Runtime Web. Linea di costa: © OpenStreetMap contributors (ODbL). Località: GeoNames (CC BY 4.0). Dati meteo e marini: Open-Meteo.com (CC BY 4.0). Mappe: © OpenStreetMap contributors. Fasi lunari, periodi solunari e alba/tramonto del calendario sono calcolati sul dispositivo.</p>
+    <p class="small mut" style="margin-top:8px">L'indice di pesca è una stima basata su regole: un aiuto per scegliere, non una garanzia. Misure minime indicative: verifica sempre la normativa vigente. Unità di misura metriche.</p>`;
 function wipeAll(){
   if(!confirm('Cancellare spot, diario, trofei e impostazioni? L\'operazione non è reversibile.'))return;
   try{Object.keys(localStorage).filter(k=>k.startsWith('lenza.')).forEach(k=>localStorage.removeItem(k));}catch(e){}
