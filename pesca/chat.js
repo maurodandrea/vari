@@ -617,8 +617,9 @@ CH.locs={};
 function mapHtml(){
   const v=locVis(),opt=[['off','🚫 Non condivisa','Nessuno ti vede e tu non vedi nessuno'],['friends','🤝 Solo amici','Ti vedono solo i tuoi amici e tu vedi solo loro'],['all','🌍 Tutti','Ti vedono tutti e tu vedi tutti']];
   return `<div class="card"><h3>📡 La mia posizione</h3>${opt.map(([k,n,d])=>`<label class="crow" style="align-items:flex-start"><input type="radio" name="cloc" ${v===k?'checked':''} onchange="CHAT.setLoc('${k}')" style="margin-top:3px"><span><b>${n}</b><br><span class="small mut">${d}</span></span></label>`).join('')}
-    <label class="crow" style="margin-top:6px"><input type="checkbox" ${G('sharecatch',true)!==false?'checked':''} onchange="LS.set('sharecatch',this.checked)"> Condividi le mie catture (anonime, zona di circa 1 km) per la mappa 🔥</label>
     <p class="small mut" style="margin:6px 0 0">La posizione viene presa dal GPS del telefono, arrotondata a circa 100 m, e aggiornata ogni minuto mentre LenzApp è aperta. L'ultima posizione resta visibile anche ad app chiusa; tocca un omino per vedere quando era online.<br><span id="clocerr">${CH.locErr?'⚠️ '+esc(CH.locErr):''}</span></p></div>
+  <div class="card"><h3>🔥 Le mie catture sulla mappa</h3>${[['none','🚫 Nessuno','Le tue catture non compaiono sulla mappa'],['friends','🤝 Solo amici','Le vedono solo i tuoi amici, con il tuo nome'],['all','🌍 Tutti','Le vedono tutti, in forma anonima']].map(([k,n,d])=>`<label class="crow" style="align-items:flex-start"><input type="radio" name="cshare" ${shareVis()===k?'checked':''} onchange="CHAT.setShare('${k}')" style="margin-top:3px"><span><b>${n}</b><br><span class="small mut">${d}</span></span></label>`).join('')}
+    <p class="small mut" style="margin:6px 0 0">Compare solo la zona (circa 1 km), mai il punto esatto dello spot. La scelta vale anche per le catture già condivise.</p></div>
   <div class="card" style="padding:10px">${heatBar()}<div id="cmap" style="height:58vh;min-height:320px;border-radius:16px;overflow:hidden"></div>
     ${v==='off'?'<p class="small" style="margin:8px 4px 0;color:var(--acc2)">🚫 Hai scelto «Non condivisa»: nessuno ti vede e tu non vedi nessuno. Sulla mappa vedi solo te stesso, con l’omino rosso.</p>':`<div id="cfstat">${friendStatus()}</div>`}
     <div class="small" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;justify-content:center"><span><svg width="12" height="15" viewBox="0 0 20 24" style="vertical-align:-2px"><circle cx="10" cy="6" r="4.6" fill="#3b8cff" stroke="#fff" stroke-width="1.8"/><path d="M2.5 22.5c0-5 3.4-8.6 7.5-8.6s7.5 3.6 7.5 8.6z" fill="#3b8cff" stroke="#fff" stroke-width="1.8"/></svg> Tu</span><span>${manSvg('#2ecc71')} Amici</span><span>${manSvg('#ff5a5f')} Altri utenti</span><span>${manSvg('#8a96a3')} Non aggiornati da 10 min</span></div></div>`;
@@ -675,7 +676,9 @@ function mapInit(){
   CH.hlayer=L.layerGroup().addTo(CH.map);CH.mlayer=L.layerGroup().addTo(CH.map);locListen();if(locVis()!=='off')pushLoc(false);else localPos();mapMarkers();heatLoad();
 }
 /* ---------- mappa di calore delle catture della community ---------- */
-// catchmap/{id}: {la, lo (arrotondati a circa 1 km), sp, l, ts, uid}; anonime: sulla mappa non compare chi le ha fatte
+// catchmap/{id}: {la, lo (arrotondati a circa 1 km), sp, l, ts, uid}; anonime, le vedono tutti
+// catchfr/{id}: come sopra più name e friends[]: le vedono solo l'autore e gli amici elencati
+const shareVis=()=>{const v=G('sharecatch',null);return v===true?'all':v===false?'none':['none','friends','all'].includes(v)?v:'friends';};
 const HEAT_DAYS=14;
 const heatOn=()=>G('heaton',true)!==false;
 CH.heat=[];CH.heatSp='';
@@ -684,19 +687,31 @@ function heatBar(){const sps=[...new Set(CH.heat.map(c=>c.sp))].sort();
     ${heatOn()&&sps.length?`<select onchange="CHAT.heatSp=this.value;heatDraw()" style="flex:1;min-width:120px;padding:6px 8px"><option value="">Tutte le specie (${CH.heat.length})</option>${sps.map(x=>`<option ${CH.heatSp===x?'selected':''}>${esc(x)}</option>`).join('')}</select>`:''}</div>`;}
 CH.heatToggle=on=>{LS.set('heaton',on);heatLoad();};
 async function heatLoad(){if(!CH.map)return;CH.hlayer?.clearLayers();if(!heatOn())return;
-  try{const ff=F(),r=await ff.getDocs(ff.query(ff.collection(D(),'catchmap'),ff.where('ts','>=',Date.now()-HEAT_DAYS*86400e3)));
-    CH.heat=r.docs.map(d=>d.data()).filter(c=>c.la!=null&&c.sp);}catch(e){CH.heat=[];}
+  const ff=F(),from=Date.now()-HEAT_DAYS*86400e3,u=me()?.uid;CH.heat=[];
+  try{const r=await ff.getDocs(ff.query(ff.collection(D(),'catchmap'),ff.where('ts','>=',from)));CH.heat=r.docs.map(d=>d.data()).filter(c=>c.la!=null&&c.sp);}catch(e){}
+  // catture condivise solo con gli amici (le mie e quelle degli amici che mi hanno nella lista)
+  try{const [a,b]=await Promise.all([ff.getDocs(ff.query(ff.collection(D(),'catchfr'),ff.where('friends','array-contains',u))),ff.getDocs(ff.query(ff.collection(D(),'catchfr'),ff.where('uid','==',u)))]);
+    const bl=blocked();CH.heat.push(...[...a.docs,...b.docs].map(d=>({...d.data(),fr:true})).filter(c=>c.la!=null&&c.sp&&c.ts>=from&&!bl.includes(c.uid)));}catch(e){}
   heatDraw();const bar=document.querySelector('#cmap')?.previousElementSibling;if(bar)bar.outerHTML=heatBar();}
 window.heatDraw=function(){if(!CH.map||!CH.hlayer)return;CH.hlayer.clearLayers();if(!heatOn())return;
-  const cells={};for(const c of CH.heat){if(CH.heatSp&&c.sp!==CH.heatSp)continue;const k=c.la+','+c.lo;(cells[k]=cells[k]||{la:c.la,lo:c.lo,n:0,sp:{}}).n++;cells[k].sp[c.sp]=(cells[k].sp[c.sp]||0)+1;}
+  const cells={},u=me()?.uid;for(const c of CH.heat){if(CH.heatSp&&c.sp!==CH.heatSp)continue;const k=c.la+','+c.lo;(cells[k]=cells[k]||{la:c.la,lo:c.lo,n:0,sp:{},who:new Set()}).n++;cells[k].sp[c.sp]=(cells[k].sp[c.sp]||0)+1;if(c.fr)cells[k].who.add(c.uid===u?'tu':(c.name||'un amico'));}
   const mx=Math.max(1,...Object.values(cells).map(c=>c.n));
   for(const c of Object.values(cells)){const t=c.n/mx;
     L.circle([c.la,c.lo],{radius:500+1500*t,stroke:false,fillColor:t>.66?'#ff3b30':t>.33?'#ff9500':'#ffcc00',fillOpacity:.35+.3*t,interactive:true}).addTo(CH.hlayer)
-      .bindPopup(`<b>🔥 ${c.n} ${c.n===1?'cattura':'catture'}</b><br><span style="font-size:13.5px">${Object.entries(c.sp).sort((a,b)=>b[1]-a[1]).map(([k,v])=>esc(k)+' '+v).join(' · ')}</span><br><span style="font-size:12.5px;opacity:.7">zona di circa 1 km · ultimi ${HEAT_DAYS} giorni</span>`);}};
-// condivisione anonima delle catture salvate nel diario (si può disattivare)
-CH.shareCatches=async e=>{try{if(!me()||G('sharecatch',true)===false)return;const sp=(S.spots||[]).find(x=>x.id===e.spot);if(!sp||sp.lat==null||sp.approx)return;
+      .bindPopup(`<b>🔥 ${c.n} ${c.n===1?'cattura':'catture'}</b><br><span style="font-size:13.5px">${Object.entries(c.sp).sort((a,b)=>b[1]-a[1]).map(([k,v])=>esc(k)+' '+v).join(' · ')}</span>${c.who.size?`<br><span style="font-size:13px">🤝 ${[...c.who].map(esc).join(', ')}</span>`:''}<br><span style="font-size:12.5px;opacity:.7">zona di circa 1 km · ultimi ${HEAT_DAYS} giorni</span>`);}};
+// condivisione delle catture salvate nel diario: con nessuno, con gli amici (col nome) o con tutti (anonime)
+CH.shareCatches=async e=>{try{const v=shareVis();if(!me()||v==='none')return;const sp=(S.spots||[]).find(x=>x.id===e.spot);if(!sp||sp.lat==null||sp.approx)return;
   const ff=F(),ts=e.start?new Date(e.start).getTime():Date.now(),la=Math.round(sp.lat*100)/100,lo=Math.round(sp.lon*100)/100;
-  for(const [i,c] of (e.catches||[]).entries()){if(!c.sp)continue;await ff.setDoc(ff.doc(D(),'catchmap',e.id+'_'+i),{la,lo,sp:String(c.sp).slice(0,40),l:c.l||null,ts,uid:me().uid});}}catch(x){}};
+  const fr=v==='friends'?friends().map(f=>f.uid).slice(0,200):null;
+  for(const [i,c] of (e.catches||[]).entries()){if(!c.sp)continue;const d={la,lo,sp:String(c.sp).slice(0,40),l:c.l||null,ts,uid:me().uid};
+    if(fr)await ff.setDoc(ff.doc(D(),'catchfr',e.id+'_'+i),{...d,name:C().name(),friends:fr});else await ff.setDoc(ff.doc(D(),'catchmap',e.id+'_'+i),d);}}catch(x){}};
+// cambio di scelta: tolgo quelle già condivise e ricondivido le catture dell'ultimo anno con la nuova scelta
+CH.setShare=async v=>{LS.set('sharecatch',v);const u=me()?.uid;if(!u)return;const ff=F();toast('Aggiorno le catture condivise…');
+  try{for(const col of ['catchmap','catchfr']){const r=await ff.getDocs(ff.query(ff.collection(D(),col),ff.where('uid','==',u)));for(const d of r.docs)await ff.deleteDoc(ff.doc(D(),col,d.id));}
+    const from=Date.now()-365*86400e3;for(const e of (S.diary||[]))if(e.catches?.length&&new Date(e.start).getTime()>=from)await CH.shareCatches(e);
+    toast(v==='none'?'Le tue catture non sono più sulla mappa':v==='friends'?'🤝 Catture visibili solo agli amici':'🌍 Catture visibili a tutti, anonime');}
+  catch(e){toast('⚠️ '+(e.code||e.message));}
+  heatLoad();};
 // omino colorato: blu tu, verde gli amici, rosso gli altri utenti
 const manIcon=col=>L.divIcon({className:'',iconSize:[34,42],iconAnchor:[17,40],popupAnchor:[0,-36],
   html:`<svg width="34" height="42" viewBox="0 0 34 42"><path d="M17 41c-1-4-14-14-14-24a14 14 0 0 1 28 0c0 10-13 20-14 24z" fill="${col}" stroke="#fff" stroke-width="2"/><circle cx="17" cy="11.5" r="4" fill="#fff"/><path d="M10.5 25c0-4.2 2.9-7.5 6.5-7.5s6.5 3.3 6.5 7.5z" fill="#fff"/></svg>`});
@@ -828,7 +843,7 @@ CH.delRun=async()=>{
     if(d.uid){
       await delCol('users',d.uid,'data');await delCol('users',d.uid,'diary');
       try{await delCol('notifs',d.uid,'items');}catch(e){}
-      try{const cm=await ff.getDocs(ff.query(ff.collection(db,'catchmap'),ff.where('uid','==',d.uid)));for(const x of cm.docs){await ff.deleteDoc(ff.doc(db,'catchmap',x.id));n++;}}catch(e){}
+      for(const col of ['catchmap','catchfr'])try{const cm=await ff.getDocs(ff.query(ff.collection(db,col),ff.where('uid','==',d.uid)));for(const x of cm.docs){await ff.deleteDoc(ff.doc(db,col,x.id));n++;}}catch(e){}
       for(const p of [['users',d.uid],['profiles',d.uid],['locations',d.uid],['notifs',d.uid]]){try{await ff.deleteDoc(ff.doc(db,...p));n++;}catch(e){}}}
     CH._del=null;
     box.innerHTML=`<p class="small" style="color:var(--ok)">✅ Cancellati ${n} elementi.${d.uid?` Ora elimina l'account da Console Firebase › Authentication${d.email?` (${esc(d.email)})`:''}: poi l'utente potrà registrarsi di nuovo con la stessa email.`:''}</p>`;

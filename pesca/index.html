@@ -1504,8 +1504,9 @@ function spotProfile(id){
 async function spotCommunity(sp){
   const el=()=>document.getElementById('spcom');const C=window.CLOUD;
   if(!C?.ff||!C?.db||!C.user){if(el())el().textContent='Accedi per vedere le catture degli altri pescatori.';return;}
-  try{const ff=C.ff,r=await ff.getDocs(ff.query(ff.collection(C.db,'catchmap'),ff.where('ts','>=',Date.now()-365*86400e3)));
-    const near=r.docs.map(d=>d.data()).filter(c=>c.la!=null&&c.sp&&kmBetween(sp.lat,sp.lon,c.la,c.lo)<=3);
+  try{const ff=C.ff,from=Date.now()-365*86400e3,r=await ff.getDocs(ff.query(ff.collection(C.db,'catchmap'),ff.where('ts','>=',from)));
+    let fr=[];try{fr=(await ff.getDocs(ff.query(ff.collection(C.db,'catchfr'),ff.where('friends','array-contains',C.user.uid)))).docs.map(d=>d.data()).filter(c=>c.ts>=from);}catch(e){}
+    const near=[...r.docs.map(d=>d.data()),...fr].filter(c=>c.la!=null&&c.sp&&kmBetween(sp.lat,sp.lon,c.la,c.lo)<=3);
     if(!el())return;if(!near.length){el().textContent='Ancora nessuna cattura condivisa in questa zona.';return;}
     const m={},mm={};near.forEach(c=>{m[c.sp]=(m[c.sp]||0)+1;const k=new Date(c.ts).getMonth();mm[k]=(mm[k]||0)+1;});
     const top=Object.entries(m).sort((a,b)=>b[1]-a[1]),bm=Object.entries(mm).sort((a,b)=>b[1]-a[1])[0];
