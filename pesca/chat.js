@@ -141,7 +141,7 @@ CH.start=async()=>{
       snap.docChanges().forEach(c=>{if(c.type==='removed')return;const n={id:c.doc.id,...c.doc.data()};if(CH.notifs.some(x=>x.id===n.id))return;
         if(n.kind==='friend'){gotFriend(n);return;}
         CH.notifs.push(n);
-        if(n.ts>CH.t0&&!blocked().includes(n.fromUid))notify(`${n.from} ti ha risposto`,clean(n.text),n.rid);});
+        if(n.ts>CH.t0&&!blocked().includes(n.fromUid)&&notifies(n.rid))notify(`${n.from} ti ha risposto`,clean(n.text),n.rid);});
       CH.notifs.sort((a,b)=>b.ts-a.ts);refresh();},snapErr('avvisi'));
   }catch(e){
     // permessi negati: un tentativo con il token rinnovato prima di mostrare l'errore
@@ -161,7 +161,7 @@ function onRoom(rid,oldTs){
   if(l&&l.ts>oldTs&&l.ts>CH.t0&&l.uid!==me()?.uid&&!blocked().includes(l.uid)){
     const watching=CH.rid===rid&&S.tab==='chat'&&document.visibilityState==='visible';
     if(watching)markSeen(rid);
-    else if(r.type!=='zone'||LS.get('chatnotif',{}).zones!==false)notify(roomName(rid),`${l.name}: ${clean(l.text)}`,rid);
+    else if(notifies(rid)&&(r.type!=='zone'||LS.get('chatnotif',{}).zones!==false))notify(roomName(rid),`${l.name}: ${clean(l.text)}`,rid);
   }
   refresh();
 }
@@ -172,14 +172,12 @@ function notify(title,body,rid){
   if(!('Notification' in window)||Notification.permission!=='granted')return;
   navigator.serviceWorker?.ready.then(r=>r.showNotification(title,{body:String(body).slice(0,140),icon:'icon-192.png',badge:'icon-192.png',tag:'lenza-'+rid,data:{url:location.pathname+'#chat',rid}})).catch(()=>{try{new Notification(title,{body});}catch(e){}});
 }
-// non letti: solo le conversazioni che si vedono nell'elenco (canali seguiti, spot vicini, messaggi e gruppi non eliminati);
-// le risposte contano finché non si apre la loro conversazione
+// conversazioni che danno notifiche: messaggi privati, gruppi di cui sono membro e canali che seguo
+const notifies=rid=>!!CH.mine[rid]||follows().includes(rid);
+// non letti: solo quelle conversazioni (le chat eliminate contano solo per i messaggi arrivati dopo)
 CH.unread=()=>{const s=seen(),u=me()?.uid,cl=cleared(),bl=blocked();let n=0;
-  const ids=new Set([...follows(),'near',...Object.keys(CH.mine)]);
-  for(const id of ids){const r=CH.rooms[id]||CH.mine[id],l=r?.last;if(l&&l.uid!==u&&l.ts>Math.max(s[id]||0,cl[id]||0)&&!bl.includes(l.uid))n++;}
-  const repl=new Set(CH.notifs.filter(x=>!x.read&&x.ts>(s[x.rid]||0)&&!bl.includes(x.fromUid)).map(x=>x.rid));
-  for(const rid of repl)if(!ids.has(rid)||!(CH.rooms[rid]||CH.mine[rid])?.last||(CH.rooms[rid]||CH.mine[rid]).last.ts<=Math.max(s[rid]||0,cl[rid]||0))n++;
-  return n+CH.friendReqs.length;};
+  for(const id of new Set([...follows(),...Object.keys(CH.mine)])){const r=CH.rooms[id]||CH.mine[id],l=r?.last;if(l&&l.uid!==u&&l.ts>Math.max(s[id]||0,cl[id]||0)&&!bl.includes(l.uid))n++;}
+  return n;};
 CH.badge=()=>{
   const a=document.querySelector(`#nav button[onclick="go('altro')"]`),rc=CH.isAdmin()?CH.reportCount():0;
   if(a){let e=a.querySelector('.cbadge');if(!rc)e?.remove();else{if(!e){e=document.createElement('i');e.className='cbadge';a.appendChild(e);}e.textContent=rc>9?'9+':rc;e.title='Segnalazioni da controllare';}}
@@ -211,7 +209,7 @@ function roomRow(rid,icon,sub){
   const r=CH.rooms[rid]||CH.mine[rid],l0=r?.last,l=l0&&l0.ts>(cleared()[rid]||0)?l0:null,s=seen(),un=l&&l.uid!==me()?.uid&&l.ts>(s[rid]||0)&&!blocked().includes(l.uid);
   return `<div class="croom" onclick="CHAT.open('${rid}')"><div class="cri">${icon}</div><div style="flex:1;min-width:0"><b>${esc(roomName(rid))}</b>
     <div class="small mut cprev">${l&&!blocked().includes(l.uid)?esc(l.name+': '+clean(l.text)):esc(sub||'Nessun messaggio: scrivi tu per primo')}</div></div>
-    <div style="text-align:right">${l?`<div class="small mut">${ago(l.ts)}</div>`:''}${un?'<i class="cdot"></i>':''}</div></div>`;
+    <div style="text-align:right">${l?`<div class="small mut">${ago(l.ts)}</div>`:''}${un&&notifies(rid)?'<i class="cdot"></i>':''}</div></div>`;
 }
 function listHtml(){
   if(CH.tab==='zone')return chanHtml()+notifCard()+(CH.diag?`<p class="small mut" style="text-align:center;opacity:.6">Diagnosi: ${esc(CH.diag)}</p>`:'');
@@ -237,7 +235,7 @@ function tRow(rid,icon,name,sub,key,open,depth){
   return `<div class="croom ctree" style="padding-left:${depth*18}px" onclick="CHAT.open('${rid}')">
     ${key?`<button class="ctog" onclick="event.stopPropagation();CHAT.tog('${key}')" aria-label="${open?'Chiudi':'Apri'}">${open?'▾':'▸'}</button>`:'<span class="ctog sp"></span>'}
     <div class="cri">${icon}</div><div style="flex:1;min-width:0"><b>${esc(name)}</b>${sub?`<div class="small mut cprev">${esc(sub)}</div>`:''}</div>
-    ${follows().includes(rid)?'<span class="small" title="Segui">⭐</span>':''}${un?'<i class="cdot"></i>':''}</div>`;}
+    ${follows().includes(rid)?'<span class="small" title="Segui">⭐</span>':''}${un&&notifies(rid)?'<i class="cdot"></i>':''}</div>`;}
 function comRows(pc){const q=prov(pc);if(!q)return '';const f=norm(CH.exp.q[pc]||'');
   const l=q[0][3].filter(x=>!f||norm(x[0]).includes(f));
   return l.map(x=>tRow('c_'+x[1],'🏘️',x[0],'',null,false,3)).join('')||'<p class="small mut" style="padding-left:72px">Nessun comune trovato.</p>';}
@@ -261,7 +259,7 @@ function notifCard(){
   return `${reps.length?`<div class="card"><h3>🔔 Risposte ai tuoi messaggi</h3>${reps.map(x=>`<div class="croom" onclick="CHAT.openNotif('${x.id}')"><div class="cri">↩️</div><div style="flex:1;min-width:0"><b>${esc(x.from)}</b> <span class="small mut">in ${esc(x.room||'')}</span><div class="small mut cprev">${esc(clean(x.text))}</div></div><div class="small mut">${ago(x.ts)}</div>${x.read?'':'<i class="cdot"></i>'}</div>`).join('')}</div>`:''}
   <div class="card"><h3>🔔 Notifiche</h3>
     <label class="crow"><input type="checkbox" ${n.on?'checked':''} onchange="CHAT.setNotif(this.checked)"> Avvisami dei nuovi messaggi</label>
-    <label class="crow"><input type="checkbox" ${n.zones!==false?'checked':''} onchange="CHAT.setNotifZones(this.checked)"> Anche per i canali che segui (spot vicini compreso)</label>
+    <label class="crow"><input type="checkbox" ${n.zones!==false?'checked':''} onchange="CHAT.setNotifZones(this.checked)"> Anche per i canali che segui</label>
     <p class="small mut" style="margin:6px 0 0">${perm==='denied'?'⚠️ Le notifiche sono bloccate nelle impostazioni del browser.':perm==='unsupported'?'Questo browser non supporta le notifiche: vedrai gli avvisi dentro l\'app.':'Arrivano mentre LenzApp è aperta, anche in un\'altra scheda o in secondo piano. Messaggi privati e risposte ti avvisano sempre.'}</p></div>`;
 }
 CH.setNotif=async on=>{const n=LS.get('chatnotif',{zones:true});n.on=on;
@@ -374,7 +372,7 @@ function gotFriend(n){const ff=F(),del=()=>ff.deleteDoc(ff.doc(D(),'notifs',me()
   if(blocked().includes(n.fromUid)){del();return;}
   if(friends().some(f=>f.uid===n.fromUid)){del();return;}
   if(n.viaCode){LS.set('chatfriends',[...friends(),{uid:n.fromUid,name:n.from}]);CH.friendsChanged();del();toast('🤝 '+n.from+' ti ha aggiunto con il tuo codice: ora siete amici');refresh();return;}
-  if(!CH.friendReqs.some(x=>x.id===n.id))CH.friendReqs.push(n);if(n.ts>CH.t0)notify(n.from+' ti ha aggiunto agli amici','Aggiungilo anche tu da Social','friends');refresh();}
+  if(!CH.friendReqs.some(x=>x.id===n.id))CH.friendReqs.push(n);refresh();}
 CH.acceptFriend=id=>{const n=CH.friendReqs.find(x=>x.id===id);if(!n)return;CH.friendReqs=CH.friendReqs.filter(x=>x.id!==id);
   if(!friends().some(f=>f.uid===n.fromUid)){LS.set('chatfriends',[...friends(),{uid:n.fromUid,name:n.from}]);CH.friendsChanged();}
   F().deleteDoc(F().doc(D(),'notifs',me().uid,'items',id)).catch(()=>{});toast('🤝 '+n.from+' aggiunto agli amici');render();};
