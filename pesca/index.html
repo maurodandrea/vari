@@ -1016,7 +1016,14 @@ function render(){
   if(S.tab==='settings')modelStatus();
 }
 // Chat (Premium): canali per zona, catture, condizioni, amici, assistente… (chat.js)
-function vChat(v){if(window.CHAT)CHAT.view(v);else v.innerHTML=subHead('Social','Funzione Premium','home')+'<div class="card"><p class="mut">Social non disponibile.</p></div>';}
+function vChat(v){if(window.CHAT){CHAT.view(v);return;}
+  // il file della chat non è arrivato (rete o aggiornamento in corso): lo ricarico invece di fermarmi
+  v.innerHTML=subHead('Social','Canali, messaggi, mappa e amici','home')+`<div class="card" style="text-align:center;padding:30px"><span class="aispin" style="width:28px;height:28px;border-width:3px;display:inline-block"></span><p class="mut" id="chload">Carico Social…</p></div>`;
+  if(vChat.busy)return;vChat.busy=true;
+  const sc=document.createElement('script');sc.src='chat.js?r='+Date.now();
+  sc.onload=()=>{vChat.busy=false;if(S.tab==='chat')render();};
+  sc.onerror=()=>{vChat.busy=false;const el=document.getElementById('chload');if(el)el.innerHTML='Social non si è caricato: controlla la connessione.<br><button class="btn" style="margin-top:10px" onclick="render()">↻ Riprova</button>';};
+  document.body.appendChild(sc);}
 function countUp(root){
   root.querySelectorAll('[data-count]').forEach(el=>{
     const to=+el.dataset.count,t0=performance.now(),dur=1300;
