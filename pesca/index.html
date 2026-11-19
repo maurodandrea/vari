@@ -1696,10 +1696,9 @@ function vPesce(v){
   v.innerHTML=subHead('Riconosci e misura','Che pesce è, quanto è lungo e quanto pesa','home')+`
   <div class="card"><h3>📸 Foto del pesce</h3>
     ${ASSIST?`<div class="cphoto big"><img src="${ASSIST.photo}" alt="" onclick="viewPhoto(ASSIST.photo)"><span onclick="ASSIST=null;render()">✕</span></div>${aiCard(ASSIST.st,'assist')}`
-      :`<div class="shoot2"><label class="shoot"><input type="file" accept="image/*" capture="environment" onchange="assistSnap(this)"><span class="cam">📸</span><b>Scatta</b><small>Che pesce è?</small></label>
+      :`<div class="shoot2"><label class="shoot" onclick="snapLive(event)"><input type="file" accept="image/*" capture="environment" onchange="assistSnap(this)"><span class="cam">📸</span><b>Scatta</b><small>Che pesce è?</small></label>
         <label class="shoot"><input type="file" accept="image/*" onchange="assistSnap(this)"><span class="cam">🖼️</span><b>Galleria</b><small>Foto già fatta</small></label></div>
-        <button class="btn full" style="margin:2px 0 10px" onclick="liveCam()">🎥 Fotocamera dal vivo · specie e misura minima</button>
-        <p class="small mut" style="margin:0;text-align:center">Lo riconosco sul telefono, gratis e anche offline. Con una moneta o una carta accanto misuro anche lunghezza e peso.</p>`}
+        <p class="small mut" style="margin:0;text-align:center">Mentre inquadri ti dico già specie e misura minima; scattando misuro anche lunghezza e peso (con una moneta, una carta o la scarpa accanto). Gratis e anche offline.</p>`}
   </div>
   <p class="small mut" style="text-align:center">Per misurare: pesce intero e disteso, foto dall'alto, accanto una moneta, il bancomat, una scarpa, il piede nudo o la mano aperta (tutti interi nella foto).</p>`;
 }
@@ -2359,14 +2358,18 @@ function legalBlock(sp,len){
 // anteprima della fotocamera: con il modello sul telefono la specie si aggiorna da sola ogni 2-3 secondi;
 // con «Scatta» la foto passa al riconoscimento completo (specie, misura e misura minima)
 let LIVECAM=null;
+// «Scatta»: apre la fotocamera dal vivo dentro l'app; se il telefono non la supporta resta la fotocamera di sistema
+function snapLive(ev){if(ev.target.tagName==='INPUT'||!navigator.mediaDevices?.getUserMedia)return;ev.preventDefault();liveCam();}
+function nativeCamSheet(msg){openSheet(`<h2>📸 Scatta</h2><p class="small mut">${esc(msg)}: uso la fotocamera del telefono.</p>
+  <label class="btn full" style="display:block;text-align:center">📸 Apri la fotocamera<input type="file" accept="image/*" capture="environment" style="display:none" onchange="closeSheet();assistSnap(this)"></label>`);}
 async function liveCam(){
-  if(!navigator.mediaDevices?.getUserMedia){toast('Fotocamera non disponibile: usa «Scatta»');return;}
-  let st;try{st=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:960}},audio:false});}
-  catch(e){toast(e.name==='NotAllowedError'?'Permesso della fotocamera negato':'Fotocamera non disponibile');return;}
+  if(!navigator.mediaDevices?.getUserMedia){nativeCamSheet('Fotocamera dal vivo non disponibile');return;}
+  let st;try{st=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1440}},audio:false});}
+  catch(e){nativeCamSheet(e.name==='NotAllowedError'?'Permesso della fotocamera negato':'Fotocamera dal vivo non disponibile');return;}
   const box=document.createElement('div');box.id='livecam';
   box.innerHTML=`<video autoplay playsinline muted></video><div class="lcframe"></div>
     <div class="lctop"><button class="lcx" onclick="liveCamClose()" aria-label="Chiudi">✕</button><div id="lcres" class="lcres">Inquadra il pesce intero, di lato</div></div>
-    <div class="lcbot"><button class="lcshot" onclick="liveCamShot()" aria-label="Scatta"></button><div class="small" style="margin-top:6px;opacity:.85">Scatta per misura e riconoscimento completo</div></div>`;
+    <div class="lcbot"><button class="lcshot" onclick="liveCamShot()" aria-label="Scatta"></button><div class="small" style="margin-top:6px;opacity:.85">Scatta per misura, peso e riconoscimento completo</div></div>`;
   document.body.appendChild(box);const v=box.querySelector('video');v.srcObject=st;
   LIVECAM={st,v,busy:false,t:null};
   if(await modelReady()){const loop=async()=>{if(!LIVECAM)return;
@@ -2379,8 +2382,13 @@ async function liveCam(){
 function liveFrame(max,q){const v=LIVECAM.v,k=Math.min(1,max/Math.max(v.videoWidth,v.videoHeight)),c=document.createElement('canvas');
   c.width=Math.round(v.videoWidth*k);c.height=Math.round(v.videoHeight*k);c.getContext('2d').drawImage(v,0,0,c.width,c.height);return c.toDataURL('image/jpeg',q);}
 function liveCamClose(){if(!LIVECAM)return;clearTimeout(LIVECAM.t);LIVECAM.st.getTracks().forEach(t=>t.stop());LIVECAM=null;document.getElementById('livecam')?.remove();}
-function liveCamShot(){if(!LIVECAM?.v.videoWidth)return;const big=liveFrame(1280,.85),photo=liveFrame(640,.68);liveCamClose();
-  ASSIST={photo,big};if(S.tab!=='pesce')go('pesce');assistAnalyze();}
+async function liveCamShot(){if(!LIVECAM?.v.videoWidth||LIVECAM.shot)return;LIVECAM.shot=true;
+  let big=liveFrame(1280,.85),photo=liveFrame(640,.68);
+  // dove possibile uso la foto a piena risoluzione del sensore (misura più precisa)
+  try{if(window.ImageCapture){const tr=LIVECAM.st.getVideoTracks()[0],bl=await Promise.race([new ImageCapture(tr).takePhoto(),new Promise((_,ko)=>setTimeout(ko,4000))]);
+    const img=await createImageBitmap(bl),k=Math.min(1,1280/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*k);c.height=Math.round(img.height*k);c.getContext('2d').drawImage(img,0,0,c.width,c.height);big=c.toDataURL("image/jpeg",.85);
+    const k2=640/Math.max(c.width,c.height),c2=document.createElement('canvas');c2.width=Math.round(c.width*k2);c2.height=Math.round(c.height*k2);c2.getContext('2d').drawImage(c,0,0,c2.width,c2.height);photo=c2.toDataURL('image/jpeg',.68);}}catch(e){}
+  liveCamClose();ASSIST={photo,big};if(S.tab!=='pesce')go('pesce');assistAnalyze();}
 function measBlock(st,target){
   const m=st.m,sp=st.r?.species;
   if(!m)return st.r?.is_fish?`<button class="btn" style="margin-top:10px;width:100%" onclick="runMeasure('${target}')">📏 Misura lunghezza e peso</button>
