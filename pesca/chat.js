@@ -172,14 +172,21 @@ function notify(title,body,rid){
   if(!('Notification' in window)||Notification.permission!=='granted')return;
   navigator.serviceWorker?.ready.then(r=>r.showNotification(title,{body:String(body).slice(0,140),icon:'icon-192.png',badge:'icon-192.png',tag:'lenza-'+rid,data:{url:location.pathname+'#chat',rid}})).catch(()=>{try{new Notification(title,{body});}catch(e){}});
 }
-CH.unread=()=>{const s=seen(),u=me()?.uid;let n=0;
-  for(const r of [...Object.values(CH.rooms),...Object.values(CH.mine)]){const l=r.last;if(l&&l.uid!==u&&l.ts>(s[r.id]||0)&&!blocked().includes(l.uid))n++;}
-  return n+CH.notifs.filter(x=>!x.read).length;};
+// non letti: solo le conversazioni che si vedono nell'elenco (canali seguiti, spot vicini, messaggi e gruppi non eliminati);
+// le risposte contano finché non si apre la loro conversazione
+CH.unread=()=>{const s=seen(),u=me()?.uid,cl=cleared(),bl=blocked();let n=0;
+  const ids=new Set([...follows(),'near',...Object.keys(CH.mine)]);
+  for(const id of ids){const r=CH.rooms[id]||CH.mine[id],l=r?.last;if(l&&l.uid!==u&&l.ts>Math.max(s[id]||0,cl[id]||0)&&!bl.includes(l.uid))n++;}
+  const repl=new Set(CH.notifs.filter(x=>!x.read&&x.ts>(s[x.rid]||0)&&!bl.includes(x.fromUid)).map(x=>x.rid));
+  for(const rid of repl)if(!ids.has(rid)||!(CH.rooms[rid]||CH.mine[rid])?.last||(CH.rooms[rid]||CH.mine[rid]).last.ts<=Math.max(s[rid]||0,cl[rid]||0))n++;
+  return n+CH.friendReqs.length;};
 CH.badge=()=>{
   const a=document.querySelector(`#nav button[onclick="go('altro')"]`),rc=CH.isAdmin()?CH.reportCount():0;
   if(a){let e=a.querySelector('.cbadge');if(!rc)e?.remove();else{if(!e){e=document.createElement('i');e.className='cbadge';a.appendChild(e);}e.textContent=rc>9?'9+':rc;e.title='Segnalazioni da controllare';}}
   const b=document.querySelector(`#nav button[onclick="go('chat')"]`);if(!b)return;let el=b.querySelector('.cbadge');const n=CH.unread();
   if(!n){el?.remove();return;}if(!el){el=document.createElement('i');el.className='cbadge';b.appendChild(el);}el.textContent=n>9?'9+':n;};
+function readNotifs(rid){const ff=F();for(const x of CH.notifs.filter(n=>n.rid===rid&&!n.read)){x.read=true;try{ff.deleteDoc(ff.doc(D(),'notifs',me().uid,'items',x.id)).catch(()=>{});}catch(e){}}
+  CH.notifs=CH.notifs.filter(n=>n.rid!==rid);CH.badge();}
 function markSeen(rid){const s=seen();s[rid]=Date.now();LS.set('chatseen',s);CH.badge();}
 // aggiorno solo la parte che cambia, così il testo che si sta scrivendo non si perde
 function refresh(){CH.badge();if(S.tab!=='chat')return;
@@ -264,7 +271,7 @@ CH.setNotifZones=on=>{const n=LS.get('chatnotif',{on:false});n.zones=on;LS.set('
 CH.openNotif=async id=>{const x=CH.notifs.find(n=>n.id===id);if(!x)return;x.read=true;try{await F().deleteDoc(F().doc(D(),'notifs',me().uid,'items',id));}catch(e){}CH.notifs=CH.notifs.filter(n=>n.id!==id);CH.open(x.rid);};
 
 /* ---------- stanza ---------- */
-CH.open=rid=>{CH.rid=rid;CH.reply=null;CH.msgs=[];CH.unsubRoom?.();CH.unsubRoom=null;markSeen(rid);CH.loaded=rid==='bot'||(rid==='near'&&CH.nearLoaded);CH.slow=false;
+CH.open=rid=>{CH.rid=rid;CH.reply=null;CH.msgs=[];CH.unsubRoom?.();CH.unsubRoom=null;markSeen(rid);readNotifs(rid);CH.loaded=rid==='bot'||(rid==='near'&&CH.nearLoaded);CH.slow=false;
   clearTimeout(CH._wd);CH._wd=setTimeout(()=>{if(CH.rid===rid&&!CH.loaded){CH.slow=true;refresh();}},10000);
   if(rid==='near'){CH.msgs=CH.nearMsgs;}
   else if(rid!=='bot')listenMsgs(rid,0);
