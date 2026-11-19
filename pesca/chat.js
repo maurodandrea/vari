@@ -534,7 +534,7 @@ function mapInit(){
   CH.map?.remove();CH._fitted=false;if(CH._locTry>3){CH._locTry=0;CH.locMode=null;}const me0=CH.locs[me()?.uid],sp=activeSpot();
   const c=me0?[me0.lat,me0.lon]:sp&&sp.lat!=null?[sp.lat,sp.lon]:[41.9,12.5];
   CH.map=L.map(el,{zoomControl:true,attributionControl:true}).setView(c,me0||sp?10:6);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap'}).addTo(CH.map);
+  baseLayers(CH.map);
   CH.mlayer=L.layerGroup().addTo(CH.map);locListen();if(locVis()!=='off')pushLoc(false);mapMarkers();
 }
 // omino colorato: blu tu, verde gli amici, rosso gli altri utenti
