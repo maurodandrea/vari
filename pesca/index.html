@@ -2443,7 +2443,8 @@ function openMeasureFor(t,ref){const st=stOf(t),m=st?.m;openMeasure(photoOf(t),t
 /* ===================== Riconoscimento con Gemini (facoltativo, con la chiave dell'utente) ===================== */
 // La chiave resta solo sul telefono. Senza chiave o senza internet si usa il modello sul telefono (BioCLIP).
 const gemKey=()=>LS.get('gemkey','');
-const gemOn=()=>(!!gemKey()||fbAI())&&navigator.onLine;
+const gemOn=()=>(!!gemKey()||fbAI())&&navigator.onLine&&gemAvail();
+const gemAvail=()=>{const n=Date.now(),sk=LS.get('gemskip',{})||{};return GEM_MODELS.some(m=>!(sk[m]>n));};
 // in ordine: i «lite» hanno più quota nel piano gratuito; se uno è sovraccarico o senza quota passo al successivo
 // prima i modelli «lite» (veloci e con più quota gratuita), poi i «flash» come riserva
 const GEM_MODELS=['gemini-flash-lite-latest','gemini-3.5-flash-lite','gemini-flash-latest','gemini-3.8-flash','gemini-2.5-flash-lite','gemini-2.5-flash','gemini-2.0-flash'];
@@ -2480,7 +2481,7 @@ Rispondi in JSON: is_fish (c'è un pesce?), species, scientific_name, confidence
 }
 async function gemCall(body,key=gemKey()){
   // modello sovraccarico (503/500) o senza quota: provo gli altri modelli e, se c'è ancora tempo, riprovo una volta dopo una pausa
-  const end=Date.now()+45000;
+  const end=Date.now()+30000;
   try{return await gemTry(body,key,end);}
   catch(e){if(e.message!=='gem-busy'||Date.now()>end-12000)throw e;await new Promise(r=>setTimeout(r,2500));return gemTry(body,key,end);}
 }
@@ -2490,11 +2491,11 @@ async function gemAc(force){if(!window.CLOUD?.acToken)return null;
 // modelli sovraccarichi o che non rispondono: li salto per 10 minuti; l'ultimo che ha funzionato lo provo per primo
 const GEM_SKIP=LS.get('gemskip',{});if(!LS.get('gemskip2',false)){for(const k in GEM_SKIP)delete GEM_SKIP[k];LS.set('gemskip',{});LS.set('gemskip2',true);}  // via i vecchi blocchi di un'ora
 const gemSkip=(m,ms=600000)=>{GEM_SKIP[m]=Date.now()+ms;LS.set('gemskip',GEM_SKIP);};
-async function gemTry(body,key,end=Date.now()+45000){
+async function gemTry(body,key,end=Date.now()+30000){
   let last='',tk=null,acForced=false;const RETRIED=new Set();const ok=LS.get('gemok',''),now=Date.now();
   if(!key)tk=await gemAc(false);
   const order=[...new Set([ok,...GEM_MODELS].filter(m=>GEM_MODELS.includes(m)))];
-  const list=[...order.filter(m=>!(GEM_SKIP[m]>now)),...order.filter(m=>GEM_SKIP[m]>now)];
+  const free=order.filter(m=>!(GEM_SKIP[m]>now)),list=free.length?free:order.slice(0,1);
   for(let i=0;i<list.length;i++){const m=list[i];
     const left=end-Date.now();if(left<3000){last=last||'gem-timeout';break;}
     const ac=new AbortController(),t=setTimeout(()=>ac.abort(),Math.min(15000,left));
@@ -2522,7 +2523,7 @@ async function gemTry(body,key,end=Date.now()+45000){
         // altrimenti lo salto solo per quel tempo. Limite giornaliero: lo salto fino a domani mattina (6 ore).
         const ds=er.details||[],q=JSON.stringify(ds.find(d=>/QuotaFailure/.test(d['@type']||''))||{}),day=/PerDay|per_day|daily/i.test(q+(er.message||''));
         const rd=parseFloat((ds.find(d=>/RetryInfo/.test(d['@type']||''))||{}).retryDelay)||(day?0:30);
-        if(!day&&rd<=12&&!RETRIED.has(m)&&end-Date.now()>rd*1000+8000){RETRIED.add(m);await new Promise(z=>setTimeout(z,rd*1000+300));i--;continue;}
+        if(!day&&rd<=10&&!RETRIED.size&&end-Date.now()>rd*1000+8000){RETRIED.add(m);await new Promise(z=>setTimeout(z,rd*1000+300));i--;continue;}
         gemSkip(m,day?6*3600000:Math.max(20,rd)*1000);last=day?'gem-limit-day':'gem-limit';continue;}
       if(r.status===403)throw new Error('gem-perm');
       throw new Error('gem-other');
