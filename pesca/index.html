@@ -1352,9 +1352,8 @@ function initMap(){
   const sp=activeSpot()||{lat:42,lon:12.5};NEWPIN=null;
   MAP=L.map('map',{zoomControl:true}).setView([sp.lat,sp.lon],sp.approx?6:12);
   baseLayers(MAP);
-  // la mappa si centra su dove sei adesso (GPS), con il pallino blu della posizione
-  if(navigator.geolocation)navigator.geolocation.getCurrentPosition(p=>{if(!MAP)return;const ll=[p.coords.latitude,p.coords.longitude];
-    MAP.setView(ll,13);L.circleMarker(ll,{radius:8,color:'#fff',weight:3,fillColor:'#3b8cff',fillOpacity:1}).addTo(MAP).bindPopup('<b>Sei qui</b>');},()=>{},{enableHighAccuracy:true,timeout:10000,maximumAge:60000});
+  // spot salvato attivo: la mappa resta su quello; posizione attuale attiva: la centro su dove sei adesso
+  showMe(!!sp.here);
   S.spots.filter(s=>!s.approx&&!s.here).forEach(s=>{
     const ic=L.divIcon({html:`<div class="pin ${s.id===S.active?'on':'off'}"><i></i></div>`,className:'',iconSize:[30,30],iconAnchor:[15,36],popupAnchor:[0,-34]});
     L.marker([s.lat,s.lon],{icon:ic}).addTo(MAP).bindPopup(`<b>${esc(s.name)}</b><br>${MODES[s.mode]?.n||''}<br><a href="#" onclick="useSpot('${s.id}');return false">Imposta come attivo</a>`);
@@ -1414,10 +1413,19 @@ async function searchPlace(){
     res.innerHTML='<div class="card list">'+j.results.map(p=>`<div class="it" onclick="MAP&&MAP.setView([${p.latitude},${p.longitude}],13);document.getElementById('res').innerHTML=''"><div class="ico">📍</div><div class="t"><b>${esc(p.name)}</b><span class="small mut">${esc([p.admin1,p.country].filter(Boolean).join(', '))}</span></div></div>`).join('')+'</div>';
   }catch(e){res.innerHTML='<p class="mut small">Ricerca non disponibile.</p>';}
 }
-function locateMe(){
-  if(!navigator.geolocation){toast('Geolocalizzazione non disponibile');return;}
-  navigator.geolocation.getCurrentPosition(p=>{MAP&&MAP.setView([p.coords.latitude,p.coords.longitude],14);editSpot(null,p.coords.latitude,p.coords.longitude);},()=>toast('Posizione non disponibile'),{enableHighAccuracy:true,timeout:10000});
+// pallino blu «Sei qui» sulla mappa degli spot; con center=true la mappa si centra lì
+let MEDOT=null;
+function showMe(center){
+  const put=(lat,lon)=>{if(!MAP)return;MEDOT?.remove();MEDOT=L.circleMarker([lat,lon],{radius:8,color:'#fff',weight:3,fillColor:'#3b8cff',fillOpacity:1}).addTo(MAP).bindPopup('<b>Sei qui</b><br><span class="small">Tocca la mappa per mettere uno spot</span>');if(center)MAP.setView([lat,lon],14);};
+  const h=S.spots.find(x=>x.here&&!x.approx);
+  if(!navigator.geolocation){if(h)put(h.lat,h.lon);else if(center)toast('Posizione non disponibile');return;}
+  navigator.geolocation.getCurrentPosition(p=>put(p.coords.latitude,p.coords.longitude),()=>{
+    navigator.geolocation.getCurrentPosition(p=>put(p.coords.latitude,p.coords.longitude),()=>{if(h)put(h.lat,h.lon);else if(center)toast('Posizione non disponibile');},{enableHighAccuracy:false,timeout:15000,maximumAge:600000});
+  },{enableHighAccuracy:true,timeout:10000,maximumAge:60000});
 }
+// bersaglio in alto: centra la mappa sulla posizione corrente
+function locateMe(){if(center0())return;}
+function center0(){const h=S.spots.find(x=>x.here&&!x.approx);if(h&&MAP)MAP.setView([h.lat,h.lon],14);showMe(true);return false;}
 
 /* ===================== Diario ===================== */
 function vDiario(v){
