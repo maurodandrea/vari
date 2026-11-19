@@ -985,6 +985,7 @@ function go(t){if(location.hash.slice(1)!==t)location.hash=t;else{S.tab=t;window
 window.addEventListener('hashchange',()=>{const t=location.hash.slice(1)||'home';if(!PAGES.includes(t))return;closeSheet();S.tab=t;window.scrollTo(0,0);render();});
 function setMode(m){}
 function render(){
+  if(!LS.get('spotclean1',false)&&!(window.LENZA_FB?.apiKey&&(!window.CLOUD?.authKnown||window.CLOUD?.user)))try{cleanSpots();}catch(e){}
   // posizione attuale: nel pulsante solo la località (il mirino dice già che è la posizione attuale)
   {const sp=activeSpot();document.getElementById('spotName').textContent=sp?(sp.here?'🎯 '+(sp.name.replace(/^Posizione attuale( · )?/,'')||'Posizione attuale'):sp.name):'Nessuno spot';}
   window.CLOUD?.chip();
@@ -1652,6 +1653,21 @@ async function liveSnap(inp){const d=await readPhoto(inp);if(d){LIVEQ.photo=d;LI
 function fabTap(){if(S.live)go('live');else startLive();}
 function startLive(){LIVEDRAFT={spot:'__here',mode:S.mode,tech:TECH[S.mode][0],bait:''};drawStart();}
 // posizione attuale: un solo spot "Posizione attuale", aggiornato ogni volta
+// pulizia una tantum: via gli spot «La mia posizione» creati in automatico, i doppioni (stesso nome a meno di 200 m)
+// e le «Posizione attuale» in più
+function cleanSpots(force){
+  if(!force&&LS.get('spotclean1',false))return;
+  const km=(a,b)=>{const t=Math.PI/180,x=Math.sin((b.lat-a.lat)*t/2)**2+Math.cos(a.lat*t)*Math.cos(b.lat*t)*Math.sin((b.lon-a.lon)*t/2)**2;return 12742*Math.asin(Math.sqrt(x));};
+  const out=[];let here=false;
+  for(const s of S.spots){
+    if(s.here){if(here)continue;here=true;out.push(s);continue;}
+    if(!s.here&&s.name==='La mia posizione'&&!s.note&&!s.face&&s.id!==S.active)continue;
+    const d=out.find(o=>!o.here&&o.name.trim().toLowerCase()===String(s.name||'').trim().toLowerCase()&&km(o,s)<.2);
+    if(d){if(s.id===S.active)S.active=d.id;continue;}
+    out.push(s);}
+  if(out.length!==S.spots.length){S.spots=out;if(!S.spots.find(s=>s.id===S.active))S.active=S.spots[0]?.id||null;LS.set('spots',S.spots);LS.set('active',S.active);}
+  LS.set('spotclean1',true);
+}
 function hereSpot(ok,ko){
   if(!navigator.geolocation){toast('Geolocalizzazione non disponibile');ko&&ko();return;}
   toast('Cerco la tua posizione…');
@@ -1975,10 +1991,8 @@ function welcomeLocate(){
   LS.set('welcomed',true);
   if(!navigator.geolocation){closeSheet();toast('Geolocalizzazione non disponibile');return;}
   toast('Cerco la tua posizione…');
-  navigator.geolocation.getCurrentPosition(p=>{
-    const s={id:uid(),name:'La mia posizione',lat:p.coords.latitude,lon:p.coords.longitude,mode:S.mode,note:'',face:null};
-    S.spots.push(s);S.active=s.id;LS.set('spots',S.spots);LS.set('active',s.id);closeSheet();S.wx=null;loadWeather();toast('Spot creato: rinominalo dalla sezione Spot');
-  },()=>{closeSheet();toast('Posizione non disponibile');},{enableHighAccuracy:true,timeout:12000});
+  // uso la «Posizione attuale» (non diventa uno spot salvato)
+  closeSheet();hereSpot(s=>{S.active=s.id;LS.set('active',s.id);S.wx=null;loadWeather();toast('🎯 Uso la tua posizione attuale');},()=>{});
 }
 
 /* ===================== Cartolina da condividere ===================== */
