@@ -201,7 +201,7 @@ CH.view=v=>{
 };
 const ago=ts=>{const m=Math.round((Date.now()-ts)/60000);return m<1?'ora':m<60?m+' min':m<1440?Math.round(m/60)+' h':new Date(ts).toLocaleDateString('it-IT',{day:'numeric',month:'short'});};
 function roomRow(rid,icon,sub){
-  const r=CH.rooms[rid]||CH.mine[rid],l=r?.last,s=seen(),un=l&&l.uid!==me()?.uid&&l.ts>(s[rid]||0)&&!blocked().includes(l.uid);
+  const r=CH.rooms[rid]||CH.mine[rid],l0=r?.last,l=l0&&l0.ts>(cleared()[rid]||0)?l0:null,s=seen(),un=l&&l.uid!==me()?.uid&&l.ts>(s[rid]||0)&&!blocked().includes(l.uid);
   return `<div class="croom" onclick="CHAT.open('${rid}')"><div class="cri">${icon}</div><div style="flex:1;min-width:0"><b>${esc(roomName(rid))}</b>
     <div class="small mut cprev">${l&&!blocked().includes(l.uid)?esc(l.name+': '+clean(l.text)):esc(sub||'Nessun messaggio: scrivi tu per primo')}</div></div>
     <div style="text-align:right">${l?`<div class="small mut">${ago(l.ts)}</div>`:''}${un?'<i class="cdot"></i>':''}</div></div>`;
@@ -209,7 +209,7 @@ function roomRow(rid,icon,sub){
 function listHtml(){
   if(CH.tab==='zone')return chanHtml()+notifCard()+(CH.diag?`<p class="small mut" style="text-align:center;opacity:.6">Diagnosi: ${esc(CH.diag)}</p>`:'');
   if(CH.tab==='mappa')return mapHtml();
-  if(CH.tab==='priv'){const rs=Object.values(CH.mine).sort((a,b)=>(b.last?.ts||b.t||0)-(a.last?.ts||a.t||0));
+  if(CH.tab==='priv'){const cl=cleared();const rs=Object.values(CH.mine).filter(r=>!cl[r.id]||(r.last?.ts||0)>cl[r.id]).sort((a,b)=>(b.last?.ts||b.t||0)-(a.last?.ts||a.t||0));
     return `<div class="card"><h3>💬 Messaggi privati e gruppi</h3>${rs.length?rs.map(r=>roomRow(r.id,r.type==='group'?'👥':'💬','')).join(''):'<p class="small mut">Nessuna conversazione. Aggiungi un amico nella scheda «Amici» e scrivigli.</p>'}
       <button class="btn ghost full" style="margin-top:10px" onclick="CHAT.newGroup()">➕ Nuovo gruppo di pesca</button></div>`;}
   if(CH.tab==='bot')return `<div class="card"><h3>🤖 Assistente in chat</h3><p class="small mut">Chiedi esche, montature, tecniche e orari migliori: risponde con il meteo, il mare e l'indice di pescosità del tuo spot attivo${typeof gemKey==='function'&&gemKey()?' (con Gemini)':''}.</p>${roomRow('bot','🤖','Fai una domanda')}</div>`;
@@ -284,8 +284,8 @@ CH.back=()=>{clearTimeout(CH._wd);CH.unsubRoom?.();CH.unsubRoom=null;CH.rid=null
 function roomView(v){
   const rid=CH.rid,r=CH.rooms[rid]||CH.mine[rid],bot=rid==='bot';
   const sub=bot?'Consigli su misura per il tuo spot':rid==='near'?`Spot attuale · chi ha lo spot a meno di ${NEAR_KM} km`:rid==='z_it'?'Canale nazionale':rid.startsWith('r_')?'Canale regionale':rid.startsWith('p_')?'Canale provinciale':rid.startsWith('c_')?'Canale comunale':r?.type==='zone'?'Canale pubblico':r?.type==='group'?`Gruppo · ${(r.members||[]).length} persone`:'Messaggio privato';
-  const canFollow=/^(z_it|r_|p_|c_)/.test(rid),fol=follows().includes(rid);
-  v.innerHTML=`<div class="subhead"><button class="back" onclick="CHAT.back()" aria-label="Indietro">‹</button><div style="flex:1;min-width:0"><h2>${esc(roomName(rid))}</h2><p>${sub}</p></div>${canFollow?`<button class="btn ${fol?'':'ghost'}" style="padding:8px 12px;flex:none" onclick="CHAT.follow('${rid}')" title="${fol?'Smetti di seguire':'Segui il canale'}">${fol?'⭐ Segui':'☆ Segui'}</button>`:''}</div>
+  const canFollow=/^(z_it|r_|p_|c_)/.test(rid),fol=follows().includes(rid),priv=r&&(r.type==='dm'||r.type==='group');
+  v.innerHTML=`<div class="subhead"><button class="back" onclick="CHAT.back()" aria-label="Indietro">‹</button><div style="flex:1;min-width:0"><h2>${esc(roomName(rid))}</h2><p>${sub}</p></div>${priv?`<button class="btn ghost" style="padding:8px 14px;flex:none;font-size:18px" onclick="CHAT.roomMenu()" aria-label="Opzioni">⋯</button>`:''}${canFollow?`<button class="btn ${fol?'':'ghost'}" style="padding:8px 12px;flex:none" onclick="CHAT.follow('${rid}')" title="${fol?'Smetti di seguire':'Segui il canale'}">${fol?'⭐ Segui':'☆ Segui'}</button>`:''}</div>
   <div class="card chatcard"><div id="chatlog" class="chatlog">${logHtml()}</div>
     <div id="creply">${replyHtml()}</div>
     ${CH.banned&&!bot?'<div class="banner" style="margin:8px 0 0">🚫 Un amministratore ti ha bloccato: puoi leggere ma non scrivere in chat.</div>':`<div class="ccomp">${bot?'':`<button class="cbtn" title="Condividi una cattura" onclick="CHAT.shareCatch()">📸</button><button class="cbtn" title="Condizioni in diretta" onclick="CHAT.condSheet()">🌊</button>`}
@@ -299,7 +299,8 @@ function logHtml(){
     return (h.length?'':`<div class="cempty">🤖 Ciao! Chiedimi per esempio:<br><span class="chip" onclick="CHAT.ask('Quando conviene pescare oggi?')">Quando conviene pescare oggi?</span> <span class="chip" onclick="CHAT.ask('Che esca uso per le orate adesso?')">Che esca uso per le orate?</span> <span class="chip" onclick="CHAT.ask('Che montatura per il surfcasting con mare mosso?')">Montatura con mare mosso?</span></div>`)+
       h.map(m=>`<div class="cmsg ${m.me?'me':''}"><div class="cb">${m.me?esc(m.text):fmtBot(m.text)}<div class="ct">${hm(m.ts)}</div></div></div>`).join('')+(CH.botBusy?'<div class="cmsg"><div class="cb"><span class="aispin" style="width:16px;height:16px;border-width:2px;display:inline-block;vertical-align:-3px"></span> Ci penso…</div></div>':'');}
   const u=me()?.uid,bl=blocked(),now=Date.now();
-  const ms=CH.msgs.filter(m=>!bl.includes(m.uid)&&!(m.kind==='cond'&&m.exp&&m.exp<now));
+  const clr=cleared()[CH.rid]||0;
+  const ms=CH.msgs.filter(m=>!bl.includes(m.uid)&&!(m.kind==='cond'&&m.exp&&m.exp<now)&&m.ts>clr);
   if(!ms.length&&!CH.loaded)return `<div class="cempty"><span class="aispin" style="width:26px;height:26px;border-width:3px;display:inline-block"></span><br>Carico i messaggi…${CH.slow?`<br><span class="small">La connessione è lenta.</span><br><button class="btn" style="margin-top:8px;padding:8px 16px" onclick="CHAT.retry()">↻ Riprova</button>`:''}</div>`;
   if(!ms.length)return `<div class="cempty">Nessun messaggio. Rompi il ghiaccio! 🎣</div>`;
   let lastDay='';
@@ -389,10 +390,44 @@ CH.newGroup=()=>{const fr=friends();if(!fr.length){toast('Aggiungi prima qualche
   openSheet(`<h2>👥 Nuovo gruppo</h2><input id="gname" placeholder="Nome del gruppo (es. Uscita di sabato)" maxlength="40" style="margin-bottom:10px">
     ${fr.map(f=>`<label class="crow"><input type="checkbox" class="gmem" value="${f.uid}"> ${esc(f.name)}</label>`).join('')}
     <button class="btn full" style="margin-top:12px" onclick="CHAT.makeGroup()">Crea il gruppo</button>`);};
+/* ---------- elimina chat, membri dei gruppi ---------- */
+const cleared=()=>LS.get('chatcleared',{});
+CH.roomMenu=()=>{const r=CH.mine[CH.rid];if(!r)return;const u=me().uid,owner=r.type==='group'&&r.owner===u;
+  openSheet(`<h2>${esc(roomName(CH.rid))}</h2>
+    ${r.type==='group'?`<button class="btn full" style="margin-bottom:8px" onclick="CHAT.members()">👥 Membri del gruppo (${(r.members||[]).length})</button>`:''}
+    ${owner?`<button class="btn ghost full" style="margin-bottom:8px" onclick="CHAT.renameGroup()">✏️ Rinomina il gruppo</button>`:''}
+    <button class="btn ghost full" style="margin-bottom:8px" onclick="CHAT.clearChat()">🗑️ Elimina chat</button>
+    <p class="small mut" style="margin:-2px 2px 10px">Sparisce solo per te; se arriva un messaggio nuovo ricompare con i soli messaggi nuovi.</p>
+    ${r.type==='group'&&!owner?`<button class="btn ghost full" style="margin-bottom:8px;color:#ff8a8d" onclick="CHAT.leaveGroup()">🚪 Esci dal gruppo</button>`:''}
+    ${owner?`<button class="btn ghost full" style="color:#ff8a8d" onclick="CHAT.deleteGroup()">💥 Elimina il gruppo per tutti</button>`:''}`);};
+CH.clearChat=()=>{const rid=CH.rid;if(!confirm('Eliminare questa chat? I messaggi spariscono solo per te.'))return;
+  const c=cleared();c[rid]=Date.now();LS.set('chatcleared',c);closeSheet();toast('🗑️ Chat eliminata');CH.back();CH.tab='priv';render();};
+async function groupNames(r){const names={...(r.names||{})},ff=F();
+  for(const id of r.members||[])if(!names[id]){try{const p=await ff.getDoc(ff.doc(D(),'profiles',id));names[id]=p.exists()?p.data().name:'Utente';}catch(e){names[id]='Utente';}}
+  return names;}
+CH.members=async()=>{const r=CH.mine[CH.rid];if(!r)return;const u=me().uid,owner=r.owner===u,names=await groupNames(r);
+  const add=friends().filter(f=>!(r.members||[]).includes(f.uid));
+  openSheet(`<h2>👥 Membri</h2>${(r.members||[]).map(id=>`<div class="croom" style="cursor:default"><div class="cri">${id===r.owner?'👑':'🎣'}</div><div style="flex:1"><b>${esc(id===u?'Tu':names[id])}</b>${id===r.owner?'<div class="small mut">ha creato il gruppo</div>':''}</div>${owner&&id!==u?`<button class="btn ghost" style="padding:7px 12px;color:#ff8a8d" onclick="CHAT.removeMember('${id}')">Togli</button>`:''}</div>`).join('')}
+    ${owner?(add.length?`<h3 style="margin-top:14px">➕ Aggiungi amici</h3>${add.map(f=>`<label class="crow"><input type="checkbox" class="gadd" value="${f.uid}"> ${esc(f.name)}</label>`).join('')}<button class="btn full" style="margin-top:10px" onclick="CHAT.addMembers()">Aggiungi al gruppo</button>`:'<p class="small mut" style="margin-top:12px">Tutti i tuoi amici sono già nel gruppo. Per aggiungerne altri, aggiungili prima agli amici.</p>'):'<p class="small mut" style="margin-top:12px">Solo chi ha creato il gruppo può aggiungere o togliere membri.</p>'}`);};
+async function saveGroup(rid,patch,msg){const ff=F();try{await ff.setDoc(ff.doc(D(),'rooms',rid),patch,{merge:true});Object.assign(CH.mine[rid]||{},patch);if(msg)toast(msg);return true;}catch(e){toast('⚠️ '+(e.code||e.message));return false;}}
+CH.addMembers=async()=>{const r=CH.mine[CH.rid],ids=[...document.querySelectorAll('.gadd:checked')].map(x=>x.value);if(!ids.length){toast('Scegli almeno un amico');return;}
+  const names={...(r.names||{})};ids.forEach(id=>{names[id]=friends().find(f=>f.uid===id)?.name||'Amico';});
+  if(await saveGroup(CH.rid,{members:[...r.members,...ids],names},'👥 Membri aggiunti'))CH.members();};
+CH.removeMember=async id=>{const r=CH.mine[CH.rid];if(!confirm('Togliere questo membro dal gruppo?'))return;
+  if(await saveGroup(CH.rid,{members:r.members.filter(x=>x!==id)},'Membro tolto dal gruppo'))CH.members();};
+CH.renameGroup=async()=>{const r=CH.mine[CH.rid];const n=prompt('Nuovo nome del gruppo',r.name||'');if(n==null)return;const name=clean(n.trim()).slice(0,40);if(!name)return;
+  if(await saveGroup(CH.rid,{name},'✏️ Gruppo rinominato')){closeSheet();render();}};
+CH.leaveGroup=async()=>{const r=CH.mine[CH.rid],u=me().uid;if(!confirm('Uscire dal gruppo? Non vedrai più i suoi messaggi.'))return;
+  const rid=CH.rid;if(await saveGroup(rid,{members:r.members.filter(x=>x!==u)},'🚪 Sei uscito dal gruppo')){closeSheet();delete CH.mine[rid];CH.back();CH.tab='priv';render();}};
+CH.deleteGroup=async()=>{const rid=CH.rid;if(!confirm('Eliminare il gruppo per tutti i membri? I messaggi vengono cancellati.'))return;const ff=F();
+  try{const ms=await ff.getDocs(ff.collection(D(),'rooms',rid,'msgs'));for(const d of ms.docs)await ff.deleteDoc(ff.doc(D(),'rooms',rid,'msgs',d.id));
+    await ff.deleteDoc(ff.doc(D(),'rooms',rid));closeSheet();delete CH.mine[rid];toast('💥 Gruppo eliminato');CH.back();CH.tab='priv';render();}
+  catch(e){toast('⚠️ '+(e.code||e.message));}};
 CH.makeGroup=async()=>{const name=clean((document.getElementById('gname')?.value||'').trim())||'Gruppo di pesca';
   const mem=[...document.querySelectorAll('.gmem:checked')].map(x=>x.value);if(!mem.length){toast('Scegli almeno un amico');return;}
   const u=me(),rid='g_'+newId(),ff=F(),members=[u.uid,...mem];
-  try{await ff.setDoc(ff.doc(D(),'rooms',rid),{type:'group',name,members,owner:u.uid,t:Date.now()});closeSheet();CH.mine[rid]={id:rid,type:'group',name,members};CH.open(rid);}
+  const names={[u.uid]:C().name()};mem.forEach(id=>{names[id]=friends().find(f=>f.uid===id)?.name||'Amico';});
+  try{await ff.setDoc(ff.doc(D(),'rooms',rid),{type:'group',name,members,names,owner:u.uid,t:Date.now()});closeSheet();CH.mine[rid]={id:rid,type:'group',name,members};CH.open(rid);}
   catch(e){toast('⚠️ '+(e.code||e.message));}};
 
 /* ---------- catture condivise (con spot protetti) ---------- */

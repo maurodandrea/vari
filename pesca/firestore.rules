@@ -35,14 +35,22 @@ service cloud.firestore {
     match /rooms/{rid} {
       allow read: if attivo() && (resource == null || membro(resource.data));
       allow create: if attivo() && (request.resource.data.type == 'zone' || request.auth.uid in request.resource.data.members);
+      // gruppi: chi l'ha creato cambia nome e membri; gli altri membri possono solo uscire
       allow update: if attivo() && membro(resource.data)
         && request.resource.data.type == resource.data.type
-        && (resource.data.type == 'zone' || request.resource.data.members == resource.data.members);
+        && request.resource.data.get('owner', null) == resource.data.get('owner', null)
+        && (resource.data.type == 'zone'
+            || request.resource.data.members == resource.data.members
+            || (resource.data.type == 'group' && resource.data.owner == request.auth.uid)
+            || (resource.data.type == 'group'
+                && request.resource.data.members.toSet() == resource.data.members.toSet().difference([request.auth.uid].toSet())));
+      allow delete: if attivo() && resource.data.type == 'group' && resource.data.owner == request.auth.uid;
 
       match /msgs/{mid} {
         allow read: if attivo() && membro(stanza(rid));
         allow create: if attivo() && !bloccato() && membro(stanza(rid)) && request.resource.data.uid == request.auth.uid;
-        allow delete: if attivo() && (resource.data.uid == request.auth.uid || admin());
+        allow delete: if attivo() && (resource.data.uid == request.auth.uid || admin()
+          || (stanza(rid).type == 'group' && stanza(rid).owner == request.auth.uid));
         // gli altri possono solo aumentare di 1 il contatore delle segnalazioni
         allow update: if attivo() && membro(stanza(rid))
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rep'])
