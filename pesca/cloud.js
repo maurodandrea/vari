@@ -83,7 +83,6 @@ C.logout=async()=>{if(!confirm('Uscire dall\'account? I tuoi dati restano salvat
   clearTimeout(C.timer);let ok=false;try{ok=await push();}catch(e){}
   // se qualcosa non è stato salvato online (per esempio il Premium) non cancello i dati dal dispositivo senza chiedere
   if(!ok||C.dirty.size){if(!confirm('Attenzione: alcune modifiche (per esempio il Premium) non sono ancora salvate online e uscendo andrebbero perse. Uscire comunque?'))return;}
-  try{await ff.deleteDoc(ff.doc(db,'locations',C.user.uid));}catch(e){}
   C.unsub.forEach(f=>f());C.unsub=[];window.CHAT?.stop();await fa.signOut(auth);
   try{[...SYNC_KEYS,'diary','cloudts','cloudhash','cloudsent','clouduid','chatbot','chatseen','chatreported'].forEach(k=>localStorage.removeItem('lenza.'+k));}catch(e){}
   location.hash='';location.reload();};
