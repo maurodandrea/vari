@@ -1508,8 +1508,10 @@ function dropPin(lat,lon){
   if(!NEWPIN){NEWPIN=L.marker([lat,lon],{draggable:true,icon:L.divIcon({html:'<div class="pin on"><i></i></div>',className:'',iconSize:[30,30],iconAnchor:[15,36]})}).addTo(MAP);}
   else NEWPIN.setLatLng([lat,lon]);
   document.getElementById('newspot').innerHTML=`<div class="row" style="gap:8px"><span class="small" style="flex:1">Trascina il pallino nel punto esatto, poi conferma.</span><button class="btn ghost" onclick="cancelPin()">Annulla</button><button class="btn" onclick="confirmPin()">📍 Crea spot qui</button></div>${bathyOn()?'<div id="pindepth" class="small" style="margin-top:6px">🌊 Misuro il fondale…</div>':''}`;
-  if(bathyOn()){const q=++dropPin.n;Promise.all([depthAt(lat,lon).catch(()=>null),substrateAt(lat,lon).catch(()=>null)]).then(([d,sb])=>{if(q!==dropPin.n)return;const el=document.getElementById('pindepth');if(!el)return;
-    el.innerHTML=d==null?'🌊 Profondità non disponibile qui':d>0?'🏖️ Qui è terra: il fondale si vede toccando il mare':`🌊 Profondità qui: <b>${mFmt(-d)}</b>${sb?' · fondo: <b>'+esc(sb.sub)+'</b>':''}`;});}
+  if(bathyOn()){const q=++dropPin.n;Promise.all([depthAt(lat,lon).catch(()=>null),substrateAt(lat,lon).catch(()=>null),costa().then(C=>seaKm(C,lat,lon)).catch(()=>null)]).then(([d,sb,km])=>{if(q!==dropPin.n)return;const el=document.getElementById('pindepth');if(!el)return;
+    const dist=km==null||km>500?'':km<1?Math.round(km*1000/10)*10+' m':fmt1(km)+' km';
+    el.innerHTML=d==null?'🌊 Profondità non disponibile qui'+(dist?` · ${dist} dalla costa`:''):d>0?`🏖️ Qui è terra${dist?`: il mare è a ${dist}`:''}`
+      :`🌊 Profondità qui: <b>${mFmt(-d)}</b>${dist?` · <b>${dist}</b> dalla costa`:''}${sb?' · fondo: <b>'+esc(sb.sub)+'</b>':''}`;});}
 }
 dropPin.n=0;
 function cancelPin(){if(NEWPIN&&MAP)MAP.removeLayer(NEWPIN);NEWPIN=null;const el=document.getElementById('newspot');if(el)el.innerHTML='<p class="small mut" style="margin:0">Tocca la mappa per mettere un nuovo spot.</p>';}
