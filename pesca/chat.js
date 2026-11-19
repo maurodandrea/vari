@@ -134,7 +134,7 @@ CH.start=async()=>{
     // il profilo si salva in sottofondo: gli ascolti partono subito (con rete lenta la scrittura può metterci molto)
     ff.setDoc(ff.doc(db,'profiles',u.uid),{name:C().name(),code:uidCode(u.uid),t:Date.now()},{merge:true}).catch(e=>{CH.diag='profilo: '+(e.code||e.message);});
     step='ascolti';
-    loadGeo();if(GEO)defaultFollow();syncSubs();nearSync();if(locVis()!=='off'){pushLoc(false);startLocTimer();}
+    loadGeo();if(GEO)defaultFollow();syncSubs();nearSync();pruneFriends();if(locVis()!=='off'){pushLoc(false);startLocTimer();}
     // amicizie fatte prima che esistessero le richieste: avviso una volta gli amici, così possono ricambiare
     if(!G('chatfriendsync',false)){friends().forEach(f=>tellFriend(f.uid,false));LS.set('chatfriendsync',true);}
     CH.subs._mine=ff.onSnapshot(ff.query(ff.collection(db,'rooms'),ff.where('members','array-contains',u.uid)),snap=>{
@@ -384,6 +384,12 @@ CH.acceptFriend=id=>{const n=CH.friendReqs.find(x=>x.id===id);if(!n)return;CH.fr
   if(!friends().some(f=>f.uid===n.fromUid)){LS.set('chatfriends',[...friends(),{uid:n.fromUid,name:n.from}]);CH.friendsChanged();}
   F().deleteDoc(F().doc(D(),'notifs',me().uid,'items',id)).catch(()=>{});toast('🤝 '+n.from+' aggiunto agli amici');render();};
 CH.ignoreFriend=id=>{CH.friendReqs=CH.friendReqs.filter(x=>x.id!==id);F().deleteDoc(F().doc(D(),'notifs',me().uid,'items',id)).catch(()=>{});render();};
+// amici il cui account è stato cancellato (profilo sparito): li tolgo dall'elenco (e dai gruppi dove sono io ad averli creati)
+async function pruneFriends(){const ff=F(),gone=[];
+  for(const f of friends()){try{const p=await ff.getDoc(ff.doc(D(),'profiles',f.uid));if(!p.exists())gone.push(f);}catch(e){}}
+  if(!gone.length)return;const ids=new Set(gone.map(f=>f.uid));
+  LS.set('chatfriends',friends().filter(f=>!ids.has(f.uid)));CH.friendsChanged();
+  toast('🤝 Tolti dagli amici (account cancellato): '+gone.map(f=>f.name).join(', '));if(S.tab==='chat')render();}
 CH.befriend=(uid,name)=>{closeSheet();if(friends().some(f=>f.uid===uid))return;LS.set('chatfriends',[...friends(),{uid,name}]);CH.friendsChanged();tellFriend(uid,false);toast('🤝 '+name+' aggiunto agli amici');};
 CH.unfriend=uid=>{if(!confirm('Togliere dagli amici?'))return;LS.set('chatfriends',friends().filter(f=>f.uid!==uid));CH.friendsChanged();render();};
 CH.addByCode=async()=>{const code=(document.getElementById('fcode')?.value||'').trim().toUpperCase();if(code.length!==6){toast('Il codice ha 6 caratteri');return;}
@@ -631,8 +637,8 @@ CH.modView=async v=>{
         <button class="btn ghost" style="flex:1;padding:9px 10px" onclick="CHAT.modOk('${g.rid}','${g.mid}')">✔ Ignora</button>
         <button class="btn ghost" style="flex:1;padding:9px 10px;color:#ff8a8d" onclick="CHAT.modBan('${g.rid}','${g.mid}','${g.uid}','${esc(g.name||'').replace(/'/g,'')}')">🚫 Blocca utente</button></div></div>`).join('')
     :`<div class="card" style="text-align:center;padding:28px 18px"><div style="font-size:44px">🛡️</div><h3 style="margin:6px 0 2px">Nessuna segnalazione</h3><p class="small mut">Quando un utente segnala un messaggio lo trovi qui.</p></div>`)+
-    `<div class="card"><h3>🗑️ Cancella utente</h3><p class="small mut" style="margin:-4px 0 8px">Elimina tutti i dati di un utente (spot, diario, impostazioni, Premium, profilo, posizione, avvisi). I messaggi già inviati restano. L'account di accesso va poi eliminato da Console Firebase › Authentication.</p>
-      <div class="row" style="gap:8px"><input id="delq" placeholder="Email o codice utente (UID)" style="flex:1" autocomplete="off"><button class="btn" onclick="CHAT.delFind()">Cerca</button></div><div id="delres" style="margin-top:10px"></div></div>
+    `<div class="card"><h3>🗑️ Cancella utente</h3><p class="small mut" style="margin:-4px 0 8px">Elimina tutti i dati di un utente (spot, diario, impostazioni, Premium, profilo, posizione, avvisi) e i suoi messaggi in chat. Per un utente già cancellato cerca il nome con cui appare in chat. L'account di accesso va poi eliminato da Console Firebase › Authentication.</p>
+      <div class="row" style="gap:8px"><input id="delq" placeholder="Email, codice utente (UID) o nome in chat" style="flex:1" autocomplete="off"><button class="btn" onclick="CHAT.delFind()">Cerca</button></div><div id="delres" style="margin-top:10px"></div></div>
     <div class="card" id="bannedbox"><h3>🚫 Utenti bloccati</h3><p class="small mut">Carico…</p></div>`;
   // testo attuale del messaggio (potrebbe essere già stato cancellato dal suo autore)
   gs.forEach(async(g,i)=>{try{const m=await ff.getDoc(ff.doc(db,'rooms',g.rid,'msgs',g.mid));const el=document.getElementById('mt'+i);if(!el)return;
@@ -653,38 +659,56 @@ CH.modBan=async(rid,mid,uid,name)=>{if(!confirm(`Bloccare ${name||'questo utente
   catch(e){toast('⚠️ '+(e.code||e.message));}};
 // cancellazione dei dati di un utente (solo amministratore; le regole di Firestore lo permettono solo a lui)
 CH.delFind=async()=>{
-  if(!CH.isAdmin())return;const q=(document.getElementById('delq')?.value||'').trim(),box=document.getElementById('delres');if(!q){toast('Scrivi email o UID');return;}
+  if(!CH.isAdmin())return;const q=(document.getElementById('delq')?.value||'').trim(),box=document.getElementById('delres');if(!q){toast('Scrivi email, UID o nome');return;}
   box.innerHTML='<p class="small mut">Cerco…</p>';const ff=F(),db=D();
   try{
     let uid=null,email='';
     if(q.includes('@')){const r=await ff.getDocs(ff.query(ff.collection(db,'users'),ff.where('email','==',q.toLowerCase())));
       const r2=r.docs.length?r:await ff.getDocs(ff.query(ff.collection(db,'users'),ff.where('email','==',q)));if(r2.docs.length){uid=r2.docs[0].id;email=r2.docs[0].data().email;}}
-    else uid=q;
-    if(!uid){box.innerHTML='<p class="small" style="color:var(--acc2)">Nessun utente con questa email nei dati dell\'app. Se si è registrato ma non ha mai salvato niente, cercalo per UID (Console Firebase › Authentication).</p>';return;}
+    else if(/^[A-Za-z0-9]{20,40}$/.test(q))uid=q;
     if(uid===me().uid){box.innerHTML='<p class="small" style="color:var(--acc2)">Questo è il tuo account.</p>';return;}
-    const [u,data,diary,prof]=await Promise.all([ff.getDoc(ff.doc(db,'users',uid)),ff.getDocs(ff.collection(db,'users',uid,'data')),ff.getDocs(ff.collection(db,'users',uid,'diary')),ff.getDoc(ff.doc(db,'profiles',uid))]);
+    let u=null,data={docs:[]},diary={docs:[]},prof=null;
+    if(uid)[u,data,diary,prof]=await Promise.all([ff.getDoc(ff.doc(db,'users',uid)),ff.getDocs(ff.collection(db,'users',uid,'data')),ff.getDocs(ff.collection(db,'users',uid,'diary')),ff.getDoc(ff.doc(db,'profiles',uid))]);
+    // messaggi: per codice utente, oppure per nome (utenti già cancellati)
+    const name0=prof?.exists()?prof.data().name:'';
+    const msgs=await ff.getDocs(ff.query(ff.collectionGroup(db,'msgs'),uid?ff.where('uid','==',uid):ff.where('name','==',q)));
+    const hasData=u?.exists()||data.docs.length||diary.docs.length||prof?.exists();
+    if(!hasData&&!msgs.docs.length){box.innerHTML=`<p class="small" style="color:var(--acc2)">Nessun dato né messaggio trovato per «${esc(q)}». Per un utente già cancellato prova con il nome come appare in chat.</p>`;return;}
     const get=k=>{const d=data.docs.find(x=>x.id===k);try{return d?JSON.parse(d.data().v):null;}catch(e){return null;}};
-    const spots=(get('spots')||[]).filter(x=>x&&!x.here).length,prem=!!get('premium')?.ok,name=prof.exists()?prof.data().name:'';email=email||(u.exists()?u.data().email:'');
-    if(!u.exists()&&!data.docs.length&&!diary.docs.length&&!prof.exists()){box.innerHTML='<p class="small" style="color:var(--acc2)">Nessun dato trovato per questo UID.</p>';return;}
-    CH._del={uid,email};
-    box.innerHTML=`<div class="kv"><span>Utente</span><b>${esc(name||'—')}</b></div><div class="kv"><span>Email</span><b style="word-break:break-all">${esc(email||'—')}</b></div><div class="kv"><span>UID</span><b style="word-break:break-all;font-size:12px">${esc(uid)}</b></div>
-      <div class="kv"><span>Spot salvati</span><b>${spots}</b></div><div class="kv"><span>Uscite nel diario</span><b>${diary.docs.filter(d=>!d.data().deleted).length}</b></div><div class="kv"><span>Premium</span><b>${prem?'sì ⭐':'no'}</b></div>
-      <button class="btn full" style="margin-top:10px;background:#c0392b;color:#fff" onclick="CHAT.delRun()">🗑️ Cancella tutti i dati</button>`;
-  }catch(e){box.innerHTML=`<p class="small" style="color:var(--acc2)">⚠️ ${esc(e.code||e.message)}${e.code==='permission-denied'?' — pubblica le regole aggiornate (firestore.rules) in Console Firebase.':''}</p>`;}
+    email=email||(u?.exists()?u.data().email:'');
+    CH._del={uid,email,name:q,msgs:msgs.docs.map(d=>d.ref.path),uids:[...new Set(msgs.docs.map(d=>d.data().uid).filter(Boolean))]};
+    box.innerHTML=(hasData?`<div class="kv"><span>Utente</span><b>${esc(name0||'—')}</b></div><div class="kv"><span>Email</span><b style="word-break:break-all">${esc(email||'—')}</b></div><div class="kv"><span>UID</span><b style="word-break:break-all;font-size:12px">${esc(uid)}</b></div>
+      <div class="kv"><span>Spot salvati</span><b>${(get('spots')||[]).filter(x=>x&&!x.here).length}</b></div><div class="kv"><span>Uscite nel diario</span><b>${diary.docs.filter(d=>!d.data().deleted).length}</b></div><div class="kv"><span>Premium</span><b>${get('premium')?.ok?'sì ⭐':'no'}</b></div>`
+      :`<p class="small mut">Nessun dato dell'account (probabilmente già cancellato).</p>`)+
+      `<div class="kv"><span>Messaggi in chat</span><b>${msgs.docs.length}</b></div>
+      <button class="btn full" style="margin-top:10px;background:#c0392b;color:#fff" onclick="CHAT.delRun()">🗑️ Cancella ${hasData?'tutti i dati e i messaggi':'tutti i messaggi'}</button>`;
+  }catch(e){box.innerHTML=`<p class="small" style="color:var(--acc2)">⚠️ ${esc(e.code||e.message)}${e.code==='permission-denied'||e.code==='failed-precondition'?' — pubblica le regole aggiornate (firestore.rules) in Console Firebase.':''}</p>`;}
 };
 CH.delRun=async()=>{
   const d=CH._del;if(!d||!CH.isAdmin())return;
-  const t=prompt(`Cancellare definitivamente tutti i dati di ${d.email||d.uid}?\nNon si può annullare. Scrivi CANCELLA per confermare.`);if(t==null)return;
+  const t=prompt(`Cancellare definitivamente dati e messaggi di ${d.email||d.uid||d.name}?\nNon si può annullare. Scrivi CANCELLA per confermare.`);if(t==null)return;
   if(t.trim().toUpperCase()!=='CANCELLA'){toast('Cancellazione annullata');return;}
   const box=document.getElementById('delres'),ff=F(),db=D();box.innerHTML='<p class="small mut">Cancello…</p>';let n=0;
   const delCol=async(...p)=>{const s=await ff.getDocs(ff.collection(db,...p));for(const x of s.docs){await ff.deleteDoc(ff.doc(db,...p,x.id));n++;}};
   try{
-    await delCol('users',d.uid,'data');await delCol('users',d.uid,'diary');
-    try{await delCol('notifs',d.uid,'items');}catch(e){}
-    for(const p of [['users',d.uid],['profiles',d.uid],['locations',d.uid],['notifs',d.uid]]){try{await ff.deleteDoc(ff.doc(db,...p));n++;}catch(e){}}
+    // messaggi scritti nei canali, nei gruppi e nei privati
+    for(const path of d.msgs){try{await ff.deleteDoc(ff.doc(db,path));n++;}catch(e){}}
+    for(const uid of d.uids.length?d.uids:(d.uid?[d.uid]:[])){
+      // privati con l'utente: via la conversazione; gruppi: lo tolgo (se l'aveva creato lui, elimino il gruppo)
+      const rs=await ff.getDocs(ff.query(ff.collection(db,'rooms'),ff.where('members','array-contains',uid)));
+      for(const r of rs.docs){const x=r.data();
+        if(x.type==='dm'||(x.type==='group'&&x.owner===uid)){await delCol('rooms',r.id,'msgs');await ff.deleteDoc(ff.doc(db,'rooms',r.id));n++;}
+        else if(x.type==='group'){await ff.setDoc(ff.doc(db,'rooms',r.id),{members:(x.members||[]).filter(m=>m!==uid)},{merge:true});n++;}}
+      // anteprima dell'ultimo messaggio nei canali
+      const ls=await ff.getDocs(ff.query(ff.collection(db,'rooms'),ff.where('last.uid','==',uid)));
+      for(const r of ls.docs){try{await ff.setDoc(ff.doc(db,'rooms',r.id),{last:null},{merge:true});}catch(e){}}}
+    if(d.uid){
+      await delCol('users',d.uid,'data');await delCol('users',d.uid,'diary');
+      try{await delCol('notifs',d.uid,'items');}catch(e){}
+      for(const p of [['users',d.uid],['profiles',d.uid],['locations',d.uid],['notifs',d.uid]]){try{await ff.deleteDoc(ff.doc(db,...p));n++;}catch(e){}}}
     CH._del=null;
-    box.innerHTML=`<p class="small" style="color:var(--ok)">✅ Dati cancellati (${n} elementi). Ora elimina l'account da Console Firebase › Authentication${d.email?` (${esc(d.email)})`:''}: poi l'utente potrà registrarsi di nuovo con la stessa email.</p>`;
-    toast('🗑️ Dati utente cancellati');
+    box.innerHTML=`<p class="small" style="color:var(--ok)">✅ Cancellati ${n} elementi.${d.uid?` Ora elimina l'account da Console Firebase › Authentication${d.email?` (${esc(d.email)})`:''}: poi l'utente potrà registrarsi di nuovo con la stessa email.`:''}</p>`;
+    toast('🗑️ Cancellazione completata');
   }catch(e){box.innerHTML=`<p class="small" style="color:var(--acc2)">⚠️ Cancellazione interrotta: ${esc(e.code||e.message)} (${n} elementi già cancellati). Puoi riprovare.</p>`;}
 };
 CH.modUnban=async uid=>{try{await F().deleteDoc(F().doc(D(),'banned',uid));toast('Utente sbloccato');render();}catch(e){toast('⚠️ '+(e.code||e.message));}};
