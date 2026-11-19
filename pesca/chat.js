@@ -193,7 +193,11 @@ CH.unread=()=>{const s=seen(),u=me()?.uid,cl=cleared(),bl=blocked();let n=0;
 CH.badge=()=>{
   const a=document.querySelector(`#nav button[onclick="go('altro')"]`),rc=CH.isAdmin()?CH.reportCount():0;
   if(a){let e=a.querySelector('.cbadge');if(!rc)e?.remove();else{if(!e){e=document.createElement('i');e.className='cbadge';a.appendChild(e);}e.textContent=rc>9?'9+':rc;e.title='Segnalazioni da controllare';}}
-  const b=document.querySelector(`#nav button[onclick="go('chat')"]`);if(!b)return;let el=b.querySelector('.cbadge');const n=CH.unread();
+  const b=document.querySelector(`#nav button[onclick="go('chat')"]`);if(!b)return;
+  // seconda pallina a sinistra: utenti visibili sulla mappa (verde = amici, rosso = tutti)
+  {let m=b.querySelector('.mbadge');const mc=(typeof locVis==='function'&&locVis()!=='off')?mapCount():0;
+   if(!mc)m?.remove();else{if(!m){m=document.createElement('i');m.className='cbadge mbadge';b.appendChild(m);}m.style.background=locVis()==='friends'?'#2ecc71':'#ff5a5f';m.textContent=mc>9?'9+':mc;m.title='Utenti visibili sulla mappa';}}
+  let el=b.querySelector('.cbadge:not(.mbadge)');const n=CH.unread();
   if(!n){el?.remove();return;}if(!el){el=document.createElement('i');el.className='cbadge';b.appendChild(el);}el.textContent=n>9?'9+':n;};
 function readNotifs(rid){const ff=F();for(const x of CH.notifs.filter(n=>n.rid===rid&&!n.read)){x.read=true;try{ff.deleteDoc(ff.doc(D(),'notifs',me().uid,'items',x.id)).catch(()=>{});}catch(e){}}
   CH.notifs=CH.notifs.filter(n=>n.rid!==rid);CH.badge();}
@@ -604,7 +608,7 @@ function locListen(){if(!CH.started)return;const v=locVis();if(CH.locMode===v)re
   locStop();CH.locMode=v;
   CH.subs._locMe=ff.onSnapshot(ff.doc(col,u),s=>{if(s.exists())CH.locs[u]={id:u,...s.data()};else delete CH.locs[u];if(CH.tab==='mappa'&&S.tab==='chat')mapMarkers();},()=>{});
   if(v==='off'){if(CH.tab==='mappa'&&S.tab==='chat')mapMarkers();return;}
-  const on=snap=>{setTimeout(()=>{const t=document.getElementById('chtabs');if(t&&S.tab==='chat'&&!CH.rid)t.innerHTML=tabsHtml();},0);if(CH.locErr&&/Non riesco a leggere/.test(CH.locErr)){CH.locErr='';if(CH.tab==='mappa'&&S.tab==='chat')render();}snap.docChanges().forEach(c=>{if(c.type==='removed')delete CH.locs[c.doc.id];else CH.locs[c.doc.id]={id:c.doc.id,...c.doc.data()};});if(CH.tab==='mappa'&&S.tab==='chat'){mapMarkers();const fs=document.getElementById('cfstat');if(fs)fs.innerHTML=friendStatus();}};
+  const on=snap=>{setTimeout(()=>{CH.badge();const t=document.getElementById('chtabs');if(t&&S.tab==='chat'&&!CH.rid)t.innerHTML=tabsHtml();},0);if(CH.locErr&&/Non riesco a leggere/.test(CH.locErr)){CH.locErr='';if(CH.tab==='mappa'&&S.tab==='chat')render();}snap.docChanges().forEach(c=>{if(c.type==='removed')delete CH.locs[c.doc.id];else CH.locs[c.doc.id]={id:c.doc.id,...c.doc.data()};});if(CH.tab==='mappa'&&S.tab==='chat'){mapMarkers();const fs=document.getElementById('cfstat');if(fs)fs.innerHTML=friendStatus();}};
   // rifiuto (di solito la propria posizione appena salvata non è ancora visibile alle regole): riprovo fino a 3 volte
   const err=lab=>e=>{CH._locTry=(CH._locTry||0)+1;locStop();
     if(CH._locTry<=3){setTimeout(()=>{CH.locMode=null;locListen();},2500*CH._locTry);return;}
