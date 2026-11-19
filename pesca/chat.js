@@ -330,7 +330,7 @@ function roomView(v){
   const rid=CH.rid,r=CH.rooms[rid]||CH.mine[rid],bot=rid==='bot';
   const sub=bot?'Consigli su misura per il tuo spot':rid==='near'?`Spot attuale · chi ha lo spot a meno di ${NEAR_KM} km`:rid==='z_it'?'Canale nazionale':rid.startsWith('r_')?'Canale regionale':rid.startsWith('p_')?'Canale provinciale':rid.startsWith('c_')?'Canale comunale':r?.type==='zone'?'Canale pubblico':r?.type==='group'?`Gruppo · ${(r.members||[]).length} persone`:'Messaggio privato';
   const canFollow=/^(z_it|r_|p_|c_)/.test(rid),fol=follows().includes(rid),priv=r&&(r.type==='dm'||r.type==='group');
-  v.innerHTML=`<div class="subhead"><button class="back" onclick="CHAT.back()" aria-label="Indietro">‹</button><div style="flex:1;min-width:0"><h2>${esc(roomName(rid))}</h2><p>${sub}</p></div>${priv?`<button class="btn ghost" style="padding:8px 14px;flex:none;font-size:18px" onclick="CHAT.roomMenu()" aria-label="Opzioni">⋯</button>`:''}${canFollow?`<button class="btn ${fol?'':'ghost'}" style="padding:8px 12px;flex:none" onclick="CHAT.follow('${rid}')" title="${fol?'Smetti di seguire':'Segui il canale'}">${fol?'⭐ Segui':'☆ Segui'}</button>`:''}</div>
+  v.innerHTML=`<div class="subhead"><button class="back" onclick="CHAT.back()" aria-label="Indietro">‹</button><div style="flex:1;min-width:0"><h2>${esc(roomName(rid))}</h2><p>${sub}</p></div>${priv?`<button class="btn ghost" style="padding:8px 14px;flex:none;font-size:19px" onclick="CHAT.roomMenu()" aria-label="Opzioni">⋯</button>`:''}${canFollow?`<button class="btn ${fol?'':'ghost'}" style="padding:8px 12px;flex:none" onclick="CHAT.follow('${rid}')" title="${fol?'Smetti di seguire':'Segui il canale'}">${fol?'⭐ Segui':'☆ Segui'}</button>`:''}</div>
   <div class="card chatcard"><div id="chatlog" class="chatlog">${logHtml()}</div>
     <div id="creply">${replyHtml()}</div>
     ${CH.banned&&!bot?'<div class="banner" style="margin:8px 0 0">🚫 Un amministratore ti ha bloccato: puoi leggere ma non scrivere in chat.</div>':`<div class="ccomp">${bot?'':`<button class="cbtn" title="Condividi una cattura" onclick="CHAT.shareCatch()">📸</button><button class="cbtn" title="Condizioni in diretta" onclick="CHAT.condSheet()">🌊</button>${/^(d_|g_)/.test(CH.rid)?`<button class="cbtn" title="Proponi un'uscita" onclick="CHAT.tripSheet()">📅</button>`:''}`}
@@ -691,7 +691,7 @@ window.heatDraw=function(){if(!CH.map||!CH.hlayer)return;CH.hlayer.clearLayers()
   const mx=Math.max(1,...Object.values(cells).map(c=>c.n));
   for(const c of Object.values(cells)){const t=c.n/mx;
     L.circle([c.la,c.lo],{radius:500+1500*t,stroke:false,fillColor:t>.66?'#ff3b30':t>.33?'#ff9500':'#ffcc00',fillOpacity:.35+.3*t,interactive:true}).addTo(CH.hlayer)
-      .bindPopup(`<b>🔥 ${c.n} ${c.n===1?'cattura':'catture'}</b><br><span style="font-size:12px">${Object.entries(c.sp).sort((a,b)=>b[1]-a[1]).map(([k,v])=>esc(k)+' '+v).join(' · ')}</span><br><span style="font-size:11px;opacity:.7">zona di circa 1 km · ultimi ${HEAT_DAYS} giorni</span>`);}};
+      .bindPopup(`<b>🔥 ${c.n} ${c.n===1?'cattura':'catture'}</b><br><span style="font-size:13.5px">${Object.entries(c.sp).sort((a,b)=>b[1]-a[1]).map(([k,v])=>esc(k)+' '+v).join(' · ')}</span><br><span style="font-size:12.5px;opacity:.7">zona di circa 1 km · ultimi ${HEAT_DAYS} giorni</span>`);}};
 // condivisione anonima delle catture salvate nel diario (si può disattivare)
 CH.shareCatches=async e=>{try{if(!me()||G('sharecatch',true)===false)return;const sp=(S.spots||[]).find(x=>x.id===e.spot);if(!sp||sp.lat==null||sp.approx)return;
   const ff=F(),ts=e.start?new Date(e.start).getTime():Date.now(),la=Math.round(sp.lat*100)/100,lo=Math.round(sp.lon*100)/100;
@@ -720,11 +720,11 @@ function mapMarkers(){
     const off=!mine&&now-l.ts>=STALE_MS;
     const m=L.marker(pos[l.id],{icon:mine?meIcon():manIcon(off?'#8a96a3':col),zIndexOffset:mine?-1000:off?-500:0}).addTo(CH.mlayer);pts.push(pos[l.id]);
     nameTag(m,mine?'Io':(l.name||'Pescatore'),mine);
-    m.bindPopup(`<b>${esc(mine?'Tu':l.name||'Pescatore')}</b><br><span style="font-size:12px">${mine?'posizione aggiornata '+agoTxt(l.ts)+' · '+(l.vis==='all'?'visibile a tutti':'visibile agli amici'):onlineTxt(l.ts)+(fr.has(l.id)?' · amico':'')}</span>${mine?'':`<br><button class="btn" style="margin-top:6px;padding:6px 12px" onclick="CHAT.dm('${l.id}','${esc(l.name||'').replace(/'/g,'')}')">💬 Scrivi</button>`}`);
+    m.bindPopup(`<b>${esc(mine?'Tu':l.name||'Pescatore')}</b><br><span style="font-size:13.5px">${mine?'posizione aggiornata '+agoTxt(l.ts)+' · '+(l.vis==='all'?'visibile a tutti':'visibile agli amici'):onlineTxt(l.ts)+(fr.has(l.id)?' · amico':'')}</span>${mine?'':`<br><button class="btn" style="margin-top:6px;padding:6px 12px" onclick="CHAT.dm('${l.id}','${esc(l.name||'').replace(/'/g,'')}')">💬 Scrivi</button>`}`);
   }
   // posizione non condivisa: mi mostro lo stesso, in rosso, con il GPS letto solo sul telefono (non viene inviato)
   if(mode==='off'&&CH.myLocal){const p0=[CH.myLocal.lat,CH.myLocal.lon];
-    const mm=L.marker(p0,{icon:meIcon('#ff5a5f')}).addTo(CH.mlayer);nameTag(mm,'Io',true);mm.bindPopup('<b>Tu</b><br><span style="font-size:12px">posizione non condivisa: la vedi solo tu</span>');pts.push(p0);}
+    const mm=L.marker(p0,{icon:meIcon('#ff5a5f')}).addTo(CH.mlayer);nameTag(mm,'Io',true);mm.bindPopup('<b>Tu</b><br><span style="font-size:13.5px">posizione non condivisa: la vedi solo tu</span>');pts.push(p0);}
   if(pts.length&&!CH._fitted){CH._fitted=true;if(pts.length>1)CH.map.fitBounds(pts,{padding:[40,40],maxZoom:13});else CH.map.setView(pts[0],12);}
 }
 
@@ -793,7 +793,7 @@ CH.delFind=async(pick)=>{
     const get=k=>{const d=data.docs.find(x=>x.id===k);try{return d?JSON.parse(d.data().v):null;}catch(e){return null;}};
     email=email||(u?.exists()?u.data().email:'');
     CH._del={uid,email,name:q,msgs:msgs.docs.map(d=>d.ref.path),uids:[...new Set(msgs.docs.map(d=>d.data().uid).filter(Boolean))]};
-    box.innerHTML=(hasData?`<div class="kv"><span>Utente</span><b>${esc(name0||'—')}</b></div><div class="kv"><span>Email</span><b style="word-break:break-all">${esc(email||'—')}</b></div><div class="kv"><span>UID</span><b style="word-break:break-all;font-size:12px">${esc(uid)}</b></div>
+    box.innerHTML=(hasData?`<div class="kv"><span>Utente</span><b>${esc(name0||'—')}</b></div><div class="kv"><span>Email</span><b style="word-break:break-all">${esc(email||'—')}</b></div><div class="kv"><span>UID</span><b style="word-break:break-all;font-size:13.5px">${esc(uid)}</b></div>
       <div class="kv"><span>Spot salvati</span><b>${(get('spots')||[]).filter(x=>x&&!x.here).length}</b></div><div class="kv"><span>Uscite nel diario</span><b>${diary.docs.filter(d=>!d.data().deleted).length}</b></div><div class="kv"><span>Premium</span><b>${get('premium')?.ok?'sì ⭐':'no'}</b></div>`
       :`<p class="small mut">Nessun dato dell'account (probabilmente già cancellato).</p>`)+
       `<div class="kv"><span>Messaggi in chat</span><b>${msgs.docs.length}</b></div>
