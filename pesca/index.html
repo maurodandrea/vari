@@ -440,6 +440,7 @@
   .mdot{display:inline-block;width:11px;height:11px;border-radius:50%;border:2px solid #fff;vertical-align:-1px;margin-right:2px}
   .tbadge{position:absolute;top:-6px;right:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#ff5a5f;color:#fff;font:800 10.5px/17px 'Outfit',sans-serif;font-style:normal;text-align:center;box-shadow:0 0 0 2px var(--bg,#06141c)}
   .fcday{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)}.fcday:last-of-type{border-bottom:0}.fch{display:flex;gap:6px;align-items:center;margin-bottom:3px}
+  .wraps{display:grid;grid-template-columns:1fr 1fr;gap:8px}.wrap{padding:12px;border-radius:16px;background:linear-gradient(140deg,rgba(255,154,60,.18),rgba(255,61,119,.12));text-align:center}.wrap .we{font-size:26px}.wrap b{display:block;font-size:19px;margin:2px 0}
   .legal{margin-top:10px;padding:9px 11px;border-radius:12px;border:1px solid;background:rgba(255,255,255,.04)}.legal b{display:block;margin-bottom:2px}
   #livecam{position:fixed;inset:0;z-index:300;background:#000;display:flex;flex-direction:column}
   #livecam video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
@@ -694,7 +695,7 @@ function activeSpot(){return S.spots.find(s=>s.id===S.active)||S.spots[0];}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('on'),2200);}
 // altezza dell'onda: sotto il metro in centimetri (il mare quasi piatto non è mai "0 m")
-const fmtOnda=w=>w==null||isNaN(w)?'—':w<.05?'meno di 5 cm':w<1?Math.round(w*100)+' cm':fmt1(w)+' m';
+const fmtOnda=w=>w==null||isNaN(w)?'—':w<.05?'meno di 5 cm':w<1?Math.round(w*100)+' cm':(Math.round(w*10)/10)+' m';
 const fmt1=n=>n==null||isNaN(n)?'—':(Math.round(n*10)/10).toLocaleString('it-IT');
 const fmt0=n=>n==null||isNaN(n)?'—':Math.round(n).toLocaleString('it-IT');
 const pad=n=>String(n).padStart(2,'0');
@@ -1167,8 +1168,8 @@ function vHome(v){
     <div class="tile"><div class="k">Vento</div><div class="v">${arrow(h.wd)} ${fmt0(h.ws)}</div><div class="s">km/h ${dirName(h.wd)} · ${windName(h.wd)}${h.expo?` · ${h.expo==='traverso'?'al traverso':'di '+h.expo}`:''}</div></div>
     <div class="tile"><div class="k">Pressione</div><div class="v">${fmt0(h.p)}</div><div class="s">hPa ${h.dp>0.6?'↗ in salita':h.dp<-0.6?'↘ in calo':'→ stabile'}</div></div>
     ${h.wave!=null?`<div class="tile"><div class="k">Mare</div><div class="v">${fmtOnda(h.wave)}</div><div class="s">${seaState(h.wave)} · ${fmt0(h.wper)} s</div></div>
-    <div class="tile"><div class="k">Temp. acqua</div><div class="v">${fmt1(h.sst)}°</div><div class="s">superficie</div></div>`:`<div class="tile"><div class="k">Nuvole</div><div class="v">${fmt0(h.cc)}%</div><div class="s">copertura</div></div>
-    <div class="tile"><div class="k">Pioggia</div><div class="v">${fmt1(h.pr)}</div><div class="s">mm/h</div></div>`}
+    <div class="tile"><div class="k">Temp. acqua</div><div class="v">${(Math.round(h.sst*10)/10)}°</div><div class="s">superficie</div></div>`:`<div class="tile"><div class="k">Nuvole</div><div class="v">${fmt0(h.cc)}%</div><div class="s">copertura</div></div>
+    <div class="tile"><div class="k">Pioggia</div><div class="v">${(Math.round(h.pr*10)/10)}</div><div class="s">mm/h</div></div>`}
     <div class="tile"><div class="k">Sole</div><div class="v" style="font-size:15px">🌅 ${D?hhmm(D.sr):'—'}</div><div class="s">🌇 ${D?hhmm(D.ss):'—'}</div></div>
   </div></div>
   <div class="row" style="gap:8px"><button class="btn ghost" style="flex:1" onclick="openEntry()">＋ Registra uscita</button><button class="btn" style="flex:1" onclick="fabTap()">🎣 ${S.live?'Sessione live':'Inizia a pescare'}</button></div>`;
@@ -1278,7 +1279,7 @@ function weekWave(X){
       <text x="${x0+w/2}" y="${H-8}" fill="#8aa0b4" font-size="19" font-weight="700" text-anchor="middle">${dayName(o.d.date)}</text></g>`;}
     return `<rect x="${x0}" y="${yt}" width="${w}" height="${H-34-yt}" rx="10" fill="${col(o.mx)}" opacity=".9"/>
       <rect x="${x0}" y="${yb}" width="${w}" height="${H-34-yb}" rx="10" fill="rgba(6,20,28,.35)"/>
-      <text x="${x0+w/2}" y="${yt-10}" fill="#fff" font-size="17" font-weight="800" text-anchor="middle">${o.mx<1?Math.round(o.mx*100)+' cm':fmt1(o.mx)+' m'}</text>
+      <text x="${x0+w/2}" y="${yt-10}" fill="#fff" font-size="17" font-weight="800" text-anchor="middle">${o.mx<1?Math.round(o.mx*100)+' cm':(Math.round(o.mx*10)/10)+' m'}</text>
       <text x="${x0+w/2}" y="${H-8}" fill="#c3d6e8" font-size="19" font-weight="700" text-anchor="middle">${k?dayName(o.d.date):'Oggi'}</text>`;}).join('');
   return `<div class="card"><h3>Onda nei prossimi giorni</h3><svg viewBox="0 0 ${W} ${H}" style="width:calc(100% + 20px);margin:0 -10px;display:block">${bars}</svg>
     <div class="legend"><span>Barra: onda massima del giorno · parte scura: minima</span></div></div>`;
@@ -1319,7 +1320,7 @@ function lineChart(vals,unit,col){
   const mn=Math.min(...v),mx=Math.max(...v),rg=mx-mn||1;
   const pts=vals.map((x,i)=>x==null?null:[p+i*(W-2*p)/(vals.length-1||1),H-p-(x-mn)/rg*(H-2*p)]).filter(Boolean);
   return `<svg viewBox="0 0 ${W} ${H}" width="100%"><polyline points="${pts.map(q=>q.join(',')).join(' ')}" fill="none" stroke="${col}" stroke-width="2.5"/>
-    <text x="${p}" y="12" fill="#93b0cc" font-size="11">max ${fmt1(mx)} ${unit}</text><text x="${p}" y="${H-4}" fill="#93b0cc" font-size="11">min ${fmt1(mn)} ${unit}</text></svg>`;
+    <text x="${p}" y="12" fill="#93b0cc" font-size="11">max ${(Math.round(mx*10)/10)} ${unit}</text><text x="${p}" y="${H-4}" fill="#93b0cc" font-size="11">min ${(Math.round(mn*10)/10)} ${unit}</text></svg>`;
 }
 function smooth(pts){
   if(pts.length<2)return '';let d=`M${pts[0][0]} ${pts[0][1]}`;
@@ -1471,7 +1472,7 @@ function drawDList(){
       <div class="ph">${entryPhoto(e)?`<img src="${entryPhoto(e)}" alt="">`:(e.catches?.length?'🐟':'🎣')}</div>
       <div style="flex:1;min-width:0"><b style="text-transform:capitalize">${d.toLocaleDateString('it-IT',{weekday:'short',day:'numeric',month:'short'})} · ${hhmm(d)}</b>
       <div class="small mut" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(sp?.name||'Spot eliminato')} · ${MODES[e.mode]?.e||''} ${esc(e.tech||'')}</div>
-      <div class="small" style="margin-top:3px">${e.catches?.length?`🐟 ${e.catches.length} · ${kg?fmt1(kg)+' kg · ':''}${esc([...new Set(e.catches.map(c=>c.sp))].join(', '))}`:'<span class="mut">Cappotto</span>'}</div></div>
+      <div class="small" style="margin-top:3px">${e.catches?.length?`🐟 ${e.catches.length} · ${kg?(Math.round(kg*10)/10)+' kg · ':''}${esc([...new Set(e.catches.map(c=>c.sp))].join(', '))}`:'<span class="mut">Cappotto</span>'}</div></div>
       ${ix!=null?miniRing(ix):''}</div></div>`;
   });
   el.innerHTML=h;
@@ -1542,7 +1543,7 @@ function snapshot(e){
 function saveEntry(){
   const e=DRAFT;e.catches=e.catches.filter(c=>c.sp&&c.sp.trim());
   e.catches.forEach(c=>{c.w=c.w===''||c.w==null?null:+c.w;c.l=c.l===''||c.l==null?null:+c.l;});
-  const live=e.fromLive;delete e.fromLive;
+  const live=e.fromLive,isNew=!e.id;delete e.fromLive;
   // le catture con foto riconosciute (e confermate o corrette) insegnano al riconoscimento
   e.catches.forEach(c=>{delete c.big;if(c.emb){learnFish(c.sp,c.emb);delete c.emb;}});
   if(!e.id){e.id=uid();e.cond=snapshot(e);S.diary.push(e);window.CHAT?.shareCatches?.(e);}
@@ -1552,10 +1553,35 @@ function saveEntry(){
   buildProfile();loadWeather();COMP.rows=null;
   closeSheet();toast('Uscita salvata');go('diario');
   const nb=checkBadges();if(nb.length)setTimeout(()=>celebrate(nb[0]),500);
+  else if(isNew&&e.catches?.length)setTimeout(()=>openSheet(`<div style="text-align:center"><div style="font-size:44px">🎉</div><h2>Bella uscita!</h2><p class="mut">${e.catches.length} ${e.catches.length===1?'cattura':'catture'}: creo la cartolina da condividere su WhatsApp o Instagram?</p>
+    <button class="btn full" style="margin-top:8px" onclick="closeSheet();shareEntry('${e.id}')">📸 Crea la cartolina</button><button class="btn ghost full" style="margin-top:8px" onclick="closeSheet()">Più tardi</button></div>`),600);
 }
 function delEntry(id){if(!confirm('Eliminare questa uscita?'))return;S.diary=S.diary.filter(e=>e.id!==id);LS.set('diary',S.diary);buildProfile();checkBadges();closeSheet();render();}
 
 /* ===================== Statistiche ===================== */
+/* ===================== Il tuo anno ===================== */
+function yearWrap(y){
+  y=y||new Date().getFullYear();const D=S.diary.filter(e=>(e.start||'').startsWith(String(y)));
+  if(!D.length){openSheet(`<h2>🎁 Il tuo ${y}</h2><p class="mut">Nessuna uscita registrata nel ${y}.</p>`);return;}
+  const all=D.flatMap(e=>(e.catches||[]).map(c=>({...c,e}))),cnt=f=>{const m={};all.forEach(x=>{const k=f(x);if(k)m[k]=(m[k]||0)+1;});return Object.entries(m).sort((a,b)=>b[1]-a[1]);};
+  const hours=Math.round(D.reduce((a,e)=>a+Math.max(0,(parseLocal(e.end)-parseLocal(e.start))/3600e3),0));
+  const sp=cnt(c=>c.sp),spot=cnt(c=>S.spots.find(s=>s.id===c.e.spot)?.name),tech=cnt(c=>c.e.tech),hr=cnt(c=>{const h=new Date(c.e.start).getHours();return String(h).padStart(2,'0')+':00';});
+  const mon=cnt(c=>new Date(c.e.start).toLocaleDateString('it-IT',{month:'long'}));
+  const big=all.filter(c=>c.l||c.w).sort((a,b)=>(+b.l||0)-(+a.l||0)||(+b.w||0)-(+a.w||0))[0];
+  const rel=all.filter(c=>c.rel).length,kg=all.reduce((a,c)=>a+(+c.w||0),0);
+  const T=(e,t,v,s)=>`<div class="wrap"><div class="we">${e}</div><div class="small mut">${t}</div><b>${v}</b>${s?`<div class="small">${s}</div>`:''}</div>`;
+  const tiles=[T('🎣','Uscite',D.length,`${hours} ore in pesca`),T('🐟','Catture',all.length,kg?`${fmt1(kg)} kg in totale`:''),T('🧬','Specie diverse',sp.length,sp.slice(0,3).map(x=>x[0]).join(', ')),
+    sp[0]&&T('🏆','La tua specie',sp[0][0],`${sp[0][1]} catture`),big&&T('📏','Il pesce più grande',big.sp,[big.l&&big.l+' cm',big.w&&fmt1(big.w)+' kg'].filter(Boolean).join(' · ')),
+    spot[0]&&T('📍','Spot più fortunato',spot[0][0],`${spot[0][1]} catture`),hr[0]&&T('⏰','La tua ora',hr[0][0],'quando hai preso di più'),mon[0]&&T('📅','Mese migliore',mon[0][0],`${mon[0][1]} catture`),
+    tech[0]&&T('🪝','Tecnica preferita',tech[0][0],''),rel&&T('💚','Rilasciati',rel,'grazie per il mare!')].filter(Boolean).join('');
+  const txt=`🎣 Il mio ${y} con LenzApp: ${D.length} uscite, ${all.length} catture, ${sp.length} specie.${sp[0]?' Specie preferita: '+sp[0][0]+'.':''}${big?' Il più grande: '+big.sp+(big.l?' '+big.l+' cm':'')+'.':''}`;
+  YW_TXT=txt;
+  openSheet(`<h2 style="text-align:center">🎁 Il tuo ${y} di pesca</h2><div class="wraps">${tiles}</div>
+    <button class="btn full" style="margin-top:12px" onclick="shareWrap()">📤 Condividi</button>`);
+}
+let YW_TXT='';
+async function shareWrap(){try{if(navigator.share){await navigator.share({title:'Il mio anno di pesca',text:YW_TXT});return;}}catch(e){return;}
+  try{await navigator.clipboard.writeText(YW_TXT);toast('Testo copiato: incollalo dove vuoi');}catch(e){toast(YW_TXT);}}
 function vStats(v){
   const D=S.diary;
   if(!D.length){v.innerHTML=subHead('Statistiche')+'<div class="empty"><div>📊</div>Nessun dato ancora.<br>Registra le tue uscite nel diario per vedere le statistiche.</div>';return;}
@@ -1570,14 +1596,14 @@ function vStats(v){
   const avgOf=(arr,k)=>{const v=arr.map(e=>e.cond?.[k]).filter(x=>x!=null);return v.length?v.reduce((a,b)=>a+b,0)/v.length:null;};
   const okE=D.filter(e=>e.catches?.length),noE=D.filter(e=>!e.catches?.length);
   const hb=(rows)=>{const mx=Math.max(1,...rows.map(r=>r[1]));return '<div class="hbars">'+rows.slice(0,6).map(r=>`<div class="r"><span>${esc(r[0])}</span><div class="bar"><div style="width:${r[1]/mx*100}%;background:var(--acc)"></div></div><b>${r[1]}</b></div>`).join('')+'</div>';};
-  v.innerHTML=subHead('Statistiche','Le tue performance in numeri')+`
+  v.innerHTML=subHead('Statistiche','Le tue performance in numeri')+`<button class="btn full" style="margin-bottom:12px;background:linear-gradient(135deg,#ff9a3c,#ff3d77);color:#fff" onclick="yearWrap()">🎁 Il tuo ${new Date().getFullYear()} di pesca</button>
   <div class="grid2 stat-hero" style="margin-bottom:14px">
     <div class="tile"><div class="k">Uscite</div><div class="v">${D.length}</div><div class="s">${fmt0(hours)} ore in pesca</div></div>
     <div class="tile"><div class="k">Catture</div><div class="v">${all.length}</div><div class="s">${fmt1(all.length/Math.max(1,hours))} / ora</div></div>
-    <div class="tile"><div class="k">Peso totale</div><div class="v">${fmt1(kg)} kg</div><div class="s">${all.filter(c=>c.rel).length} rilasciati</div></div>
+    <div class="tile"><div class="k">Peso totale</div><div class="v">${(Math.round(kg*10)/10)} kg</div><div class="s">${all.filter(c=>c.rel).length} rilasciati</div></div>
     <div class="tile"><div class="k">Uscite fruttuose</div><div class="v">${Math.round(ok/D.length*100)}%</div><div class="s">${ok} su ${D.length}</div></div>
   </div>
-  ${big?`<div class="card"><h3>🏆 Cattura record</h3><b>${esc(big.sp)}</b> · ${fmt1(big.w)} kg${big.l?` · ${big.l} cm`:''}<div class="small mut">${new Date(big.e.start).toLocaleDateString('it-IT')} · ${esc(S.spots.find(s=>s.id===big.e.spot)?.name||'')} · ${esc(big.e.tech||'')}</div></div>`:''}
+  ${big?`<div class="card"><h3>🏆 Cattura record</h3><b>${esc(big.sp)}</b> · ${(Math.round(big.w*10)/10)} kg${big.l?` · ${big.l} cm`:''}<div class="small mut">${new Date(big.e.start).toLocaleDateString('it-IT')} · ${esc(S.spots.find(s=>s.id===big.e.spot)?.name||'')} · ${esc(big.e.tech||'')}</div></div>`:''}
   ${bySp.length?`<div class="card"><h3>Specie</h3>${hb(bySp)}</div>`:''}
   <div class="card"><h3>Catture per ora di inizio</h3><div class="vbars">${hrs.map(x=>`<div style="height:${x/hmx*100}%;opacity:${x?1:.25}"></div>`).join('')}</div><div class="tl-lbl"><span>00</span><span>06</span><span>12</span><span>18</span><span>23</span></div></div>
   ${byTech.length?`<div class="card"><h3>Tecniche</h3>${hb(byTech)}</div>`:''}
@@ -1704,7 +1730,7 @@ function advice(){
   else if(h.dp>2)out.push(['📈','Pressione in rapida salita: pesci spesso apatici, rallenta il recupero ed usa esche più piccole.']);
   const ph=moonPhase(now);
   out.push([ph.e,`${ph.name}: ${ph.illum>.85||ph.illum<.15?'fase forte, attività elevata nei periodi solunari.':'fase intermedia, concentrati su alba e tramonto.'}`]);
-  if(h.sst!=null)out.push(['🌡️',`Acqua a ${fmt1(h.sst)} °C: ${h.sst<14?'pesci lenti, privilegia esche naturali e ore centrali.':h.sst>24?'acqua calda, pesci attivi di notte e al primo mattino.':'temperatura ottimale per la maggior parte delle specie.'}`]);
+  if(h.sst!=null)out.push(['🌡️',`Acqua a ${(Math.round(h.sst*10)/10)} °C: ${h.sst<14?'pesci lenti, privilegia esche naturali e ore centrali.':h.sst>24?'acqua calda, pesci attivi di notte e al primo mattino.':'temperatura ottimale per la maggior parte delle specie.'}`]);
   const tech=TECH[S.mode],seasonal=SPECIES.filter(s=>s.m.includes(S.mode)&&s.mo.includes(mo)).slice(0,3).map(s=>s.n);
   if(seasonal.length)out.push(['🎯',`Specie da insidiare ora: <b>${seasonal.join(', ')}</b>. Tecniche consigliate: ${tech.slice(0,3).join(', ')}.`]);
   if(PROFILE){const bh=PROFILE.hrs.indexOf(Math.max(...PROFILE.hrs));out.push(['✨',`Dalle tue ${PROFILE.n} uscite fruttuose: catturi di più intorno alle <b>${pad(bh)}:00</b>${PROFILE.ws!=null?` con vento sui ${fmt0(PROFILE.ws)} km/h`:''}.`]);}
@@ -1741,7 +1767,7 @@ function weatherAlerts(X){
   const now=Date.now(),hs=X.hours.filter(h=>h.t.getTime()>=now-3600e3&&h.t.getTime()<=now+24*3600e3),out=[];
   const st=hs.find(h=>[95,96,99].includes(h.code));if(st)out.push(['⛈️','Temporali previsti',`Dalle ${hhmm(st.t)} circa: evita canne in carbonio all'aperto e cerca riparo.`]);
   const g=hs.reduce((a,h)=>h.wg>(a?.wg||0)?h:a,null);if(g&&g.wg>=50)out.push(['🌬️',`Raffiche fino a ${fmt0(g.wg)} km/h`,`Picco verso le ${hhmm(g.t)}: attenzione su moli e scogliere.`]);
-  const wv=hs.reduce((a,h)=>(h.wave||0)>(a?.wave||0)?h:a,null);if(wv&&wv.wave>=2.5)out.push(['🌊',`Mare agitato (${fmt1(wv.wave)} m)`,`Massimo verso le ${hhmm(wv.t)}: non avvicinarti a scogli esposti.`]);
+  const wv=hs.reduce((a,h)=>(h.wave||0)>(a?.wave||0)?h:a,null);if(wv&&wv.wave>=2.5)out.push(['🌊',`Mare agitato (${(Math.round(wv.wave*10)/10)} m)`,`Massimo verso le ${hhmm(wv.t)}: non avvicinarti a scogli esposti.`]);
   return out;
 }
 
@@ -1833,7 +1859,7 @@ function vLive(v){
   <section class="live-hero"><div class="live-badge"><span class="rec"></span>IN PESCA</div>
     <div class="live-time" id="liveT">${durStr(Date.now()-L.start)}</div>
     <div class="live-sub">📍 ${esc(sp?.name||'')} · ${MODES[L.mode].e} ${esc(L.tech)}</div>
-    <div class="live-stats"><div><b>${L.catches.length}</b><span>catture</span></div><div><b>${fmt1(kg)}</b><span>kg</span></div><div><b>${idx}</b><span>indice ora</span></div></div>${WAVES}
+    <div class="live-stats"><div><b>${L.catches.length}</b><span>catture</span></div><div><b>${(Math.round(kg*10)/10)}</b><span>kg</span></div><div><b>${idx}</b><span>indice ora</span></div></div>${WAVES}
   </section>
   <div class="card"><h3>Registra una cattura</h3>
     ${LIVEQ.photo?`<div class="cphoto big"><img src="${LIVEQ.photo}" alt="" onclick="viewPhoto(LIVEQ.photo)"><span onclick="LIVEQ.photo=null;LIVEQ.big=null;LIVEAI=null;render()">✕</span></div>${aiCard(LIVEAI,'live')}`
@@ -1845,13 +1871,31 @@ function vLive(v){
     <datalist id="spl2">${[...new Set([...SPECIES.map(s=>s.n),...Object.keys(LW)])].map(n=>`<option value="${n}">`).join('')}</datalist>
     <div class="grid2"><div><label>Peso (kg)</label><input type="number" step="0.01" min="0" value="${LIVEQ.w}" oninput="LIVEQ.w=this.value" placeholder="facoltativo"></div>
     <div><label>Lunghezza (cm)</label><input type="number" step="1" min="0" value="${LIVEQ.l}" onchange="LIVEQ.l=this.value;render()" placeholder="facoltativa"></div></div>
-    ${est?`<div class="small" style="margin-top:6px;color:var(--acc)">⚖️ Peso stimato ≈ ${fmt1(est)} kg</div>`:''}
+    ${est?`<div class="small" style="margin-top:6px;color:var(--acc)">⚖️ Peso stimato ≈ ${(Math.round(est*10)/10)} kg</div>`:''}
     ${sizeWarn({sp:LIVEQ.sp,l:LIVEQ.l,rel:LIVEQ.rel})}
     <div class="toggle ${LIVEQ.rel?'on':''}" onclick="LIVEQ.rel=!LIVEQ.rel;render()"><i></i>Rilasciato</div>
-    <button class="btn full fish" style="margin-top:16px" onclick="liveCatch()">🐟 Segna la cattura${LIVEQ.photo?' con foto':''}</button>
+    <div class="row" style="gap:8px;margin-top:16px"><button class="btn full fish" style="flex:1" onclick="liveCatch()">🐟 Segna la cattura${LIVEQ.photo?' con foto':''}</button>${(window.SpeechRecognition||window.webkitSpeechRecognition)?`<button class="btn ghost" style="flex:none;font-size:20px;padding:0 16px" onclick="voiceCatch()" title="Detta la cattura">🎤</button>`:''}</div>
   </div>
-  ${L.catches.length?`<div class="card"><h3>Catture della sessione</h3>${L.catches.map((c,i)=>`<div class="lc"><span class="tm">${hhmm(new Date(c.t))}</span>${c.photo?`<img class="lcimg" src="${c.photo}" alt="" onclick="viewPhoto(S.live.catches[${i}].photo)">`:''}<div><b>${esc(c.sp)}</b><div class="small mut">${[c.w?fmt1(c.w)+' kg':'',c.l?c.l+' cm':'',c.rel?'rilasciato':''].filter(Boolean).join(' · ')||'—'}</div></div><span class="x" onclick="S.live.catches.splice(${i},1);LS.set('live',S.live);render()">✕</span></div>`).join('')}</div>`:''}
+  ${L.catches.length?`<div class="card"><h3>Catture della sessione</h3>${L.catches.map((c,i)=>`<div class="lc"><span class="tm">${hhmm(new Date(c.t))}</span>${c.photo?`<img class="lcimg" src="${c.photo}" alt="" onclick="viewPhoto(S.live.catches[${i}].photo)">`:''}<div><b>${esc(c.sp)}</b><div class="small mut">${[c.w?(Math.round(c.w*10)/10)+' kg':'',c.l?c.l+' cm':'',c.rel?'rilasciato':''].filter(Boolean).join(' · ')||'—'}</div></div><span class="x" onclick="S.live.catches.splice(${i},1);LS.set('live',S.live);render()">✕</span></div>`).join('')}</div>`:''}
   <div class="row" style="gap:8px"><button class="btn danger" style="flex:1" onclick="cancelLive()">Annulla</button><button class="btn" style="flex:2" onclick="endLive()">Termina e salva</button></div>`;
+}
+/* ===================== Cattura a voce ===================== */
+// «Ho preso un'orata da 35 centimetri», «spigola 2 chili rilasciata»: riconosco specie, misura, peso e rilascio
+function parseCatch(t){t=' '+t.toLowerCase().replace(/,/g,'.')+' ';
+  const names=SPECIES.map(s=>s.n).sort((a,b)=>b.length-a.length);let sp=names.find(n=>t.includes(n.toLowerCase()));
+  if(!sp){const short=names.find(n=>t.includes(n.toLowerCase().split(' ')[0]));sp=short||null;}
+  const num=r=>{const m=t.match(r);return m?parseFloat(m[1]):null;};
+  const l=num(/(\d+(?:\.\d+)?)\s*(?:cm|centimetr)/);let w=num(/(\d+(?:\.\d+)?)\s*(?:kg|chil|kili)/);const g=num(/(\d+(?:\.\d+)?)\s*(?:g|gr|grammi)\b/);if(w==null&&g!=null)w=g/1000;
+  return {sp,l,w,rel:/rilasciat|liberat|rimess/.test(t)};}
+function voiceCatch(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){toast('Riconoscimento vocale non disponibile su questo browser');return;}
+  const r=new SR();r.lang='it-IT';r.interimResults=false;r.maxAlternatives=3;
+  toast('🎤 Parla: per esempio «orata da 35 centimetri»');
+  r.onresult=ev=>{const alts=[...ev.results[0]].map(a=>a.transcript);let c=null,txt=alts[0];for(const a of alts){const p=parseCatch(a);if(p.sp){c=p;txt=a;break;}}c=c||parseCatch(alts[0]);
+    if(!c.sp){toast('Non ho capito la specie: «'+txt+'»');return;}
+    LIVEQ.sp=c.sp;LIVEQ.l=c.l!=null?String(c.l):'';LIVEQ.w=c.w!=null?String(Math.round(c.w*100)/100):'';LIVEQ.rel=c.rel;toast('🎤 «'+txt+'»');liveCatch();};
+  r.onerror=e=>toast(e.error==='not-allowed'?'Permesso del microfono negato':'Non ho sentito: riprova');
+  try{r.start();}catch(e){toast('Microfono non disponibile');}
 }
 function liveCatch(){
   const q=LIVEQ,sp=(q.sp||'').trim();if(!sp){toast('Scegli la specie');return;}
@@ -1948,7 +1992,7 @@ function vCal(v){
     <div class="cal">${['L','M','M','G','V','S','D'].map(x=>`<div class="wd">${x}</div>`).join('')}${'<div></div>'.repeat(lead)}${Array.from({length:nd},(_,i)=>cell(i+1)).join('')}</div>
     <div class="legend"><span><i style="background:var(--acc);border-radius:50%"></i>Previsione meteo</span><span><i style="background:var(--acc2);border-radius:50%"></i>Uscita nel diario</span><span>La barra colorata indica l'attività attesa</span></div></div>
   <div class="card"><div class="row" style="gap:14px"><div class="moonbig">${ph.e}</div><div style="flex:1"><b style="font-size:17px;text-transform:capitalize">${sel.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'})}</b>
-    <div class="small mut">${ph.name} · ${Math.round(ph.illum*100)}% illuminata · età ${fmt1(ph.age)} giorni</div></div>${miniRing(sc)}</div>
+    <div class="small mut">${ph.name} · ${Math.round(ph.illum*100)}% illuminata · età ${(Math.round(ph.age*10)/10)} giorni</div></div>${miniRing(sc)}</div>
     <div class="small mut" style="margin:10px 0 8px">${fc?'Indice basato sulle previsioni meteo':'Indice basato solo su luna e periodi solunari'}${sun?` · 🌅 ${hhmm(sun.sr)} · 🌇 ${hhmm(sun.ss)}`:''}</div>
     ${timeline(sol,{date:sel,sr:sun?.sr,ss:sun?.ss})}
     <div class="small" style="margin-top:10px">${sol.map(s=>`${s.type==='major'?'●':'○'} ${s.k} <b>${hhmm(s.t)}</b>`).join(' · ')||'—'}</div>
@@ -1981,7 +2025,7 @@ function vCompare(v){
   ${rows.some(r=>r.sim)?'<div class="banner">⚠️ Per alcuni spot il meteo non è raggiungibile: valori simulati.</div>':''}
   ${rows.map((r,i)=>`<div class="card"><div class="rank"><div class="md">${r.na?'<span class="mut small">—</span>':med[i]||'<span class="mut small">'+(i+1)+'°</span>'}</div>
     <div class="t"><b>${esc(r.sp.name)}</b><div class="small mut">${svgInline(r.sp.mode)} ${MODES[r.sp.mode]?.n||''}${k===0&&r.now!=null?` · ora ${wmo(r.code)[0]} ${fmt0(r.temp)}° · indice ${r.na?'NA':r.now}`:''}</div>
-    <div class="small" style="margin-top:3px">${r.na?`<span class="mut">Mare a ${fmt1(r.sp.wq.km)} km: indice NA</span>`:r.w[k]?`⏰ Meglio <b>${hhmm(r.w[k].from)}–${hhmm(r.w[k].to)}</b>`:'<span class="mut">Nessuna finestra favorevole</span>'}</div></div>
+    <div class="small" style="margin-top:3px">${r.na?`<span class="mut">Mare a ${(Math.round(r.sp.wq.km*10)/10)} km: indice NA</span>`:r.w[k]?`⏰ Meglio <b>${hhmm(r.w[k].from)}–${hhmm(r.w[k].to)}</b>`:'<span class="mut">Nessuna finestra favorevole</span>'}</div></div>
     ${r.na?'<div style="width:58px;height:58px;border-radius:50%;border:5px solid #5d7381;display:grid;place-items:center;font-weight:800;color:#9fb3c0">NA</div>':miniRing(r.s[k])}</div>
     ${r.sp.id!==S.active?`<button class="btn ghost full" style="margin-top:12px;padding:10px" onclick="useSpot('${r.sp.id}')">Usa questo spot</button>`:''}</div>`).join('')}
   <button class="btn ghost full" onclick="runCompare(true)">↻ Aggiorna</button>`;
@@ -2049,7 +2093,7 @@ function vAltro(v){
   if(!standalone())hub.push(['install','📲','Installa app','Sulla schermata Home','linear-gradient(140deg,#2fe0cf,#3b8cff)']);
   v.innerHTML=`<div class="card"><div class="profile">${lvlRing(c)}<div style="flex:1"><div class="small mut" style="text-transform:uppercase;letter-spacing:1.2px;font-weight:700">Il tuo livello</div><h2>${c.lvl.name}</h2>
     <div class="xpbar"><div style="width:${c.lvl.pct*100}%"></div></div><div class="small mut">${fmt0(c.xp)} XP${c.lvl.to?` · prossimo a ${fmt0(c.lvl.to)}`:''}</div></div></div>
-    <div class="minis"><div><b data-count="${c.out}">0</b><span>uscite</span></div><div><b data-count="${c.n}">0</b><span>catture</span></div><div><b data-count="${c.species}">0</b><span>specie</span></div><div><b>${fmt1(c.kg)}</b><span>kg</span></div></div></div>
+    <div class="minis"><div><b data-count="${c.out}">0</b><span>uscite</span></div><div><b data-count="${c.n}">0</b><span>catture</span></div><div><b data-count="${c.species}">0</b><span>specie</span></div><div><b>${(Math.round(c.kg*10)/10)}</b><span>kg</span></div></div></div>
   <div class="hub">${hub.map(([t,e,n,s,bg])=>`<button style="background:${bg}" ${lockedTab(t)?'class="locked"':''} onclick="${t==='install'?'installApp()':`go('${t}')`}"><span class="he">${e}</span><b>${n}</b><span>${lockedTab(t)?'⭐ Premium':s}</span></button>`).join('')}</div>`;
 }
 function vSettings(v){
@@ -2141,7 +2185,7 @@ async function shareEntry(id){
   let title=best?best.sp:'Giornata di pesca';while(g.measureText(title).width>W-120&&title.length>3)title=title.slice(0,-2);
   g.fillText(title,px,py+ph+130);
   const tg=g.createLinearGradient(px,0,px+700,0);tg.addColorStop(0,'#2fe0cf');tg.addColorStop(1,'#3b8cff');g.fillStyle=tg;g.font='700 60px Outfit, sans-serif';
-  g.fillText(best?[best.w?fmt1(best.w)+' kg':'',best.l?best.l+' cm':''].filter(Boolean).join(' · ')||`${e.catches.length} catture`:'Il cappotto fa parte del gioco',px,py+ph+215);
+  g.fillText(best?[best.w?(Math.round(best.w*10)/10)+' kg':'',best.l?best.l+' cm':''].filter(Boolean).join(' · ')||`${e.catches.length} catture`:'Il cappotto fa parte del gioco',px,py+ph+215);
   g.fillStyle='rgba(234,244,255,.8)';g.font='400 40px Outfit, sans-serif';
   g.fillText(`${e.catches?.length||0} catture · ${e.tech||''}`,px,py+ph+290);
   g.fillText(`📍 ${sp?.name||''} · ${parseLocal(e.start).toLocaleDateString('it-IT',{day:'numeric',month:'long',year:'numeric'})}`,px,py+ph+350);
@@ -2200,19 +2244,19 @@ function drawMeasure(){
   document.getElementById('mrefs').innerHTML=[...REFS.map((r,i)=>`<span class="chip ${M.ref===i?'on':''}" onclick="MEAS.ref=${i};document.getElementById('mcustom').style.display='none';drawMeasure()">${refName(i)}</span>`),`<span class="chip ${M.ref===REFS.length?'on':''}" onclick="MEAS.ref=${REFS.length};document.getElementById('mcustom').style.display='block';drawMeasure()">Altro…</span>`].join('');
   document.getElementById('mcustom').style.display=M.ref===REFS.length?'block':'none';
   const len=measResult(),w=len?estW(measSpecies(),len):null;
-  document.getElementById('mlen').textContent=len?fmt1(len)+' cm':'—';
-  document.getElementById('mw').textContent=w?fmt1(w)+' kg':len?'specie?':'—';
+  document.getElementById('mlen').textContent=len?(Math.round(len*10)/10)+' cm':'—';
+  document.getElementById('mw').textContent=w?(Math.round(w*10)/10)+' kg':len?'specie?':'—';
   document.getElementById('mpts').textContent=M.pts.length+'/4';
   document.getElementById('mok').disabled=!len;
 }
 function applyMeasure(){
   const len=measResult();if(!len)return;const t=MEAS.target,sp=measSpecies(),w=estW(sp,len);
   const st=stOf(t);if(st?.m){st.m.len=len;st.m.pts=MEAS.pts.map(p=>[...p]);st.m.ref=MEAS.ref;st.m.refOk=st.m.fishOk=true;st.m.manual=true;st.m.kind=REFS[MEAS.ref]?.[2]?.t||null;const mm=st.m;measPreview(MEAS.src,mm.pts).then(u=>{mm.preview=u;redraw(t);}).catch(()=>{});}
-  if(t==='assist'){closeSheet();render();toast(`📏 ${fmt1(len)} cm${w?' · ≈ '+fmt1(w)+' kg':''}`);return;}
+  if(t==='assist'){closeSheet();render();toast(`📏 ${(Math.round(len*10)/10)} cm${w?' · ≈ '+(Math.round(w*10)/10)+' kg':''}`);return;}
   closeSheet();
   if(t==='live'){LIVEQ.l=String(Math.round(len));if(w)LIVEQ.w=String(Math.round(w*100)/100);render();}
   else{const c=DRAFT.catches[+t];c.l=Math.round(len);if(w)c.w=Math.round(w*100)/100;drawEntry();}
-  toast(`📏 ${fmt1(len)} cm${w?' · ≈ '+fmt1(w)+' kg':''}`);
+  toast(`📏 ${(Math.round(len*10)/10)} cm${w?' · ≈ '+(Math.round(w*10)/10)+' kg':''}`);
 }
 
 /* ===================== Misura automatica (SlimSAM + analisi delle forme) ===================== */
@@ -2268,7 +2312,7 @@ function measBlock(st,target){
   if(m.err)return `<div class="small" style="margin-top:8px;color:var(--acc2)">⚠️ ${esc(m.err)}</div>`;
   const refChips=`<div class="chips" style="margin-top:6px">${autoRefs().map(([r,i])=>`<span class="chip" style="padding:3px 9px;font-size:12px;${m.ref===i?'background:var(--acc);color:#03282a':''}" onclick="setAutoRef('${target}',${i})">${esc(refName(i))}</span>`).join('')}</div>`;
   const manual=`<u style="cursor:pointer;color:var(--acc)" onclick="openMeasureFor('${target}')">📏 Controlla o correggi i punti</u>`;
-  if(m.len){const w=(m.gem&&m.wgem)||estW(sp,m.len)||m.wgem;return `<div class="aigrid" style="margin-top:10px"><div><b>${fmt1(m.len)} cm</b><span>lunghezza</span></div><div><b>${w?fmt1(w)+' kg':'—'}</b><span>${m.scale?'letto sulla bilancia':m.gem&&m.wgem?'peso stimato da Gemini':'peso stimato'}</span></div><div><b style="font-size:12px">${m.est?'Senza riferimento':esc(refName(m.ref))}</b><span>${m.manual?'segnato da te':m.est?'stima di Gemini':m.gem?'trovato da Gemini':m.forced?'riferimento scelto':'riferimento trovato'}</span></div></div>
+  if(m.len){const w=(m.gem&&m.wgem)||estW(sp,m.len)||m.wgem;return `<div class="aigrid" style="margin-top:10px"><div><b>${(Math.round(m.len*10)/10)} cm</b><span>lunghezza</span></div><div><b>${w?(Math.round(w*10)/10)+' kg':'—'}</b><span>${m.scale?'letto sulla bilancia':m.gem&&m.wgem?'peso stimato da Gemini':'peso stimato'}</span></div><div><b style="font-size:12px">${m.est?'Senza riferimento':esc(refName(m.ref))}</b><span>${m.manual?'segnato da te':m.est?'stima di Gemini':m.gem?'trovato da Gemini':m.forced?'riferimento scelto':'riferimento trovato'}</span></div></div>
     ${m.gem&&!m.manual?`<div class="small mut">✨ Misurato con Gemini${m.note?' · '+esc(m.note):''}${m.refDoubt?' · la misura con il riferimento non era coerente con forma e peso del pesce: uso la stima coerente':''}${m.est?' · senza un riferimento accanto è solo una stima: per una misura precisa metti una moneta, il bancomat o una scarpa':''}</div>`:''}
     ${m.fishCut&&!m.manual?'<div class="small" style="color:var(--acc2)">✂️ Il pesce esce dalla foto (testa o coda tagliate): la misura è per difetto. Meglio rifare la foto con tutto il pesce dentro.</div>':''}
     ${m.refCut&&!m.manual?`<div class="small" style="color:var(--acc2)">✂️ ${m.kind==='foot'?'Il piede':'La scarpa'} esce dalla foto: la misura è sbagliata, rifai la foto con tutto dentro.</div>`:''}
