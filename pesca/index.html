@@ -1347,9 +1347,12 @@ function vSpot(v){
 function initMap(){
   if(typeof L==='undefined'){document.getElementById('map').innerHTML='<div class="empty"><div>🗺️</div>Mappa non disponibile offline</div>';return;}
   const sp=activeSpot()||{lat:42,lon:12.5};NEWPIN=null;
-  MAP=L.map('map',{zoomControl:true}).setView([sp.lat,sp.lon],12);
+  MAP=L.map('map',{zoomControl:true}).setView([sp.lat,sp.lon],sp.approx?6:12);
   baseLayers(MAP);
-  S.spots.forEach(s=>{
+  // la mappa si centra su dove sei adesso (GPS), con il pallino blu della posizione
+  if(navigator.geolocation)navigator.geolocation.getCurrentPosition(p=>{if(!MAP)return;const ll=[p.coords.latitude,p.coords.longitude];
+    MAP.setView(ll,13);L.circleMarker(ll,{radius:8,color:'#fff',weight:3,fillColor:'#3b8cff',fillOpacity:1}).addTo(MAP).bindPopup('<b>Sei qui</b>');},()=>{},{enableHighAccuracy:true,timeout:10000,maximumAge:60000});
+  S.spots.filter(s=>!s.approx&&!s.here).forEach(s=>{
     const ic=L.divIcon({html:`<div class="pin ${s.id===S.active?'on':'off'}"><i></i></div>`,className:'',iconSize:[30,30],iconAnchor:[15,36],popupAnchor:[0,-34]});
     L.marker([s.lat,s.lon],{icon:ic}).addTo(MAP).bindPopup(`<b>${esc(s.name)}</b><br>${MODES[s.mode]?.n||''}<br><a href="#" onclick="useSpot('${s.id}');return false">Imposta come attivo</a>`);
   });
@@ -1689,9 +1692,9 @@ function cleanSpots(force){
     if(S.spots.find(s=>s.id===S.active)?.approx)setTimeout(()=>hereSpot(()=>{S.wx=null;loadWeather();},()=>{}),300);}
   LS.set('spotclean1',true);
 }
-function hereSpot(ok,ko){
-  if(!navigator.geolocation){toast('Geolocalizzazione non disponibile');ko&&ko();return;}
-  toast('Cerco la tua posizione…');
+function hereSpot(ok,ko,quiet){
+  if(!navigator.geolocation){if(!quiet)toast('Geolocalizzazione non disponibile');ko&&ko();return;}
+  hereSpot.t=Date.now();if(!quiet)toast('Cerco la tua posizione…');
   navigator.geolocation.getCurrentPosition(p=>{
     let s=S.spots.find(x=>x.here);
     if(s){s.lat=p.coords.latitude;s.lon=p.coords.longitude;delete s.approx;}
@@ -2410,7 +2413,10 @@ render();
 loadWeather();
 if(!LS.get('welcomed',false))setTimeout(welcome,700);
 // si parte dal punto indicativo: chiedo subito il GPS (se non lo concede resta il punto indicativo e si può scegliere uno spot)
-else if(activeSpot()?.approx)setTimeout(()=>hereSpot(()=>{S.wx=null;loadWeather();},()=>{}),900);
+// posizione attuale attiva: a ogni apertura rileggo il GPS (altrimenti resterebbe il punto dell'ultima volta)
+else if(activeSpot()?.here)setTimeout(()=>{const o=activeSpot(),la=o.lat,lo=o.lon;hereSpot(s=>{if(Math.abs(s.lat-la)>.0005||Math.abs(s.lon-lo)>.0005||o.approx){S.wx=null;loadWeather();}},()=>{});},900);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState!=='visible'||!activeSpot()?.here||Date.now()-(hereSpot.t||0)<600000)return;
+  const o=activeSpot(),la=o.lat,lo=o.lon;hereSpot(s=>{if(Math.abs(s.lat-la)>.002||Math.abs(s.lon-lo)>.002){S.wx=null;loadWeather();}},()=>{},true);});
 // aggiornamento automatico: controlla sempre se c'è una versione nuova e ricarica appena è pronta
 if('serviceWorker' in navigator&&location.protocol.startsWith('http')){
   const had=!!navigator.serviceWorker.controller;
