@@ -108,6 +108,12 @@ async function start(){
   setStatus('Sincronizzo…');C.busy=true;
   try{
     const [ds,es]=await Promise.all([ff.getDocs(dataCol()),ff.getDocs(diaryCol())]);
+    // account già sincronizzato in passato ma ora vuoto online: i dati sono stati cancellati (dall'amministratore);
+    // tolgo anche la copia sul dispositivo, invece di rimandarla online
+    if(!first&&!ds.docs.length&&!es.docs.length&&Object.keys(raw.get('cloudsent')||{}).length){
+      try{[...SYNC_KEYS,'diary','cloudts','cloudhash','cloudsent','chatbot','chatseen','chatreported','chatgone','spotclean1'].forEach(k=>localStorage.removeItem('lenza.'+k));}catch(e){}
+      S.spots=[];S.diary=[];S.live=null;S.active=null;try{ensureHere();}catch(e){}
+      toast('I dati di questo account sono stati azzerati');}
     C.applying=true;
     // impostazioni e spot: al primo accesso unisco quelli del dispositivo con quelli dell'account; poi vince il più recente
     const ts=raw.get('cloudts')||{};
@@ -207,14 +213,14 @@ async function shrink(e){
 function listen(){
   C.unsub.push(ff.onSnapshot(dataCol(),snap=>{
     if(snap.metadata.hasPendingWrites)return;let ch=false;const ts=raw.get('cloudts')||{};
-    snap.docChanges().forEach(c=>{const k=c.doc.id,o=c.doc.data();if(!SYNC_KEYS.includes(k)||C.dirty.has(k)||(ts[k]||0)>=(o.t||0))return;
+    snap.docChanges().forEach(c=>{if(c.type==='removed'||!c.doc.data())return;const k=c.doc.id,o=c.doc.data();if(!SYNC_KEYS.includes(k)||C.dirty.has(k)||(ts[k]||0)>=(o.t||0))return;
       ts[k]=o.t;if(JSON.stringify(raw.get(k))===o.v)return;let v;try{v=JSON.parse(o.v);}catch(e){return;}if((k==='spots'||k==='myfish')&&!Array.isArray(v))v=[];if(k==='spots'){if(JSON.stringify(noHere(raw.get(k)))===JSON.stringify(noHere(v)))return;v=keepHere(v);}raw.set(k,v);ch=true;});
     raw.set('cloudts',ts);if(ch)reloadSoon();
   }));
   C.unsub.push(ff.onSnapshot(diaryCol(),snap=>{
     if(snap.metadata.hasPendingWrites||C.dirty.has('diary'))return;let ch=false;
     const loc=raw.get('diary')||[],hs=raw.get('cloudhash')||{},byId=new Map(loc.map(e=>[e.id,e]));
-    snap.docChanges().forEach(c=>{const id=c.doc.id,o=c.doc.data();
+    snap.docChanges().forEach(c=>{if(c.type==='removed'||!c.doc.data())return;const id=c.doc.id,o=c.doc.data();
       if(o.deleted){if(byId.has(id)){byId.delete(id);ch=true;}delete hs[id];return;}
       const e=JSON.parse(o.v),h=hash(JSON.stringify(e));if(hs[id]===h&&byId.has(id))return;byId.set(id,e);hs[id]=h;ch=true;});
     if(ch){raw.set('diary',[...byId.values()].sort((a,b)=>(a.start||0)-(b.start||0)));raw.set('cloudhash',hs);reloadSoon();}
