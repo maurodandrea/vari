@@ -200,10 +200,14 @@ function readNotifs(rid){const ff=F();for(const x of CH.notifs.filter(n=>n.rid==
 function markSeen(rid){const s=seen();s[rid]=Date.now();LS.set('chatseen',s);CH.badge();}
 // aggiorno solo la parte che cambia, così il testo che si sta scrivendo non si perde
 // non letti per scheda: Canali (canali seguiti), Messaggi (privati e gruppi), Amici (richieste)
+// utenti visibili sulla mappa adesso (escluso me), secondo la modalità scelta
+function mapCount(){const mode=locVis();if(mode==='off')return 0;const u=me()?.uid,fr=new Set(friends().map(f=>f.uid)),bl=blocked(),now=Date.now();
+  return Object.values(CH.locs||{}).filter(l=>l.id!==u&&l.lat!=null&&!bl.includes(l.id)&&now-l.ts<=LOC_MAX_H*3600e3&&(mode==='all'||fr.has(l.id))).length;}
 function tabCounts(){const s=seen(),u=me()?.uid,cl=cleared(),bl=blocked(),gn=new Set(goneRooms()),c={zone:0,priv:0,amici:CH.friendReqs?.length||0};
   const un=id=>{const r=CH.rooms[id]||CH.mine[id],l=r?.last;return l&&l.uid!==u&&l.ts>Math.max(s[id]||0,cl[id]||0)&&!bl.includes(l.uid);};
   for(const id of [...follows(),...(nearOn()?['near']:[])])if(!CH.mine[id]&&un(id))c.zone++;
   for(const id of Object.keys(CH.mine))if(!gn.has(id)&&un(id))c.priv++;
+  c.mappa=mapCount();
   return c;}
 function tabsHtml(){const c=tabCounts();return (CH._tabs||[]).map(([k,n])=>`<span class="chip ${CH.tab===k?'on':''}" style="flex:none;white-space:nowrap;position:relative" onclick="CHAT.tab='${k}';render()">${n}${c[k]?`<i class="tbadge">${c[k]>9?'9+':c[k]}</i>`:''}</span>`).join('');}
 function refresh(){CH.badge();if(S.tab!=='chat')return;
@@ -595,7 +599,7 @@ function locListen(){if(!CH.started)return;const v=locVis();if(CH.locMode===v)re
   locStop();CH.locMode=v;
   CH.subs._locMe=ff.onSnapshot(ff.doc(col,u),s=>{if(s.exists())CH.locs[u]={id:u,...s.data()};else delete CH.locs[u];if(CH.tab==='mappa'&&S.tab==='chat')mapMarkers();},()=>{});
   if(v==='off'){if(CH.tab==='mappa'&&S.tab==='chat')mapMarkers();return;}
-  const on=snap=>{if(CH.locErr&&/Non riesco a leggere/.test(CH.locErr)){CH.locErr='';if(CH.tab==='mappa'&&S.tab==='chat')render();}snap.docChanges().forEach(c=>{if(c.type==='removed')delete CH.locs[c.doc.id];else CH.locs[c.doc.id]={id:c.doc.id,...c.doc.data()};});if(CH.tab==='mappa'&&S.tab==='chat'){mapMarkers();const fs=document.getElementById('cfstat');if(fs)fs.innerHTML=friendStatus();}};
+  const on=snap=>{setTimeout(()=>{const t=document.getElementById('chtabs');if(t&&S.tab==='chat'&&!CH.rid)t.innerHTML=tabsHtml();},0);if(CH.locErr&&/Non riesco a leggere/.test(CH.locErr)){CH.locErr='';if(CH.tab==='mappa'&&S.tab==='chat')render();}snap.docChanges().forEach(c=>{if(c.type==='removed')delete CH.locs[c.doc.id];else CH.locs[c.doc.id]={id:c.doc.id,...c.doc.data()};});if(CH.tab==='mappa'&&S.tab==='chat'){mapMarkers();const fs=document.getElementById('cfstat');if(fs)fs.innerHTML=friendStatus();}};
   // rifiuto (di solito la propria posizione appena salvata non è ancora visibile alle regole): riprovo fino a 3 volte
   const err=lab=>e=>{CH._locTry=(CH._locTry||0)+1;locStop();
     if(CH._locTry<=3){setTimeout(()=>{CH.locMode=null;locListen();},2500*CH._locTry);return;}
