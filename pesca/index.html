@@ -813,8 +813,11 @@ async function waterInfo(sp){
     const C=await costa(),km=seaKm(C,+sp.lat,+sp.lon),nb=(list,max)=>{let n=null,nd=max;for(const [m,a,o] of list){const d=kmTo(sp,a,o);if(d<nd){nd=d;n=m;}}return n;};
     // località di mare entro 5 km; altrimenti comune e zona/quartiere dove sei
     let near=nb(C.T,5);
-    if(!near){const P=await luoghi(),com=nb(P.c,30),zona=nb(P.x,2.5);near=[com,zona&&zona!==com?zona:null].filter(Boolean).join(', ')||null;}
+    // lontano dal mare: il quartiere o la località dove sei; solo se manca, il comune più vicino
+    if(!near){const P=await luoghi(),zona=nb(P.x,2.5);near=zona||nb(P.c,30)||null;}
     sp.wq={k,water:km<=5,km,near};if(sp.here)sp.name='Posizione attuale'+(near&&sp.approx!==true?' · '+near:'');
+    // posizione attuale: con la rete uso il nome di OpenStreetMap (più preciso dei dati salvati nell'app)
+    if(sp.here&&sp.approx!==true&&navigator.onLine)placeAt(sp.lat,sp.lon).then(n=>{if(n&&sp.wq?.k===k&&S.spots.includes(sp)){sp.name='Posizione attuale · '+n;sp.wq.near=n;LS.set('spots',S.spots);render();}}).catch(()=>{});
     LS.set('spots',S.spots);return sp.wq;
   }catch(e){sp.wqErr=e.message;return null;}
 }
