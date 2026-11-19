@@ -196,7 +196,7 @@ CH.badge=()=>{
   const b=document.querySelector(`#nav button[onclick="go('chat')"]`);if(!b)return;
   // seconda pallina a sinistra: utenti visibili sulla mappa (verde = amici, rosso = tutti)
   {let m=b.querySelector('.mbadge');const mc=(typeof locVis==='function'&&locVis()!=='off')?mapCount():0;
-   if(!mc)m?.remove();else{if(!m){m=document.createElement('i');m.className='cbadge mbadge';b.appendChild(m);}m.style.background=locVis()==='friends'?'#2ecc71':'#ff5a5f';m.textContent=mc>9?'9+':mc;m.title='Utenti visibili sulla mappa';}}
+   if(!mc)m?.remove();else{if(!m){m=document.createElement('i');m.className='cbadge mbadge';b.appendChild(m);}const oo=mapOnline();m.style.background=oo.fr?'#2ecc71':'#ff5a5f';m.textContent=mc>9?'9+':mc;m.title='Utenti online sulla mappa';}}
   let el=b.querySelector('.cbadge:not(.mbadge)');const n=CH.unread();
   if(!n){el?.remove();return;}if(!el){el=document.createElement('i');el.className='cbadge';b.appendChild(el);}el.textContent=n>9?'9+':n;};
 function readNotifs(rid){const ff=F();for(const x of CH.notifs.filter(n=>n.rid===rid&&!n.read)){x.read=true;try{ff.deleteDoc(ff.doc(D(),'notifs',me().uid,'items',x.id)).catch(()=>{});}catch(e){}}
@@ -205,8 +205,11 @@ function markSeen(rid){const s=seen();s[rid]=Date.now();LS.set('chatseen',s);CH.
 // aggiorno solo la parte che cambia, così il testo che si sta scrivendo non si perde
 // non letti per scheda: Canali (canali seguiti), Messaggi (privati e gruppi), Amici (richieste)
 // utenti visibili sulla mappa adesso (escluso me), secondo la modalità scelta
-function mapCount(){const mode=locVis();if(mode==='off')return 0;const u=me()?.uid,fr=new Set(friends().map(f=>f.uid)),bl=blocked(),now=Date.now();
-  return Object.values(CH.locs||{}).filter(l=>l.id!==u&&l.lat!=null&&!bl.includes(l.id)&&now-l.ts<=LOC_MAX_H*3600e3&&(mode==='all'||fr.has(l.id))).length;}
+// utenti online sulla mappa (posizione aggiornata negli ultimi 10 minuti), escluso me: amici e altri, secondo la modalità
+function mapOnline(){const mode=locVis(),r={fr:0,ot:0};if(mode==='off')return r;const u=me()?.uid,fr=new Set(friends().map(f=>f.uid)),bl=blocked(),now=Date.now();
+  for(const l of Object.values(CH.locs||{})){if(l.id===u||l.lat==null||bl.includes(l.id)||now-l.ts>10*60000)continue;if(fr.has(l.id))r.fr++;else if(mode==='all')r.ot++;}
+  return r;}
+function mapCount(){const o=mapOnline();return o.fr+o.ot;}
 function tabCounts(){const s=seen(),u=me()?.uid,cl=cleared(),bl=blocked(),gn=new Set(goneRooms()),c={zone:0,priv:0,amici:CH.friendReqs?.length||0};
   const un=id=>{const r=CH.rooms[id]||CH.mine[id],l=r?.last;return l&&l.uid!==u&&l.ts>Math.max(s[id]||0,cl[id]||0)&&!bl.includes(l.uid);};
   for(const id of [...follows(),...(nearOn()?['near']:[])])if(!CH.mine[id]&&un(id))c.zone++;
@@ -214,9 +217,10 @@ function tabCounts(){const s=seen(),u=me()?.uid,cl=cleared(),bl=blocked(),gn=new
   c.mappa=mapCount();
   return c;}
 function tabsHtml(){const c=tabCounts(),mode=locVis();
-  // Mappa: verde con gli amici visibili (Solo amici), rosso con tutti gli utenti visibili (Tutti), grigio se non condivisa; anche con 0
+  // Mappa: verde = amici online; con «Tutti» anche rosso = altri utenti online (anche con 0); grigio se non condivisa
+  const n9=x=>x>9?'9+':x,o=mapOnline();
   const badge=k=>k==='mappa'?(mode==='off'?'<i class="tbadge" style="background:#7f8c99;min-width:12px;height:12px;top:-4px;right:-2px;padding:0"></i>'
-      :`<i class="tbadge" style="background:${mode==='friends'?'#2ecc71':'#ff5a5f'}">${c.mappa>9?'9+':c.mappa}</i>`)
+      :`<i class="tbadge" style="background:#2ecc71;${mode==='all'?'right:16px':''}" title="Amici online">${n9(o.fr)}</i>${mode==='all'?`<i class="tbadge" style="background:#ff5a5f" title="Altri utenti online">${n9(o.ot)}</i>`:''}`)
     :c[k]?`<i class="tbadge">${c[k]>9?'9+':c[k]}</i>`:'';
   return (CH._tabs||[]).map(([k,n])=>`<span class="chip ${CH.tab===k?'on':''}" style="flex:none;white-space:nowrap;position:relative" onclick="CHAT.tab='${k}';render()">${n}${badge(k)}</span>`).join('');}
 function refresh(){CH.badge();if(S.tab!=='chat')return;
