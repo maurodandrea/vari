@@ -222,7 +222,7 @@ function roomRow(rid,icon,sub){
 function listHtml(){
   if(CH.tab==='zone')return chanHtml()+notifCard()+(CH.diag?`<p class="small mut" style="text-align:center;opacity:.6">Diagnosi: ${esc(CH.diag)}</p>`:'');
   if(CH.tab==='mappa')return mapHtml();
-  if(CH.tab==='priv'){const cl=cleared(),gn=new Set(goneRooms());const rs=Object.values(CH.mine).filter(r=>!gn.has(r.id)&&!cl[r.id]||(r.last?.ts||0)>cl[r.id]).sort((a,b)=>(b.last?.ts||b.t||0)-(a.last?.ts||a.t||0));
+  if(CH.tab==='priv'){const cl=cleared(),gn=new Set(goneRooms());const rs=Object.values(CH.mine).filter(r=>!gn.has(r.id)&&(!cl[r.id]||(r.last?.ts||0)>cl[r.id])).sort((a,b)=>(b.last?.ts||b.t||0)-(a.last?.ts||a.t||0));
     return `<div class="card"><h3>💬 Messaggi privati e gruppi</h3>${rs.length?rs.map(r=>roomRow(r.id,r.type==='group'?'👥':'💬','')).join(''):'<p class="small mut">Nessuna conversazione. Aggiungi un amico nella scheda «Amici» e scrivigli.</p>'}
       <button class="btn ghost full" style="margin-top:10px" onclick="CHAT.newGroup()">➕ Nuovo gruppo di pesca</button></div>`;}
   if(CH.tab==='bot')return `<div class="card"><h3>🤖 Assistente in chat</h3><p class="small mut">Chiedi esche, montature, tecniche e orari migliori: risponde con il meteo, il mare e l'indice di pescosità del tuo spot attivo${typeof gemOn==='function'&&gemOn()?' (con Gemini)':''}.</p>${roomRow('bot','🤖','Fai una domanda')}</div>`;
