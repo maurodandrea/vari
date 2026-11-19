@@ -669,13 +669,17 @@ CH.modBan=async(rid,mid,uid,name)=>{if(!confirm(`Bloccare ${name||'questo utente
   catch(e){toast('⚠️ '+(e.code||e.message));}};
 // cancellazione dei dati di un utente (solo amministratore; le regole di Firestore lo permettono solo a lui)
 CH.delFind=async()=>{
-  if(!CH.isAdmin())return;const q=(document.getElementById('delq')?.value||'').trim(),box=document.getElementById('delres');if(!q){toast('Scrivi email, UID o nome');return;}
+  if(!CH.isAdmin())return;let q=(document.getElementById('delq')?.value||'').trim(),box=document.getElementById('delres');if(!q){toast('Scrivi email, UID o nome');return;}
   box.innerHTML='<p class="small mut">Cerco…</p>';const ff=F(),db=D();
   try{
     let uid=null,email='';
     if(q.includes('@')){const r=await ff.getDocs(ff.query(ff.collection(db,'users'),ff.where('email','==',q.toLowerCase())));
       const r2=r.docs.length?r:await ff.getDocs(ff.query(ff.collection(db,'users'),ff.where('email','==',q)));if(r2.docs.length){uid=r2.docs[0].id;email=r2.docs[0].data().email;}}
     else if(/^[A-Za-z0-9]{20,40}$/.test(q))uid=q;
+    // non trovato per email: cerco il profilo con il nome che si vede in chat (con l'email è la parte prima della @)
+    if(!uid){const nm=q.includes('@')?q.split('@')[0]:q;
+      for(const n of [...new Set([nm,nm.toLowerCase()])]){const r=await ff.getDocs(ff.query(ff.collection(db,'profiles'),ff.where('name','==',n)));if(r.docs.length){uid=r.docs[0].id;if(r.docs.length>1)toast('Più utenti con il nome «'+n+'»: uso il primo');break;}}
+      if(!uid&&q.includes('@'))q=nm;}
     if(uid===me().uid){box.innerHTML='<p class="small" style="color:var(--acc2)">Questo è il tuo account.</p>';return;}
     let u=null,data={docs:[]},diary={docs:[]},prof=null;
     if(uid)[u,data,diary,prof]=await Promise.all([ff.getDoc(ff.doc(db,'users',uid)),ff.getDocs(ff.collection(db,'users',uid,'data')),ff.getDocs(ff.collection(db,'users',uid,'diary')),ff.getDoc(ff.doc(db,'profiles',uid))]);

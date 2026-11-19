@@ -99,6 +99,8 @@ async function start(){
   const uid=C.user.uid,prev=raw.get('clouduid'),first=prev!==uid;
   // sul dispositivo ci sono i dati di un ALTRO account (per esempio uno cancellato, da cui non si era usciti):
   // non li unisco al nuovo account, li tolgo
+  // email nel documento dell'utente (lo legge solo l'amministratore, per «Cancella utente»)
+  ff.setDoc(uref(),{email:(C.user.email||'').toLowerCase(),t:Date.now()},{merge:true}).catch(()=>{});
   if(prev&&prev!==uid){try{[...SYNC_KEYS,'diary','cloudts','cloudhash','cloudsent','chatbot','chatseen','chatreported','chatgone','spotclean1'].forEach(k=>localStorage.removeItem('lenza.'+k));}catch(e){}
     S.spots=[];S.diary=[];S.live=null;S.active=null;try{ensureHere();}catch(e){}}
   // email attivata da poco: rinnovo il token, altrimenti le regole di Firestore lo vedono ancora «non verificato»
