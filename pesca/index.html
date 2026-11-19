@@ -1017,12 +1017,15 @@ function render(){
 }
 // Chat (Premium): canali per zona, catture, condizioni, amici, assistente… (chat.js)
 function vChat(v){if(window.CHAT){CHAT.view(v);return;}
-  // il file della chat non è arrivato (rete o aggiornamento in corso): lo ricarico invece di fermarmi
-  v.innerHTML=subHead('Social','Canali, messaggi, mappa e amici','home')+`<div class="card" style="text-align:center;padding:30px"><span class="aispin" style="width:28px;height:28px;border-width:3px;display:inline-block"></span><p class="mut" id="chload">Carico Social…</p></div>`;
+  // il file della chat non è arrivato (rete o aggiornamento in corso): lo ricarico una volta; se va in errore lo dico
+  const box=msg=>{v.innerHTML=subHead('Social','Canali, messaggi, mappa e amici','home')+`<div class="card" style="text-align:center;padding:30px">${msg}</div>`;};
+  if(vChat.err){box(`<p class="mut">Social non si è caricato.</p><p class="small" style="color:var(--acc2);word-break:break-word">${esc(vChat.err)}</p><button class="btn" style="margin-top:10px" onclick="vChat.err='';render()">↻ Riprova</button>`);return;}
+  box('<span class="aispin" style="width:28px;height:28px;border-width:3px;display:inline-block"></span><p class="mut">Carico Social…</p>');
   if(vChat.busy)return;vChat.busy=true;
+  const onErr=ev=>{if(String(ev.filename||'').includes('chat.js'))vChat.jsErr=(ev.message||'errore')+' (riga '+ev.lineno+')';};window.addEventListener('error',onErr);
   const sc=document.createElement('script');sc.src='chat.js?r='+Date.now();
-  sc.onload=()=>{vChat.busy=false;if(S.tab==='chat')render();};
-  sc.onerror=()=>{vChat.busy=false;const el=document.getElementById('chload');if(el)el.innerHTML='Social non si è caricato: controlla la connessione.<br><button class="btn" style="margin-top:10px" onclick="render()">↻ Riprova</button>';};
+  sc.onload=()=>{vChat.busy=false;window.removeEventListener('error',onErr);if(!window.CHAT)vChat.err=vChat.jsErr||'Il file è arrivato ma non è partito';if(S.tab==='chat')render();};
+  sc.onerror=()=>{vChat.busy=false;window.removeEventListener('error',onErr);vChat.err='Il file non è arrivato: controlla la connessione';if(S.tab==='chat')render();};
   document.body.appendChild(sc);}
 function countUp(root){
   root.querySelectorAll('[data-count]').forEach(el=>{
@@ -1108,6 +1111,11 @@ function setHeading(hd){
   const n=document.getElementById('cnote');if(n)n.textContent='';
 }
 function vHome(v){
+  // posizione attuale non ancora nota (GPS che non risponde): niente indice calcolato su un punto a caso
+  if(activeSpot()?.approx){v.innerHTML=`<div class="card" style="text-align:center;padding:28px 18px"><div style="font-size:46px">📍</div><h2 style="margin:6px 0">Posizione non disponibile</h2>
+    <p class="mut">Il GPS non ha ancora dato la tua posizione: senza, non posso calcolare meteo e indice di pescosità.</p>${hereSpot.err?`<p class="small" style="color:var(--acc2)">${esc(hereSpot.err)}</p>`:''}
+    <button class="btn full" style="margin-top:10px" onclick="hereSpot(()=>{S.wx=null;loadWeather();render();},()=>render())">🎯 Riprova con il GPS</button>
+    <button class="btn ghost full" style="margin-top:8px" onclick="go('spot')">🗺️ Scegli uno spot sulla mappa</button></div>`;return;}
   if(needWx(v))return;
   const X=S.wx,now=new Date(),i=X.hours.findIndex(h=>h.t.getTime()<=now.getTime()&&h.t.getTime()+3600e3>now.getTime());
   const h=X.hours[i>=0?i:0],[lbl,col]=idxLabel(h.idx),ph=moonPhase(now);
@@ -1175,7 +1183,7 @@ function timeline(sol,D){
   return `<div class="timeline">${seg}</div><div class="tl-lbl"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>`;
 }
 
-function vMeteo(v){
+function vMeteo(v){if(activeSpot()?.approx)return vHome(v);
   if(needWx(v))return;
   if(!isPremium()&&S.day>=FREE_DAYS)S.day=0;
   const X=S.wx,d=X.fdays[S.day]||X.fdays[0],hs=dayHours(X,d.date),ph=moonPhase(new Date(d.date.getTime()+12*3600e3));
@@ -1337,8 +1345,8 @@ function vSpot(v){
   <div id="res"></div>
   <div id="map"></div>
   <div id="newspot" style="margin:-4px 0 12px"><p class="small mut" style="margin:0">Tocca la mappa per mettere un nuovo spot.</p></div>
-  <div class="card"><h3>I miei spot (${S.spots.length})</h3><div class="list">
-  ${S.spots.length?S.spots.map(s=>{const n=S.diary.filter(e=>e.spot===s.id).length;return `<div class="it"><div class="ico">${MODES[s.mode]?.e||'📍'}</div>
+  <div class="card"><h3>I miei spot (${S.spots.filter(s=>!s.here).length})</h3><div class="list">
+  ${S.spots.some(s=>!s.here)?S.spots.filter(s=>!s.here).map(s=>{const n=S.diary.filter(e=>e.spot===s.id).length;return `<div class="it"><div class="ico">${MODES[s.mode]?.e||'📍'}</div>
     <div class="t" onclick="MAP&&MAP.setView([${s.lat},${s.lon}],14)"><b>${esc(s.name)} ${s.id===S.active?'<span class="pill" style="background:#2fd4c422;color:var(--acc)">attivo</span>':''}</b><span class="small mut">${s.lat.toFixed(4)}, ${s.lon.toFixed(4)} · ${n} uscite${s.face!=null?' · mare a '+DIRS[s.face/22.5]:''}${s.note?' · '+esc(s.note):''}</span></div>
     ${s.id!==S.active?`<button class="btn ghost" onclick="useSpot('${s.id}')">Usa</button>`:''}<button class="btn ghost" onclick="editSpot('${s.id}')">✏️</button></div>`;}).join(''):'<div class="empty"><div>🗺️</div>Nessuno spot salvato</div>'}
   </div></div>`;
@@ -1695,13 +1703,18 @@ function cleanSpots(force){
 function hereSpot(ok,ko,quiet){
   if(!navigator.geolocation){if(!quiet)toast('Geolocalizzazione non disponibile');ko&&ko();return;}
   hereSpot.t=Date.now();if(!quiet)toast('Cerco la tua posizione…');
-  navigator.geolocation.getCurrentPosition(p=>{
+  const got=p=>{
     let s=S.spots.find(x=>x.here);
     if(s){s.lat=p.coords.latitude;s.lon=p.coords.longitude;delete s.approx;}
     else{s={id:uid(),name:'Posizione attuale',here:true,lat:p.coords.latitude,lon:p.coords.longitude,mode:S.mode,note:'',face:null};S.spots.push(s);}
-    LS.set('spots',S.spots);ok(s);
+    hereSpot.err='';LS.set('spots',S.spots);ok(s);
     waterInfo(s).then(()=>{S.spots=S.spots;render();});
-  },()=>{toast('Posizione non disponibile: scegli uno spot salvato');ko&&ko();},{enableHighAccuracy:true,timeout:12000});
+  };
+  const fail=e=>{hereSpot.err=e?.code===1?'Permesso negato: consenti la posizione a LenzApp nelle impostazioni del browser (lucchetto accanto all\'indirizzo › Autorizzazioni › Posizione) e quella del telefono.':'Il GPS non risponde: controlla che la posizione del telefono sia attiva, poi riprova.';
+    if(!quiet)toast(e?.code===1?'Permesso della posizione negato':'Posizione non disponibile');ko&&ko();};
+  // prima lettura precisa; se non arriva, una seconda più veloce (rete/celle), accettando anche una posizione di pochi minuti fa
+  navigator.geolocation.getCurrentPosition(got,e=>{if(e?.code===1)return fail(e);
+    navigator.geolocation.getCurrentPosition(got,fail,{enableHighAccuracy:false,timeout:20000,maximumAge:600000});},{enableHighAccuracy:true,timeout:12000,maximumAge:60000});
 }
 // tocco sul nome dello spot in alto: scegli tra gli spot salvati o la posizione attuale
 function pickSpot(){
