@@ -48,9 +48,11 @@ service cloud.firestore {
             || (resource.data.type == 'group'
                 && request.resource.data.members.toSet() == resource.data.members.toSet().difference([request.auth.uid].toSet())));
       allow delete: if attivo() && resource.data.type == 'group' && resource.data.owner == request.auth.uid;
+      // l'amministratore (Cancella utente) può leggere, modificare e cancellare le stanze
+      allow read, update, delete: if admin();
 
       match /msgs/{mid} {
-        allow read: if attivo() && membro(stanza(rid));
+        allow read: if attivo() && (membro(stanza(rid)) || admin());
         allow create: if attivo() && !bloccato() && membro(stanza(rid)) && request.resource.data.uid == request.auth.uid;
         allow delete: if attivo() && (resource.data.uid == request.auth.uid || admin()
           || (stanza(rid).type == 'group' && stanza(rid).owner == request.auth.uid));
@@ -62,6 +64,10 @@ service cloud.firestore {
     }
 
     // avvisi personali (risposte ai propri messaggi): chiunque può lasciarne uno, solo il destinatario li legge
+    // ricerca dei messaggi di un utente in tutte le stanze (solo amministratore)
+    match /{path=**}/msgs/{mid} {
+      allow read, delete: if admin();
+    }
     match /notifs/{uid}/items/{id} {
       allow read, delete: if (attivo() && request.auth.uid == uid) || admin();
       allow create: if attivo() && request.resource.data.fromUid == request.auth.uid;
