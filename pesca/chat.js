@@ -618,7 +618,7 @@ function mapHtml(){
   const v=locVis(),opt=[['off','🚫 Non condivisa','Nessuno ti vede e tu non vedi nessuno'],['friends','🤝 Solo amici','Ti vedono solo i tuoi amici e tu vedi solo loro'],['all','🌍 Tutti','Ti vedono tutti e tu vedi tutti']];
   return `<div class="card"><h3>📡 La mia posizione</h3>${opt.map(([k,n,d])=>`<label class="crow" style="align-items:flex-start"><input type="radio" name="cloc" ${v===k?'checked':''} onchange="CHAT.setLoc('${k}')" style="margin-top:3px"><span><b>${n}</b><br><span class="small mut">${d}</span></span></label>`).join('')}
     <p class="small mut" style="margin:6px 0 0">La posizione viene presa dal GPS del telefono, arrotondata a circa 100 m, e aggiornata ogni minuto mentre LenzApp è aperta. L'ultima posizione resta visibile anche ad app chiusa; tocca un omino per vedere quando era online.<br><span id="clocerr">${CH.locErr?'⚠️ '+esc(CH.locErr):''}</span></p></div>
-  <div class="card"><h3>🔥 Le mie catture sulla mappa</h3>${[['none','🚫 Nessuno','Le tue catture non compaiono sulla mappa'],['friends','🤝 Solo amici','Le vedono solo i tuoi amici, con il tuo nome'],['all','🌍 Tutti','Le vedono tutti, in forma anonima']].map(([k,n,d])=>`<label class="crow" style="align-items:flex-start"><input type="radio" name="cshare" ${shareVis()===k?'checked':''} onchange="CHAT.setShare('${k}')" style="margin-top:3px"><span><b>${n}</b><br><span class="small mut">${d}</span></span></label>`).join('')}
+  <div class="card"><h3>🔥 Le mie catture sulla mappa</h3>${[['none','🚫 Nessuno','Nessuno vede le tue catture e tu vedi solo le tue'],['friends','🤝 Solo amici','Le vedono i tuoi amici, con il tuo nome; tu vedi le tue e quelle degli amici'],['all','🌍 Tutti','Le vedono tutti, in forma anonima; tu vedi quelle di tutti']].map(([k,n,d])=>`<label class="crow" style="align-items:flex-start"><input type="radio" name="cshare" ${shareVis()===k?'checked':''} onchange="CHAT.setShare('${k}')" style="margin-top:3px"><span><b>${n}</b><br><span class="small mut">${d}</span></span></label>`).join('')}
     <p class="small mut" style="margin:6px 0 0">Compare solo la zona (circa 1 km), mai il punto esatto dello spot. La scelta vale anche per le catture già condivise.</p></div>
   <div class="card" style="padding:10px">${heatBar()}<div id="cmap" style="height:58vh;min-height:320px;border-radius:16px;overflow:hidden"></div>
     ${v==='off'?'<p class="small" style="margin:8px 4px 0;color:var(--acc2)">🚫 Hai scelto «Non condivisa»: nessuno ti vede e tu non vedi nessuno. Sulla mappa vedi solo te stesso, con l’omino rosso.</p>':`<div id="cfstat">${friendStatus()}</div>`}
@@ -683,15 +683,26 @@ const HEAT_DAYS=14;
 const heatOn=()=>G('heaton',true)!==false;
 CH.heat=[];CH.heatSp='';
 function heatBar(){const sps=[...new Set(CH.heat.map(c=>c.sp))].sort();
-  return `<div class="row" style="gap:8px;align-items:center;margin:0 2px 8px;flex-wrap:wrap"><label class="crow" style="padding:0"><input type="checkbox" ${heatOn()?'checked':''} onchange="CHAT.heatToggle(this.checked)"> 🔥 Catture ultimi ${HEAT_DAYS} giorni</label>
+  return `<div class="row" style="gap:8px;align-items:center;margin:0 2px 8px;flex-wrap:wrap"><label class="crow" style="padding:0"><input type="checkbox" ${heatOn()?'checked':''} onchange="CHAT.heatToggle(this.checked)"> 🔥 Catture ultimi ${HEAT_DAYS} giorni <span class="small mut">(${({none:'solo le mie',friends:'mie e degli amici',all:'di tutti'})[shareVis()]})</span></label>
     ${heatOn()&&sps.length?`<select onchange="CHAT.heatSp=this.value;heatDraw()" style="flex:1;min-width:120px;padding:6px 8px"><option value="">Tutte le specie (${CH.heat.length})</option>${sps.map(x=>`<option ${CH.heatSp===x?'selected':''}>${esc(x)}</option>`).join('')}</select>`:''}</div>`;}
 CH.heatToggle=on=>{LS.set('heaton',on);heatLoad();};
 async function heatLoad(){if(!CH.map)return;CH.hlayer?.clearLayers();if(!heatOn())return;
-  const ff=F(),from=Date.now()-HEAT_DAYS*86400e3,u=me()?.uid;CH.heat=[];
-  try{const r=await ff.getDocs(ff.query(ff.collection(D(),'catchmap'),ff.where('ts','>=',from)));CH.heat=r.docs.map(d=>d.data()).filter(c=>c.la!=null&&c.sp);}catch(e){}
-  // catture condivise solo con gli amici (le mie e quelle degli amici che mi hanno nella lista)
-  try{const [a,b]=await Promise.all([ff.getDocs(ff.query(ff.collection(D(),'catchfr'),ff.where('friends','array-contains',u))),ff.getDocs(ff.query(ff.collection(D(),'catchfr'),ff.where('uid','==',u)))]);
-    const bl=blocked();CH.heat.push(...[...a.docs,...b.docs].map(d=>({...d.data(),fr:true})).filter(c=>c.la!=null&&c.sp&&c.ts>=from&&!bl.includes(c.uid)));}catch(e){}
+  // reciprocità: «Nessuno» vedo solo le mie; «Solo amici» le mie e quelle degli amici; «Tutti» anche quelle pubbliche di tutti
+  const ff=F(),from=Date.now()-HEAT_DAYS*86400e3,u=me()?.uid,v=shareVis(),bl=blocked(),fr=friends(),frName=Object.fromEntries(fr.map(f=>[f.uid,f.name]));
+  // le mie: dal diario sul telefono (ci sono anche se non le condivido)
+  const mine=[];for(const e of (S.diary||[])){const t=e.start?new Date(e.start).getTime():0;if(t<from)continue;const sp=(S.spots||[]).find(x=>x.id===e.spot);if(!sp||sp.lat==null||sp.approx)continue;
+    for(const c of e.catches||[])if(c.sp)mine.push({la:Math.round(sp.lat*100)/100,lo:Math.round(sp.lon*100)/100,sp:String(c.sp).slice(0,40),ts:t,uid:u,fr:true});}
+  const out=[...mine],ok=c=>c.la!=null&&c.sp&&c.ts>=from&&c.uid!==u&&!bl.includes(c.uid);
+  if(v!=='none'&&u){
+    // amici che le condividono «solo con gli amici»
+    try{const r=await ff.getDocs(ff.query(ff.collection(D(),'catchfr'),ff.where('friends','array-contains',u)));out.push(...r.docs.map(d=>({...d.data(),fr:true})).filter(ok));}catch(e){}
+    if(v==='all'){try{const r=await ff.getDocs(ff.query(ff.collection(D(),'catchmap'),ff.where('ts','>=',from)));
+      out.push(...r.docs.map(d=>d.data()).filter(ok).map(c=>frName[c.uid]?{...c,fr:true,name:frName[c.uid]}:c));}catch(e){}}
+    else{// amici che le condividono «con tutti»: le vedo anche io che ho scelto «Solo amici»
+      const ids=fr.map(f=>f.uid);for(let i=0;i<ids.length;i+=30)try{const r=await ff.getDocs(ff.query(ff.collection(D(),'catchmap'),ff.where('uid','in',ids.slice(i,i+30))));
+        out.push(...r.docs.map(d=>d.data()).filter(ok).map(c=>({...c,fr:true,name:frName[c.uid]})));}catch(e){}}
+  }
+  CH.heat=out;
   heatDraw();const bar=document.querySelector('#cmap')?.previousElementSibling;if(bar)bar.outerHTML=heatBar();}
 window.heatDraw=function(){if(!CH.map||!CH.hlayer)return;CH.hlayer.clearLayers();if(!heatOn())return;
   const cells={},u=me()?.uid;for(const c of CH.heat){if(CH.heatSp&&c.sp!==CH.heatSp)continue;const k=c.la+','+c.lo;(cells[k]=cells[k]||{la:c.la,lo:c.lo,n:0,sp:{},who:new Set()}).n++;cells[k].sp[c.sp]=(cells[k].sp[c.sp]||0)+1;if(c.fr)cells[k].who.add(c.uid===u?'tu':(c.name||'un amico'));}
