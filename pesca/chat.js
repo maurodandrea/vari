@@ -333,7 +333,7 @@ function roomView(v){
   v.innerHTML=`<div class="subhead"><button class="back" onclick="CHAT.back()" aria-label="Indietro">‹</button><div style="flex:1;min-width:0"><h2>${esc(roomName(rid))}</h2><p>${sub}</p></div>${priv?`<button class="btn ghost" style="padding:8px 14px;flex:none;font-size:18px" onclick="CHAT.roomMenu()" aria-label="Opzioni">⋯</button>`:''}${canFollow?`<button class="btn ${fol?'':'ghost'}" style="padding:8px 12px;flex:none" onclick="CHAT.follow('${rid}')" title="${fol?'Smetti di seguire':'Segui il canale'}">${fol?'⭐ Segui':'☆ Segui'}</button>`:''}</div>
   <div class="card chatcard"><div id="chatlog" class="chatlog">${logHtml()}</div>
     <div id="creply">${replyHtml()}</div>
-    ${CH.banned&&!bot?'<div class="banner" style="margin:8px 0 0">🚫 Un amministratore ti ha bloccato: puoi leggere ma non scrivere in chat.</div>':`<div class="ccomp">${bot?'':`<button class="cbtn" title="Condividi una cattura" onclick="CHAT.shareCatch()">📸</button><button class="cbtn" title="Condizioni in diretta" onclick="CHAT.condSheet()">🌊</button>`}
+    ${CH.banned&&!bot?'<div class="banner" style="margin:8px 0 0">🚫 Un amministratore ti ha bloccato: puoi leggere ma non scrivere in chat.</div>':`<div class="ccomp">${bot?'':`<button class="cbtn" title="Condividi una cattura" onclick="CHAT.shareCatch()">📸</button><button class="cbtn" title="Condizioni in diretta" onclick="CHAT.condSheet()">🌊</button>${/^(d_|g_)/.test(CH.rid)?`<button class="cbtn" title="Proponi un'uscita" onclick="CHAT.tripSheet()">📅</button>`:''}`}
       <textarea id="cmsg" rows="1" maxlength="1000" placeholder="${bot?'Chiedi all\'assistente…':'Scrivi un messaggio…'}" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();CHAT.send();}"></textarea>
       <button class="cbtn send" onclick="CHAT.send()" aria-label="Invia">➤</button></div>`}</div>`;
   const log=document.getElementById('chatlog');log.scrollTop=log.scrollHeight;
@@ -356,6 +356,7 @@ function logHtml(){
     let body='';
     if(m.kind==='catch'){const c=m.catch||{};body=`<div class="ccatch">${c.photo?`<img src="${c.photo}" alt="" onclick="viewPhoto(this.src)">`:''}<div class="cct"><b>🐟 ${esc(c.sp||'Cattura')}</b>${c.sci?` <i class="small">${esc(c.sci)}</i>`:''}
       <div class="small">${c.len?`📏 ${fmt1(c.len)} cm`:''}${c.w?` · ⚖️ ${c.w<1?Math.round(c.w*1000)+' g':fmt1(c.w)+' kg'}`:''}</div><div class="small mut">📍 ${c.pos?`<a href="https://www.openstreetmap.org/?mlat=${c.pos.lat}&mlon=${c.pos.lon}#map=15/${c.pos.lat}/${c.pos.lon}" target="_blank" rel="noopener" style="color:inherit">posizione condivisa</a>`:esc(c.zone||'zona')}</div></div></div>`;}
+    else if(m.kind==='trip')body=tripHtml(m);
     else if(m.kind==='cond'){const c=m.cond||{},left=Math.max(0,Math.round((m.exp-now)/3600e3));body=`<div class="ccond"><b>🌊 Condizioni in diretta</b><div class="cchips">${['sea','wind','water','bite'].filter(k=>c[k]).map(k=>`<span>${esc(c[k])}</span>`).join('')}</div><div class="small mut">valide ancora ${left?left+' h':'meno di un\'ora'}</div></div>`;}
     const txt=m.text?`<div>${esc(clean(m.text)).replace(/\n/g,'<br>')}</div>`:'';
     return sep+`<div class="cmsg ${mine?'me':''}" onclick="CHAT.act('${m.id}')"><div class="cb">${mine?'':`<div class="cn">${esc(m.name)}</div>`}${rp}${body}${txt}<div class="ct">${hm(m.ts)}</div></div></div>`;}).join('');
@@ -384,7 +385,7 @@ CH.send=async()=>{
 };
 // azioni su un messaggio: rispondi, amici, privato, segnala, blocca, elimina
 CH.act=id=>{const m=CH.msgs.find(x=>x.id===id);if(!m)return;const mine=m.uid===me()?.uid,fr=friends().some(f=>f.uid===m.uid);
-  openSheet(`<h2>${mine?'Il tuo messaggio':esc(m.name)}</h2><div class="small mut" style="margin-bottom:12px">${esc(clean(m.text||m.catch?.sp||'Condizioni del mare').slice(0,140))}</div>
+  openSheet(`<h2>${mine?'Il tuo messaggio':esc(m.name)}</h2><div class="small mut" style="margin-bottom:12px">${esc(clean(m.text||m.catch?.sp||(m.trip?'Uscita proposta':'Condizioni del mare')).slice(0,140))}</div>
     <button class="btn full" style="margin-bottom:8px" onclick="CHAT.replyTo('${id}')">↩️ Rispondi</button>
     ${mine?`<button class="btn ghost full" onclick="CHAT.del('${id}')">🗑️ Elimina messaggio</button>`:`
     ${fr?'':`<button class="btn ghost full" style="margin-bottom:8px" onclick="CHAT.befriend('${m.uid}','${esc(m.name).replace(/'/g,'')}')">🤝 Aggiungi agli amici</button>`}
@@ -526,6 +527,38 @@ CH.postCatch=async()=>{
   try{await post({kind:'catch',catch:c,text:txt},`🐟 ${c.sp}${c.len?' '+fmt1(c.len)+' cm':''}`);closeSheet();toast('✅ Cattura pubblicata');CH.open(rid);}
   catch(e){CH.rid=prev;toast('⚠️ Non pubblicata: '+(e.code||e.message));}
 };
+
+/* ---------- uscite di gruppo ---------- */
+// proposta nei gruppi e nei privati: ognuno risponde «ci sono» o «non vengo» e tutti vedono chi viene
+const tripWhen=t=>new Date(t).toLocaleString('it-IT',{weekday:'long',day:'numeric',month:'long',hour:'2-digit',minute:'2-digit'});
+function tripHtml(m){const t=m.trip||{},g=m.going||{},u=me()?.uid,yes=Object.entries(g).filter(x=>x[1]?.v),no=Object.entries(g).filter(x=>x[1]&&!x[1].v),mine=g[u],past=t.when<Date.now()-6*3600e3;
+  return `<div class="ctrip"><b>📅 Uscita di pesca</b><div class="ctw">${esc(tripWhen(t.when))}</div><div class="small">📍 ${t.lat!=null?`<a href="https://www.openstreetmap.org/?mlat=${t.lat}&mlon=${t.lon}#map=15/${t.lat}/${t.lon}" target="_blank" rel="noopener" style="color:inherit" onclick="event.stopPropagation()">${esc(t.place||'Luogo')}</a>`:esc(t.place||'Da decidere')}</div>
+    <div class="small" style="margin-top:6px">✅ ${yes.length?yes.map(x=>esc(x[1].n||'')).join(', '):'nessuno ancora'}</div>${no.length?`<div class="small mut">❌ ${no.map(x=>esc(x[1].n||'')).join(', ')}</div>`:''}
+    ${past?'<div class="small mut" style="margin-top:4px">Uscita passata</div>':`<div class="ctb"><button class="${mine?.v?'on':''}" onclick="event.stopPropagation();CHAT.tripGo('${m.id}',true)">✅ Ci sono</button><button class="${mine&&!mine.v?'on':''}" onclick="event.stopPropagation();CHAT.tripGo('${m.id}',false)">❌ Non vengo</button><button onclick="event.stopPropagation();CHAT.tripIcs('${m.id}')" title="Aggiungi al calendario">📆</button></div>`}</div>`;}
+CH.tripSheet=()=>{const d=new Date(Date.now()+86400e3);d.setHours(6,0,0,0);const loc=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')+'T06:00';
+  const sps=(S.spots||[]).filter(x=>!x.here&&x.lat!=null),ac=activeSpot();
+  openSheet(`<h2>📅 Proponi un'uscita</h2><p class="small mut" style="margin-top:-4px">Chi è nella chat potrà rispondere «ci sono» o «non vengo».</p>
+    <label>Quando</label><input id="trw" type="datetime-local" value="${loc}">
+    <label>Dove</label><select id="trs">${sps.map(x=>`<option value="${x.id}" ${x.id===ac?.id?'selected':''}>${esc(x.name)}</option>`).join('')}<option value="">Altro luogo…</option></select>
+    <input id="trp" maxlength="80" placeholder="Luogo (se non è tra i tuoi spot)" style="margin-top:6px">
+    <label class="crow" style="margin-top:8px"><input type="checkbox" id="trx" checked> Condividi la posizione esatta dello spot</label>
+    <label>Note</label><input id="trn" maxlength="200" placeholder="es. Porto le esche, ci vediamo al parcheggio">
+    <button class="btn full" style="margin-top:12px" onclick="CHAT.postTrip()">Proponi</button>`);};
+CH.postTrip=async()=>{const w=document.getElementById('trw').value,when=w?new Date(w).getTime():NaN;if(isNaN(when)){toast('Scegli data e ora');return;}
+  const sp=(S.spots||[]).find(x=>x.id===document.getElementById('trs').value),place=clean(document.getElementById('trp').value.trim())||sp?.name||'';
+  if(!place){toast('Scrivi il luogo');return;}
+  const t={when,place};if(sp&&!document.getElementById('trp').value.trim()&&document.getElementById('trx').checked){t.lat=Math.round(sp.lat*1e5)/1e5;t.lon=Math.round(sp.lon*1e5)/1e5;}
+  const note=clean(document.getElementById('trn').value.trim()),u=me();
+  try{await post({kind:'trip',trip:t,text:note,going:{[u.uid]:{n:C().name(),v:true}}},'📅 Uscita '+tripWhen(when)+' · '+place);closeSheet();toast('📅 Uscita proposta');}
+  catch(e){toast('⚠️ '+(e.code||e.message));}};
+CH.tripGo=async(id,v)=>{const m=CH.msgs.find(x=>x.id===id),u=me();if(!m||!u)return;const ff=F();
+  try{await ff.updateDoc(ff.doc(D(),'rooms',CH.rid,'msgs',id),{['going.'+u.uid]:{n:C().name(),v}});
+    m.going={...(m.going||{}),[u.uid]:{n:C().name(),v}};toast(v?'✅ Ci sei!':'Risposta inviata');
+    if(m.uid!==u.uid)ff.setDoc(ff.doc(D(),'notifs',m.uid,'items','t_'+id+'_'+u.uid),{rid:CH.rid,room:roomName(CH.rid),from:C().name(),fromUid:u.uid,text:(v?'✅ viene':'❌ non viene')+' all\'uscita di '+tripWhen(m.trip?.when),ts:Date.now()}).catch(()=>{});
+    if(typeof refresh==='function')refresh();}catch(e){toast('⚠️ '+(e.code||e.message));}};
+CH.tripIcs=id=>{const m=CH.msgs.find(x=>x.id===id);if(!m?.trip)return;const t=m.trip,f=d=>new Date(d).toISOString().replace(/[-:]/g,'').replace(/\.\d+/,'');
+  const ics=['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//LenzApp//IT','BEGIN:VEVENT','UID:'+id+'@lenzapp','DTSTAMP:'+f(Date.now()),'DTSTART:'+f(t.when),'DTEND:'+f(t.when+3*3600e3),'SUMMARY:🎣 Pesca - '+String(t.place||'').replace(/[,;\n]/g,' '),t.lat!=null?'GEO:'+t.lat+';'+t.lon:'','LOCATION:'+String(t.place||'').replace(/[,;\n]/g,' '),'DESCRIPTION:'+String(m.text||'').replace(/[,;\n]/g,' '),'END:VEVENT','END:VCALENDAR'].filter(Boolean).join('\r\n');
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([ics],{type:'text/calendar'}));a.download='uscita-pesca.ics';a.click();};
 
 /* ---------- condizioni in diretta ---------- */
 const COND={sea:['Mare piatto','Mare poco mosso','Mare mosso','Mare agitato'],wind:['Niente vento','Vento leggero','Vento teso','Vento forte'],water:['Acqua limpida','Acqua velata','Acqua torbida','Alghe'],bite:['Mangiano!','Qualche tocco','Niente mangianza']};
