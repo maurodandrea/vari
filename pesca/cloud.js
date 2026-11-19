@@ -3,11 +3,14 @@
 // Firestore tiene una copia per utente (users/{uid}/data/{chiave} e users/{uid}/diary/{id}) e la sincronizza tra telefono e PC.
 (function(){
 const FBV='10.14.1',FB=`https://www.gstatic.com/firebasejs/${FBV}/`;
-const SYNC_KEYS=['spots','active','shoesize','gemkey','badges','myfish','live','premium','chatfriends','chatblock','chatblocknames','chatnotif','chatfollow','chatfollow2','chatspotc','chatspotc3','chatloc','chatfriendsync','chatcleared'];  // il diario va a parte, un documento per uscita
+const SYNC_KEYS=['spots','active','shoesize','gemkey','badges','myfish','live','premium','chatfriends','chatblock','chatblocknames','chatnotif','chatfollow','chatfollow2','chatspotc','chatspotc3','chatloc','chatfriendsync','chatcleared','spotclean1'];  // il diario va a parte, un documento per uscita
 const MAX_DOC=900000;  // Firestore accetta documenti fino a 1 MB
 const C={ready:false,user:null,status:'',busy:false,applying:false,dirty:new Set(),timer:null,unsub:[]};
 window.CLOUD=C;
 let fa,ff,auth,db;
+// la «Posizione attuale» è solo di questo dispositivo: non va nell'account e non arriva dagli altri dispositivi
+const noHere=v=>Array.isArray(v)?v.filter(x=>!x?.here):v;
+const keepHere=v=>{const h=(Array.isArray(raw.get('spots'))?raw.get('spots'):[]).filter(x=>x?.here).slice(0,1);return [...noHere(v),...h];};
 const raw={get:k=>{try{const v=localStorage.getItem('lenza.'+k);return v?JSON.parse(v):null;}catch(e){return null;}},
   set:(k,v)=>{try{localStorage.setItem('lenza.'+k,JSON.stringify(v));}catch(e){}}};
 
@@ -110,6 +113,7 @@ async function start(){
         v=[...v,...loc.filter(s=>!v.some(r=>same(r,s)))];const act=raw.get('active'),dup=loc.find(s=>s.id===act);if(dup&&!v.some(r=>r.id===act)){const r=v.find(x=>same(x,dup));if(r)raw.set('active',r.id);}C.dirty.add('spots');}
       else if(first&&k==='myfish'){v=[...v,...(Array.isArray(raw.get('myfish'))?raw.get('myfish'):[])].slice(-200);C.dirty.add('myfish');}
       else if(!first&&(ts[k]||0)>(o.t||0))return;  // il dispositivo ha una modifica più recente ancora da inviare
+      if(k==='spots')v=keepHere(v);
       raw.set(k,v);ts[k]=o.t||Date.now();});
     if(first)SYNC_KEYS.forEach(k=>{if(!ds.docs.some(d=>d.id===k)&&raw.get(k)!=null)C.dirty.add(k);});
     // diario: unione per uscita; le uscite cancellate restano come «tombstone»
@@ -142,6 +146,7 @@ function reload(){
   S.diary=LS.get('diary',[]);S.live=LS.get('live',null);
   try{buildProfile();checkBadges();}catch(e){}
   C.applying=false;
+  try{cleanSpots(true);}catch(e){}  // dopo l'unione con i dati dell'account (le modifiche vengono poi salvate online)
   if(!document.getElementById('sheet').classList.contains('on'))render();
 }
 
@@ -152,7 +157,7 @@ async function push(retry){
     const ts=raw.get('cloudts')||{},now=Date.now();
     const sent=raw.get('cloudsent')||{};
     for(const k of keys.filter(k=>k!=='diary')){
-      const s=JSON.stringify(raw.get(k));if(sent[k]===hash(s))continue;  // uguale all'ultimo invio
+      const s=JSON.stringify(k==='spots'?noHere(raw.get(k)):raw.get(k));if(sent[k]===hash(s))continue;  // uguale all'ultimo invio
       ts[k]=now;await ff.setDoc(ff.doc(dataCol(),k),{v:s,t:now});sent[k]=hash(s);
     }
     raw.set('cloudsent',sent);
@@ -194,7 +199,7 @@ function listen(){
   C.unsub.push(ff.onSnapshot(dataCol(),snap=>{
     if(snap.metadata.hasPendingWrites)return;let ch=false;const ts=raw.get('cloudts')||{};
     snap.docChanges().forEach(c=>{const k=c.doc.id,o=c.doc.data();if(!SYNC_KEYS.includes(k)||C.dirty.has(k)||(ts[k]||0)>=(o.t||0))return;
-      ts[k]=o.t;if(JSON.stringify(raw.get(k))===o.v)return;let v;try{v=JSON.parse(o.v);}catch(e){return;}if((k==='spots'||k==='myfish')&&!Array.isArray(v))v=[];raw.set(k,v);ch=true;});
+      ts[k]=o.t;if(JSON.stringify(raw.get(k))===o.v)return;let v;try{v=JSON.parse(o.v);}catch(e){return;}if((k==='spots'||k==='myfish')&&!Array.isArray(v))v=[];if(k==='spots'){if(JSON.stringify(noHere(raw.get(k)))===JSON.stringify(noHere(v)))return;v=keepHere(v);}raw.set(k,v);ch=true;});
     raw.set('cloudts',ts);if(ch)reloadSoon();
   }));
   C.unsub.push(ff.onSnapshot(diaryCol(),snap=>{
