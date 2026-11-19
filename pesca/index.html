@@ -660,16 +660,10 @@ function premiumPage(v,t){const [title,what]=PREMIUM_TABS[t];
     <button class="btn full" onclick="go('settings')">⭐ Inserisci il codice Premium</button></div>`;}
 const savedSpots=()=>S.spots.filter(s=>!s.here).length;
 function uid(){return Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);}
-// sfondo delle mappe: Stradale (Esri World Street Map) o Satellite (Esri World Imagery con nomi dei luoghi);
-// gratuiti e senza chiave; la scelta resta salvata
+// sfondo delle mappe: satellite (Esri World Imagery) con i nomi dei luoghi sovrapposti; gratuito e senza chiave
 function baseLayers(map){
-  const road=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:18,attribution:'Mappa © Esri, HERE, Garmin, © OpenStreetMap'});
-  const sat=L.layerGroup([L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:18,attribution:'Immagini © Esri, Maxar, Earthstar Geographics'}),
-    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:18})]);
-  const L0={'🗺️ Stradale':road,'🛰️ Satellite':sat};
-  (LS.get('maplayer','road')==='sat'?sat:road).addTo(map);
-  L.control.layers(L0,null,{position:'topright',collapsed:false}).addTo(map);
-  map.on('baselayerchange',e=>LS.set('maplayer',e.layer===sat?'sat':'road'));
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:18,attribution:'Immagini © Esri, Maxar, Earthstar Geographics'}).addTo(map);
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:18}).addTo(map);
 }
 function activeSpot(){return S.spots.find(s=>s.id===S.active)||S.spots[0];}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
