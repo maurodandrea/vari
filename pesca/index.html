@@ -1545,7 +1545,7 @@ function saveEntry(){
   const live=e.fromLive;delete e.fromLive;
   // le catture con foto riconosciute (e confermate o corrette) insegnano al riconoscimento
   e.catches.forEach(c=>{delete c.big;if(c.emb){learnFish(c.sp,c.emb);delete c.emb;}});
-  if(!e.id){e.id=uid();e.cond=snapshot(e);S.diary.push(e);}
+  if(!e.id){e.id=uid();e.cond=snapshot(e);S.diary.push(e);window.CHAT?.shareCatches?.(e);}
   else{const old=S.diary.find(x=>x.id===e.id);if(old.start!==e.start||!old.cond||old.cond.ws==null)e.cond=snapshot(e);Object.assign(old,e);}
   if(!LS.set('diary',S.diary)){S.diary=LS.get('diary',[]);return;}
   if(live){S.live=null;LS.set('live',null);}

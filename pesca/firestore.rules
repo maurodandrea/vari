@@ -91,6 +91,14 @@ service cloud.firestore {
     }
 
     // utenti bloccati dagli amministratori: possono leggere ma non scrivere in chat
+    // catture anonime per la mappa di calore: le leggono tutti, ognuno scrive e cancella solo le proprie
+    match /catchmap/{id} {
+      allow read: if attivo();
+      allow create: if attivo() && request.resource.data.uid == request.auth.uid
+        && request.resource.data.la is number && request.resource.data.lo is number && request.resource.data.sp is string;
+      allow delete: if attivo() && (resource.data.uid == request.auth.uid || admin());
+    }
+
     match /banned/{uid} {
       allow read: if attivo() && (request.auth.uid == uid || admin());
       allow write: if admin();
