@@ -25,6 +25,10 @@ async function init(){
   const cfg=window.LENZA_FB;if(!cfg||!cfg.apiKey)return;
   try{
     const app=(await import(FB+'firebase-app.js')).initializeApp(cfg);
+    // App Check prima di tutto il resto, così anche Firestore invia il proprio token
+    if(cfg.recaptchaEnterpriseKey){try{const ac=await import(FB+'firebase-app-check.js');
+      C.appCheck=ac.initializeAppCheck(app,{provider:new ac.ReCaptchaEnterpriseProvider(cfg.recaptchaEnterpriseKey),isTokenAutoRefreshEnabled:true});
+      C.acToken=async(force)=>{try{return (await ac.getToken(C.appCheck,!!force)).token;}catch(e){C.acErr=e.code||e.message;return null;}};}catch(e){C.acErr='App Check non caricato: '+(e.message||e);}}
     fa=await import(FB+'firebase-auth.js');ff=await import(FB+'firebase-firestore.js');
     auth=fa.getAuth(app);auth.languageCode='it';db=ff.getFirestore(app);
     C.ff=ff;C.db=db;  // usati anche dalla chat (chat.js)

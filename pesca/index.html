@@ -2191,6 +2191,7 @@ async function gemTry(body,key){
     const fb=!key,cfg=window.LENZA_FB||{};
     const url=fb?`https://firebasevertexai.googleapis.com/v1beta/projects/${cfg.projectId}/models/${m}:generateContent`:`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
     const hd={'Content-Type':'application/json','x-goog-api-key':fb?cfg.apiKey:key};if(fb&&cfg.appId)hd['X-Firebase-Appid']=cfg.appId;
+    if(fb&&window.CLOUD?.acToken){const tk=await CLOUD.acToken();if(tk)hd['X-Firebase-AppCheck']=tk;}
     let r;try{r=await fetch(url,{method:'POST',signal:ac.signal,headers:hd,body:JSON.stringify(body)});}
     catch(e){clearTimeout(t);
       // modello che non risponde: passo al successivo invece di arrendermi

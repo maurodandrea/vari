@@ -6,5 +6,7 @@ window.LENZA_FB={
   projectId:"lenza-9ec21",
   storageBucket:"lenza-9ec21.firebasestorage.app",
   messagingSenderId:"227183786940",
-  appId:"1:227183786940:web:e5fd3f081eefae9d8f09b9"
+  appId:"1:227183786940:web:e5fd3f081eefae9d8f09b9",
+  // App Check (reCAPTCHA Enterprise): dimostra a Firebase che le richieste (per esempio a Gemini) arrivano dalla vera LenzApp
+  recaptchaEnterpriseKey:"6LdDdicuAAAAAGy9QsnkuTVbtAWlwh3CySoXSJED"
 };
