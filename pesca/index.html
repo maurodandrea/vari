@@ -2143,7 +2143,8 @@ function openMeasureFor(t,ref){const st=stOf(t),m=st?.m;openMeasure(photoOf(t),t
 const gemKey=()=>LS.get('gemkey','');
 const gemOn=()=>(!!gemKey()||fbAI())&&navigator.onLine;
 // in ordine: i «lite» hanno più quota nel piano gratuito; se uno è sovraccarico o senza quota passo al successivo
-const GEM_MODELS=['gemini-flash-latest','gemini-3.8-flash','gemini-flash-lite-latest','gemini-3.5-flash-lite','gemini-2.5-flash','gemini-2.5-flash-lite','gemini-2.0-flash'];
+// prima i modelli «lite» (veloci e con più quota gratuita), poi i «flash» come riserva
+const GEM_MODELS=['gemini-flash-lite-latest','gemini-3.5-flash-lite','gemini-flash-latest','gemini-3.8-flash','gemini-2.5-flash-lite','gemini-2.5-flash','gemini-2.0-flash'];
 // Gemini per tutti gli utenti collegati tramite Firebase AI Logic (la chiave Gemini resta custodita da Firebase);
 // una chiave personale nelle Impostazioni, se c'è, ha la precedenza
 const fbAI=()=>!!window.LENZA_FB?.apiKey&&!!window.CLOUD?.user;
@@ -2181,7 +2182,7 @@ async function gemCall(body,key=gemKey()){
   catch(e){if(e.message!=='gem-busy')throw e;await new Promise(r=>setTimeout(r,2500));return gemTry(body,key);}
 }
 // modelli sovraccarichi o che non rispondono: li salto per 10 minuti; l'ultimo che ha funzionato lo provo per primo
-const GEM_SKIP=LS.get('gemskip',{});const gemSkip=m=>{GEM_SKIP[m]=Date.now()+600000;LS.set('gemskip',GEM_SKIP);};
+const GEM_SKIP=LS.get('gemskip',{});const gemSkip=(m,ms=600000)=>{GEM_SKIP[m]=Date.now()+ms;LS.set('gemskip',GEM_SKIP);};
 async function gemTry(body,key){
   let last='';const ok=LS.get('gemok',''),now=Date.now();
   const order=[...new Set([ok,...GEM_MODELS].filter(m=>GEM_MODELS.includes(m)))];
@@ -2202,10 +2203,10 @@ async function gemTry(body,key){
       // leggo il motivo vero dell'errore: chiave errata, servizio non abilitato, limite, modello inesistente…
       let er={};try{er=(await r.json()).error||{};}catch(e){}
       const reason=(er.details||[]).map(d=>d.reason).find(Boolean)||er.status||'';GEM_LAST=`${m}: ${r.status} ${reason} ${(er.message||'').slice(0,300)}`.trim();LS.set('gemlog',new Date().toLocaleString('it-IT')+' · '+GEM_LAST);
-      if(r.status===404||/not found|not supported/i.test(er.message||'')){last=last||'gem-model';continue;}
+      if(r.status===404||/not found|not supported/i.test(er.message||'')){gemSkip(m,86400000);last=last||'gem-model';continue;}
       if(r.status>=500){gemSkip(m);last=last==='gem-limit'?last:'gem-busy';continue;}
       if(reason==='API_KEY_INVALID'||/api key not valid/i.test(er.message||''))throw new Error('gem-key');
-      if(r.status===429){last='gem-limit';continue;}
+      if(r.status===429){gemSkip(m,3600000);last='gem-limit';continue;}  // quota del modello esaurita: lo salto per un'ora
       if(r.status===403)throw new Error('gem-perm');
       throw new Error('gem-other');
     }
