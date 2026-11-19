@@ -194,7 +194,7 @@ CH.view=v=>{
   if(!me()){v.innerHTML=subHead('Social','Funzione Premium','home')+`<div class="card"><p class="mut">Accedi con il tuo account per usare Social.</p><button class="btn" onclick="CLOUD.open()">Accedi</button></div>`;return;}
   CH.start();nearSync();
   if(CH.rid)return roomView(v);
-  const tabs=[['zone','📍 Canali'],['priv','💬 Messaggi'],['mappa','🗺️ Mappa'],['bot','🤖 Assistente'],['amici','🤝 Amici']];
+  const tabs=[['zone','📍 Canali'],['priv','💬 Messaggi'],['mappa','🗺️ Mappa'],['amici','🤝 Amici'],['bot','🤖 Assistente']];
   v.innerHTML=subHead('Social','Canali, messaggi, mappa e amici','home')+(CH.err?`<div class="banner">⚠️ ${esc(CH.err)}</div>`:'')+
     `<div class="chips" style="margin-bottom:12px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none">${tabs.map(([k,n])=>`<span class="chip ${CH.tab===k?'on':''}" style="flex:none;white-space:nowrap" onclick="CHAT.tab='${k}';render()">${n}</span>`).join('')}</div><div id="chatlist">${listHtml()}</div>`;
   if(CH.tab==='mappa')setTimeout(mapInit,0);
