@@ -2233,8 +2233,18 @@ async function shareEntry(id){
   let bg=g.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#0f4a7a');bg.addColorStop(.55,'#072a4d');bg.addColorStop(1,'#020a15');g.fillStyle=bg;g.fillRect(0,0,W,H);
   const glow=g.createRadialGradient(W*.2,80,10,W*.2,80,600);glow.addColorStop(0,'rgba(47,224,207,.35)');glow.addColorStop(1,'rgba(47,224,207,0)');g.fillStyle=glow;g.fillRect(0,0,W,H);
   const px=60,py=60,pw=W-120,ph=720;
-  const best0=(e.catches||[]).slice().sort((a,b)=>(+b.w||0)-(+a.w||0))[0],pic=best0?.photo||entryPhoto(e);
-  if(pic){
+  const best0=(e.catches||[]).slice().sort((a,b)=>(+b.w||0)-(+a.w||0)||(+b.l||0)-(+a.l||0))[0],pic=best0?.photo||entryPhoto(e);
+  const pics=[...new Set([best0?.photo,...(e.catches||[]).map(c=>c.photo)].filter(Boolean))].slice(0,4);
+  const ld=src=>new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=src;});
+  const imgs=pics.length>1?(await Promise.all(pics.map(ld))).filter(Boolean):[];
+  if(imgs.length>1){
+    // più foto: collage (2 affiancate, 3 = una grande + due, 4 = griglia 2×2)
+    const gap=10,cells=imgs.length===2?[[0,0,.5,1],[.5,0,.5,1]]:imgs.length===3?[[0,0,.6,1],[.6,0,.4,.5],[.6,.5,.4,.5]]:[[0,0,.5,.5],[.5,0,.5,.5],[0,.5,.5,.5],[.5,.5,.5,.5]];
+    g.save();rrect(g,px,py,pw,ph,48);g.clip();g.fillStyle='#020a15';g.fillRect(px,py,pw,ph);
+    imgs.forEach((img,i)=>{const [cx,cy,cw,chh]=cells[i],x=px+cx*pw+(cx?gap/2:0),y=py+cy*ph+(cy?gap/2:0),w=cw*pw-(cx?gap/2:0)-(cx+cw<1?gap/2:0),h=chh*ph-(cy?gap/2:0)-(cy+chh<1?gap/2:0);
+      g.save();g.beginPath();g.rect(x,y,w,h);g.clip();const k=Math.max(w/img.width,h/img.height);g.drawImage(img,x+(w-img.width*k)/2,y+(h-img.height*k)/2,img.width*k,img.height*k);g.restore();});
+    const sh=g.createLinearGradient(0,py+ph-260,0,py+ph);sh.addColorStop(0,'rgba(2,10,21,0)');sh.addColorStop(1,'rgba(2,10,21,.6)');g.fillStyle=sh;g.fillRect(px,py,pw,ph);g.restore();
+  }else if(pic){
     const img=await new Promise(r=>{const i=new Image();i.onload=()=>r(i);i.onerror=()=>r(null);i.src=pic;});
     if(img){g.save();rrect(g,px,py,pw,ph,48);g.clip();const k=Math.max(pw/img.width,ph/img.height);g.drawImage(img,px+(pw-img.width*k)/2,py+(ph-img.height*k)/2,img.width*k,img.height*k);
       const sh=g.createLinearGradient(0,py+ph-260,0,py+ph);sh.addColorStop(0,'rgba(2,10,21,0)');sh.addColorStop(1,'rgba(2,10,21,.7)');g.fillStyle=sh;g.fillRect(px,py,pw,ph);g.restore();}
@@ -2244,14 +2254,17 @@ async function shareEntry(id){
     g.fillStyle='#fff';g.font='300px serif';g.textAlign='center';g.textBaseline='middle';g.fillText(e.catches?.length?'🐟':'🎣',W/2,py+ph/2-40);g.restore();
   }
   g.strokeStyle='rgba(255,255,255,.18)';g.lineWidth=3;rrect(g,px,py,pw,ph,48);g.stroke();
-  const best=(e.catches||[]).slice().sort((a,b)=>(+b.w||0)-(+a.w||0))[0],sp=S.spots.find(s=>s.id===e.spot);
+  const best=best0,sp=S.spots.find(s=>s.id===e.spot),n=e.catches?.length||0;
+  const fit=(t,max)=>{if(g.measureText(t).width<=max)return t;while(t.length>3&&g.measureText(t+'…').width>max)t=t.slice(0,-1);return t+'…';};
+  const size=c=>[c.l?c.l+' cm':'',c.w?(c.w<1?Math.round(c.w*1000)+' g':fmt1(c.w)+' kg'):''].filter(Boolean).join(' · ');
   g.textAlign='left';g.textBaseline='alphabetic';g.fillStyle='#fff';g.font='800 96px Outfit, sans-serif';
-  let title=best?best.sp:'Giornata di pesca';while(g.measureText(title).width>W-120&&title.length>3)title=title.slice(0,-2);
-  g.fillText(title,px,py+ph+130);
-  const tg=g.createLinearGradient(px,0,px+700,0);tg.addColorStop(0,'#2fe0cf');tg.addColorStop(1,'#3b8cff');g.fillStyle=tg;g.font='700 60px Outfit, sans-serif';
-  g.fillText(best?[best.w?(Math.round(best.w*10)/10)+' kg':'',best.l?best.l+' cm':''].filter(Boolean).join(' · ')||`${e.catches.length} catture`:'Il cappotto fa parte del gioco',px,py+ph+215);
+  g.fillText(fit(n>1?`${n} catture`:best?best.sp:'Giornata di pesca',W-120),px,py+ph+130);
+  const tg=g.createLinearGradient(px,0,px+700,0);tg.addColorStop(0,'#2fe0cf');tg.addColorStop(1,'#3b8cff');g.fillStyle=tg;g.font='700 56px Outfit, sans-serif';
+  if(n>1){const m={};e.catches.forEach(c=>m[c.sp]=(m[c.sp]||0)+1);
+    g.fillText(fit(Object.entries(m).sort((a,b)=>b[1]-a[1]).map(([k,v])=>(v>1?v+'× ':'')+k).join(' · '),W-120),px,py+ph+210);}
+  else g.fillText(best?size(best)||'1 cattura':'Il cappotto fa parte del gioco',px,py+ph+210);
   g.fillStyle='rgba(234,244,255,.8)';g.font='400 40px Outfit, sans-serif';
-  g.fillText(`${e.catches?.length||0} catture · ${e.tech||''}`,px,py+ph+290);
+  g.fillText(fit(n>1&&best?`🏆 ${best.sp}${size(best)?' '+size(best):''}${e.tech?' · '+e.tech:''}`:`${n} ${n===1?'cattura':'catture'}${e.tech?' · '+e.tech:''}`,W-120),px,py+ph+290);
   g.fillText(`📍 ${sp?.name||''} · ${parseLocal(e.start).toLocaleDateString('it-IT',{day:'numeric',month:'long',year:'numeric'})}`,px,py+ph+350);
   g.fillStyle=tg;rrect(g,px,H-110,64,64,18);g.fill();g.save();g.translate(px+12,H-98);g.scale(1.7,1.7);g.strokeStyle='#03282a';g.lineWidth=2.4;g.lineCap='round';g.lineJoin='round';g.stroke(new Path2D('M14 3v9.5a4.5 4.5 0 1 1-9 0V10l3 3'));g.restore();
   g.textAlign='left';g.fillStyle='#fff';g.font='800 46px Outfit, sans-serif';g.fillText('LenzApp',px+84,H-62);
