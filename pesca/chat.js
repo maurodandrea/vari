@@ -668,14 +668,14 @@ CH.modBan=async(rid,mid,uid,name)=>{if(!confirm(`Bloccare ${name||'questo utente
   try{await F().setDoc(F().doc(D(),'banned',uid),{name,ts:Date.now(),by:me().uid});try{await F().deleteDoc(F().doc(D(),'rooms',rid,'msgs',mid));}catch(e){}await closeReports(rid,mid);toast('🚫 '+(name||'Utente')+' bloccato');}
   catch(e){toast('⚠️ '+(e.code||e.message));}};
 // cancellazione dei dati di un utente (solo amministratore; le regole di Firestore lo permettono solo a lui)
-CH.delFind=async()=>{
-  if(!CH.isAdmin())return;let q=(document.getElementById('delq')?.value||'').trim(),box=document.getElementById('delres');if(!q){toast('Scrivi email, UID o nome');return;}
+CH.delFind=async(pick)=>{
+  if(!CH.isAdmin())return;if(pick)document.getElementById('delq').value=pick;let q=(document.getElementById('delq')?.value||'').trim(),box=document.getElementById('delres');if(!q){toast('Scrivi email, UID o nome');return;}
   box.innerHTML='<p class="small mut">Cerco…</p>';const ff=F(),db=D();
   try{
     let uid=null,email='';
     if(q.includes('@')){const r=await ff.getDocs(ff.query(ff.collection(db,'users'),ff.where('email','==',q.toLowerCase())));
       const r2=r.docs.length?r:await ff.getDocs(ff.query(ff.collection(db,'users'),ff.where('email','==',q)));if(r2.docs.length){uid=r2.docs[0].id;email=r2.docs[0].data().email;}}
-    else if(/^[A-Za-z0-9]{20,40}$/.test(q))uid=q;
+    else if(pick||/^[A-Za-z0-9]{20,40}$/.test(q))uid=q;
     // non trovato per email: cerco il profilo con il nome che si vede in chat (con l'email è la parte prima della @)
     if(!uid){const nm=q.includes('@')?q.split('@')[0]:q;
       for(const n of [...new Set([nm,nm.toLowerCase()])]){const r=await ff.getDocs(ff.query(ff.collection(db,'profiles'),ff.where('name','==',n)));if(r.docs.length){uid=r.docs[0].id;if(r.docs.length>1)toast('Più utenti con il nome «'+n+'»: uso il primo');break;}}
@@ -689,7 +689,11 @@ CH.delFind=async()=>{
     const msgs={docs:[]},rooms=await ff.getDocs(ff.collection(db,'rooms'));
     for(const r of rooms.docs){try{const m=await ff.getDocs(ff.query(ff.collection(db,'rooms',r.id,'msgs'),uid?ff.where('uid','==',uid):ff.where('name','==',q)));msgs.docs.push(...m.docs);}catch(e){}}
     const hasData=u?.exists()||data.docs.length||diary.docs.length||prof?.exists();
-    if(!hasData&&!msgs.docs.length){box.innerHTML=`<p class="small" style="color:var(--acc2)">Nessun dato né messaggio trovato per «${esc(q)}». Per un utente già cancellato prova con il nome come appare in chat.</p>`;return;}
+    if(!hasData&&!msgs.docs.length){
+      // nessuna corrispondenza esatta: propongo gli utenti con email o nome simili
+      const cand=await delCandidates(q);
+      if(cand.length){box.innerHTML=`<p class="small mut" style="margin:0 0 6px">Nessuna corrispondenza esatta. Utenti simili:</p>`+cand.map(c=>`<div class="croom" style="cursor:default"><div style="flex:1;min-width:0"><b>${esc(c.name||'—')}</b><div class="small mut" style="word-break:break-all">${esc(c.email||'email non salvata')} · ${esc(c.uid)}</div></div><button class="btn" style="padding:7px 12px" onclick="CHAT.delFind('${c.uid}')">Scegli</button></div>`).join('');return;}
+      box.innerHTML=`<p class="small" style="color:var(--acc2)">Nessun dato né messaggio trovato per «${esc(q)}». Per un utente già cancellato prova con il nome come appare in chat.</p>`;return;}
     const get=k=>{const d=data.docs.find(x=>x.id===k);try{return d?JSON.parse(d.data().v):null;}catch(e){return null;}};
     email=email||(u?.exists()?u.data().email:'');
     CH._del={uid,email,name:q,msgs:msgs.docs.map(d=>d.ref.path),uids:[...new Set(msgs.docs.map(d=>d.data().uid).filter(Boolean))]};
@@ -700,6 +704,12 @@ CH.delFind=async()=>{
       <button class="btn full" style="margin-top:10px;background:#c0392b;color:#fff" onclick="CHAT.delRun()">🗑️ Cancella ${hasData?'tutti i dati e i messaggi':'tutti i messaggi'}</button>`;
   }catch(e){box.innerHTML=`<p class="small" style="color:var(--acc2)">⚠️ ${e.code==='permission-denied'?'Permesso negato: pubblica le regole aggiornate (firestore.rules) in Console Firebase.':esc(e.code||e.message)}</p>`;}
 };
+// utenti con email o nome che contengono il testo cercato (o una sua parte)
+async function delCandidates(q){const ff=F(),db=D(),map={};
+  const parts=q.toLowerCase().split(/[@.\s_-]+/).filter(x=>x.length>=3&&!['gmail','com','it','hotmail','libero','yahoo','outlook','icloud'].includes(x));if(!parts.length)return [];
+  try{(await ff.getDocs(ff.collection(db,'users'))).docs.forEach(d=>{map[d.id]={uid:d.id,email:d.data().email||''};});}catch(e){}
+  try{(await ff.getDocs(ff.collection(db,'profiles'))).docs.forEach(d=>{map[d.id]={...(map[d.id]||{uid:d.id}),name:d.data().name||''};});}catch(e){}
+  return Object.values(map).filter(c=>c.uid!==me().uid&&parts.some(p=>(c.email||'').toLowerCase().includes(p)||(c.name||'').toLowerCase().includes(p))).slice(0,10);}
 CH.delRun=async()=>{
   const d=CH._del;if(!d||!CH.isAdmin())return;
   const t=prompt(`Cancellare definitivamente dati e messaggi di ${d.email||d.uid||d.name}?\nNon si può annullare. Scrivi CANCELLA per confermare.`);if(t==null)return;
