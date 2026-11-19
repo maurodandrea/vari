@@ -64,11 +64,11 @@ service cloud.firestore {
 
     // posizione condivisa sulla mappa della chat: visibile a tutti (vis 'all') o solo agli amici scelti
     match /locations/{uid} {
-      // per vedere gli altri bisogna condividere la propria posizione: «Tutti» per vedere le posizioni pubbliche,
-      // «Solo amici» o «Tutti» per vedere quelle condivise con me dagli amici
+      // le posizioni pubbliche le vede solo chi condivide la propria con «Tutti»;
+      // quelle condivise con me da un amico le vedo sempre (l'ha scelto lui); il resto lo regola l'app
       allow read: if attivo() && (request.auth.uid == uid
         || (resource.data.vis == 'all' && miaPosizione() && get(/databases/$(database)/documents/locations/$(request.auth.uid)).data.vis == 'all')
-        || (request.auth.uid in resource.data.friends && miaPosizione()));
+        || request.auth.uid in resource.data.friends);
       allow write: if attivo() && request.auth.uid == uid;
     }
 

@@ -485,12 +485,12 @@ CH.locs={};
 function mapHtml(){
   const v=locVis(),opt=[['off','🚫 Non condivisa','Nessuno ti vede e tu non vedi nessuno'],['friends','🤝 Solo amici','Ti vedono solo i tuoi amici e tu vedi solo loro'],['all','🌍 Tutti','Ti vedono tutti e tu vedi tutti']];
   return `<div class="card"><h3>📡 La mia posizione</h3>${opt.map(([k,n,d])=>`<label class="crow" style="align-items:flex-start"><input type="radio" name="cloc" ${v===k?'checked':''} onchange="CHAT.setLoc('${k}')" style="margin-top:3px"><span><b>${n}</b><br><span class="small mut">${d}</span></span></label>`).join('')}
-    <p class="small mut" style="margin:6px 0 0">La posizione viene presa dal GPS del telefono, arrotondata a circa 100 m, e aggiornata ogni 5 minuti mentre LenzApp è aperta. Dopo ${LOC_MAX_H} ore senza aggiornamenti sparisce dalla mappa.${CH.locErr?`<br>⚠️ ${esc(CH.locErr)}`:''}</p></div>
+    <p class="small mut" style="margin:6px 0 0">La posizione viene presa dal GPS del telefono, arrotondata a circa 100 m, e aggiornata ogni 5 minuti mentre LenzApp è aperta. Dopo ${LOC_MAX_H} ore senza aggiornamenti sparisce dalla mappa.<br><span id="clocerr">${CH.locErr?'⚠️ '+esc(CH.locErr):''}</span></p></div>
   <div class="card" style="padding:10px"><div id="cmap" style="height:58vh;min-height:320px;border-radius:16px;overflow:hidden"></div>
     ${v==='off'?'<p class="small" style="margin:8px 4px 0;color:var(--acc2)">🚫 Hai scelto «Non condivisa»: nessuno ti vede e tu non vedi nessuno.</p>':`<div id="cfstat">${friendStatus()}</div>`}
     <div class="small" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;justify-content:center"><span><svg width="12" height="15" viewBox="0 0 20 24" style="vertical-align:-2px"><circle cx="10" cy="6" r="4.6" fill="#3b8cff" stroke="#fff" stroke-width="1.8"/><path d="M2.5 22.5c0-5 3.4-8.6 7.5-8.6s7.5 3.6 7.5 8.6z" fill="#3b8cff" stroke="#fff" stroke-width="1.8"/></svg> Tu</span><span>${manSvg('#2ecc71')} Amici</span><span>${manSvg('#ff5a5f')} Altri utenti</span></div></div>`;
 }
-CH.setLoc=async v=>{LS.set('chatloc',v);CH.locErr='';
+CH.setLoc=async v=>{LS.set('chatloc',v);CH.locErr='';CH._locTry=0;
   if(v==='off'){clearInterval(CH._locT);try{await F().deleteDoc(F().doc(D(),'locations',me().uid));}catch(e){}locStop();delete CH.locs[me().uid];toast('📡 Posizione non condivisa: non vedi e non sei visto');render();return;}
   await pushLoc(true);startLocTimer();locListen();};
 function startLocTimer(){clearInterval(CH._locT);if(locVis()==='off')return;CH._locT=setInterval(()=>pushLoc(false),5*60000);}
@@ -519,7 +519,9 @@ function locListen(){if(!CH.started)return;const v=locVis();if(CH.locMode===v)re
   // rifiuto (di solito la propria posizione appena salvata non è ancora visibile alle regole): riprovo fino a 3 volte
   const err=lab=>e=>{CH._locTry=(CH._locTry||0)+1;locStop();
     if(CH._locTry<=3){setTimeout(()=>{CH.locMode=null;locListen();},2500*CH._locTry);return;}
-    CH.locErr='Non riesco a leggere '+lab+' ('+(e.code||e.message)+'): controlla che la tua posizione sia condivisa e che il GPS sia attivo.';if(CH.tab==='mappa'&&S.tab==='chat')render();};
+    // niente ridisegno della pagina (ripartirebbe da capo all'infinito): aggiorno solo il testo dell'avviso
+    CH.locErr='Non riesco a leggere '+lab+' ('+(e.code||e.message)+'). Controlla che le regole di Firebase siano aggiornate e che la tua posizione sia condivisa.';
+    const el=document.getElementById('clocerr');if(el)el.textContent='⚠️ '+CH.locErr;CH.locMode=v;};
   CH.subs._locF=ff.onSnapshot(ff.query(col,ff.where('friends','array-contains',u)),on,err('le posizioni degli amici'));
   if(v==='all')CH.subs._locA=ff.onSnapshot(ff.query(col,ff.where('vis','==','all')),on,err('le posizioni pubbliche'));}
 function friendStatus(){const fr=friends();if(!fr.length)return '<p class="small mut" style="margin:8px 4px 0">Non hai ancora amici: aggiungili nella scheda «Amici» con il loro codice.</p>';
@@ -529,7 +531,7 @@ function friendStatus(){const fr=friends();if(!fr.length)return '<p class="small
     <p class="small mut" style="margin:4px 4px 0">Per vedere un amico deve avere la posizione su «Solo amici» o «Tutti», averti tra i suoi amici e aver aperto LenzApp da poco.</p></div>`;}
 function mapInit(){
   const el=document.getElementById('cmap');if(!el||!window.L)return;
-  CH.map?.remove();CH._fitted=false;const me0=CH.locs[me()?.uid],sp=activeSpot();
+  CH.map?.remove();CH._fitted=false;if(CH._locTry>3){CH._locTry=0;CH.locMode=null;}const me0=CH.locs[me()?.uid],sp=activeSpot();
   const c=me0?[me0.lat,me0.lon]:sp&&sp.lat!=null?[sp.lat,sp.lon]:[41.9,12.5];
   CH.map=L.map(el,{zoomControl:true,attributionControl:true}).setView(c,me0||sp?10:6);
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,attribution:'© OpenStreetMap'}).addTo(CH.map);
