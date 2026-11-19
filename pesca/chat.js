@@ -209,7 +209,12 @@ function tabCounts(){const s=seen(),u=me()?.uid,cl=cleared(),bl=blocked(),gn=new
   for(const id of Object.keys(CH.mine))if(!gn.has(id)&&un(id))c.priv++;
   c.mappa=mapCount();
   return c;}
-function tabsHtml(){const c=tabCounts();return (CH._tabs||[]).map(([k,n])=>`<span class="chip ${CH.tab===k?'on':''}" style="flex:none;white-space:nowrap;position:relative" onclick="CHAT.tab='${k}';render()">${n}${c[k]?`<i class="tbadge">${c[k]>9?'9+':c[k]}</i>`:''}</span>`).join('');}
+function tabsHtml(){const c=tabCounts(),mode=locVis();
+  // Mappa: verde con gli amici visibili (Solo amici), rosso con tutti gli utenti visibili (Tutti), grigio se non condivisa; anche con 0
+  const badge=k=>k==='mappa'?(mode==='off'?'<i class="tbadge" style="background:#7f8c99;min-width:12px;height:12px;top:-4px;right:-2px;padding:0"></i>'
+      :`<i class="tbadge" style="background:${mode==='friends'?'#2ecc71':'#ff5a5f'}">${c.mappa>9?'9+':c.mappa}</i>`)
+    :c[k]?`<i class="tbadge">${c[k]>9?'9+':c[k]}</i>`:'';
+  return (CH._tabs||[]).map(([k,n])=>`<span class="chip ${CH.tab===k?'on':''}" style="flex:none;white-space:nowrap;position:relative" onclick="CHAT.tab='${k}';render()">${n}${badge(k)}</span>`).join('');}
 function refresh(){CH.badge();if(S.tab!=='chat')return;
   {const t=document.getElementById('chtabs');if(t&&!CH.rid)t.innerHTML=tabsHtml();}
   if(CH.rid){const log=document.getElementById('chatlog');if(log){const atEnd=log.scrollHeight-log.scrollTop-log.clientHeight<80;log.innerHTML=logHtml();if(atEnd)log.scrollTop=log.scrollHeight;}}
