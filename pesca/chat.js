@@ -499,7 +499,7 @@ async function pushLoc(say){
   const pos=await new Promise(ok=>{if(!navigator.geolocation)return ok(null);navigator.geolocation.getCurrentPosition(p=>ok(p.coords),()=>ok(null),{enableHighAccuracy:true,timeout:15000,maximumAge:120000});});
   if(!pos){CH.locErr='Non riesco a leggere il GPS: controlla che la posizione sia attiva e consentita per LenzApp.';refresh();if(say)render();return;}
   const d={name:C().name(),lat:Math.round(pos.latitude*1000)/1000,lon:Math.round(pos.longitude*1000)/1000,vis:v,friends:friends().map(f=>f.uid),ts:Date.now()};
-  try{await F().setDoc(F().doc(D(),'locations',me().uid),d);CH.locs[me().uid]={id:me().uid,...d};if(CH.locMode!==v)locListen();if(say)toast(v==='all'?'🌍 Posizione visibile a tutti':'🤝 Posizione visibile agli amici');CH.locErr='';refresh();if(say&&CH.tab==='mappa')render();}
+  try{await F().setDoc(F().doc(D(),'locations',me().uid),d);CH.locs[me().uid]={id:me().uid,...d};CH._locTry=0;if(CH.locMode!==v)locListen();if(say)toast(v==='all'?'🌍 Posizione visibile a tutti':'🤝 Posizione visibile agli amici');CH.locErr='';refresh();if(say&&CH.tab==='mappa')render();}
   catch(e){CH.locErr='Posizione non condivisa: '+(e.code||e.message);if(say)render();}}
 CH.friendsChanged=()=>{if(locVis()!=='off')pushLoc(false);};
 // ascolto delle posizioni: quelle pubbliche e quelle condivise con me dagli amici
@@ -507,12 +507,19 @@ CH.friendsChanged=()=>{if(locVis()!=='off')pushLoc(false);};
 // (le regole di Firestore lo impongono anche lato server: per leggere le posizioni degli altri serve avere la propria condivisa)
 function locStop(){['_locA','_locF','_locMe'].forEach(k=>{CH.subs[k]?.();delete CH.subs[k];});CH.locMode=null;
   const u=me()?.uid;for(const k of Object.keys(CH.locs))if(k!==u)delete CH.locs[k];}
-function locListen(){if(!CH.started)return;const v=locVis();if(CH.locMode===v)return;locStop();CH.locMode=v;
+function locListen(){if(!CH.started)return;const v=locVis();if(CH.locMode===v)return;
   const ff=F(),col=ff.collection(D(),'locations'),u=me().uid;
+  // le regole permettono di leggere gli altri solo dopo aver condiviso la propria posizione (con la stessa modalità):
+  // se non è ancora salvata aspetto, pushLoc() mi richiama appena l'ha salvata
+  const myDoc=CH.locs[u];if(v!=='off'&&(!myDoc||myDoc.vis!==v))return;
+  locStop();CH.locMode=v;
   CH.subs._locMe=ff.onSnapshot(ff.doc(col,u),s=>{if(s.exists())CH.locs[u]={id:u,...s.data()};else delete CH.locs[u];if(CH.tab==='mappa'&&S.tab==='chat')mapMarkers();},()=>{});
   if(v==='off'){if(CH.tab==='mappa'&&S.tab==='chat')mapMarkers();return;}
-  const on=snap=>{snap.docChanges().forEach(c=>{if(c.type==='removed')delete CH.locs[c.doc.id];else CH.locs[c.doc.id]={id:c.doc.id,...c.doc.data()};});if(CH.tab==='mappa'&&S.tab==='chat'){mapMarkers();const fs=document.getElementById('cfstat');if(fs)fs.innerHTML=friendStatus();}};
-  const err=lab=>e=>{CH.locErr='Non riesco a leggere '+lab+' ('+(e.code||e.message)+'): la tua posizione deve essere condivisa.';delete CH.subs[lab==='le posizioni pubbliche'?'_locA':'_locF'];CH.locMode=null;};
+  const on=snap=>{if(CH.locErr&&/Non riesco a leggere/.test(CH.locErr)){CH.locErr='';if(CH.tab==='mappa'&&S.tab==='chat')render();}snap.docChanges().forEach(c=>{if(c.type==='removed')delete CH.locs[c.doc.id];else CH.locs[c.doc.id]={id:c.doc.id,...c.doc.data()};});if(CH.tab==='mappa'&&S.tab==='chat'){mapMarkers();const fs=document.getElementById('cfstat');if(fs)fs.innerHTML=friendStatus();}};
+  // rifiuto (di solito la propria posizione appena salvata non è ancora visibile alle regole): riprovo fino a 3 volte
+  const err=lab=>e=>{CH._locTry=(CH._locTry||0)+1;locStop();
+    if(CH._locTry<=3){setTimeout(()=>{CH.locMode=null;locListen();},2500*CH._locTry);return;}
+    CH.locErr='Non riesco a leggere '+lab+' ('+(e.code||e.message)+'): controlla che la tua posizione sia condivisa e che il GPS sia attivo.';if(CH.tab==='mappa'&&S.tab==='chat')render();};
   CH.subs._locF=ff.onSnapshot(ff.query(col,ff.where('friends','array-contains',u)),on,err('le posizioni degli amici'));
   if(v==='all')CH.subs._locA=ff.onSnapshot(ff.query(col,ff.where('vis','==','all')),on,err('le posizioni pubbliche'));}
 function friendStatus(){const fr=friends();if(!fr.length)return '<p class="small mut" style="margin:8px 4px 0">Non hai ancora amici: aggiungili nella scheda «Amici» con il loro codice.</p>';
