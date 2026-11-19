@@ -2488,9 +2488,10 @@ async function gemCall(body,key=gemKey()){
 async function gemAc(force){if(!window.CLOUD?.acToken)return null;
   return Promise.race([CLOUD.acToken(force),new Promise(r=>setTimeout(()=>{CLOUD.acErr=CLOUD.acErr||'timeout';r(null);},8000))]);}
 // modelli sovraccarichi o che non rispondono: li salto per 10 minuti; l'ultimo che ha funzionato lo provo per primo
-const GEM_SKIP=LS.get('gemskip',{});const gemSkip=(m,ms=600000)=>{GEM_SKIP[m]=Date.now()+ms;LS.set('gemskip',GEM_SKIP);};
+const GEM_SKIP=LS.get('gemskip',{});if(!LS.get('gemskip2',false)){for(const k in GEM_SKIP)delete GEM_SKIP[k];LS.set('gemskip',{});LS.set('gemskip2',true);}  // via i vecchi blocchi di un'ora
+const gemSkip=(m,ms=600000)=>{GEM_SKIP[m]=Date.now()+ms;LS.set('gemskip',GEM_SKIP);};
 async function gemTry(body,key,end=Date.now()+45000){
-  let last='',tk=null,acForced=false;const ok=LS.get('gemok',''),now=Date.now();
+  let last='',tk=null,acForced=false;const RETRIED=new Set();const ok=LS.get('gemok',''),now=Date.now();
   if(!key)tk=await gemAc(false);
   const order=[...new Set([ok,...GEM_MODELS].filter(m=>GEM_MODELS.includes(m)))];
   const list=[...order.filter(m=>!(GEM_SKIP[m]>now)),...order.filter(m=>GEM_SKIP[m]>now)];
@@ -2516,7 +2517,13 @@ async function gemTry(body,key,end=Date.now()+45000){
       if(r.status===404||/not found|not supported/i.test(er.message||'')){gemSkip(m,86400000);last=last||'gem-model';continue;}
       if(r.status>=500){gemSkip(m);last=last==='gem-limit'?last:'gem-busy';continue;}
       if(reason==='API_KEY_INVALID'||/api key not valid/i.test(er.message||''))throw new Error('gem-key');
-      if(r.status===429){gemSkip(m,3600000);last='gem-limit';continue;}  // quota del modello esaurita: lo salto per un'ora
+      if(r.status===429){
+        // limite al minuto: Google dice quanti secondi aspettare (retryDelay); se è poco aspetto e riprovo lo stesso modello,
+        // altrimenti lo salto solo per quel tempo. Limite giornaliero: lo salto fino a domani mattina (6 ore).
+        const ds=er.details||[],q=JSON.stringify(ds.find(d=>/QuotaFailure/.test(d['@type']||''))||{}),day=/PerDay|per_day|daily/i.test(q+(er.message||''));
+        const rd=parseFloat((ds.find(d=>/RetryInfo/.test(d['@type']||''))||{}).retryDelay)||(day?0:30);
+        if(!day&&rd<=12&&!RETRIED.has(m)&&end-Date.now()>rd*1000+8000){RETRIED.add(m);await new Promise(z=>setTimeout(z,rd*1000+300));i--;continue;}
+        gemSkip(m,day?6*3600000:Math.max(20,rd)*1000);last=day?'gem-limit-day':'gem-limit';continue;}
       if(r.status===403)throw new Error('gem-perm');
       throw new Error('gem-other');
     }
@@ -2563,7 +2570,7 @@ async function geminiMeasure(src,sp){
 // lunghezza (cm) dal peso (kg) con la relazione W = a·L^b della specie
 function lenFromW(sp,w){const k=LW[Object.keys(LW).find(x=>x.toLowerCase()===String(sp||'').trim().toLowerCase())];return k&&w>0?Math.pow(w*1000/k[0],1/k[1]):null;
 }
-const GEM_ERR={'gem-appcheck':'Verifica di sicurezza di Google non riuscita (App Check)','gem-busy':'Gemini è sovraccarico in questo momento, riprova tra poco','gem-perm':'Chiave senza accesso a Gemini (abilita la Gemini API per questa chiave)','gem-other':'Gemini ha rifiutato la richiesta','gem-key':'Chiave Gemini non valida','gem-limit':'Limite gratuito di Gemini raggiunto per ora','gem-timeout':'Gemini non risponde','gem-net':'Gemini non raggiungibile','gem-model':'Modello Gemini non disponibile'};
+const GEM_ERR={'gem-appcheck':'Verifica di sicurezza di Google non riuscita (App Check)','gem-busy':'Gemini è sovraccarico in questo momento, riprova tra poco','gem-perm':'Chiave senza accesso a Gemini (abilita la Gemini API per questa chiave)','gem-other':'Gemini ha rifiutato la richiesta','gem-key':'Chiave Gemini non valida','gem-limit':'Gemini è molto richiesto in questo momento (limite al minuto), riprova tra 30 secondi','gem-limit-day':'Limite gratuito giornaliero di Gemini raggiunto','gem-timeout':'Gemini non risponde','gem-net':'Gemini non raggiungibile','gem-model':'Modello Gemini non disponibile'};
 // Gemini se c'è la chiave e internet, altrimenti (o se Gemini fallisce) il modello sul telefono
 async function recognize(src,mode){
   if(gemOn()){
@@ -2581,7 +2588,7 @@ async function gemTest(){
     LS.set('gemkey',k);LS.set('gemerr','');toast('✨ Gemini attivo');render();}
   catch(e){
     // chiave accettata ma Gemini occupato o senza quota: la chiave è buona, la salvo lo stesso
-    if(e.message==='gem-busy'||e.message==='gem-limit'){LS.set('gemkey',k);LS.set('gemerr','');toast('✨ Chiave valida, Gemini attivo (ora è molto richiesto: se non risponde uso il modello sul telefono)');render();return;}
+    if(e.message==='gem-busy'||e.message==='gem-limit'||e.message==='gem-limit-day'){LS.set('gemkey',k);LS.set('gemerr','');toast('✨ Chiave valida, Gemini attivo (ora è molto richiesto: se non risponde uso il modello sul telefono)');render();return;}
     const msg=(GEM_ERR[e.message]||'Verifica non riuscita')+(GEM_LAST?' — '+GEM_LAST:'');LS.set('gemerr',msg);toast('⚠️ '+(GEM_ERR[e.message]||'Verifica non riuscita'));render();}
 }
 function aiCard(st,target){
