@@ -1496,7 +1496,7 @@ function spotProfile(id){
     ${!all.length?`<div class="empty" style="padding:14px"><div>🎣</div>Nessuna cattura registrata qui. Le statistiche arrivano con le tue uscite.</div>`:''}
     ${sp.mode==='coast'||sp.mode==='sea'?`<div class="card"><h3>🪸 Il fondale</h3><div id="spsea" class="small mut">Leggo profondità e tipo di fondo…</div></div>`:''}
     <div class="card"><h3>🌊 In stagione adesso</h3><div class="small">${season.length?season.map(esc).join(', '):'Nessuna specie in piena stagione questo mese'}</div></div>
-    <div class="card"><h3>👥 Catture della community (entro 3 km, ultimo anno)</h3><div id="spcom" class="small mut">Carico…</div></div>`);
+    <div class="card"><h3>👥 Catture degli altri (entro 3 km, ultimo anno)</h3><div id="spcom" class="small mut">Carico…</div></div>`);
   spotCommunity(sp);
   if(sp.mode==='coast'||sp.mode==='sea')seabed(sp).then(o=>{const el=document.getElementById('spsea');if(el){el.classList.remove('mut');el.innerHTML=seabedHtml(o);}})
     .catch(()=>{const el=document.getElementById('spsea');if(el)el.textContent='Dati del fondale non disponibili al momento.';});
@@ -1504,14 +1504,19 @@ function spotProfile(id){
 async function spotCommunity(sp){
   const el=()=>document.getElementById('spcom');const C=window.CLOUD;
   if(!C?.ff||!C?.db||!C.user){if(el())el().textContent='Accedi per vedere le catture degli altri pescatori.';return;}
-  try{const ff=C.ff,from=Date.now()-365*86400e3,r=await ff.getDocs(ff.query(ff.collection(C.db,'catchmap'),ff.where('ts','>=',from)));
-    let fr=[];try{fr=(await ff.getDocs(ff.query(ff.collection(C.db,'catchfr'),ff.where('friends','array-contains',C.user.uid)))).docs.map(d=>d.data()).filter(c=>c.ts>=from);}catch(e){}
-    const near=[...r.docs.map(d=>d.data()),...fr].filter(c=>c.la!=null&&c.sp&&kmBetween(sp.lat,sp.lon,c.la,c.lo)<=3);
-    if(!el())return;if(!near.length){el().textContent='Ancora nessuna cattura condivisa in questa zona.';return;}
+  // stessa regola della mappa: vedo le catture degli altri solo se condivido anche le mie (amici o tutti)
+  const sv=LS.get('sharecatch',null),vis=sv===true?'all':sv===false?'none':['none','friends','all'].includes(sv)?sv:'friends';
+  if(vis==='none'){if(el())el().innerHTML='Hai scelto di non condividere le tue catture, quindi non vedi quelle degli altri. <u style="cursor:pointer" onclick="closeSheet();go(\'chat\')">Cambia in Social › Mappa</u>';return;}
+  try{const ff=C.ff,from=Date.now()-365*86400e3,u=C.user.uid,frIds=(LS.get('chatfriends',[])||[]).map(f=>f?.uid).filter(Boolean);
+    let all=[];try{all=(await ff.getDocs(ff.query(ff.collection(C.db,'catchfr'),ff.where('friends','array-contains',u)))).docs.map(d=>d.data());}catch(e){}
+    if(vis==='all')all.push(...(await ff.getDocs(ff.query(ff.collection(C.db,'catchmap'),ff.where('ts','>=',from)))).docs.map(d=>d.data()));
+    else for(let i=0;i<frIds.length;i+=30)try{all.push(...(await ff.getDocs(ff.query(ff.collection(C.db,'catchmap'),ff.where('uid','in',frIds.slice(i,i+30))))).docs.map(d=>d.data()));}catch(e){}
+    const near=all.filter(c=>c.la!=null&&c.sp&&c.ts>=from&&c.uid!==u&&kmBetween(sp.lat,sp.lon,c.la,c.lo)<=3);
+    if(!el())return;if(!near.length){el().textContent=vis==='friends'?'Nessuna cattura dei tuoi amici in questa zona.':'Ancora nessuna cattura condivisa in questa zona.';return;}
     const m={},mm={};near.forEach(c=>{m[c.sp]=(m[c.sp]||0)+1;const k=new Date(c.ts).getMonth();mm[k]=(mm[k]||0)+1;});
     const top=Object.entries(m).sort((a,b)=>b[1]-a[1]),bm=Object.entries(mm).sort((a,b)=>b[1]-a[1])[0];
     el().classList.remove('mut');
-    el().innerHTML=`<b>${near.length}</b> catture da altri utenti${bm?` · mese più attivo: <b>${new Date(2000,+bm[0],1).toLocaleDateString('it-IT',{month:'long'})}</b>`:''}<div class="hbars" style="margin-top:6px">${top.slice(0,6).map(r=>`<div class="r"><span>${esc(r[0])}</span><div class="bar"><div style="width:${r[1]/top[0][1]*100}%;background:#ff9500"></div></div><b>${r[1]}</b></div>`).join('')}</div>`;
+    el().innerHTML=`<b>${near.length}</b> catture ${vis==='friends'?'dei tuoi amici':'da altri utenti'}${bm?` · mese più attivo: <b>${new Date(2000,+bm[0],1).toLocaleDateString('it-IT',{month:'long'})}</b>`:''}<div class="hbars" style="margin-top:6px">${top.slice(0,6).map(r=>`<div class="r"><span>${esc(r[0])}</span><div class="bar"><div style="width:${r[1]/top[0][1]*100}%;background:#ff9500"></div></div><b>${r[1]}</b></div>`).join('')}</div>`;
   }catch(e){if(el())el().textContent='Catture della community non disponibili al momento.';}
 }
 function initMap(){
