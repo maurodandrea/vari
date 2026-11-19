@@ -27,7 +27,9 @@ const seen=()=>G('chatseen',{});
 const snapErr=label=>e=>{CH.err=(e.code==='permission-denied'?'Social non ha i permessi su Firebase: pubblica le regole aggiornate (file firestore.rules) in Console Firebase › Firestore Database › Regole.':'Social non raggiungibile: '+(e.code||e.message))+` [ascolto: ${label} · ${String(e.message||'').slice(0,120)}]`;if(S.tab==='chat')render();};
 const friends=()=>G('chatfriends',[]).filter(f=>f&&typeof f.uid==='string').map(f=>({uid:f.uid,name:String(f.name||'Amico')}));
 const blocked=()=>G('chatblock',[]).filter(x=>typeof x==='string');
-const notifOn=()=>G('chatnotif',{on:false}).on;
+const NOTIF_DEF={on:true,zones:false};  // predefinito: avvisi dei nuovi messaggi sì, canali seguiti no
+const notifSet=()=>({...NOTIF_DEF,...G('chatnotif',{})});
+const notifOn=()=>notifSet().on!==false;
 
 /* ---------- filtro parole offensive ---------- */
 const BAD=['cazz','minchi','stronz','vaffancul','fancul','coglion','puttan','troi','merd','bastard','porco ?dio','porcodio','dio ?cane','diocane','porca ?madonna','froci','ricchion','negr[oiae]','mongoloid','zoccol','frocio'];
@@ -168,7 +170,7 @@ function onRoom(rid,oldTs){
   if(l&&l.ts>oldTs&&l.ts>CH.t0&&l.uid!==me()?.uid&&!blocked().includes(l.uid)){
     const watching=CH.rid===rid&&S.tab==='chat'&&document.visibilityState==='visible';
     if(watching)markSeen(rid);
-    else if(notifies(rid)&&(r.type!=='zone'||G('chatnotif',{}).zones!==false))notify(roomName(rid),`${l.name}: ${clean(l.text)}`,rid);
+    else if(notifies(rid)&&(r.type!=='zone'||notifSet().zones===true))notify(roomName(rid),`${l.name}: ${clean(l.text)}`,rid);
   }
   refresh();
 }
@@ -206,6 +208,8 @@ CH.view=v=>{
   if(!me()&&window.LENZA_FB?.apiKey&&!C()?.authKnown){v.innerHTML=subHead('Social','Canali, messaggi, mappa e amici','home')+`<div class="card" style="text-align:center;padding:30px"><span class="aispin" style="width:28px;height:28px;border-width:3px;display:inline-block"></span><p class="mut">Carico Social…</p></div>`;return;}
   if(!me()){v.innerHTML=subHead('Social','Funzione Premium','home')+`<div class="card"><p class="mut">Accedi con il tuo account per usare Social.</p><button class="btn" onclick="CLOUD.open()">Accedi</button></div>`;return;}
   CH.start();nearSync();
+  // avvisi attivi di default: alla prima apertura di Social chiedo il permesso per le notifiche del telefono
+  if(notifOn()&&'Notification' in window&&Notification.permission==='default'&&!G('chatnotifask',false)){LS.set('chatnotifask',true);try{Notification.requestPermission();}catch(e){}}
   if(CH.rid)return roomView(v);
   const tabs=[['zone','📍 Canali'],['priv','💬 Messaggi'],['mappa','🗺️ Mappa'],['amici','🤝 Amici'],['bot','🤖 Assistente']];
   v.innerHTML=subHead('Social','Canali, messaggi, mappa e amici','home')+(CH.err?`<div class="banner">⚠️ ${esc(CH.err)}</div>`:'')+
@@ -262,18 +266,18 @@ function chanHtml(){
   <div class="card" id="chbrowse"><h3>🇮🇹 Tutti i canali</h3><p class="small mut" style="margin:-4px 0 6px">Tocca ▸ per aprire regioni, province e comuni; tocca il nome per entrare nel canale.</p>${treeHtml()}</div>`;
 }
 function notifCard(){
-  const n=G('chatnotif',{on:false,zones:true}),perm='Notification' in window?Notification.permission:'unsupported';
+  const n=notifSet(),perm='Notification' in window?Notification.permission:'unsupported';
   const reps=CH.notifs.slice(0,5);
   return `${reps.length?`<div class="card"><h3>🔔 Risposte ai tuoi messaggi</h3>${reps.map(x=>`<div class="croom" onclick="CHAT.openNotif('${x.id}')"><div class="cri">↩️</div><div style="flex:1;min-width:0"><b>${esc(x.from)}</b> <span class="small mut">in ${esc(x.room||'')}</span><div class="small mut cprev">${esc(clean(x.text))}</div></div><div class="small mut">${ago(x.ts)}</div>${x.read?'':'<i class="cdot"></i>'}</div>`).join('')}</div>`:''}
   <div class="card"><h3>🔔 Notifiche</h3>
     <label class="crow"><input type="checkbox" ${n.on?'checked':''} onchange="CHAT.setNotif(this.checked)"> Avvisami dei nuovi messaggi</label>
-    <label class="crow"><input type="checkbox" ${n.zones!==false?'checked':''} onchange="CHAT.setNotifZones(this.checked)"> Anche per i canali che segui</label>
+    <label class="crow"><input type="checkbox" ${n.zones===true?'checked':''} onchange="CHAT.setNotifZones(this.checked)"> Anche per i canali che segui</label>
     <p class="small mut" style="margin:6px 0 0">${perm==='denied'?'⚠️ Le notifiche sono bloccate nelle impostazioni del browser.':perm==='unsupported'?'Questo browser non supporta le notifiche: vedrai gli avvisi dentro l\'app.':'Arrivano mentre LenzApp è aperta, anche in un\'altra scheda o in secondo piano. Messaggi privati e risposte ti avvisano sempre.'}</p></div>`;
 }
-CH.setNotif=async on=>{const n=G('chatnotif',{zones:true});n.on=on;
+CH.setNotif=async on=>{const n=notifSet();n.on=on;
   if(on&&'Notification' in window&&Notification.permission==='default'){try{await Notification.requestPermission();}catch(e){}}
   LS.set('chatnotif',n);render();};
-CH.setNotifZones=on=>{const n=G('chatnotif',{on:false});n.zones=on;LS.set('chatnotif',n);};
+CH.setNotifZones=on=>{const n=notifSet();n.zones=on;LS.set('chatnotif',n);};
 CH.openNotif=async id=>{const x=CH.notifs.find(n=>n.id===id);if(!x)return;x.read=true;try{await F().deleteDoc(F().doc(D(),'notifs',me().uid,'items',id));}catch(e){}CH.notifs=CH.notifs.filter(n=>n.id!==id);CH.open(x.rid);};
 
 /* ---------- stanza ---------- */
