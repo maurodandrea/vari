@@ -2182,7 +2182,7 @@ function vSettings(v){
       <div class="row" style="gap:8px"><input id="gemk" type="password" placeholder="Chiave API Gemini" value="${esc(gemKey()||GEM_TRY)}" style="flex:1" autocomplete="off"><button class="btn" onclick="gemTest()">${gemKey()?'Aggiorna':'Attiva'}</button></div>
       <div class="small" style="margin-top:6px">${gemKey()?'<span style="color:var(--ok)">● Gemini attivo</span> · <u style="cursor:pointer" onclick="LS.set(\'gemkey\',\'\');render()">disattiva</u>':'<span class="mut">● Non attivo: uso il modello sul telefono</span>'}</div>
       ${gemKey()&&LS.get('gemok','')?`<div class="small mut" style="margin-top:4px">Ultima risposta riuscita con ${esc(LS.get('gemok',''))}</div>`:''}
-      ${gemKey()&&LS.get('gemlog','')?`<div class="small" style="margin-top:6px;color:var(--acc2);word-break:break-word">Ultimo errore di Google: ${esc(LS.get('gemlog',''))}</div>`:''}
+      ${LS.get('gemlog','')?`<div class="small" style="margin-top:6px;color:var(--acc2);word-break:break-word">Ultimo errore di Google: ${esc(LS.get('gemlog',''))}</div>`:''}
       ${LS.get('gemerr','')&&!gemKey()?`<div class="small" style="margin-top:6px;color:var(--bad);word-break:break-word">⚠️ ${esc(LS.get('gemerr',''))}</div>`:''}
     </div>
     <div class="kv" style="margin-top:10px"><span>Numero della tua scarpa (riferimento di riserva)</span><input type="number" min="30" max="50" step="0.5" style="width:80px;padding:6px 8px" value="${shoeSize()}" onchange="if(+this.value>=30&&+this.value<=50)LS.set('shoesize',+this.value)"></div>
@@ -2479,22 +2479,28 @@ Rispondi in JSON: is_fish (c'è un pesce?), species, scientific_name, confidence
       alternatives:(o.alternatives||[]).filter(a=>a.species&&a.species!==o.species).slice(0,3).map(a=>({species:a.species,confidence:clamp(+a.confidence||0,0,1)})),note:o.note||'',emb:null};
 }
 async function gemCall(body,key=gemKey()){
-  // modello sovraccarico (503/500) o senza quota: provo gli altri modelli e poi riprovo una volta dopo una pausa
-  try{return await gemTry(body,key);}
-  catch(e){if(e.message!=='gem-busy')throw e;await new Promise(r=>setTimeout(r,2500));return gemTry(body,key);}
+  // modello sovraccarico (503/500) o senza quota: provo gli altri modelli e, se c'è ancora tempo, riprovo una volta dopo una pausa
+  const end=Date.now()+45000;
+  try{return await gemTry(body,key,end);}
+  catch(e){if(e.message!=='gem-busy'||Date.now()>end-12000)throw e;await new Promise(r=>setTimeout(r,2500));return gemTry(body,key,end);}
 }
+// token di sicurezza di Firebase (App Check): mai più di 8 secondi di attesa
+async function gemAc(force){if(!window.CLOUD?.acToken)return null;
+  return Promise.race([CLOUD.acToken(force),new Promise(r=>setTimeout(()=>{CLOUD.acErr=CLOUD.acErr||'timeout';r(null);},8000))]);}
 // modelli sovraccarichi o che non rispondono: li salto per 10 minuti; l'ultimo che ha funzionato lo provo per primo
 const GEM_SKIP=LS.get('gemskip',{});const gemSkip=(m,ms=600000)=>{GEM_SKIP[m]=Date.now()+ms;LS.set('gemskip',GEM_SKIP);};
-async function gemTry(body,key){
-  let last='';const ok=LS.get('gemok',''),now=Date.now();
+async function gemTry(body,key,end=Date.now()+45000){
+  let last='',tk=null,acForced=false;const ok=LS.get('gemok',''),now=Date.now();
+  if(!key)tk=await gemAc(false);
   const order=[...new Set([ok,...GEM_MODELS].filter(m=>GEM_MODELS.includes(m)))];
   const list=[...order.filter(m=>!(GEM_SKIP[m]>now)),...order.filter(m=>GEM_SKIP[m]>now)];
-  for(const m of list){
-    const ac=new AbortController(),t=setTimeout(()=>ac.abort(),15000);
+  for(let i=0;i<list.length;i++){const m=list[i];
+    const left=end-Date.now();if(left<3000){last=last||'gem-timeout';break;}
+    const ac=new AbortController(),t=setTimeout(()=>ac.abort(),Math.min(15000,left));
     const fb=!key,cfg=window.LENZA_FB||{};
     const url=fb?`https://firebasevertexai.googleapis.com/v1beta/projects/${cfg.projectId}/models/${m}:generateContent`:`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
     const hd={'Content-Type':'application/json','x-goog-api-key':fb?cfg.apiKey:key};if(fb&&cfg.appId)hd['X-Firebase-Appid']=cfg.appId;
-    if(fb&&window.CLOUD?.acToken){const tk=await CLOUD.acToken();if(tk)hd['X-Firebase-AppCheck']=tk;}
+    if(fb&&tk)hd['X-Firebase-AppCheck']=tk;
     let r;try{r=await fetch(url,{method:'POST',signal:ac.signal,headers:hd,body:JSON.stringify(body)});}
     catch(e){clearTimeout(t);
       // modello che non risponde: passo al successivo invece di arrendermi
@@ -2505,6 +2511,8 @@ async function gemTry(body,key){
       // leggo il motivo vero dell'errore: chiave errata, servizio non abilitato, limite, modello inesistente…
       let er={};try{er=(await r.json()).error||{};}catch(e){}
       const reason=(er.details||[]).map(d=>d.reason).find(Boolean)||er.status||'';GEM_LAST=`${m}: ${r.status} ${reason} ${(er.message||'').slice(0,300)}`.trim();LS.set('gemlog',new Date().toLocaleString('it-IT')+' · '+GEM_LAST);
+      // token di sicurezza scaduto o rifiutato: ne chiedo uno nuovo e riprovo lo stesso modello una volta
+      if(fb&&r.status===401){if(!acForced){acForced=true;tk=await gemAc(true);i--;continue;}throw new Error('gem-appcheck');}
       if(r.status===404||/not found|not supported/i.test(er.message||'')){gemSkip(m,86400000);last=last||'gem-model';continue;}
       if(r.status>=500){gemSkip(m);last=last==='gem-limit'?last:'gem-busy';continue;}
       if(reason==='API_KEY_INVALID'||/api key not valid/i.test(er.message||''))throw new Error('gem-key');
@@ -2555,12 +2563,12 @@ async function geminiMeasure(src,sp){
 // lunghezza (cm) dal peso (kg) con la relazione W = a·L^b della specie
 function lenFromW(sp,w){const k=LW[Object.keys(LW).find(x=>x.toLowerCase()===String(sp||'').trim().toLowerCase())];return k&&w>0?Math.pow(w*1000/k[0],1/k[1]):null;
 }
-const GEM_ERR={'gem-busy':'Gemini è sovraccarico in questo momento, riprova tra poco','gem-perm':'Chiave senza accesso a Gemini (abilita la Gemini API per questa chiave)','gem-other':'Gemini ha rifiutato la richiesta','gem-key':'Chiave Gemini non valida','gem-limit':'Limite gratuito di Gemini raggiunto per ora','gem-timeout':'Gemini non risponde','gem-net':'Gemini non raggiungibile','gem-model':'Modello Gemini non disponibile'};
+const GEM_ERR={'gem-appcheck':'Verifica di sicurezza di Google non riuscita (App Check)','gem-busy':'Gemini è sovraccarico in questo momento, riprova tra poco','gem-perm':'Chiave senza accesso a Gemini (abilita la Gemini API per questa chiave)','gem-other':'Gemini ha rifiutato la richiesta','gem-key':'Chiave Gemini non valida','gem-limit':'Limite gratuito di Gemini raggiunto per ora','gem-timeout':'Gemini non risponde','gem-net':'Gemini non raggiungibile','gem-model':'Modello Gemini non disponibile'};
 // Gemini se c'è la chiave e internet, altrimenti (o se Gemini fallisce) il modello sul telefono
 async function recognize(src,mode){
   if(gemOn()){
     try{return await geminiFish(src);}
-    catch(e){if(!(await modelReady()))throw new Error(GEM_ERR[e.message]?GEM_ERR[e.message]+'. Riprova tra poco, oppure scarica il modello sul telefono (Impostazioni) per usarlo anche offline':'Riconoscimento non riuscito ('+(e.message||'errore sconosciuto')+')');
+    catch(e){if(!(await modelReady()))throw new Error((GEM_ERR[e.message]?GEM_ERR[e.message]:'Riconoscimento non riuscito')+(GEM_LAST?' ['+GEM_LAST.slice(0,90)+']':e.message==='gem-appcheck'&&CLOUD?.acErr?' ['+CLOUD.acErr+']':'')+'. Riprova tra poco, oppure scarica il modello sul telefono (Impostazioni) per usarlo anche offline');
       toast((GEM_ERR[e.message]||'Gemini non disponibile')+': uso il modello sul telefono');}
   }
   return classifyFish(src,mode);
@@ -2581,7 +2589,7 @@ function aiCard(st,target){
   if(st.needPremium)return `<div class="aibox"><span style="font-size:24px">⭐</span><div style="flex:1"><b>Riconoscimento dei pesci: funzione Premium</b><div class="small mut">Specie, lunghezza e peso dalla foto sono riservati agli utenti Premium.</div><button class="btn" style="margin-top:8px;padding:9px 14px" onclick="go('settings')">Inserisci il codice Premium</button></div></div>`;
   if(st.needModel)return `<div class="aibox"><span style="font-size:24px">🧠</span><div style="flex:1"><b>Riconoscimento automatico gratuito</b><div class="small mut">Scarica una volta i modelli (circa 155 MB, meglio con Wi-Fi): poi specie, misura e peso si calcolano da soli, anche senza internet.</div>
     ${MODEL_DL?`<div class="dlb"><div id="dlbar" style="width:${(MODEL_DL.st.pct*100).toFixed(1)}%"></div></div><div class="small mut"><span id="dlpct">${Math.round(MODEL_DL.st.pct*100)}%</span> scaricato…</div>`:`<button class="btn" style="margin-top:8px;padding:9px 14px" onclick="downloadModel().then(()=>aiRetry('${target}')).catch(e=>toast(aiErrMsg(e)))">⬇️ Scarica e riconosci</button>`}</div></div>`;
-  if(st.loading)return `<div class="aibox"><div class="aispin"></div><div><b>Riconosco il pesce…</b><div class="small mut">Poi misuro lunghezza e peso · sul telefono, senza internet</div></div></div>`;
+  if(st.loading)return `<div class="aibox"><div class="aispin"></div><div><b>Riconosco il pesce${gemOn()?' con Gemini':''}…</b><div class="small mut">Poi misuro lunghezza e peso${gemOn()?' · di solito bastano 5–15 secondi':' · sul telefono, senza internet'}</div></div></div>`;
   if(st.err)return `<div class="aibox err"><span style="font-size:22px">⚠️</span><div style="flex:1"><b>${esc(st.err)}</b><div class="small"><u style="cursor:pointer" onclick="aiRetry('${target}')">Riprova</u></div></div></div>`;
   const r=st.r;if(!r)return '';
   if(!r.is_fish)return `<div class="aibox err"><span style="font-size:22px">🤔</span><div><b>Non sembra un pesce</b><div class="small mut">Inquadra il pesce intero, da vicino e di lato. Se è un pesce, scegli la specie qui sotto.</div>${target!=='assist'?`<div class="small" style="margin-top:6px"><u style="cursor:pointer;color:var(--acct)" onclick="openMeasureFor('${target}')">📏 Misura a mano sulla foto</u></div>`:''}</div></div>`;
