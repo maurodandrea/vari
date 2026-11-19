@@ -1376,16 +1376,28 @@ function useSpot(id){S.active=id;LS.set('active',id);const sp=activeSpot();if(fa
 function editSpot(id,lat,lon){
   const s=id?S.spots.find(x=>x.id===id):{name:'',lat,lon,mode:S.mode,note:'',face:null};
   openSheet(`<h2>${id?'Modifica spot':'Nuovo spot'}</h2><p class="small mut">${s.lat.toFixed(5)}, ${s.lon.toFixed(5)}</p>
-    <label>Nome</label><input id="spN" value="${esc(s.name)}" placeholder="Es. Scogliera del faro">
+    <label>Nome</label><input id="spN" value="${esc(s.name)}" placeholder="Es. Scogliera del faro (vuoto: il nome della località)">
     <label>Il mare / l'acqua è verso</label><select id="spF"><option value="">Non specificato</option>${['N','NE','E','SE','S','SO','O','NO'].map((d,k)=>`<option value="${k*45}" ${s.face===k*45?'selected':''}>${d} (${['Tramontana','Grecale','Levante','Scirocco','Ostro','Libeccio','Ponente','Maestrale'][k]})</option>`).join('')}</select>
     <p class="small mut" style="margin-top:4px">Serve a capire se il vento soffia dal mare o da terra e a calcolare meglio l'indice.</p>
     <label>Note</label><textarea id="spT" placeholder="Fondale, accesso, esche che funzionano…">${esc(s.note)}</textarea>
     <div class="row" style="margin-top:14px">${id?`<button class="btn danger" onclick="delSpot('${id}')">Elimina</button>`:''}<button class="btn ghost" style="margin-left:auto" onclick="closeSheet()">Annulla</button><button class="btn" onclick="saveSpot('${id||''}',${s.lat},${s.lon})">Salva</button></div>`);
 }
+// nome della località di un punto: OpenStreetMap (frazione, paese o città); senza rete il paese più vicino dai dati locali
+async function placeAt(lat,lon){
+  try{const r=await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}&zoom=16&accept-language=it`);const a=(await r.json()).address||{};
+    const ok=x=>x&&!/^(municipio|circoscrizione|quartiere|zona)\b/i.test(x);
+    const n=[a.beach,a.hamlet,a.village,a.town,a.neighbourhood,a.quarter,a.suburb,a.city,a.municipality].find(ok);if(n)return n;}catch(e){}
+  try{const P=await luoghi();let best=null,bd=30;for(const [m,a,o] of P.c){const d=kmTo({lat,lon},a,o);if(d<bd){bd=d;best=m;}}if(best)return best;}catch(e){}
+  return null;}
+// spot salvato senza nome: gli do il nome della località
+async function autoName(id){const s=S.spots.find(x=>x.id===id);if(!s||!s.autoname)return;const n=await placeAt(s.lat,s.lon);
+  const t=S.spots.find(x=>x.id===id);if(!t||!t.autoname)return;delete t.autoname;
+  if(n){let name=n,k=2;while(S.spots.some(x=>x.id!==id&&!x.here&&x.name===name))name=n+' '+(k++);t.name=name;}
+  LS.set('spots',S.spots);render();}
 function saveSpot(id,lat,lon){
-  const name=document.getElementById('spN').value.trim()||'Spot senza nome',mode=S.mode,note=document.getElementById('spT').value.trim(),fv=document.getElementById('spF').value,face=fv===''?null:+fv;
-  if(id){Object.assign(S.spots.find(s=>s.id===id),{name,mode,note,face});if(id===S.active){S.wx=null;loadWeather();}COMP.rows=null;}
-  else{if(!isPremium()&&savedSpots()>=FREE_SPOTS){closeSheet();needPremium('Salvare più di '+FREE_SPOTS+' spot');return;}const s={id:uid(),name,lat,lon,mode,note,face};COMP.rows=null;S.spots.push(s);NEWPIN=null;LS.set('spots',S.spots);closeSheet();useSpot(s.id);return;}
+  const typed=document.getElementById('spN').value.trim(),name=typed||'Spot senza nome',mode=S.mode,note=document.getElementById('spT').value.trim(),fv=document.getElementById('spF').value,face=fv===''?null:+fv;
+  if(id){Object.assign(S.spots.find(s=>s.id===id),{name,mode,note,face},typed?{}:{autoname:true});if(!typed)autoName(id);if(id===S.active){S.wx=null;loadWeather();}COMP.rows=null;}
+  else{if(!isPremium()&&savedSpots()>=FREE_SPOTS){closeSheet();needPremium('Salvare più di '+FREE_SPOTS+' spot');return;}const s={id:uid(),name:typed||'Cerco il nome…',lat,lon,mode,note,face};if(!typed){s.autoname=true;setTimeout(()=>autoName(s.id),0);}COMP.rows=null;S.spots.push(s);NEWPIN=null;LS.set('spots',S.spots);closeSheet();useSpot(s.id);return;}
   LS.set('spots',S.spots);LS.set('active',S.active);closeSheet();toast('Spot salvato');render();
 }
 function delSpot(id){
