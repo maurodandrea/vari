@@ -582,6 +582,7 @@ function context(){
     if(h)out.push(`Adesso: ${fmt1(h.temp)}°C, vento ${fmt1(h.ws)} km/h, onda ${h.wave!=null?fmt1(h.wave)+' m':'n.d.'}, pressione ${Math.round(h.p)} hPa.`);
     out.push('Indice di pescosità dei prossimi giorni: '+X.fdays.slice(0,4).map(d=>`${d.date.toLocaleDateString('it-IT',{weekday:'short'})} ${dayScore(X,d.date)}`).join(', ')+' (0-100).');
     const today=new Date();today.setHours(0,0,0,0);const w=bestWindows(X,today,2);if(w.length)out.push('Finestre migliori di oggi: '+w.map(x=>`${hhmm(x.from)}-${hhmm(x.to)} (indice ${x.max})`).join(', ')+'.');}}catch(e){}
+  try{const t=window.seabedTxt?.(window.seabedCached?.(sp));if(t)out.push('Fondale dello spot: '+t+'.');}catch(e){}
   try{out.push('Consigli calcolati dall\'app: '+advice().map(a=>strip(a[1])).join(' '));}catch(e){}
   return out.join('\n');
 }
