@@ -1360,9 +1360,46 @@ function vSpot(v){
   <div class="card"><h3>I miei spot (${S.spots.filter(s=>!s.here).length})</h3><div class="list">
   ${S.spots.some(s=>!s.here)?S.spots.filter(s=>!s.here).map(s=>{const n=S.diary.filter(e=>e.spot===s.id).length;return `<div class="it"><div class="ico">${MODES[s.mode]?.e||'📍'}</div>
     <div class="t" onclick="MAP&&MAP.setView([${s.lat},${s.lon}],14)"><b>${esc(s.name)} ${s.id===S.active?'<span class="pill" style="background:#2fd4c422;color:var(--acc)">attivo</span>':''}</b><span class="small mut">${s.lat.toFixed(4)}, ${s.lon.toFixed(4)} · ${n} uscite${s.face!=null?' · mare a '+DIRS[s.face/22.5]:''}${s.note?' · '+esc(s.note):''}</span></div>
-    ${s.id!==S.active?`<button class="btn ghost" onclick="useSpot('${s.id}')">Usa</button>`:''}<button class="btn ghost" onclick="editSpot('${s.id}')">✏️</button></div>`;}).join(''):'<div class="empty"><div>🗺️</div>Nessuno spot salvato</div>'}
+    ${s.id!==S.active?`<button class="btn ghost" onclick="useSpot('${s.id}')">Usa</button>`:''}<button class="btn ghost" onclick="spotProfile('${s.id}')" title="Profilo dello spot">📊</button><button class="btn ghost" onclick="editSpot('${s.id}')">✏️</button></div>`;}).join(''):'<div class="empty"><div>🗺️</div>Nessuno spot salvato</div>'}
   </div></div>`;
   setTimeout(initMap,0);
+}
+/* ===================== Profilo dello spot ===================== */
+function kmBetween(a,b,c,d){const r=Math.PI/180,x=(c-a)*r,y=(d-b)*r*Math.cos((a+c)/2*r);return 6371*Math.hypot(x,y);}
+function spotProfile(id){
+  const sp=S.spots.find(s=>s.id===id);if(!sp)return;
+  const D=S.diary.filter(e=>e.spot===id),all=D.flatMap(e=>(e.catches||[]).map(c=>({...c,e})));
+  const cnt=f=>{const m={};all.forEach(x=>{const k=f(x);if(k!=null)m[k]=(m[k]||0)+1;});return Object.entries(m).sort((a,b)=>b[1]-a[1]);};
+  const sp1=cnt(c=>c.sp),hr=cnt(c=>new Date(c.e.start).getHours()),mo=cnt(c=>new Date(c.e.start).getMonth());
+  const tech=cnt(c=>c.e.tech),okE=D.filter(e=>e.catches?.length).length;
+  const big=all.filter(c=>c.l||c.w).sort((a,b)=>(+b.l||0)-(+a.l||0)||(+b.w||0)-(+a.w||0))[0];
+  const MN=['gen','feb','mar','apr','mag','giu','lug','ago','set','ott','nov','dic'],m0=new Date().getMonth()+1;
+  const mbar=new Array(12).fill(0);mo.forEach(([m,n])=>mbar[m]=n);const mx=Math.max(1,...mbar);
+  const season=SPECIES.filter(f=>f.m?.includes(sp.mode)&&f.mo?.includes(m0)).map(f=>f.n);
+  const hb=rows=>{const m=Math.max(1,...rows.map(r=>r[1]));return '<div class="hbars">'+rows.slice(0,5).map(r=>`<div class="r"><span>${esc(String(r[0]))}</span><div class="bar"><div style="width:${r[1]/m*100}%;background:var(--acc)"></div></div><b>${r[1]}</b></div>`).join('')+'</div>';};
+  openSheet(`<h2>📊 ${esc(sp.name)}</h2><p class="small mut">${MODES[sp.mode]?.e||''} ${(MODES[sp.mode]?.d||'').split(':')[0]} · ${sp.lat.toFixed(4)}, ${sp.lon.toFixed(4)}</p>
+    <div class="grid2" style="margin:10px 0"><div class="tile"><div class="k">Uscite</div><div class="v">${D.length}</div><div class="s">${okE} fruttuose</div></div><div class="tile"><div class="k">Catture</div><div class="v">${all.length}</div><div class="s">${sp1.length} specie</div></div></div>
+    ${big?`<div class="card"><h3>🏆 Record qui</h3><b>${esc(big.sp)}</b> ${[big.l&&big.l+' cm',big.w&&fmt1(big.w)+' kg'].filter(Boolean).join(' · ')}<div class="small mut">${new Date(big.e.start).toLocaleDateString('it-IT')}</div></div>`:''}
+    ${sp1.length?`<div class="card"><h3>🐟 Le tue specie qui</h3>${hb(sp1)}</div>`:''}
+    ${hr.length?`<div class="card"><h3>⏰ Ore migliori</h3>${hb(hr.map(([h,n])=>[String(h).padStart(2,'0')+':00',n]))}</div>`:''}
+    ${all.length?`<div class="card"><h3>📅 Mesi</h3><div class="vbars">${mbar.map(x=>`<div style="height:${x/mx*100}%;opacity:${x?1:.25}"></div>`).join('')}</div><div class="tl-lbl">${MN.filter((_,i)=>i%2==0).map(m=>`<span>${m}</span>`).join('')}</div></div>`:''}
+    ${tech.length?`<div class="card"><h3>🪝 Tecniche che funzionano</h3>${hb(tech)}</div>`:''}
+    ${!all.length?`<div class="empty" style="padding:14px"><div>🎣</div>Nessuna cattura registrata qui. Le statistiche arrivano con le tue uscite.</div>`:''}
+    <div class="card"><h3>🌊 In stagione adesso</h3><div class="small">${season.length?season.map(esc).join(', '):'Nessuna specie in piena stagione questo mese'}</div></div>
+    <div class="card"><h3>👥 Catture della community (entro 3 km, ultimo anno)</h3><div id="spcom" class="small mut">Carico…</div></div>`);
+  spotCommunity(sp);
+}
+async function spotCommunity(sp){
+  const el=()=>document.getElementById('spcom');const C=window.CLOUD;
+  if(!C?.ff||!C?.db||!C.user){if(el())el().textContent='Accedi per vedere le catture degli altri pescatori.';return;}
+  try{const ff=C.ff,r=await ff.getDocs(ff.query(ff.collection(C.db,'catchmap'),ff.where('ts','>=',Date.now()-365*86400e3)));
+    const near=r.docs.map(d=>d.data()).filter(c=>c.la!=null&&c.sp&&kmBetween(sp.lat,sp.lon,c.la,c.lo)<=3);
+    if(!el())return;if(!near.length){el().textContent='Ancora nessuna cattura condivisa in questa zona.';return;}
+    const m={},mm={};near.forEach(c=>{m[c.sp]=(m[c.sp]||0)+1;const k=new Date(c.ts).getMonth();mm[k]=(mm[k]||0)+1;});
+    const top=Object.entries(m).sort((a,b)=>b[1]-a[1]),bm=Object.entries(mm).sort((a,b)=>b[1]-a[1])[0];
+    el().classList.remove('mut');
+    el().innerHTML=`<b>${near.length}</b> catture da altri utenti${bm?` · mese più attivo: <b>${new Date(2000,+bm[0],1).toLocaleDateString('it-IT',{month:'long'})}</b>`:''}<div class="hbars" style="margin-top:6px">${top.slice(0,6).map(r=>`<div class="r"><span>${esc(r[0])}</span><div class="bar"><div style="width:${r[1]/top[0][1]*100}%;background:#ff9500"></div></div><b>${r[1]}</b></div>`).join('')}</div>`;
+  }catch(e){if(el())el().textContent='Catture della community non disponibili al momento.';}
 }
 function initMap(){
   if(typeof L==='undefined'){document.getElementById('map').innerHTML='<div class="empty"><div>🗺️</div>Mappa non disponibile offline</div>';return;}
