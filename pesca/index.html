@@ -263,7 +263,8 @@
   .toast{position:fixed;left:50%;bottom:100px;transform:translate(-50%,10px);background:var(--grad);color:#03282a;padding:11px 18px;border-radius:999px;font-weight:700;font-size:14px;z-index:2000;opacity:0;transition:.3s;pointer-events:none;box-shadow:0 12px 30px -10px rgba(47,224,207,.9);}
   .toast.on{opacity:1;transform:translate(-50%,0);}
   .leaflet-container{background:#0a1f36;font:inherit;}
-  .leaflet-tile-pane{filter:invert(1) hue-rotate(185deg) brightness(.95) contrast(.88) saturate(.7);}
+  .leaflet-control-layers{background:rgba(10,24,36,.92);color:#e8f1f8;border:1px solid rgba(255,255,255,.15)!important;border-radius:12px!important;font:600 13px 'Outfit',sans-serif}
+  .leaflet-control-layers-toggle{filter:invert(1)}.leaflet-control-layers label{padding:3px 2px;cursor:pointer}.leaflet-control-layers label>span{display:flex;align-items:center;gap:6px}.leaflet-control-layers input{width:auto!important;margin:0!important;height:auto}.leaflet-control-layers-expanded{padding:6px 10px}
   .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:#0e2a48;color:var(--txt);border-radius:16px;}
   .leaflet-popup-content a{color:var(--acc);}
   .leaflet-bar a{background:#0e2a48;color:#fff;border-color:rgba(255,255,255,.1);}
@@ -659,6 +660,17 @@ function premiumPage(v,t){const [title,what]=PREMIUM_TABS[t];
     <button class="btn full" onclick="go('settings')">⭐ Inserisci il codice Premium</button></div>`;}
 const savedSpots=()=>S.spots.filter(s=>!s.here).length;
 function uid(){return Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);}
+// sfondo delle mappe: Stradale (Esri World Street Map) o Satellite (Esri World Imagery con nomi dei luoghi);
+// gratuiti e senza chiave; la scelta resta salvata
+function baseLayers(map){
+  const road=L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:18,attribution:'Mappa © Esri, HERE, Garmin, © OpenStreetMap'});
+  const sat=L.layerGroup([L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:18,attribution:'Immagini © Esri, Maxar, Earthstar Geographics'}),
+    L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',{maxZoom:19,maxNativeZoom:18})]);
+  const L0={'🗺️ Stradale':road,'🛰️ Satellite':sat};
+  (LS.get('maplayer','road')==='sat'?sat:road).addTo(map);
+  L.control.layers(L0,null,{position:'topright',collapsed:false}).addTo(map);
+  map.on('baselayerchange',e=>LS.set('maplayer',e.layer===sat?'sat':'road'));
+}
 function activeSpot(){return S.spots.find(s=>s.id===S.active)||S.spots[0];}
 function esc(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function toast(m){const t=document.getElementById('toast');t.textContent=m;t.classList.add('on');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('on'),2200);}
@@ -1322,7 +1334,7 @@ function initMap(){
   if(typeof L==='undefined'){document.getElementById('map').innerHTML='<div class="empty"><div>🗺️</div>Mappa non disponibile offline</div>';return;}
   const sp=activeSpot()||{lat:42,lon:12.5};NEWPIN=null;
   MAP=L.map('map',{zoomControl:true}).setView([sp.lat,sp.lon],12);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'© OpenStreetMap'}).addTo(MAP);
+  baseLayers(MAP);
   S.spots.forEach(s=>{
     const ic=L.divIcon({html:`<div class="pin ${s.id===S.active?'on':'off'}"><i></i></div>`,className:'',iconSize:[30,30],iconAnchor:[15,36],popupAnchor:[0,-34]});
     L.marker([s.lat,s.lon],{icon:ic}).addTo(MAP).bindPopup(`<b>${esc(s.name)}</b><br>${MODES[s.mode]?.n||''}<br><a href="#" onclick="useSpot('${s.id}');return false">Imposta come attivo</a>`);
