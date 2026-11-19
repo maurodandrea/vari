@@ -212,7 +212,7 @@ function listHtml(){
   if(CH.tab==='priv'){const cl=cleared();const rs=Object.values(CH.mine).filter(r=>!cl[r.id]||(r.last?.ts||0)>cl[r.id]).sort((a,b)=>(b.last?.ts||b.t||0)-(a.last?.ts||a.t||0));
     return `<div class="card"><h3>💬 Messaggi privati e gruppi</h3>${rs.length?rs.map(r=>roomRow(r.id,r.type==='group'?'👥':'💬','')).join(''):'<p class="small mut">Nessuna conversazione. Aggiungi un amico nella scheda «Amici» e scrivigli.</p>'}
       <button class="btn ghost full" style="margin-top:10px" onclick="CHAT.newGroup()">➕ Nuovo gruppo di pesca</button></div>`;}
-  if(CH.tab==='bot')return `<div class="card"><h3>🤖 Assistente in chat</h3><p class="small mut">Chiedi esche, montature, tecniche e orari migliori: risponde con il meteo, il mare e l'indice di pescosità del tuo spot attivo${typeof gemKey==='function'&&gemKey()?' (con Gemini)':''}.</p>${roomRow('bot','🤖','Fai una domanda')}</div>`;
+  if(CH.tab==='bot')return `<div class="card"><h3>🤖 Assistente in chat</h3><p class="small mut">Chiedi esche, montature, tecniche e orari migliori: risponde con il meteo, il mare e l'indice di pescosità del tuo spot attivo${typeof gemOn==='function'&&gemOn()?' (con Gemini)':''}.</p>${roomRow('bot','🤖','Fai una domanda')}</div>`;
   const fr=friends(),bl=blocked(),code=uidCode(me().uid);
   const req=CH.friendReqs.length?`<div class="card"><h3>📩 Ti hanno aggiunto agli amici</h3>${CH.friendReqs.map(x=>`<div class="croom" style="cursor:default"><div class="cri">🎣</div><div style="flex:1"><b>${esc(x.from)}</b><div class="small mut">Aggiungilo anche tu per vedervi sulla mappa</div></div><button class="btn" style="padding:7px 12px" onclick="CHAT.acceptFriend('${x.id}')">Aggiungi</button><button class="btn ghost" style="padding:7px 10px" onclick="CHAT.ignoreFriend('${x.id}')">✕</button></div>`).join('')}</div>`:'';
   return req+`<div class="card"><h3>🤝 Il tuo codice amico</h3><div class="ccode">${code}</div><p class="small mut" style="text-align:center">Dallo ai tuoi compagni di pesca: con questo codice ti aggiungono agli amici.</p>
@@ -497,7 +497,7 @@ CH.ask=async q=>{
   const el=document.getElementById('cmsg');if(el)el.value='';
   const h=LS.get('chatbot',[]);h.push({me:true,text:q,ts:Date.now()});LS.set('chatbot',h.slice(-40));CH.botBusy=true;refresh();
   let ans='';
-  if(typeof gemKey==='function'&&gemKey()){
+  if(typeof gemOn==='function'&&gemOn()){
     try{const sys=`Sei l'assistente di pesca dell'app LenzApp. Rispondi in italiano, in modo pratico e breve (massimo 8 righe), con esche, montature, tecniche e orari adatti alle condizioni. Usa le unità metriche. Se la domanda non riguarda la pesca, riporta gentilmente il discorso sulla pesca. Ricorda di rispettare le misure minime e la normativa locale quando parli di trattenere il pesce. Rispondi in JSON: {"risposta":"testo"}.\nDati attuali:\n${context()}`;
       const hist=LS.get('chatbot',[]).slice(-10).map(m=>({role:m.me?'user':'model',parts:[{text:m.text}]}));
       const j=await gemCall({systemInstruction:{parts:[{text:sys}]},contents:hist,generationConfig:{responseMimeType:'application/json',temperature:.6}});
@@ -506,7 +506,7 @@ CH.ask=async q=>{
   }
   if(!ans){let tips=[];try{tips=advice().map(a=>a[0]+' '+strip(a[1]));}catch(e){}
     ans=(tips.length?'Ecco cosa ti consiglio adesso per il tuo spot:\n'+tips.join('\n'):'Sto ancora caricando il meteo del tuo spot: riprova tra qualche secondo.')+
-      (typeof gemKey==='function'&&gemKey()?'':'\n\nPer risposte libere a qualsiasi domanda attiva Gemini nelle Impostazioni.');}
+      (typeof gemOn==='function'&&gemOn()?'\n\n(Gemini al momento non risponde: riprova tra poco.)':'\n\nPer risposte libere serve la connessione a internet.');}
   const h2=LS.get('chatbot',[]);h2.push({me:false,text:ans,ts:Date.now()});LS.set('chatbot',h2.slice(-40));CH.botBusy=false;refresh();
 };
 
