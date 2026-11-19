@@ -141,12 +141,15 @@ function reloadSoon(){  // modifiche arrivate da un altro dispositivo: ridisegno
   if(!reloadTimer)reloadTimer=setTimeout(()=>{reloadTimer=null;reload();},wait);
 }
 function reload(){
+  const act0=S.active,pos0=JSON.stringify((S.spots||[]).find(x=>x.id===S.active)||{});
   lastReload=Date.now();C.applying=true;  // i calcoli fatti qui (trofei, profilo) non vanno rimandati online
   S.spots=LS.get('spots',S.spots);if(!Array.isArray(S.spots))S.spots=[];S.active=LS.get('active',S.active);if(!S.spots.find(s=>s.id===S.active))S.active=S.spots[0]?.id||null;
   S.diary=LS.get('diary',[]);S.live=LS.get('live',null);
   try{buildProfile();checkBadges();}catch(e){}
   C.applying=false;
-  try{cleanSpots(true);}catch(e){}  // dopo l'unione con i dati dell'account (le modifiche vengono poi salvate online)
+  try{cleanSpots(true);ensureHere();if(S.active!==LS.get('active',null))LS.set('active',S.active);}catch(e){}  // dopo l'unione con i dati dell'account (le modifiche vengono poi salvate online)
+  // spot attivo cambiato (per esempio dall'altro dispositivo o dalla pulizia): ricarico il meteo
+  const sp=(S.spots||[]).find(x=>x.id===S.active);if(S.active!==act0||JSON.stringify(sp||{})!==pos0){S.wx=null;try{loadWeather();}catch(e){}}
   if(!document.getElementById('sheet').classList.contains('on'))render();
 }
 
