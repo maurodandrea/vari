@@ -539,7 +539,7 @@
 <div class="ocean"><div class="rays"></div><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div id="bubbles"></div></div>
 <div id="app">
   <header>
-    <div class="logo"><div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#03282a" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 10.6v4.9a4.5 4.5 0 1 1-9 0V13l3 3" stroke-width="2.4"/><circle cx="13.5" cy="8.6" r="1.75" stroke-width="1.7"/><path d="M13.5 6.85V.6" stroke-width="1.1"/><path d="M12.3 6.1l2.4-1M12.3 4.9l2.4-1M12.3 3.7l2.4-1" stroke-width="1.25"/><path d="M13.9 2.6l2.1-1.3" stroke-width="1.05"/></svg></div><div><span class="word">Lenz<b>App</b></span><div class="ver" id="ver" data-build="__BUILD__"></div></div></div>
+    <div class="logo"><div class="mark"><svg viewBox="0 0 24 24" fill="none" stroke="#03282a" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 9.2v6.3a4.5 4.5 0 1 1-9 0V13l3 3" stroke-width="2.4"/><circle cx="13.5" cy="6.6" r="1.75" stroke-width="1.7"/><path d="M13.5 4.85V.6" stroke-width="1.1"/><path d="M11.4 10.6l4.2-1.3M11.4 11.9l4.2-1.3M11.4 13.2l4.2-1.3M11.4 14.5l4.2-1.3" stroke-width="1.05"/><path d="M15.6 13.2l1.9 1.6" stroke-width="1.05"/></svg></div><div><span class="word">Lenz<b>App</b></span><div class="ver" id="ver" data-build="__BUILD__"></div></div></div>
     <button class="userchip" id="userChip" style="display:none" onclick="CLOUD.open()"></button>
     <button class="spotchip" id="spotChip" onclick="pickSpot()"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a7 7 0 0 0-7 7c0 5.3 7 13 7 13s7-7.7 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg><span id="spotName">—</span></button>
   </header>
@@ -2305,7 +2305,7 @@ function wipeAll(){
 
 /* ===================== Benvenuto ===================== */
 function welcome(){
-  openSheet(`<div class="welcome"><div class="wl"><svg viewBox="0 0 24 24" fill="none" stroke="#03282a" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 10.6v4.9a4.5 4.5 0 1 1-9 0V13l3 3" stroke-width="2.4"/><circle cx="13.5" cy="8.6" r="1.75" stroke-width="1.7"/><path d="M13.5 6.85V.6" stroke-width="1.1"/><path d="M12.3 6.1l2.4-1M12.3 4.9l2.4-1M12.3 3.7l2.4-1" stroke-width="1.25"/><path d="M13.9 2.6l2.1-1.3" stroke-width="1.05"/></svg></div>
+  openSheet(`<div class="welcome"><div class="wl"><svg viewBox="0 0 24 24" fill="none" stroke="#03282a" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 9.2v6.3a4.5 4.5 0 1 1-9 0V13l3 3" stroke-width="2.4"/><circle cx="13.5" cy="6.6" r="1.75" stroke-width="1.7"/><path d="M13.5 4.85V.6" stroke-width="1.1"/><path d="M11.4 10.6l4.2-1.3M11.4 11.9l4.2-1.3M11.4 13.2l4.2-1.3M11.4 14.5l4.2-1.3" stroke-width="1.05"/><path d="M15.6 13.2l1.9 1.6" stroke-width="1.05"/></svg></div>
   <h2>Benvenuto su LenzApp</h2><p class="mut">Sapere quando e dove pescare, ogni volta.</p>
   <div class="feat"><div><span>🎯</span>Indice di pesca ora per ora, da meteo, mare, luna e marea reali</div>
   <div><span>📍</span>I tuoi spot sulla mappa e la classifica di dove andare oggi</div>
@@ -2365,7 +2365,7 @@ async function shareEntry(id){
   g.fillStyle='rgba(234,244,255,.8)';g.font='400 40px Outfit, sans-serif';
   g.fillText(fit(n>1&&best?`🏆 ${best.sp}${size(best)?' '+size(best):''}${e.tech?' · '+e.tech:''}`:`${n} ${n===1?'cattura':'catture'}${e.tech?' · '+e.tech:''}`,W-120),px,py+ph+290);
   g.fillText(`📍 ${sp?.name||''} · ${parseLocal(e.start).toLocaleDateString('it-IT',{day:'numeric',month:'long',year:'numeric'})}`,px,py+ph+350);
-  g.fillStyle=tg;rrect(g,px,H-110,64,64,18);g.fill();g.save();g.translate(px+12,H-98);g.scale(1.7,1.7);g.strokeStyle='#03282a';g.lineCap='round';g.lineJoin='round';for(const [d,lw] of [['M13.5 10.6v4.9a4.5 4.5 0 1 1-9 0V13l3 3',2.4],['M15.25 8.6a1.75 1.75 0 1 0-3.5 0a1.75 1.75 0 1 0 3.5 0',1.7],['M13.5 6.85V.6',1.1],['M12.3 6.1l2.4-1M12.3 4.9l2.4-1M12.3 3.7l2.4-1',1.25],['M13.9 2.6l2.1-1.3',1.05]]){g.lineWidth=lw;g.stroke(new Path2D(d));}g.restore();
+  g.fillStyle=tg;rrect(g,px,H-110,64,64,18);g.fill();g.save();g.translate(px+12,H-98);g.scale(1.7,1.7);g.strokeStyle='#03282a';g.lineCap='round';g.lineJoin='round';for(const [d,lw] of [['M13.5 9.2v6.3a4.5 4.5 0 1 1-9 0V13l3 3',2.4],['M15.25 6.6a1.75 1.75 0 1 0-3.5 0a1.75 1.75 0 1 0 3.5 0',1.7],['M13.5 4.85V.6',1.1],['M11.4 10.6l4.2-1.3M11.4 11.9l4.2-1.3M11.4 13.2l4.2-1.3M11.4 14.5l4.2-1.3',1.05],['M15.6 13.2l1.9 1.6',1.05]]){g.lineWidth=lw;g.stroke(new Path2D(d));}g.restore();
   g.textAlign='left';g.fillStyle='#fff';g.font='800 46px Outfit, sans-serif';g.fillText('LenzApp',px+84,H-62);
   if(e.cond?.idx!=null){g.textAlign='right';g.fillStyle=idxColor(e.cond.idx);g.font='700 38px Outfit, sans-serif';g.fillText(`Indice ${e.cond.idx} · ${idxLabel(e.cond.idx)[0]}`,W-px,H-64);}
   const blob=await new Promise(r=>c.toBlob(r,'image/png'));
