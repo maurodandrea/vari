@@ -681,7 +681,9 @@ CH.delFind=async()=>{
     if(uid)[u,data,diary,prof]=await Promise.all([ff.getDoc(ff.doc(db,'users',uid)),ff.getDocs(ff.collection(db,'users',uid,'data')),ff.getDocs(ff.collection(db,'users',uid,'diary')),ff.getDoc(ff.doc(db,'profiles',uid))]);
     // messaggi: per codice utente, oppure per nome (utenti già cancellati)
     const name0=prof?.exists()?prof.data().name:'';
-    const msgs=await ff.getDocs(ff.query(ff.collectionGroup(db,'msgs'),uid?ff.where('uid','==',uid):ff.where('name','==',q)));
+    // messaggi: scorro le stanze una per una (nessun indice da creare su Firestore)
+    const msgs={docs:[]},rooms=await ff.getDocs(ff.collection(db,'rooms'));
+    for(const r of rooms.docs){try{const m=await ff.getDocs(ff.query(ff.collection(db,'rooms',r.id,'msgs'),uid?ff.where('uid','==',uid):ff.where('name','==',q)));msgs.docs.push(...m.docs);}catch(e){}}
     const hasData=u?.exists()||data.docs.length||diary.docs.length||prof?.exists();
     if(!hasData&&!msgs.docs.length){box.innerHTML=`<p class="small" style="color:var(--acc2)">Nessun dato né messaggio trovato per «${esc(q)}». Per un utente già cancellato prova con il nome come appare in chat.</p>`;return;}
     const get=k=>{const d=data.docs.find(x=>x.id===k);try{return d?JSON.parse(d.data().v):null;}catch(e){return null;}};
@@ -692,8 +694,7 @@ CH.delFind=async()=>{
       :`<p class="small mut">Nessun dato dell'account (probabilmente già cancellato).</p>`)+
       `<div class="kv"><span>Messaggi in chat</span><b>${msgs.docs.length}</b></div>
       <button class="btn full" style="margin-top:10px;background:#c0392b;color:#fff" onclick="CHAT.delRun()">🗑️ Cancella ${hasData?'tutti i dati e i messaggi':'tutti i messaggi'}</button>`;
-  }catch(e){const link=(String(e.message||'').match(/https:\/\/console\.firebase\.google\.com\S+/)||[])[0];
-    box.innerHTML=`<p class="small" style="color:var(--acc2);word-break:break-word">⚠️ ${e.code==='failed-precondition'?'Firestore deve creare un indice per cercare i messaggi in tutte le stanze (si fa una volta sola).'+(link?` <a href="${esc(link)}" target="_blank" rel="noopener" style="color:inherit"><b>Apri il link e premi «Crea indice»</b></a>, aspetta qualche minuto e riprova.`:' Console Firebase › Firestore › Indici › Campo singolo › Aggiungi esenzione: raccolta «msgs», campi «uid» e «name», ambito «Gruppo di raccolte», ordine crescente.'):e.code==='permission-denied'?'Permesso negato: pubblica le regole aggiornate (firestore.rules) in Console Firebase.':esc(e.code||e.message)}</p>`;}
+  }catch(e){box.innerHTML=`<p class="small" style="color:var(--acc2)">⚠️ ${e.code==='permission-denied'?'Permesso negato: pubblica le regole aggiornate (firestore.rules) in Console Firebase.':esc(e.code||e.message)}</p>`;}
 };
 CH.delRun=async()=>{
   const d=CH._del;if(!d||!CH.isAdmin())return;
