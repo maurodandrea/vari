@@ -527,7 +527,7 @@ function mapHtml(){
   return `<div class="card"><h3>📡 La mia posizione</h3>${opt.map(([k,n,d])=>`<label class="crow" style="align-items:flex-start"><input type="radio" name="cloc" ${v===k?'checked':''} onchange="CHAT.setLoc('${k}')" style="margin-top:3px"><span><b>${n}</b><br><span class="small mut">${d}</span></span></label>`).join('')}
     <p class="small mut" style="margin:6px 0 0">La posizione viene presa dal GPS del telefono, arrotondata a circa 100 m, e aggiornata ogni 5 minuti mentre LenzApp è aperta. Dopo ${LOC_MAX_H} ore senza aggiornamenti sparisce dalla mappa.<br><span id="clocerr">${CH.locErr?'⚠️ '+esc(CH.locErr):''}</span></p></div>
   <div class="card" style="padding:10px"><div id="cmap" style="height:58vh;min-height:320px;border-radius:16px;overflow:hidden"></div>
-    ${v==='off'?'<p class="small" style="margin:8px 4px 0;color:var(--acc2)">🚫 Hai scelto «Non condivisa»: nessuno ti vede e tu non vedi nessuno.</p>':`<div id="cfstat">${friendStatus()}</div>`}
+    ${v==='off'?'<p class="small" style="margin:8px 4px 0;color:var(--acc2)">🚫 Hai scelto «Non condivisa»: nessuno ti vede e tu non vedi nessuno. Sulla mappa vedi solo te stesso, con l’omino rosso.</p>':`<div id="cfstat">${friendStatus()}</div>`}
     <div class="small" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;justify-content:center"><span><svg width="12" height="15" viewBox="0 0 20 24" style="vertical-align:-2px"><circle cx="10" cy="6" r="4.6" fill="#3b8cff" stroke="#fff" stroke-width="1.8"/><path d="M2.5 22.5c0-5 3.4-8.6 7.5-8.6s7.5 3.6 7.5 8.6z" fill="#3b8cff" stroke="#fff" stroke-width="1.8"/></svg> Tu</span><span>${manSvg('#2ecc71')} Amici</span><span>${manSvg('#ff5a5f')} Altri utenti</span></div></div>`;
 }
 CH.setLoc=async v=>{LS.set('chatloc',v);CH.locErr='';CH._locTry=0;
@@ -569,20 +569,21 @@ function friendStatus(){const fr=friends();if(!fr.length)return '<p class="small
   return `<div style="margin-top:8px">${fr.map(f=>{const l=CH.locs[f.uid],ok=l&&now-l.ts<=LOC_MAX_H*3600e3;
     return `<div class="small" style="display:flex;gap:6px;align-items:center;padding:3px 4px">${manSvg(ok?'#2ecc71':'#7f8c99')}<b>${esc(f.name)}</b><span class="mut">${ok?'sulla mappa · '+ago(l.ts)+' fa':l?'posizione vecchia (più di '+LOC_MAX_H+' ore)':'non condivide la posizione con te'}</span></div>`;}).join('')}
     <p class="small mut" style="margin:4px 4px 0">Per vedere un amico deve avere la posizione su «Solo amici» o «Tutti», averti tra i suoi amici e aver aperto LenzApp da poco.</p></div>`;}
+function localPos(){if(!navigator.geolocation)return;navigator.geolocation.getCurrentPosition(p=>{CH.myLocal={lat:p.coords.latitude,lon:p.coords.longitude};if(CH.tab==='mappa'&&S.tab==='chat')mapMarkers();},()=>{},{enableHighAccuracy:true,timeout:15000,maximumAge:120000});}
 function mapInit(){
   const el=document.getElementById('cmap');if(!el||!window.L)return;
   CH.map?.remove();CH._fitted=false;if(CH._locTry>3){CH._locTry=0;CH.locMode=null;}const me0=CH.locs[me()?.uid],sp=activeSpot();
   const c=me0?[me0.lat,me0.lon]:sp&&sp.lat!=null?[sp.lat,sp.lon]:[41.9,12.5];
   CH.map=L.map(el,{zoomControl:true,attributionControl:true}).setView(c,me0||sp?10:6);
   baseLayers(CH.map);
-  CH.mlayer=L.layerGroup().addTo(CH.map);locListen();if(locVis()!=='off')pushLoc(false);mapMarkers();
+  CH.mlayer=L.layerGroup().addTo(CH.map);locListen();if(locVis()!=='off')pushLoc(false);else localPos();mapMarkers();
 }
 // omino colorato: blu tu, verde gli amici, rosso gli altri utenti
 const manIcon=col=>L.divIcon({className:'',iconSize:[34,42],iconAnchor:[17,40],popupAnchor:[0,-36],
   html:`<svg width="34" height="42" viewBox="0 0 34 42"><path d="M17 41c-1-4-14-14-14-24a14 14 0 0 1 28 0c0 10-13 20-14 24z" fill="${col}" stroke="#fff" stroke-width="2"/><circle cx="17" cy="11.5" r="4" fill="#fff"/><path d="M10.5 25c0-4.2 2.9-7.5 6.5-7.5s6.5 3.3 6.5 7.5z" fill="#fff"/></svg>`});
 // tu: omino piccolo senza goccia, sotto gli altri
-const meIcon=()=>L.divIcon({className:'',iconSize:[20,24],iconAnchor:[10,22],popupAnchor:[0,-20],
-  html:`<svg width="20" height="24" viewBox="0 0 20 24"><circle cx="10" cy="6" r="4.6" fill="#3b8cff" stroke="#fff" stroke-width="1.8"/><path d="M2.5 22.5c0-5 3.4-8.6 7.5-8.6s7.5 3.6 7.5 8.6z" fill="#3b8cff" stroke="#fff" stroke-width="1.8"/></svg>`});
+const meIcon=(col='#3b8cff')=>L.divIcon({className:'',iconSize:[20,24],iconAnchor:[10,22],popupAnchor:[0,-20],
+  html:`<svg width="20" height="24" viewBox="0 0 20 24"><circle cx="10" cy="6" r="4.6" fill="${col}" stroke="#fff" stroke-width="1.8"/><path d="M2.5 22.5c0-5 3.4-8.6 7.5-8.6s7.5 3.6 7.5 8.6z" fill="${col}" stroke="#fff" stroke-width="1.8"/></svg>`});
 function mapMarkers(){
   if(!CH.map||!CH.mlayer||!document.getElementById('cmap'))return;CH.mlayer.clearLayers();
   const u=me()?.uid,fr=new Set(friends().map(f=>f.uid)),bl=blocked(),now=Date.now(),pts=[];
@@ -597,6 +598,9 @@ function mapMarkers(){
     const m=L.marker(pos[l.id],{icon:mine?meIcon():manIcon(col),zIndexOffset:mine?-1000:0}).addTo(CH.mlayer);pts.push(pos[l.id]);
     m.bindPopup(`<b>${esc(mine?'Tu':l.name||'Pescatore')}</b><br><span style="font-size:12px">aggiornata ${ago(l.ts)} fa${mine?' · '+(l.vis==='all'?'visibile a tutti':'visibile agli amici'):fr.has(l.id)?' · amico':''}</span>${mine?'':`<br><button class="btn" style="margin-top:6px;padding:6px 12px" onclick="CHAT.dm('${l.id}','${esc(l.name||'').replace(/'/g,'')}')">💬 Scrivi</button>`}`);
   }
+  // posizione non condivisa: mi mostro lo stesso, in rosso, con il GPS letto solo sul telefono (non viene inviato)
+  if(mode==='off'&&CH.myLocal){const p0=[CH.myLocal.lat,CH.myLocal.lon];
+    L.marker(p0,{icon:meIcon('#ff5a5f')}).addTo(CH.mlayer).bindPopup('<b>Tu</b><br><span style="font-size:12px">posizione non condivisa: la vedi solo tu</span>');pts.push(p0);}
   if(pts.length&&!CH._fitted){CH._fitted=true;if(pts.length>1)CH.map.fitBounds(pts,{padding:[40,40],maxZoom:13});else CH.map.setView(pts[0],12);}
 }
 
