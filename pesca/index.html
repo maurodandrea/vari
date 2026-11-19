@@ -612,8 +612,18 @@ const S = {
   live:LS.get('live',null),
   wx:null, wxErr:false, loading:false
 };
-if(!S.spots){S.spots=[{id:uid(),name:'Lido di Ostia',lat:41.7275,lon:12.2772,mode:'coast',note:'Spot di esempio: aggiungi i tuoi dalla mappa'}];LS.set('spots',S.spots);}
-if(!S.active||!S.spots.find(s=>s.id===S.active)){S.active=S.spots[0]?.id||null;}
+// niente più spot di esempio salvato: senza spot si parte dalla «Posizione attuale» (solo sul dispositivo, non salvata nell'account);
+// finché il GPS non risponde la posizione è un punto indicativo sulla costa di Roma
+const isExample=s=>s&&!s.here&&s.name==='Lido di Ostia'&&s.note==='Spot di esempio: aggiungi i tuoi dalla mappa'&&!s.face;
+function ensureHere(){
+  if(!Array.isArray(S.spots))S.spots=[];
+  if(!S.spots.length){S.spots=[{id:uid(),name:'Posizione attuale',here:true,approx:true,lat:41.7275,lon:12.2772,mode:S.mode||'coast',note:'',face:null}];LS.set('spots',S.spots);}
+  const a=S.spots.find(s=>s.id===S.active),saved=S.spots.find(s=>!s.here);
+  // se è attivo il punto indicativo ma ci sono spot salvati, uso il primo spot salvato
+  if(!a||(a.approx&&saved)){S.active=(saved||S.spots[0]).id;LS.set('active',S.active);}
+}
+if(!S.spots)S.spots=[];
+ensureHere();
 
 /* ===================== Premium ===================== */
 // Codice valido: la data del giorno in cui lo inserisci (ggmmaaaa, come numero) moltiplicata per un numero pari.
@@ -802,7 +812,7 @@ async function waterInfo(sp){
     // località di mare entro 5 km; altrimenti comune e zona/quartiere dove sei
     let near=nb(C.T,5);
     if(!near){const P=await luoghi(),com=nb(P.c,30),zona=nb(P.x,2.5);near=[com,zona&&zona!==com?zona:null].filter(Boolean).join(', ')||null;}
-    sp.wq={k,water:km<=5,km,near};if(sp.here)sp.name='Posizione attuale'+(near?' · '+near:'');
+    sp.wq={k,water:km<=5,km,near};if(sp.here)sp.name='Posizione attuale'+(near&&!sp.approx?' · '+near:'');
     LS.set('spots',S.spots);return sp.wq;
   }catch(e){sp.wqErr=e.message;return null;}
 }
@@ -1662,10 +1672,12 @@ function cleanSpots(force){
   for(const s of S.spots){
     if(s.here){if(here)continue;here=true;out.push(s);continue;}
     if(!s.here&&s.name==='La mia posizione'&&!s.note&&!s.face&&s.id!==S.active)continue;
+    if(isExample(s))continue;  // spot di esempio mai modificato
     const d=out.find(o=>!o.here&&o.name.trim().toLowerCase()===String(s.name||'').trim().toLowerCase()&&km(o,s)<.2);
     if(d){if(s.id===S.active)S.active=d.id;continue;}
     out.push(s);}
-  if(out.length!==S.spots.length){S.spots=out;if(!S.spots.find(s=>s.id===S.active))S.active=S.spots[0]?.id||null;LS.set('spots',S.spots);LS.set('active',S.active);}
+  if(out.length!==S.spots.length){S.spots=out;if(!S.spots.find(s=>s.id===S.active))S.active=null;ensureHere();LS.set('spots',S.spots);LS.set('active',S.active);
+    if(S.spots.find(s=>s.id===S.active)?.approx)setTimeout(()=>hereSpot(()=>{S.wx=null;loadWeather();},()=>{}),300);}
   LS.set('spotclean1',true);
 }
 function hereSpot(ok,ko){
@@ -1673,7 +1685,7 @@ function hereSpot(ok,ko){
   toast('Cerco la tua posizione…');
   navigator.geolocation.getCurrentPosition(p=>{
     let s=S.spots.find(x=>x.here);
-    if(s){s.lat=p.coords.latitude;s.lon=p.coords.longitude;}
+    if(s){s.lat=p.coords.latitude;s.lon=p.coords.longitude;delete s.approx;}
     else{s={id:uid(),name:'Posizione attuale',here:true,lat:p.coords.latitude,lon:p.coords.longitude,mode:S.mode,note:'',face:null};S.spots.push(s);}
     LS.set('spots',S.spots);ok(s);
     waterInfo(s).then(()=>{S.spots=S.spots;render();});
@@ -1985,14 +1997,14 @@ function welcome(){
   <div><span>⏱️</span>Sessione live: cronometro e catture con un tocco</div>
   <div><span>🏆</span>Diario, statistiche, trofei: l'indice impara dalle tue uscite</div></div>
   <button class="btn full" onclick="welcomeLocate()">📍 Usa la mia posizione</button>
-  <button class="btn ghost full" style="margin-top:8px" onclick="LS.set('welcomed',true);closeSheet()">Esplora con lo spot di esempio</button></div>`);
+  <button class="btn ghost full" style="margin-top:8px" onclick="LS.set('welcomed',true);closeSheet();go('spot')">🗺️ Scegli uno spot sulla mappa</button></div>`);
 }
 function welcomeLocate(){
   LS.set('welcomed',true);
   if(!navigator.geolocation){closeSheet();toast('Geolocalizzazione non disponibile');return;}
   toast('Cerco la tua posizione…');
   // uso la «Posizione attuale» (non diventa uno spot salvato)
-  closeSheet();hereSpot(s=>{S.active=s.id;LS.set('active',s.id);S.wx=null;loadWeather();toast('🎯 Uso la tua posizione attuale');},()=>{});
+  closeSheet();hereSpot(s=>{S.active=s.id;LS.set('active',s.id);S.wx=null;loadWeather();toast('🎯 Uso la tua posizione attuale');},()=>{go('spot');});
 }
 
 /* ===================== Cartolina da condividere ===================== */
@@ -2388,6 +2400,8 @@ checkBadges();
 render();
 loadWeather();
 if(!LS.get('welcomed',false))setTimeout(welcome,700);
+// si parte dal punto indicativo: chiedo subito il GPS (se non lo concede resta il punto indicativo e si può scegliere uno spot)
+else if(activeSpot()?.approx)setTimeout(()=>hereSpot(()=>{S.wx=null;loadWeather();},()=>{}),900);
 // aggiornamento automatico: controlla sempre se c'è una versione nuova e ricarica appena è pronta
 if('serviceWorker' in navigator&&location.protocol.startsWith('http')){
   const had=!!navigator.serviceWorker.controller;
