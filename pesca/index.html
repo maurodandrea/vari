@@ -814,7 +814,7 @@ async function waterInfo(sp){
     // località di mare entro 5 km; altrimenti comune e zona/quartiere dove sei
     let near=nb(C.T,5);
     if(!near){const P=await luoghi(),com=nb(P.c,30),zona=nb(P.x,2.5);near=[com,zona&&zona!==com?zona:null].filter(Boolean).join(', ')||null;}
-    sp.wq={k,water:km<=5,km,near};if(sp.here)sp.name='Posizione attuale'+(near&&!sp.approx?' · '+near:'');
+    sp.wq={k,water:km<=5,km,near};if(sp.here)sp.name='Posizione attuale'+(near&&sp.approx!==true?' · '+near:'');
     LS.set('spots',S.spots);return sp.wq;
   }catch(e){sp.wqErr=e.message;return null;}
 }
@@ -1038,7 +1038,7 @@ function needWx(v){
   if(S.loading||!S.wx){v.innerHTML=`<div class="loader"><svg viewBox="0 0 110 110"><ellipse class="rip" cx="55" cy="72" rx="34" ry="8" fill="none" stroke="#2fe0cf" stroke-width="1.5"/><ellipse class="rip r2" cx="55" cy="72" rx="34" ry="8" fill="none" stroke="#2fe0cf" stroke-width="1.5"/><g class="bobber"><line x1="55" y1="8" x2="55" y2="40" stroke="#cfe3f7" stroke-width="1"/><rect x="53" y="34" width="4" height="10" rx="2" fill="#fff"/><ellipse cx="55" cy="52" rx="9" ry="11" fill="#ff5a5f"/><path d="M46 56a9 11 0 0 0 18 0z" fill="#fff"/><rect x="54" y="62" width="2" height="9" rx="1" fill="#fff"/></g></svg><p>Leggo il mare e il cielo…</p></div>`;return true;}
   return false;
 }
-function simBanner(){return S.wxErr?'<div class="banner">⚠️ Servizio meteo non raggiungibile: sto mostrando valori simulati. <a href="#" style="color:inherit" onclick="loadWeather(true);return false">Riprova</a></div>':'';}
+function simBanner(){return (activeSpot()?.approx==='net'?'<div class="banner">📍 Posizione approssimativa, ricavata dalla rete: meteo e indice possono riferirsi a qualche km di distanza. <a href="#" style="color:inherit" onclick="hereSpot(()=>{S.wx=null;loadWeather();});return false">Riprova con il GPS</a></div>':'')+(S.wxErr?'<div class="banner">⚠️ Servizio meteo non raggiungibile: sto mostrando valori simulati. <a href="#" style="color:inherit" onclick="loadWeather(true);return false">Riprova</a></div>':'');}
 function gauge(v){
   const C=100,R=84,pt=a=>[C+R*Math.cos(a*RAD),C+R*Math.sin(a*RAD)];
   const [x0,y0]=pt(135),[x1,y1]=pt(45),d=`M${x0} ${y0} A${R} ${R} 0 1 1 ${x1} ${y1}`;
@@ -1112,7 +1112,8 @@ function setHeading(hd){
 }
 function vHome(v){
   // posizione attuale non ancora nota (GPS che non risponde): niente indice calcolato su un punto a caso
-  if(activeSpot()?.approx){v.innerHTML=`<div class="card" style="text-align:center;padding:28px 18px"><div style="font-size:46px">📍</div><h2 style="margin:6px 0">Posizione non disponibile</h2>
+  if(activeSpot()?.approx===true&&!hereSpot.err&&Date.now()-(hereSpot.t||0)<30000){v.innerHTML=`<div class="card" style="text-align:center;padding:30px 18px"><span class="aispin" style="width:30px;height:30px;border-width:3px;display:inline-block"></span><h2 style="margin:10px 0 4px">Cerco la tua posizione…</h2><p class="mut">GPS o, se non risponde, posizione approssimata dalla rete.</p></div>`;setTimeout(()=>{if(S.tab==='home'&&activeSpot()?.approx===true)render();},8000);return;}
+  if(activeSpot()?.approx===true){v.innerHTML=`<div class="card" style="text-align:center;padding:28px 18px"><div style="font-size:46px">📍</div><h2 style="margin:6px 0">Posizione non disponibile</h2>
     <p class="mut">Il GPS non ha ancora dato la tua posizione: senza, non posso calcolare meteo e indice di pescosità.</p>${hereSpot.err?`<p class="small" style="color:var(--acc2)">${esc(hereSpot.err)}</p>`:''}
     <button class="btn full" style="margin-top:10px" onclick="hereSpot(()=>{S.wx=null;loadWeather();render();},()=>render())">🎯 Riprova con il GPS</button>
     <button class="btn ghost full" style="margin-top:8px" onclick="go('spot')">🗺️ Scegli uno spot sulla mappa</button></div>`;return;}
@@ -1183,7 +1184,7 @@ function timeline(sol,D){
   return `<div class="timeline">${seg}</div><div class="tl-lbl"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>`;
 }
 
-function vMeteo(v){if(activeSpot()?.approx)return vHome(v);
+function vMeteo(v){if(activeSpot()?.approx===true)return vHome(v);
   if(needWx(v))return;
   if(!isPremium()&&S.day>=FREE_DAYS)S.day=0;
   const X=S.wx,d=X.fdays[S.day]||X.fdays[0],hs=dayHours(X,d.date),ph=moonPhase(new Date(d.date.getTime()+12*3600e3));
@@ -1700,21 +1701,36 @@ function cleanSpots(force){
     if(S.spots.find(s=>s.id===S.active)?.approx)setTimeout(()=>hereSpot(()=>{S.wx=null;loadWeather();},()=>{}),300);}
   LS.set('spotclean1',true);
 }
+// posizione attuale: chiedo in parallelo la posizione veloce (celle/Wi-Fi) e quella precisa (GPS) e uso la prima che arriva;
+// se il telefono non risponde uso quella approssimata dalla rete (indirizzo IP); niente blocca l'app
 function hereSpot(ok,ko,quiet){
-  if(!navigator.geolocation){if(!quiet)toast('Geolocalizzazione non disponibile');ko&&ko();return;}
   hereSpot.t=Date.now();if(!quiet)toast('Cerco la tua posizione…');
-  const got=p=>{
+  let done=false,acc=1e9;const t0=Date.now();
+  const apply=(lat,lon,a,src)=>{
     let s=S.spots.find(x=>x.here);
-    if(s){s.lat=p.coords.latitude;s.lon=p.coords.longitude;delete s.approx;}
-    else{s={id:uid(),name:'Posizione attuale',here:true,lat:p.coords.latitude,lon:p.coords.longitude,mode:S.mode,note:'',face:null};S.spots.push(s);}
-    hereSpot.err='';LS.set('spots',S.spots);ok(s);
+    if(s&&!s.approx&&done&&a>=acc)return;  // ho già una posizione più precisa
+    if(s&&done&&Math.abs(s.lat-lat)<.002&&Math.abs(s.lon-lon)<.002&&a>=acc*.5){acc=Math.min(acc,a);return;}
+    acc=Math.min(acc,a);
+    if(s){s.lat=lat;s.lon=lon;if(src==='net')s.approx='net';else delete s.approx;}
+    else{s={id:uid(),name:'Posizione attuale',here:true,lat,lon,mode:S.mode,note:'',face:null};if(src==='net')s.approx='net';S.spots.push(s);}
+    s.acc=Math.round(a);hereSpot.err='';LS.set('spots',S.spots);
+    const first=!done;done=true;
+    if(first)ok&&ok(s);else if(S.active===s.id){S.wx=null;loadWeather();}
     waterInfo(s).then(()=>{S.spots=S.spots;render();});
   };
-  const fail=e=>{hereSpot.err=e?.code===1?'Permesso negato: consenti la posizione a LenzApp nelle impostazioni del browser (lucchetto accanto all\'indirizzo › Autorizzazioni › Posizione) e quella del telefono.':'Il GPS non risponde: controlla che la posizione del telefono sia attiva, poi riprova.';
-    if(!quiet)toast(e?.code===1?'Permesso della posizione negato':'Posizione non disponibile');ko&&ko();};
-  // prima lettura precisa; se non arriva, una seconda più veloce (rete/celle), accettando anche una posizione di pochi minuti fa
-  navigator.geolocation.getCurrentPosition(got,e=>{if(e?.code===1)return fail(e);
-    navigator.geolocation.getCurrentPosition(got,fail,{enableHighAccuracy:false,timeout:20000,maximumAge:600000});},{enableHighAccuracy:true,timeout:12000,maximumAge:60000});
+  const got=p=>apply(p.coords.latitude,p.coords.longitude,p.coords.accuracy||1000,'dev');
+  let denied=false,fails=0;
+  const net=async()=>{if(done)return;
+    try{const r=await fetch('https://get.geojs.io/v1/ip/geo.json');const j=await r.json();const la=+j.latitude,lo=+j.longitude;
+      if(!isNaN(la)&&!isNaN(lo)&&!done){apply(la,lo,15000,'net');if(!quiet)toast('📍 Posizione approssimata dalla rete: la preciso appena il GPS risponde');return;}}catch(e){}
+    if(!done){hereSpot.err=denied?'Permesso della posizione negato: consentilo a LenzApp nelle impostazioni del browser (lucchetto accanto all\'indirizzo › Autorizzazioni › Posizione).':'Né il GPS né la rete hanno dato la posizione: controlla la connessione e la posizione del telefono.';
+      if(!quiet)toast('Posizione non disponibile');ko&&ko();}};
+  const fail=e=>{if(e?.code===1)denied=true;if(++fails>=2||denied)net();};
+  if(!navigator.geolocation){net();return;}
+  navigator.geolocation.getCurrentPosition(got,fail,{enableHighAccuracy:false,timeout:8000,maximumAge:600000});
+  navigator.geolocation.getCurrentPosition(got,fail,{enableHighAccuracy:true,timeout:25000,maximumAge:60000});
+  // se dopo 6 secondi non c'è ancora niente, intanto uso la rete (poi il GPS la sostituisce)
+  setTimeout(()=>{if(!done)net();},6000);
 }
 // tocco sul nome dello spot in alto: scegli tra gli spot salvati o la posizione attuale
 function pickSpot(){
@@ -2427,7 +2443,7 @@ loadWeather();
 if(!LS.get('welcomed',false))setTimeout(welcome,700);
 // si parte dal punto indicativo: chiedo subito il GPS (se non lo concede resta il punto indicativo e si può scegliere uno spot)
 // posizione attuale attiva: a ogni apertura rileggo il GPS (altrimenti resterebbe il punto dell'ultima volta)
-else if(activeSpot()?.here)setTimeout(()=>{const o=activeSpot(),la=o.lat,lo=o.lon;hereSpot(s=>{if(Math.abs(s.lat-la)>.0005||Math.abs(s.lon-lo)>.0005||o.approx){S.wx=null;loadWeather();}},()=>{});},900);
+if(activeSpot()?.here)setTimeout(()=>{const o=activeSpot(),la=o.lat,lo=o.lon;hereSpot(s=>{if(Math.abs(s.lat-la)>.0005||Math.abs(s.lon-lo)>.0005||o.approx){S.wx=null;loadWeather();}},()=>{});},900);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState!=='visible'||!activeSpot()?.here||Date.now()-(hereSpot.t||0)<600000)return;
   const o=activeSpot(),la=o.lat,lo=o.lon;hereSpot(s=>{if(Math.abs(s.lat-la)>.002||Math.abs(s.lon-lo)>.002){S.wx=null;loadWeather();}},()=>{},true);});
 // aggiornamento automatico: controlla sempre se c'è una versione nuova e ricarica appena è pronta
