@@ -57,9 +57,13 @@ service cloud.firestore {
         allow delete: if attivo() && (resource.data.uid == request.auth.uid || admin()
           || (stanza(rid).type == 'group' && stanza(rid).owner == request.auth.uid));
         // gli altri possono solo aumentare di 1 il contatore delle segnalazioni
+        // oppure rispondere a un'uscita proposta (solo la propria voce in «going»)
         allow update: if attivo() && membro(stanza(rid))
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rep'])
-          && (request.resource.data.rep == resource.data.get('rep', 0) + 1 || admin());
+          && ((request.resource.data.diff(resource.data).affectedKeys().hasOnly(['rep'])
+               && (request.resource.data.rep == resource.data.get('rep', 0) + 1 || admin()))
+            || (resource.data.get('kind', '') == 'trip'
+               && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['going'])
+               && request.resource.data.going.diff(resource.data.get('going', {})).affectedKeys().hasOnly([request.auth.uid])));
       }
     }
 
