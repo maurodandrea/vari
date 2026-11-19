@@ -690,7 +690,8 @@ CH.delFind=async()=>{
       :`<p class="small mut">Nessun dato dell'account (probabilmente già cancellato).</p>`)+
       `<div class="kv"><span>Messaggi in chat</span><b>${msgs.docs.length}</b></div>
       <button class="btn full" style="margin-top:10px;background:#c0392b;color:#fff" onclick="CHAT.delRun()">🗑️ Cancella ${hasData?'tutti i dati e i messaggi':'tutti i messaggi'}</button>`;
-  }catch(e){box.innerHTML=`<p class="small" style="color:var(--acc2)">⚠️ ${esc(e.code||e.message)}${e.code==='permission-denied'||e.code==='failed-precondition'?' — pubblica le regole aggiornate (firestore.rules) in Console Firebase.':''}</p>`;}
+  }catch(e){const link=(String(e.message||'').match(/https:\/\/console\.firebase\.google\.com\S+/)||[])[0];
+    box.innerHTML=`<p class="small" style="color:var(--acc2);word-break:break-word">⚠️ ${e.code==='failed-precondition'?'Firestore deve creare un indice per cercare i messaggi in tutte le stanze (si fa una volta sola).'+(link?` <a href="${esc(link)}" target="_blank" rel="noopener" style="color:inherit"><b>Apri il link e premi «Crea indice»</b></a>, aspetta qualche minuto e riprova.`:' Console Firebase › Firestore › Indici › Campo singolo › Aggiungi esenzione: raccolta «msgs», campi «uid» e «name», ambito «Gruppo di raccolte», ordine crescente.'):e.code==='permission-denied'?'Permesso negato: pubblica le regole aggiornate (firestore.rules) in Console Firebase.':esc(e.code||e.message)}</p>`;}
 };
 CH.delRun=async()=>{
   const d=CH._del;if(!d||!CH.isAdmin())return;
