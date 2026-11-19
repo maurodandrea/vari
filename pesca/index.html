@@ -876,6 +876,31 @@ function seaKm(C,lat,lon){
   }
   return best;
 }
+// punto della costa più vicino (per capire da che parte è il mare)
+function seaNear(C,lat,lon){
+  const kx=111.32*Math.cos(lat*Math.PI/180),ky=110.57;let best=1e9,q=null;
+  for(const {p,bb} of C.L){
+    const dx=Math.max(bb[0]-lon,0,lon-bb[2])*kx,dy=Math.max(bb[1]-lat,0,lat-bb[3])*ky;if(Math.hypot(dx,dy)>=best)continue;
+    for(let i=0;i+3<p.length;i+=2){
+      const ax=(p[i]-lon)*kx,ay=(p[i+1]-lat)*ky,bx=(p[i+2]-lon)*kx,by=(p[i+3]-lat)*ky,vx=bx-ax,vy=by-ay,l2=vx*vx+vy*vy;
+      const t=l2?Math.max(0,Math.min(1,-(ax*vx+ay*vy)/l2)):0,x=ax+t*vx,y=ay+t*vy,d=Math.hypot(x,y);if(d<best){best=d;q=[lat+y/ky,lon+x/kx];}
+    }
+  }
+  return {km:best,q};
+}
+// vicino a riva i quadretti EMODnet (~115 m) a cavallo della spiaggia hanno valori sopra lo zero:
+// guardo 400 m dalla riva da una parte e dall'altra per capire dove è il mare, e stimo la profondità in proporzione
+async function pointSea(lat,lon){
+  const [d,C]=await Promise.all([depthAt(lat,lon).catch(()=>null),costa().catch(()=>null)]);
+  const n=C?seaNear(C,lat,lon):null,km=n?.km;
+  if(!n||!n.q||km>0.45||(d!=null&&d<-1))return {d,km};
+  const kx=111.32*Math.cos(lat*Math.PI/180),ky=110.57,ux=(lon-n.q[1])*kx,uy=(lat-n.q[0])*ky,ul=Math.hypot(ux,uy)||1;
+  const off=s=>[n.q[0]+uy/ul*s/ky,n.q[1]+ux/ul*s/kx];
+  const [a,b]=await Promise.all([depthAt(...off(.4)).catch(()=>null),depthAt(...off(-.4)).catch(()=>null)]);
+  if(a==null||!(a<-0.5)||(b!=null&&b<a))return {d,km,land:true};  // il mare è dall'altra parte: sono a terra
+  const est=Math.max(0.3,-a*km/0.4);
+  return {d:-est,km,est:true};
+}
 const kmTo=(sp,lat,lon)=>{const R=6371,r=Math.PI/180;return 2*R*Math.asin(Math.sqrt(Math.sin((lat-sp.lat)*r/2)**2+Math.cos(sp.lat*r)*Math.cos(lat*r)*Math.sin((lon-sp.lon)*r/2)**2));};
 let LUOGHI=null;
 async function luoghi(){return LUOGHI||(LUOGHI=await (await fetch('luoghi.json')).json());}  // comuni e quartieri italiani (GeoNames)
@@ -1508,10 +1533,11 @@ function dropPin(lat,lon){
   if(!NEWPIN){NEWPIN=L.marker([lat,lon],{draggable:true,icon:L.divIcon({html:'<div class="pin on"><i></i></div>',className:'',iconSize:[30,30],iconAnchor:[15,36]})}).addTo(MAP);}
   else NEWPIN.setLatLng([lat,lon]);
   document.getElementById('newspot').innerHTML=`<div class="row" style="gap:8px"><span class="small" style="flex:1">Trascina il pallino nel punto esatto, poi conferma.</span><button class="btn ghost" onclick="cancelPin()">Annulla</button><button class="btn" onclick="confirmPin()">📍 Crea spot qui</button></div>${bathyOn()?'<div id="pindepth" class="small" style="margin-top:6px">🌊 Misuro il fondale…</div>':''}`;
-  if(bathyOn()){const q=++dropPin.n;Promise.all([depthAt(lat,lon).catch(()=>null),substrateAt(lat,lon).catch(()=>null),costa().then(C=>seaKm(C,lat,lon)).catch(()=>null)]).then(([d,sb,km])=>{if(q!==dropPin.n)return;const el=document.getElementById('pindepth');if(!el)return;
+  if(bathyOn()){const q=++dropPin.n;Promise.all([pointSea(lat,lon).catch(()=>({})),substrateAt(lat,lon).catch(()=>null)]).then(([ps,sb])=>{if(q!==dropPin.n)return;const el=document.getElementById('pindepth');if(!el)return;
+    let {d,km,est,land}=ps;if(land&&d!=null&&d<0)d=0.1;
     const dist=km==null||km>500?'':km<1?Math.round(km*1000/10)*10+' m':fmt1(km)+' km';
     el.innerHTML=d==null?'🌊 Profondità non disponibile qui'+(dist?` · ${dist} dalla costa`:''):d>0?`🏖️ Qui è terra${dist?`: il mare è a ${dist}`:''}`
-      :`🌊 Profondità qui: <b>${mFmt(-d)}</b>${dist?` · <b>${dist}</b> dalla costa`:''}${sb?' · fondo: <b>'+esc(sb.sub)+'</b>':''}`;});}
+      :`🌊 Profondità qui: <b>${est?(-d<1?'meno di 1 m':'circa '+mFmt(Math.round(-d*2)/2)):mFmt(-d)}</b>${dist?` · <b>${dist}</b> dalla costa`:''}${sb?' · fondo: <b>'+esc(sb.sub)+'</b>':''}${est?'<div class="small mut">Vicino a riva i dati sono meno precisi: profondità stimata</div>':''}`;});}
 }
 dropPin.n=0;
 function cancelPin(){if(NEWPIN&&MAP)MAP.removeLayer(NEWPIN);NEWPIN=null;const el=document.getElementById('newspot');if(el)el.innerHTML='<p class="small mut" style="margin:0">Tocca la mappa per mettere un nuovo spot.</p>';}
