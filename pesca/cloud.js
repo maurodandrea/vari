@@ -166,7 +166,7 @@ async function push(retry){
     raw.set('cloudsent',sent);
     raw.set('cloudts',ts);
     if(keys.includes('diary'))await pushDiary();
-    await ff.setDoc(uref(),{email:C.user.email||'',t:now},{merge:true});
+    await ff.setDoc(uref(),{email:(C.user.email||'').toLowerCase(),t:now},{merge:true});
     setStatus('Dati salvati online · '+new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'}));
     return true;
   }catch(e){keys.forEach(k=>C.dirty.add(k));

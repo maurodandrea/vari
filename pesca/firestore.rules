@@ -23,12 +23,15 @@ service cloud.firestore {
 
     match /users/{uid}/{document=**} {
       allow read, write: if attivo() && request.auth.uid == uid;
+      // l'amministratore può cercare e cancellare i dati di un utente (pagina Segnalazioni › Cancella utente)
+      allow read, delete: if admin();
     }
 
     // profilo pubblico: nome e codice amico
     match /profiles/{uid} {
       allow read: if attivo();
       allow write: if attivo() && request.auth.uid == uid;
+      allow delete: if admin();
     }
 
     // stanze della chat
@@ -60,7 +63,7 @@ service cloud.firestore {
 
     // avvisi personali (risposte ai propri messaggi): chiunque può lasciarne uno, solo il destinatario li legge
     match /notifs/{uid}/items/{id} {
-      allow read, delete: if attivo() && request.auth.uid == uid;
+      allow read, delete: if (attivo() && request.auth.uid == uid) || admin();
       allow create: if attivo() && request.resource.data.fromUid == request.auth.uid;
     }
 
@@ -78,6 +81,7 @@ service cloud.firestore {
         || (resource.data.vis == 'all' && miaPosizione() && get(/databases/$(database)/documents/locations/$(request.auth.uid)).data.vis == 'all')
         || request.auth.uid in resource.data.friends);
       allow write: if attivo() && request.auth.uid == uid;
+      allow delete: if admin();
     }
 
     // utenti bloccati dagli amministratori: possono leggere ma non scrivere in chat

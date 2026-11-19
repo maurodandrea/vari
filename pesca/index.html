@@ -653,7 +653,7 @@ function needPremium(what){
 }
 // pagine riservate ai Premium (titolo, descrizione)
 const PREMIUM_TABS={chat:['Social','Social (canali, messaggi, mappa e amici tra pescatori) è riservato agli utenti Premium.'],pesce:['Riconosci e misura','Il riconoscimento della specie e la misura di lunghezza e peso dalla foto sono riservati agli utenti Premium.'],
-  compare:['Dove pescare','La classifica dei tuoi spot per indice di pesca è riservata agli utenti Premium.'],ai:['Assistente','I consigli su misura e le specie di stagione sono riservati agli utenti Premium.'],guide:['Guida','La guida a nodi, montature ed esche è riservata agli utenti Premium.']};
+  compare:['Dove pescare','La classifica dei tuoi spot per indice di pesca è riservata agli utenti Premium.'],ai:['Consigli','I consigli su misura e le specie di stagione sono riservati agli utenti Premium.'],guide:['Guida','La guida a nodi, montature ed esche è riservata agli utenti Premium.']};
 const lockedTab=t=>!!PREMIUM_TABS[t]&&!isPremium();
 // anteprima sfocata di Riconosci: un pesce disegnato, riconosciuto e misurato
 // foto reale fornita dall'utente, con le linee di misura già disegnate (azzurra sul sarago, arancione sulla scarpa)
@@ -668,7 +668,7 @@ function premiumPage(v,t){const [title,what]=PREMIUM_TABS[t];
   v.innerHTML=subHead(title,'Funzione Premium',t==='pesce'||t==='compare'?'home':'altro')+(t==='pesce'?`<div class="pvhost">${premiumPreview()}</div>`:'')+`<div class="card" style="text-align:center;padding:28px 18px">
     <div style="font-size:52px">⭐</div><h2 style="margin:6px 0">Funzione Premium</h2>
     <p class="mut">${what}</p>
-    <p class="small mut" style="margin:10px 0 16px">Con Premium: riconoscimento dei pesci, dove pescare, assistente, guida, spot illimitati, previsioni per tutta la settimana e Social.</p>
+    <p class="small mut" style="margin:10px 0 16px">Con Premium: riconoscimento dei pesci, dove pescare, consigli, guida, spot illimitati, previsioni per tutta la settimana e Social.</p>
     <button class="btn full" onclick="go('settings')">⭐ Inserisci il codice Premium</button></div>`;}
 const savedSpots=()=>S.spots.filter(s=>!s.here).length;
 function uid(){return Math.random().toString(36).slice(2,10)+Date.now().toString(36).slice(-4);}
@@ -1605,7 +1605,7 @@ function vAI(v){
   const traits=[...new Set(SPECIES.flatMap(s=>s.t))].sort();
   const cand=SPECIES.map(s=>{let sc=0;if(AIQ.sh&&s.sh===AIQ.sh)sc+=2;if(AIQ.c&&s.c===AIQ.c)sc+=2;AIQ.t.forEach(t=>{if(s.t.includes(t))sc+=3;});if(s.m.includes(S.mode))sc+=.5;return {s,sc};})
     .filter(x=>x.sc>.5).sort((a,b)=>b.sc-a.sc).slice(0,4);
-  v.innerHTML=subHead('Assistente','Consigli su misura, specie di stagione e riconoscimento')+`
+  v.innerHTML=subHead('Consigli','Consigli su misura, specie di stagione e riconoscimento')+`
   <div class="card"><h3>🤖 Consigli per ${MODES[S.mode].n}${X?' · ora':''}</h3>${tips.map(t=>`<div class="tip"><span>${t[0]}</span><span>${t[1]}</span></div>`).join('')}</div>
   <div class="card"><h3>In stagione a ${now.toLocaleDateString('it-IT',{month:'long'})}</h3>
     ${inSeason.length?inSeason.map(s=>`<div class="species"><div class="ico">🐟</div><div><b>${s.n}</b> <i class="small mut">${s.s}</i><div class="small">🪱 ${s.b}</div>${s.sz?`<div class="small mut">Misura minima indicativa: ${s.sz} cm</div>`:''}</div></div>`).join(''):'<div class="mut">Nessuna specie di punta in questo periodo.</div>'}
@@ -1988,7 +1988,7 @@ function vAltro(v){
     ['stats','📊','Statistiche','Le tue performance','linear-gradient(140deg,#2b5fd9,#1a2f7a)'],
     ['trofei','🏆','Trofei',`${c.unlocked.length}/${BADGES.length} sbloccati`,'linear-gradient(140deg,#c9771a,#6e3a10)'],
     ['cal','🌙','Calendario','Luna e solunare','linear-gradient(140deg,#6a4bd6,#2c1f6e)'],
-    ['ai','🤖','Assistente','Consigli e specie','linear-gradient(140deg,#159a6b,#0b4a3a)'],
+    ['ai','🤖','Consigli','Su misura e specie di stagione','linear-gradient(140deg,#159a6b,#0b4a3a)'],
     ['guide','🪢','Guida','Nodi, montature, esche','linear-gradient(140deg,#b8436e,#5a1d3a)'],
     ['settings','⚙️','Impostazioni',window.LENZA_FB?.apiKey?(window.CLOUD?.user?'Account attivo · dati online':'Accedi · backup e dati'):'Backup e dati','linear-gradient(140deg,#3d5671,#1b2a3c)']
   ];

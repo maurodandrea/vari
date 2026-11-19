@@ -631,7 +631,9 @@ CH.modView=async v=>{
         <button class="btn ghost" style="flex:1;padding:9px 10px" onclick="CHAT.modOk('${g.rid}','${g.mid}')">✔ Ignora</button>
         <button class="btn ghost" style="flex:1;padding:9px 10px;color:#ff8a8d" onclick="CHAT.modBan('${g.rid}','${g.mid}','${g.uid}','${esc(g.name||'').replace(/'/g,'')}')">🚫 Blocca utente</button></div></div>`).join('')
     :`<div class="card" style="text-align:center;padding:28px 18px"><div style="font-size:44px">🛡️</div><h3 style="margin:6px 0 2px">Nessuna segnalazione</h3><p class="small mut">Quando un utente segnala un messaggio lo trovi qui.</p></div>`)+
-    `<div class="card" id="bannedbox"><h3>🚫 Utenti bloccati</h3><p class="small mut">Carico…</p></div>`;
+    `<div class="card"><h3>🗑️ Cancella utente</h3><p class="small mut" style="margin:-4px 0 8px">Elimina tutti i dati di un utente (spot, diario, impostazioni, Premium, profilo, posizione, avvisi). I messaggi già inviati restano. L'account di accesso va poi eliminato da Console Firebase › Authentication.</p>
+      <div class="row" style="gap:8px"><input id="delq" placeholder="Email o codice utente (UID)" style="flex:1" autocomplete="off"><button class="btn" onclick="CHAT.delFind()">Cerca</button></div><div id="delres" style="margin-top:10px"></div></div>
+    <div class="card" id="bannedbox"><h3>🚫 Utenti bloccati</h3><p class="small mut">Carico…</p></div>`;
   // testo attuale del messaggio (potrebbe essere già stato cancellato dal suo autore)
   gs.forEach(async(g,i)=>{try{const m=await ff.getDoc(ff.doc(db,'rooms',g.rid,'msgs',g.mid));const el=document.getElementById('mt'+i);if(!el)return;
     if(!m.exists())el.innerHTML='<i class="mut">Messaggio già eliminato</i>';else{const d=m.data();if(d.kind==='catch'&&d.catch?.photo)el.innerHTML=`<img src="${d.catch.photo}" style="width:100%;max-height:200px;object-fit:cover;border-radius:10px;margin-bottom:6px"><div>${esc('🐟 '+(d.catch.sp||'')+(d.text?' · '+d.text:''))}</div>`;}
@@ -649,6 +651,42 @@ CH.modOk=async(rid,mid)=>{
 CH.modBan=async(rid,mid,uid,name)=>{if(!confirm(`Bloccare ${name||'questo utente'}? Non potrà più scrivere in chat. Il messaggio segnalato viene eliminato.`))return;
   try{await F().setDoc(F().doc(D(),'banned',uid),{name,ts:Date.now(),by:me().uid});try{await F().deleteDoc(F().doc(D(),'rooms',rid,'msgs',mid));}catch(e){}await closeReports(rid,mid);toast('🚫 '+(name||'Utente')+' bloccato');}
   catch(e){toast('⚠️ '+(e.code||e.message));}};
+// cancellazione dei dati di un utente (solo amministratore; le regole di Firestore lo permettono solo a lui)
+CH.delFind=async()=>{
+  if(!CH.isAdmin())return;const q=(document.getElementById('delq')?.value||'').trim(),box=document.getElementById('delres');if(!q){toast('Scrivi email o UID');return;}
+  box.innerHTML='<p class="small mut">Cerco…</p>';const ff=F(),db=D();
+  try{
+    let uid=null,email='';
+    if(q.includes('@')){const r=await ff.getDocs(ff.query(ff.collection(db,'users'),ff.where('email','==',q.toLowerCase())));
+      const r2=r.docs.length?r:await ff.getDocs(ff.query(ff.collection(db,'users'),ff.where('email','==',q)));if(r2.docs.length){uid=r2.docs[0].id;email=r2.docs[0].data().email;}}
+    else uid=q;
+    if(!uid){box.innerHTML='<p class="small" style="color:var(--acc2)">Nessun utente con questa email nei dati dell\'app. Se si è registrato ma non ha mai salvato niente, cercalo per UID (Console Firebase › Authentication).</p>';return;}
+    if(uid===me().uid){box.innerHTML='<p class="small" style="color:var(--acc2)">Questo è il tuo account.</p>';return;}
+    const [u,data,diary,prof]=await Promise.all([ff.getDoc(ff.doc(db,'users',uid)),ff.getDocs(ff.collection(db,'users',uid,'data')),ff.getDocs(ff.collection(db,'users',uid,'diary')),ff.getDoc(ff.doc(db,'profiles',uid))]);
+    const get=k=>{const d=data.docs.find(x=>x.id===k);try{return d?JSON.parse(d.data().v):null;}catch(e){return null;}};
+    const spots=(get('spots')||[]).filter(x=>x&&!x.here).length,prem=!!get('premium')?.ok,name=prof.exists()?prof.data().name:'';email=email||(u.exists()?u.data().email:'');
+    if(!u.exists()&&!data.docs.length&&!diary.docs.length&&!prof.exists()){box.innerHTML='<p class="small" style="color:var(--acc2)">Nessun dato trovato per questo UID.</p>';return;}
+    CH._del={uid,email};
+    box.innerHTML=`<div class="kv"><span>Utente</span><b>${esc(name||'—')}</b></div><div class="kv"><span>Email</span><b style="word-break:break-all">${esc(email||'—')}</b></div><div class="kv"><span>UID</span><b style="word-break:break-all;font-size:12px">${esc(uid)}</b></div>
+      <div class="kv"><span>Spot salvati</span><b>${spots}</b></div><div class="kv"><span>Uscite nel diario</span><b>${diary.docs.filter(d=>!d.data().deleted).length}</b></div><div class="kv"><span>Premium</span><b>${prem?'sì ⭐':'no'}</b></div>
+      <button class="btn full" style="margin-top:10px;background:#c0392b;color:#fff" onclick="CHAT.delRun()">🗑️ Cancella tutti i dati</button>`;
+  }catch(e){box.innerHTML=`<p class="small" style="color:var(--acc2)">⚠️ ${esc(e.code||e.message)}${e.code==='permission-denied'?' — pubblica le regole aggiornate (firestore.rules) in Console Firebase.':''}</p>`;}
+};
+CH.delRun=async()=>{
+  const d=CH._del;if(!d||!CH.isAdmin())return;
+  const t=prompt(`Cancellare definitivamente tutti i dati di ${d.email||d.uid}?\nNon si può annullare. Scrivi CANCELLA per confermare.`);if(t==null)return;
+  if(t.trim().toUpperCase()!=='CANCELLA'){toast('Cancellazione annullata');return;}
+  const box=document.getElementById('delres'),ff=F(),db=D();box.innerHTML='<p class="small mut">Cancello…</p>';let n=0;
+  const delCol=async(...p)=>{const s=await ff.getDocs(ff.collection(db,...p));for(const x of s.docs){await ff.deleteDoc(ff.doc(db,...p,x.id));n++;}};
+  try{
+    await delCol('users',d.uid,'data');await delCol('users',d.uid,'diary');
+    try{await delCol('notifs',d.uid,'items');}catch(e){}
+    for(const p of [['users',d.uid],['profiles',d.uid],['locations',d.uid],['notifs',d.uid]]){try{await ff.deleteDoc(ff.doc(db,...p));n++;}catch(e){}}
+    CH._del=null;
+    box.innerHTML=`<p class="small" style="color:var(--ok)">✅ Dati cancellati (${n} elementi). Ora elimina l'account da Console Firebase › Authentication${d.email?` (${esc(d.email)})`:''}: poi l'utente potrà registrarsi di nuovo con la stessa email.</p>`;
+    toast('🗑️ Dati utente cancellati');
+  }catch(e){box.innerHTML=`<p class="small" style="color:var(--acc2)">⚠️ Cancellazione interrotta: ${esc(e.code||e.message)} (${n} elementi già cancellati). Puoi riprovare.</p>`;}
+};
 CH.modUnban=async uid=>{try{await F().deleteDoc(F().doc(D(),'banned',uid));toast('Utente sbloccato');render();}catch(e){toast('⚠️ '+(e.code||e.message));}};
 
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&S.tab==='chat'&&CH.rid)markSeen(CH.rid);});
