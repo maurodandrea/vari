@@ -96,7 +96,11 @@ const hash=s=>{let h=0;for(let i=0;i<s.length;i++)h=(h*31+s.charCodeAt(i))|0;ret
 function setStatus(t){C.status=t;const el=document.getElementById('cloudst');if(el)el.textContent=t;}
 
 async function start(){
-  const uid=C.user.uid,first=raw.get('clouduid')!==uid;
+  const uid=C.user.uid,prev=raw.get('clouduid'),first=prev!==uid;
+  // sul dispositivo ci sono i dati di un ALTRO account (per esempio uno cancellato, da cui non si era usciti):
+  // non li unisco al nuovo account, li tolgo
+  if(prev&&prev!==uid){try{[...SYNC_KEYS,'diary','cloudts','cloudhash','cloudsent','chatbot','chatseen','chatreported','chatgone','spotclean1'].forEach(k=>localStorage.removeItem('lenza.'+k));}catch(e){}
+    S.spots=[];S.diary=[];S.live=null;S.active=null;try{ensureHere();}catch(e){}}
   // email attivata da poco: rinnovo il token, altrimenti le regole di Firestore lo vedono ancora «non verificato»
   try{const t=await C.user.getIdTokenResult?.();if(t&&C.user.emailVerified&&t.claims?.email_verified!==true)await C.user.getIdToken(true);}catch(e){}
   setStatus('Sincronizzo…');C.busy=true;
