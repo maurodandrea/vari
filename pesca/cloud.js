@@ -3,12 +3,14 @@
 // Firestore tiene una copia per utente (users/{uid}/data/{chiave} e users/{uid}/diary/{id}) e la sincronizza tra telefono e PC.
 (function(){
 const FBV='10.14.1',FB=`https://www.gstatic.com/firebasejs/${FBV}/`;
-const SYNC_KEYS=['spots','active','shoesize','gemkey','badges','myfish','live','premium','chatfriends','chatblock','chatblocknames','chatnotif','chatfollow','chatfollow2','chatspotc','chatspotc3','chatloc','chatfriendsync','chatcleared','spotclean1','chatgone'];  // il diario va a parte, un documento per uscita
+const SYNC_KEYS=['chatseen','spots','active','shoesize','gemkey','badges','myfish','live','premium','chatfriends','chatblock','chatblocknames','chatnotif','chatfollow','chatfollow2','chatspotc','chatspotc3','chatloc','chatfriendsync','chatcleared','spotclean1','chatgone'];  // il diario va a parte, un documento per uscita
 const MAX_DOC=900000;  // Firestore accetta documenti fino a 1 MB
 const C={ready:false,user:null,status:'',busy:false,applying:false,dirty:new Set(),timer:null,unsub:[]};
 window.CLOUD=C;
 let fa,ff,auth,db;
 // la «Posizione attuale» è solo di questo dispositivo: non va nell'account e non arriva dagli altri dispositivi
+// conversazioni lette: per ognuna tengo la lettura più recente tra dispositivo e account
+const mergeSeen=v=>{const a=raw.get('chatseen'),o=a&&typeof a==='object'&&!Array.isArray(a)?{...a}:{};if(v&&typeof v==='object'&&!Array.isArray(v))for(const [k,t] of Object.entries(v))if(typeof t==='number'&&t>(o[k]||0))o[k]=t;return o;};
 const noHere=v=>Array.isArray(v)?v.filter(x=>!x?.here):v;
 const keepHere=v=>{const h=(Array.isArray(raw.get('spots'))?raw.get('spots'):[]).filter(x=>x?.here).slice(0,1);return [...noHere(v),...h];};
 const raw={get:k=>{try{const v=localStorage.getItem('lenza.'+k);return v?JSON.parse(v):null;}catch(e){return null;}},
@@ -126,6 +128,7 @@ async function start(){
       else if(first&&k==='myfish'){v=[...v,...(Array.isArray(raw.get('myfish'))?raw.get('myfish'):[])].slice(-200);C.dirty.add('myfish');}
       else if(!first&&(ts[k]||0)>(o.t||0))return;  // il dispositivo ha una modifica più recente ancora da inviare
       if(k==='spots')v=keepHere(v);
+      if(k==='chatseen'){const m=mergeSeen(v);if(JSON.stringify(m)!==JSON.stringify(v))C.dirty.add('chatseen');v=m;}
       raw.set(k,v);ts[k]=o.t||Date.now();});
     if(first)SYNC_KEYS.forEach(k=>{if(!ds.docs.some(d=>d.id===k)&&raw.get(k)!=null)C.dirty.add(k);});
     // diario: unione per uscita; le uscite cancellate restano come «tombstone»
@@ -214,7 +217,7 @@ function listen(){
   C.unsub.push(ff.onSnapshot(dataCol(),snap=>{
     if(snap.metadata.hasPendingWrites)return;let ch=false;const ts=raw.get('cloudts')||{};
     snap.docChanges().forEach(c=>{if(c.type==='removed'||!c.doc.data())return;const k=c.doc.id,o=c.doc.data();if(!SYNC_KEYS.includes(k)||C.dirty.has(k)||(ts[k]||0)>=(o.t||0))return;
-      ts[k]=o.t;if(JSON.stringify(raw.get(k))===o.v)return;let v;try{v=JSON.parse(o.v);}catch(e){return;}if((k==='spots'||k==='myfish')&&!Array.isArray(v))v=[];if(k==='spots'){if(JSON.stringify(noHere(raw.get(k)))===JSON.stringify(noHere(v)))return;v=keepHere(v);}raw.set(k,v);ch=true;});
+      ts[k]=o.t;if(JSON.stringify(raw.get(k))===o.v)return;let v;try{v=JSON.parse(o.v);}catch(e){return;}if((k==='spots'||k==='myfish')&&!Array.isArray(v))v=[];if(k==='chatseen'){v=mergeSeen(v);if(JSON.stringify(v)===JSON.stringify(raw.get(k)))return;}if(k==='spots'){if(JSON.stringify(noHere(raw.get(k)))===JSON.stringify(noHere(v)))return;v=keepHere(v);}raw.set(k,v);ch=true;});
     raw.set('cloudts',ts);if(ch)reloadSoon();
   }));
   C.unsub.push(ff.onSnapshot(diaryCol(),snap=>{
