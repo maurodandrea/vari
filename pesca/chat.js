@@ -197,7 +197,15 @@ function readNotifs(rid){const ff=F();for(const x of CH.notifs.filter(n=>n.rid==
   CH.notifs=CH.notifs.filter(n=>n.rid!==rid);CH.badge();}
 function markSeen(rid){const s=seen();s[rid]=Date.now();LS.set('chatseen',s);CH.badge();}
 // aggiorno solo la parte che cambia, così il testo che si sta scrivendo non si perde
+// non letti per scheda: Canali (canali seguiti), Messaggi (privati e gruppi), Amici (richieste)
+function tabCounts(){const s=seen(),u=me()?.uid,cl=cleared(),bl=blocked(),gn=new Set(goneRooms()),c={zone:0,priv:0,amici:CH.friendReqs?.length||0};
+  const un=id=>{const r=CH.rooms[id]||CH.mine[id],l=r?.last;return l&&l.uid!==u&&l.ts>Math.max(s[id]||0,cl[id]||0)&&!bl.includes(l.uid);};
+  for(const id of follows())if(!CH.mine[id]&&un(id))c.zone++;
+  for(const id of Object.keys(CH.mine))if(!gn.has(id)&&un(id))c.priv++;
+  return c;}
+function tabsHtml(){const c=tabCounts();return (CH._tabs||[]).map(([k,n])=>`<span class="chip ${CH.tab===k?'on':''}" style="flex:none;white-space:nowrap;position:relative" onclick="CHAT.tab='${k}';render()">${n}${c[k]?`<i class="tbadge">${c[k]>9?'9+':c[k]}</i>`:''}</span>`).join('');}
 function refresh(){CH.badge();if(S.tab!=='chat')return;
+  {const t=document.getElementById('chtabs');if(t&&!CH.rid)t.innerHTML=tabsHtml();}
   if(CH.rid){const log=document.getElementById('chatlog');if(log){const atEnd=log.scrollHeight-log.scrollTop-log.clientHeight<80;log.innerHTML=logHtml();if(atEnd)log.scrollTop=log.scrollHeight;}}
   else if(CH.tab==='mappa')mapMarkers();
   else{const box=document.getElementById('chatlist');if(box)box.innerHTML=listHtml();}}
@@ -211,9 +219,9 @@ CH.view=v=>{
   // avvisi attivi di default: alla prima apertura di Social chiedo il permesso per le notifiche del telefono
   if(notifOn()&&'Notification' in window&&Notification.permission==='default'&&!G('chatnotifask',false)){LS.set('chatnotifask',true);try{Notification.requestPermission();}catch(e){}}
   if(CH.rid)return roomView(v);
-  const tabs=[['zone','📍 Canali'],['priv','💬 Messaggi'],['mappa','🗺️ Mappa'],['amici','🤝 Amici'],['bot','🤖 Assistente']];
+  CH._tabs=[['zone','📍 Canali'],['priv','💬 Messaggi'],['mappa','🗺️ Mappa'],['amici','🤝 Amici'],['bot','🤖 Assistente']];
   v.innerHTML=subHead('Social','Canali, messaggi, mappa e amici','home')+(CH.err?`<div class="banner">⚠️ ${esc(CH.err)}</div>`:'')+
-    `<div class="chips" style="margin-bottom:12px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none">${tabs.map(([k,n])=>`<span class="chip ${CH.tab===k?'on':''}" style="flex:none;white-space:nowrap" onclick="CHAT.tab='${k}';render()">${n}</span>`).join('')}</div><div id="chatlist">${listHtml()}</div>`;
+    `<div id="chtabs" class="chips" style="margin-bottom:12px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding-top:6px">${tabsHtml()}</div><div id="chatlist">${listHtml()}</div>`;
   if(CH.tab==='mappa')setTimeout(mapInit,0);
 };
 const ago=ts=>{const m=Math.round((Date.now()-ts)/60000);return m<1?'ora':m<60?m+' min':m<1440?Math.round(m/60)+' h':new Date(ts).toLocaleDateString('it-IT',{day:'numeric',month:'short'});};
@@ -552,7 +560,7 @@ CH.locs={};
 function mapHtml(){
   const v=locVis(),opt=[['off','🚫 Non condivisa','Nessuno ti vede e tu non vedi nessuno'],['friends','🤝 Solo amici','Ti vedono solo i tuoi amici e tu vedi solo loro'],['all','🌍 Tutti','Ti vedono tutti e tu vedi tutti']];
   return `<div class="card"><h3>📡 La mia posizione</h3>${opt.map(([k,n,d])=>`<label class="crow" style="align-items:flex-start"><input type="radio" name="cloc" ${v===k?'checked':''} onchange="CHAT.setLoc('${k}')" style="margin-top:3px"><span><b>${n}</b><br><span class="small mut">${d}</span></span></label>`).join('')}
-    <p class="small mut" style="margin:6px 0 0">La posizione viene presa dal GPS del telefono, arrotondata a circa 100 m, e aggiornata ogni 5 minuti mentre LenzApp è aperta. Dopo ${LOC_MAX_H} ore senza aggiornamenti sparisce dalla mappa.<br><span id="clocerr">${CH.locErr?'⚠️ '+esc(CH.locErr):''}</span></p></div>
+    <p class="small mut" style="margin:6px 0 0">La posizione viene presa dal GPS del telefono, arrotondata a circa 100 m, e aggiornata ogni minuto mentre LenzApp è aperta. Dopo ${LOC_MAX_H} ore senza aggiornamenti sparisce dalla mappa.<br><span id="clocerr">${CH.locErr?'⚠️ '+esc(CH.locErr):''}</span></p></div>
   <div class="card" style="padding:10px"><div id="cmap" style="height:58vh;min-height:320px;border-radius:16px;overflow:hidden"></div>
     ${v==='off'?'<p class="small" style="margin:8px 4px 0;color:var(--acc2)">🚫 Hai scelto «Non condivisa»: nessuno ti vede e tu non vedi nessuno. Sulla mappa vedi solo te stesso, con l’omino rosso.</p>':`<div id="cfstat">${friendStatus()}</div>`}
     <div class="small" style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;justify-content:center"><span><svg width="12" height="15" viewBox="0 0 20 24" style="vertical-align:-2px"><circle cx="10" cy="6" r="4.6" fill="#3b8cff" stroke="#fff" stroke-width="1.8"/><path d="M2.5 22.5c0-5 3.4-8.6 7.5-8.6s7.5 3.6 7.5 8.6z" fill="#3b8cff" stroke="#fff" stroke-width="1.8"/></svg> Tu</span><span>${manSvg('#2ecc71')} Amici</span><span>${manSvg('#ff5a5f')} Altri utenti</span></div></div>`;
@@ -560,10 +568,13 @@ function mapHtml(){
 CH.setLoc=async v=>{LS.set('chatloc',v);CH.locErr='';CH._locTry=0;
   if(v==='off'){clearInterval(CH._locT);try{await F().deleteDoc(F().doc(D(),'locations',me().uid));}catch(e){}locStop();delete CH.locs[me().uid];toast('📡 Posizione non condivisa: non vedi e non sei visto');render();return;}
   await pushLoc(true);startLocTimer();locListen();};
-function startLocTimer(){clearInterval(CH._locT);if(locVis()==='off')return;CH._locT=setInterval(()=>pushLoc(false),5*60000);}
+// invio della posizione ogni 60 secondi mentre l'app è aperta (anche in secondo piano, finché il browser la lascia attiva);
+// al ritorno in primo piano la invio subito
+function startLocTimer(){clearInterval(CH._locT);if(locVis()==='off')return;CH._locT=setInterval(()=>pushLoc(false),60000);}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&CH.started&&locVis()!=='off')pushLoc(false);});
 async function pushLoc(say){
   const v=locVis();if(v==='off'||!me())return;
-  const pos=await new Promise(ok=>{if(!navigator.geolocation)return ok(null);navigator.geolocation.getCurrentPosition(p=>ok(p.coords),()=>ok(null),{enableHighAccuracy:true,timeout:15000,maximumAge:120000});});
+  const pos=await new Promise(ok=>{if(!navigator.geolocation)return ok(null);navigator.geolocation.getCurrentPosition(p=>ok(p.coords),()=>ok(null),{enableHighAccuracy:true,timeout:15000,maximumAge:30000});});
   if(!pos){CH.locErr='Non riesco a leggere il GPS: controlla che la posizione sia attiva e consentita per LenzApp.';refresh();if(say)render();return;}
   const d={name:C().name(),lat:Math.round(pos.latitude*1000)/1000,lon:Math.round(pos.longitude*1000)/1000,vis:v,friends:friends().map(f=>f.uid),ts:Date.now()};
   try{await F().setDoc(F().doc(D(),'locations',me().uid),d);CH.locs[me().uid]={id:me().uid,...d};CH._locTry=0;if(CH.locMode!==v)locListen();if(say)toast(v==='all'?'🌍 Posizione visibile a tutti':'🤝 Posizione visibile agli amici');CH.locErr='';refresh();if(say&&CH.tab==='mappa')render();}
