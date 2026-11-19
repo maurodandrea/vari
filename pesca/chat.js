@@ -15,12 +15,19 @@ const COND_H=6;  // le condizioni del mare restano visibili 6 ore
 const REP_HIDE=3; // messaggio nascosto dopo 3 segnalazioni
 const uidCode=u=>{let h=7;for(const c of u)h=(h*131+c.charCodeAt(0))>>>0;return h.toString(36).toUpperCase().padStart(6,'0').slice(-6);};
 const newId=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
-const seen=()=>LS.get('chatseen',{});
+// lettura sicura delle impostazioni della chat: un valore vuoto o rovinato (per esempio arrivato dall'account)
+// viene sostituito dal valore predefinito invece di mandare Social in errore
+function G(k,def){let v;try{v=LS.get(k,def);}catch(e){return def;}
+  if(def===null)return v;
+  if(Array.isArray(def))return Array.isArray(v)?v.filter(x=>x!=null):def;
+  if(def&&typeof def==='object')return v&&typeof v==='object'&&!Array.isArray(v)?v:{...def};
+  return v==null?def:v;}
+const seen=()=>G('chatseen',{});
 // errore di un ascolto in tempo reale: lo mostro con il nome dell'operazione rifiutata
 const snapErr=label=>e=>{CH.err=(e.code==='permission-denied'?'Social non ha i permessi su Firebase: pubblica le regole aggiornate (file firestore.rules) in Console Firebase › Firestore Database › Regole.':'Social non raggiungibile: '+(e.code||e.message))+` [ascolto: ${label} · ${String(e.message||'').slice(0,120)}]`;if(S.tab==='chat')render();};
-const friends=()=>LS.get('chatfriends',[]);
-const blocked=()=>LS.get('chatblock',[]);
-const notifOn=()=>LS.get('chatnotif',{on:false}).on;
+const friends=()=>G('chatfriends',[]).filter(f=>f&&typeof f.uid==='string').map(f=>({uid:f.uid,name:String(f.name||'Amico')}));
+const blocked=()=>G('chatblock',[]).filter(x=>typeof x==='string');
+const notifOn=()=>G('chatnotif',{on:false}).on;
 
 /* ---------- filtro parole offensive ---------- */
 const BAD=['cazz','minchi','stronz','vaffancul','fancul','coglion','puttan','troi','merd','bastard','porco ?dio','porcodio','dio ?cane','diocane','porca ?madonna','froci','ricchion','negr[oiae]','mongoloid','zoccol','frocio'];
@@ -46,7 +53,7 @@ const chName=rid=>{if(rid==='z_it')return 'Tutta Italia';if(rid==='near'){const 
 const chIcon=rid=>rid==='z_it'?'🇮🇹':rid==='near'?'🎣':rid.startsWith('r_')?'🗺️':rid.startsWith('p_')?'🏙️':rid.startsWith('c_')?'🏘️':'📍';
 // canali seguiti (avvisi e anteprima): in automatico il comune di ogni spot, uno per comune; Italia, regione e provincia a scelta.
 // Ogni spot viene considerato una volta sola (chatspotc): se poi smetti di seguire quel comune, non lo riaggiungo.
-const follows=()=>LS.get('chatfollow',null)||[];
+const follows=()=>{const f=G('chatfollow',null);return Array.isArray(f)?f.filter(x=>typeof x==='string'&&/^(z_it|r_|p_|c_)/.test(x)):[];};
 // comune di uno spot: lo chiedo a OpenStreetMap (Ostia → Roma, non il comune col centro più vicino);
 // senza rete uso il comune con il centro più vicino
 async function placeOf(sp){
@@ -56,7 +63,7 @@ async function placeOf(sp){
   }catch(e){}
   return myPlace(sp);}
 // spot cancellato: tolgo dai seguiti il suo comune, se nessun altro spot rimasto è nello stesso comune
-function dropDeleted(){const done=LS.get('chatspotc',{}),ids=new Set((S.spots||[]).filter(s=>!s.here).map(s=>s.id));
+function dropDeleted(){const done=G('chatspotc',{}),ids=new Set((S.spots||[]).filter(s=>!s.here).map(s=>s.id));
   const gone=Object.keys(done).filter(id=>!ids.has(id));if(!gone.length)return;
   const keep=new Set(Object.entries(done).filter(([id])=>ids.has(id)).map(([,r])=>r));
   const drop=new Set(gone.map(id=>done[id]).filter(r=>!keep.has(r)));gone.forEach(id=>delete done[id]);
@@ -65,13 +72,13 @@ CH.spotsChanged=()=>{if(GEO&&CH.started)dropDeleted();};
 // la posizione attuale non è uno spot vero: non conta per i canali seguiti in automatico
 async function defaultFollow(){if(!GEO||CH._df)return;dropDeleted();CH._df=true;
   try{
-    let f=LS.get('chatfollow',null)||[],done=LS.get('chatspotc',{});
-    if(!LS.get('chatfollow2',false)){const m=myPlace();if(m){const old=['z_it','r_'+m.r[0],'p_'+m.p[0]];f=f.filter(x=>!old.includes(x));}LS.set('chatfollow2',true);}
+    let f=follows(),done=G('chatspotc',{});
+    if(!G('chatfollow2',false)){const m=myPlace();if(m){const old=['z_it','r_'+m.r[0],'p_'+m.p[0]];f=f.filter(x=>!old.includes(x));}LS.set('chatfollow2',true);}
     // versione 3: i comuni scelti prima col centro più vicino possono essere sbagliati: li ricalcolo
-    if(!LS.get('chatspotc3',false)){const auto=new Set(Object.values(done));f=f.filter(x=>!auto.has(x));done={};LS.set('chatspotc3',true);LS.set('chatfollow',f);LS.set('chatspotc',done);}
+    if(!G('chatspotc3',false)){const auto=new Set(Object.values(done));f=f.filter(x=>!auto.has(x));done={};LS.set('chatspotc3',true);LS.set('chatfollow',f);LS.set('chatspotc',done);}
     for(const sp of S.spots||[]){if(sp.here||sp.lat==null||done[sp.id])continue;
       const m=await placeOf(sp);if(!m)continue;const rid='c_'+m.c[1];
-      f=LS.get('chatfollow',null)||[];done=LS.get('chatspotc',{});done[sp.id]=rid;if(!f.includes(rid))f.push(rid);
+      f=follows();done=G('chatspotc',{});done[sp.id]=rid;if(!f.includes(rid))f.push(rid);
       LS.set('chatfollow',f);LS.set('chatspotc',done);syncSubs();refresh();
       await new Promise(r=>setTimeout(r,1100));}  // OpenStreetMap chiede al massimo una richiesta al secondo
   }finally{CH._df=false;}
@@ -129,7 +136,7 @@ CH.start=async()=>{
     step='ascolti';
     loadGeo();if(GEO)defaultFollow();syncSubs();nearSync();if(locVis()!=='off'){pushLoc(false);startLocTimer();}
     // amicizie fatte prima che esistessero le richieste: avviso una volta gli amici, così possono ricambiare
-    if(!LS.get('chatfriendsync',false)){friends().forEach(f=>tellFriend(f.uid,false));LS.set('chatfriendsync',true);}
+    if(!G('chatfriendsync',false)){friends().forEach(f=>tellFriend(f.uid,false));LS.set('chatfriendsync',true);}
     CH.subs._mine=ff.onSnapshot(ff.query(ff.collection(db,'rooms'),ff.where('members','array-contains',u.uid)),snap=>{
       snap.docChanges().forEach(c=>{const id=c.doc.id;if(c.type==='removed'){delete CH.mine[id];return;}const old=CH.mine[id]?.last?.ts||0;CH.mine[id]={id,...c.doc.data()};onRoom(id,old);});
       refresh();},snapErr('stanze private'));
@@ -161,7 +168,7 @@ function onRoom(rid,oldTs){
   if(l&&l.ts>oldTs&&l.ts>CH.t0&&l.uid!==me()?.uid&&!blocked().includes(l.uid)){
     const watching=CH.rid===rid&&S.tab==='chat'&&document.visibilityState==='visible';
     if(watching)markSeen(rid);
-    else if(notifies(rid)&&(r.type!=='zone'||LS.get('chatnotif',{}).zones!==false))notify(roomName(rid),`${l.name}: ${clean(l.text)}`,rid);
+    else if(notifies(rid)&&(r.type!=='zone'||G('chatnotif',{}).zones!==false))notify(roomName(rid),`${l.name}: ${clean(l.text)}`,rid);
   }
   refresh();
 }
@@ -223,7 +230,7 @@ function listHtml(){
   return req+`<div class="card"><h3>🤝 Il tuo codice amico</h3><div class="ccode">${code}</div><p class="small mut" style="text-align:center">Dallo ai tuoi compagni di pesca: con questo codice ti aggiungono agli amici.</p>
     <div class="row" style="gap:8px;margin-top:8px"><input id="fcode" placeholder="Codice di un amico" maxlength="6" style="flex:1;text-transform:uppercase"><button class="btn" onclick="CHAT.addByCode()">Aggiungi</button></div></div>
   <div class="card"><h3>Amici</h3>${fr.length?fr.map(f=>`<div class="croom"><div class="cri">🎣</div><div style="flex:1"><b>${esc(f.name)}</b></div><button class="btn" style="padding:7px 12px" onclick="CHAT.dm('${f.uid}')">Scrivi</button><button class="btn ghost" style="padding:7px 10px" onclick="CHAT.unfriend('${f.uid}')">✕</button></div>`).join(''):'<p class="small mut">Nessun amico ancora.</p>'}</div>
-  ${bl.length?`<div class="card"><h3>🚫 Utenti bloccati</h3><p class="small mut">Non vedi i loro messaggi.</p>${bl.map(u=>`<div class="croom"><div style="flex:1">${esc((LS.get('chatblocknames',{})[u])||'Utente')}</div><button class="btn ghost" style="padding:7px 12px" onclick="CHAT.unblock('${u}')">Sblocca</button></div>`).join('')}</div>`:''}`;
+  ${bl.length?`<div class="card"><h3>🚫 Utenti bloccati</h3><p class="small mut">Non vedi i loro messaggi.</p>${bl.map(u=>`<div class="croom"><div style="flex:1">${esc((G('chatblocknames',{})[u])||'Utente')}</div><button class="btn ghost" style="padding:7px 12px" onclick="CHAT.unblock('${u}')">Sblocca</button></div>`).join('')}</div>`:''}`;
 }
 // albero dei canali: Italia ▸ regioni ▸ province ▸ comuni; la freccia apre il livello sotto, il nome apre il canale
 CH.exp={it:false,r:{},p:{},q:{}};
@@ -254,7 +261,7 @@ function chanHtml(){
   <div class="card" id="chbrowse"><h3>🇮🇹 Tutti i canali</h3><p class="small mut" style="margin:-4px 0 6px">Tocca ▸ per aprire regioni, province e comuni; tocca il nome per entrare nel canale.</p>${treeHtml()}</div>`;
 }
 function notifCard(){
-  const n=LS.get('chatnotif',{on:false,zones:true}),perm='Notification' in window?Notification.permission:'unsupported';
+  const n=G('chatnotif',{on:false,zones:true}),perm='Notification' in window?Notification.permission:'unsupported';
   const reps=CH.notifs.slice(0,5);
   return `${reps.length?`<div class="card"><h3>🔔 Risposte ai tuoi messaggi</h3>${reps.map(x=>`<div class="croom" onclick="CHAT.openNotif('${x.id}')"><div class="cri">↩️</div><div style="flex:1;min-width:0"><b>${esc(x.from)}</b> <span class="small mut">in ${esc(x.room||'')}</span><div class="small mut cprev">${esc(clean(x.text))}</div></div><div class="small mut">${ago(x.ts)}</div>${x.read?'':'<i class="cdot"></i>'}</div>`).join('')}</div>`:''}
   <div class="card"><h3>🔔 Notifiche</h3>
@@ -262,10 +269,10 @@ function notifCard(){
     <label class="crow"><input type="checkbox" ${n.zones!==false?'checked':''} onchange="CHAT.setNotifZones(this.checked)"> Anche per i canali che segui</label>
     <p class="small mut" style="margin:6px 0 0">${perm==='denied'?'⚠️ Le notifiche sono bloccate nelle impostazioni del browser.':perm==='unsupported'?'Questo browser non supporta le notifiche: vedrai gli avvisi dentro l\'app.':'Arrivano mentre LenzApp è aperta, anche in un\'altra scheda o in secondo piano. Messaggi privati e risposte ti avvisano sempre.'}</p></div>`;
 }
-CH.setNotif=async on=>{const n=LS.get('chatnotif',{zones:true});n.on=on;
+CH.setNotif=async on=>{const n=G('chatnotif',{zones:true});n.on=on;
   if(on&&'Notification' in window&&Notification.permission==='default'){try{await Notification.requestPermission();}catch(e){}}
   LS.set('chatnotif',n);render();};
-CH.setNotifZones=on=>{const n=LS.get('chatnotif',{on:false});n.zones=on;LS.set('chatnotif',n);};
+CH.setNotifZones=on=>{const n=G('chatnotif',{on:false});n.zones=on;LS.set('chatnotif',n);};
 CH.openNotif=async id=>{const x=CH.notifs.find(n=>n.id===id);if(!x)return;x.read=true;try{await F().deleteDoc(F().doc(D(),'notifs',me().uid,'items',id));}catch(e){}CH.notifs=CH.notifs.filter(n=>n.id!==id);CH.open(x.rid);};
 
 /* ---------- stanza ---------- */
@@ -300,7 +307,7 @@ function roomView(v){
 }
 const hm=ts=>new Date(ts).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
 function logHtml(){
-  if(CH.rid==='bot'){const h=LS.get('chatbot',[]);
+  if(CH.rid==='bot'){const h=G('chatbot',[]);
     return (h.length?'':`<div class="cempty">🤖 Ciao! Chiedimi per esempio:<br><span class="chip" onclick="CHAT.ask('Quando conviene pescare oggi?')">Quando conviene pescare oggi?</span> <span class="chip" onclick="CHAT.ask('Che esca uso per le orate adesso?')">Che esca uso per le orate?</span> <span class="chip" onclick="CHAT.ask('Che montatura per il surfcasting con mare mosso?')">Montatura con mare mosso?</span></div>`)+
       h.map(m=>`<div class="cmsg ${m.me?'me':''}"><div class="cb">${m.me?esc(m.text):fmtBot(m.text)}<div class="ct">${hm(m.ts)}</div></div></div>`).join('')+(CH.botBusy?'<div class="cmsg"><div class="cb"><span class="aispin" style="width:16px;height:16px;border-width:2px;display:inline-block;vertical-align:-3px"></span> Ci penso…</div></div>':'');}
   const u=me()?.uid,bl=blocked(),now=Date.now();
@@ -355,12 +362,12 @@ CH.replyTo=id=>{const m=CH.msgs.find(x=>x.id===id);closeSheet();if(!m)return;CH.
   const rp=document.getElementById('creply');if(rp)rp.innerHTML=replyHtml();document.getElementById('cmsg')?.focus();};
 CH.del=async id=>{closeSheet();try{await F().deleteDoc(F().doc(D(),'rooms',CH.rid,'msgs',id));toast('Messaggio eliminato');}catch(e){toast('⚠️ '+(e.code||e.message));}};
 CH.report=async id=>{closeSheet();const m=CH.msgs.find(x=>x.id===id);if(!m)return;const ff=F();
-  const done=LS.get('chatreported',[]);if(done.includes(id)){toast('Hai già segnalato questo messaggio');return;}
+  const done=G('chatreported',[]);if(done.includes(id)){toast('Hai già segnalato questo messaggio');return;}
   try{await ff.setDoc(ff.doc(D(),'reports',newId()),{rid:CH.rid,mid:id,uid:m.uid,name:m.name,text:String(m.text||'').slice(0,300),by:me().uid,ts:Date.now()});
     await ff.updateDoc(ff.doc(D(),'rooms',CH.rid,'msgs',id),{rep:ff.increment(1)});
     LS.set('chatreported',[...done,id].slice(-300));toast('🚩 Segnalazione inviata, grazie');}catch(e){toast('⚠️ '+(e.code||e.message));}};
 CH.block=(uid,name)=>{closeSheet();if(!confirm(`Bloccare ${name}? Non vedrai più i suoi messaggi.`))return;
-  LS.set('chatblock',[...new Set([...blocked(),uid])]);const n=LS.get('chatblocknames',{});n[uid]=name;LS.set('chatblocknames',n);refresh();toast('🚫 '+name+' bloccato');};
+  LS.set('chatblock',[...new Set([...blocked(),uid])]);const n=G('chatblocknames',{});n[uid]=name;LS.set('chatblocknames',n);refresh();toast('🚫 '+name+' bloccato');};
 CH.unblock=uid=>{LS.set('chatblock',blocked().filter(u=>u!==uid));render();};
 
 /* ---------- amici, privati e gruppi ---------- */
@@ -396,7 +403,7 @@ CH.newGroup=()=>{const fr=friends();if(!fr.length){toast('Aggiungi prima qualche
     ${fr.map(f=>`<label class="crow"><input type="checkbox" class="gmem" value="${f.uid}"> ${esc(f.name)}</label>`).join('')}
     <button class="btn full" style="margin-top:12px" onclick="CHAT.makeGroup()">Crea il gruppo</button>`);};
 /* ---------- elimina chat, membri dei gruppi ---------- */
-const cleared=()=>LS.get('chatcleared',{});
+const cleared=()=>G('chatcleared',{});
 CH.roomMenu=()=>{const r=CH.mine[CH.rid];if(!r)return;const u=me().uid,owner=r.type==='group'&&r.owner===u;
   openSheet(`<h2>${esc(roomName(CH.rid))}</h2>
     ${r.type==='group'?`<button class="btn full" style="margin-bottom:8px" onclick="CHAT.members()">👥 Membri del gruppo (${(r.members||[]).length})</button>`:''}
@@ -500,11 +507,11 @@ function context(){
 }
 CH.ask=async q=>{
   const el=document.getElementById('cmsg');if(el)el.value='';
-  const h=LS.get('chatbot',[]);h.push({me:true,text:q,ts:Date.now()});LS.set('chatbot',h.slice(-40));CH.botBusy=true;refresh();
+  const h=G('chatbot',[]);h.push({me:true,text:q,ts:Date.now()});LS.set('chatbot',h.slice(-40));CH.botBusy=true;refresh();
   let ans='';
   if(typeof gemOn==='function'&&gemOn()){
     try{const sys=`Sei l'assistente di pesca dell'app LenzApp. Rispondi in italiano, in modo pratico e breve (massimo 8 righe), con esche, montature, tecniche e orari adatti alle condizioni. Usa le unità metriche. Se la domanda non riguarda la pesca, riporta gentilmente il discorso sulla pesca. Ricorda di rispettare le misure minime e la normativa locale quando parli di trattenere il pesce. Rispondi in JSON: {"risposta":"testo"}.\nDati attuali:\n${context()}`;
-      const hist=LS.get('chatbot',[]).slice(-10).map(m=>({role:m.me?'user':'model',parts:[{text:m.text}]}));
+      const hist=G('chatbot',[]).slice(-10).map(m=>({role:m.me?'user':'model',parts:[{text:m.text}]}));
       const j=await gemCall({systemInstruction:{parts:[{text:sys}]},contents:hist,generationConfig:{responseMimeType:'application/json',temperature:.6}});
       ans=String(j.risposta||j.answer||'').trim();}
     catch(e){ans='';}
@@ -512,7 +519,7 @@ CH.ask=async q=>{
   if(!ans){let tips=[];try{tips=advice().map(a=>a[0]+' '+strip(a[1]));}catch(e){}
     ans=(tips.length?'Ecco cosa ti consiglio adesso per il tuo spot:\n'+tips.join('\n'):'Sto ancora caricando il meteo del tuo spot: riprova tra qualche secondo.')+
       (typeof gemOn==='function'&&gemOn()?'\n\n(Gemini al momento non risponde: riprova tra poco.)':'\n\nPer risposte libere serve la connessione a internet.');}
-  const h2=LS.get('chatbot',[]);h2.push({me:false,text:ans,ts:Date.now()});LS.set('chatbot',h2.slice(-40));CH.botBusy=false;refresh();
+  const h2=G('chatbot',[]);h2.push({me:false,text:ans,ts:Date.now()});LS.set('chatbot',h2.slice(-40));CH.botBusy=false;refresh();
 };
 
 /* ---------- mappa: posizione condivisa ---------- */
@@ -520,7 +527,7 @@ CH.ask=async q=>{
 // vis 'all': la vedono tutti gli utenti della chat; 'friends': solo gli utenti che ho tra gli amici. Spenta: il documento viene cancellato.
 const LOC_MAX_H=6;
 const manSvg=col=>`<svg width="16" height="20" viewBox="0 0 34 42" style="vertical-align:-4px"><path d="M17 41c-1-4-14-14-14-24a14 14 0 0 1 28 0c0 10-13 20-14 24z" fill="${col}" stroke="#fff" stroke-width="2"/><circle cx="17" cy="11.5" r="4" fill="#fff"/><path d="M10.5 25c0-4.2 2.9-7.5 6.5-7.5s6.5 3.3 6.5 7.5z" fill="#fff"/></svg>`;            // dopo 6 ore senza aggiornamenti la posizione non si mostra più
-const locVis=()=>LS.get('chatloc',null)||'friends';  // di default visibile agli amici; chi ha scelto altro tiene la sua scelta
+const locVis=()=>G('chatloc',null)||'friends';  // di default visibile agli amici; chi ha scelto altro tiene la sua scelta
 CH.locs={};
 function mapHtml(){
   const v=locVis(),opt=[['off','🚫 Non condivisa','Nessuno ti vede e tu non vedi nessuno'],['friends','🤝 Solo amici','Ti vedono solo i tuoi amici e tu vedi solo loro'],['all','🌍 Tutti','Ti vedono tutti e tu vedi tutti']];
