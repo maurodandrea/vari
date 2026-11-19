@@ -138,7 +138,7 @@ CH.start=async()=>{
     // amicizie fatte prima che esistessero le richieste: avviso una volta gli amici, così possono ricambiare
     if(!G('chatfriendsync',false)){friends().forEach(f=>tellFriend(f.uid,false));LS.set('chatfriendsync',true);}
     CH.subs._mine=ff.onSnapshot(ff.query(ff.collection(db,'rooms'),ff.where('members','array-contains',u.uid)),snap=>{
-      snap.docChanges().forEach(c=>{const id=c.doc.id;if(c.type==='removed'){delete CH.mine[id];return;}const old=CH.mine[id]?.last?.ts||0;CH.mine[id]={id,...c.doc.data()};onRoom(id,old);});
+      snap.docChanges().forEach(c=>{const id=c.doc.id;if(c.type==='removed'){delete CH.mine[id];return;}const old=CH.mine[id]?.last?.ts||0;CH.mine[id]={id,...c.doc.data()};checkGone(CH.mine[id]);onRoom(id,old);});
       refresh();},snapErr('stanze private'));
     CH.subs._ban=ff.onSnapshot(ff.doc(db,'banned',u.uid),s=>{CH.banned=s.exists();if(S.tab==='chat'&&CH.rid)render();},snapErr('blocco'));
     if(CH.isAdmin())CH.subs._rep=ff.onSnapshot(ff.collection(db,'reports'),snap=>{
@@ -295,6 +295,7 @@ function listenMsgs(rid,n){const ff=F();
 CH.retry=()=>{const rid=CH.rid;if(!rid)return;if(!CH.started){CH.stop();CH.start();}CH.open(rid);};
 CH.back=()=>{clearTimeout(CH._wd);CH.unsubRoom?.();CH.unsubRoom=null;CH.rid=null;CH.reply=null;render();};
 function roomView(v){
+  if(goneRooms().includes(CH.rid)){v.innerHTML=`<div class="subhead"><button class="back" onclick="CHAT.back()" aria-label="Indietro">‹</button><div><h2>Account cancellato</h2><p>Conversazione non più disponibile</p></div></div><div class="card" style="text-align:center;padding:26px"><div style="font-size:40px">🚫</div><p class="mut">L'account di questo utente è stato cancellato.</p></div>`;return;}
   const rid=CH.rid,r=CH.rooms[rid]||CH.mine[rid],bot=rid==='bot';
   const sub=bot?'Consigli su misura per il tuo spot':rid==='near'?`Spot attuale · chi ha lo spot a meno di ${NEAR_KM} km`:rid==='z_it'?'Canale nazionale':rid.startsWith('r_')?'Canale regionale':rid.startsWith('p_')?'Canale provinciale':rid.startsWith('c_')?'Canale comunale':r?.type==='zone'?'Canale pubblico':r?.type==='group'?`Gruppo · ${(r.members||[]).length} persone`:'Messaggio privato';
   const canFollow=/^(z_it|r_|p_|c_)/.test(rid),fol=follows().includes(rid),priv=r&&(r.type==='dm'||r.type==='group');
@@ -387,13 +388,14 @@ CH.acceptFriend=id=>{const n=CH.friendReqs.find(x=>x.id===id);if(!n)return;CH.fr
 CH.ignoreFriend=id=>{CH.friendReqs=CH.friendReqs.filter(x=>x.id!==id);F().deleteDoc(F().doc(D(),'notifs',me().uid,'items',id)).catch(()=>{});render();};
 // amici il cui account è stato cancellato (profilo sparito): li tolgo dall'elenco (e dai gruppi dove sono io ad averli creati)
 const goneRooms=()=>G('chatgone',[]).filter(x=>typeof x==='string');
+// conversazione privata con un utente il cui account non esiste più: la nascondo per sempre (controllo appena arriva la stanza)
+const GONECHK=new Set();
+async function checkGone(r){if(!r||r.type!=='dm'||GONECHK.has(r.id)||goneRooms().includes(r.id))return;GONECHK.add(r.id);
+  const o=(r.members||[]).find(x=>x!==me()?.uid);if(!o)return;
+  try{const p=await F().getDoc(F().doc(D(),'profiles',o));if(p.exists())return;}catch(e){GONECHK.delete(r.id);return;}
+  LS.set('chatgone',[...new Set([...goneRooms(),r.id])]);CH.badge();if(S.tab==='chat')render();}
 async function pruneFriends(){const ff=F(),gone=[],u=me()?.uid;
-  // conversazioni private con utenti il cui account non esiste più: le nascondo per sempre
-  await new Promise(r=>setTimeout(r,2500));  // aspetto che arrivino le mie stanze
-  const hid=new Set(goneRooms());let ch=false;
-  for(const r of Object.values(CH.mine)){if(r.type!=='dm'||hid.has(r.id))continue;const o=(r.members||[]).find(x=>x!==u);if(!o)continue;
-    try{const p=await ff.getDoc(ff.doc(D(),'profiles',o));if(!p.exists()){hid.add(r.id);ch=true;}}catch(e){}}
-  if(ch){LS.set('chatgone',[...hid]);CH.badge();if(S.tab==='chat')render();}
+  for(const r of Object.values(CH.mine))checkGone(r);
   for(const f of friends()){try{const p=await ff.getDoc(ff.doc(D(),'profiles',f.uid));if(!p.exists())gone.push(f);}catch(e){}}
   if(!gone.length)return;const ids=new Set(gone.map(f=>f.uid));
   LS.set('chatfriends',friends().filter(f=>!ids.has(f.uid)));CH.friendsChanged();
