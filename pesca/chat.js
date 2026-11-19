@@ -182,11 +182,13 @@ function notify(title,body,rid){
   navigator.serviceWorker?.ready.then(r=>r.showNotification(title,{body:String(body).slice(0,140),icon:'icon-192.png',badge:'icon-192.png',tag:'lenza-'+rid,data:{url:location.pathname+'#chat',rid}})).catch(()=>{try{new Notification(title,{body});}catch(e){}});
 }
 // conversazioni che danno notifiche: messaggi privati, gruppi di cui sono membro e canali che seguo
-const notifies=rid=>!!CH.mine[rid]||follows().includes(rid);
+// con «Anche per i canali che segui» attivo, avvisa anche il canale entro 5 km dallo spot attuale
+const nearOn=()=>notifSet().zones===true&&!!activeSpot();
+const notifies=rid=>!!CH.mine[rid]||follows().includes(rid)||(rid==='near'&&nearOn());
 // non letti: solo quelle conversazioni (le chat eliminate contano solo per i messaggi arrivati dopo)
 CH.unread=()=>{const s=seen(),u=me()?.uid,cl=cleared(),bl=blocked();let n=0;
   const gn=new Set(goneRooms());
-  for(const id of new Set([...follows(),...Object.keys(CH.mine)])){if(gn.has(id))continue;const r=CH.rooms[id]||CH.mine[id],l=r?.last;if(l&&l.uid!==u&&l.ts>Math.max(s[id]||0,cl[id]||0)&&!bl.includes(l.uid))n++;}
+  for(const id of new Set([...follows(),...Object.keys(CH.mine),...(nearOn()?['near']:[])])){if(gn.has(id))continue;const r=CH.rooms[id]||CH.mine[id],l=r?.last;if(l&&l.uid!==u&&l.ts>Math.max(s[id]||0,cl[id]||0)&&!bl.includes(l.uid))n++;}
   return n;};
 CH.badge=()=>{
   const a=document.querySelector(`#nav button[onclick="go('altro')"]`),rc=CH.isAdmin()?CH.reportCount():0;
@@ -200,7 +202,7 @@ function markSeen(rid){const s=seen();s[rid]=Date.now();LS.set('chatseen',s);CH.
 // non letti per scheda: Canali (canali seguiti), Messaggi (privati e gruppi), Amici (richieste)
 function tabCounts(){const s=seen(),u=me()?.uid,cl=cleared(),bl=blocked(),gn=new Set(goneRooms()),c={zone:0,priv:0,amici:CH.friendReqs?.length||0};
   const un=id=>{const r=CH.rooms[id]||CH.mine[id],l=r?.last;return l&&l.uid!==u&&l.ts>Math.max(s[id]||0,cl[id]||0)&&!bl.includes(l.uid);};
-  for(const id of follows())if(!CH.mine[id]&&un(id))c.zone++;
+  for(const id of [...follows(),...(nearOn()?['near']:[])])if(!CH.mine[id]&&un(id))c.zone++;
   for(const id of Object.keys(CH.mine))if(!gn.has(id)&&un(id))c.priv++;
   return c;}
 function tabsHtml(){const c=tabCounts();return (CH._tabs||[]).map(([k,n])=>`<span class="chip ${CH.tab===k?'on':''}" style="flex:none;white-space:nowrap;position:relative" onclick="CHAT.tab='${k}';render()">${n}${c[k]?`<i class="tbadge">${c[k]>9?'9+':c[k]}</i>`:''}</span>`).join('');}
@@ -279,13 +281,13 @@ function notifCard(){
   return `${reps.length?`<div class="card"><h3>🔔 Risposte ai tuoi messaggi</h3>${reps.map(x=>`<div class="croom" onclick="CHAT.openNotif('${x.id}')"><div class="cri">↩️</div><div style="flex:1;min-width:0"><b>${esc(x.from)}</b> <span class="small mut">in ${esc(x.room||'')}</span><div class="small mut cprev">${esc(clean(x.text))}</div></div><div class="small mut">${ago(x.ts)}</div>${x.read?'':'<i class="cdot"></i>'}</div>`).join('')}</div>`:''}
   <div class="card"><h3>🔔 Notifiche</h3>
     <label class="crow"><input type="checkbox" ${n.on?'checked':''} onchange="CHAT.setNotif(this.checked)"> Avvisami dei nuovi messaggi</label>
-    <label class="crow"><input type="checkbox" ${n.zones===true?'checked':''} onchange="CHAT.setNotifZones(this.checked)"> Anche per i canali che segui</label>
+    <label class="crow"><input type="checkbox" ${n.zones===true?'checked':''} onchange="CHAT.setNotifZones(this.checked)"> Anche per i canali che segui e «Entro 5km»</label>
     <p class="small mut" style="margin:6px 0 0">${perm==='denied'?'⚠️ Le notifiche sono bloccate nelle impostazioni del browser.':perm==='unsupported'?'Questo browser non supporta le notifiche: vedrai gli avvisi dentro l\'app.':'Arrivano mentre LenzApp è aperta, anche in un\'altra scheda o in secondo piano. Messaggi privati e risposte ti avvisano sempre.'}</p></div>`;
 }
 CH.setNotif=async on=>{const n=notifSet();n.on=on;
   if(on&&'Notification' in window&&Notification.permission==='default'){try{await Notification.requestPermission();}catch(e){}}
   LS.set('chatnotif',n);render();};
-CH.setNotifZones=on=>{const n=notifSet();n.zones=on;LS.set('chatnotif',n);};
+CH.setNotifZones=on=>{const n=notifSet();n.zones=on;LS.set('chatnotif',n);refresh();};
 CH.openNotif=async id=>{const x=CH.notifs.find(n=>n.id===id);if(!x)return;x.read=true;try{await F().deleteDoc(F().doc(D(),'notifs',me().uid,'items',id));}catch(e){}CH.notifs=CH.notifs.filter(n=>n.id!==id);CH.open(x.rid);};
 
 /* ---------- stanza ---------- */
