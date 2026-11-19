@@ -1016,7 +1016,7 @@ function render(){
   if(S.tab==='settings')modelStatus();
 }
 // Chat (Premium): canali per zona, catture, condizioni, amici, assistente… (chat.js)
-function vChat(v){if(window.CHAT){CHAT.view(v);return;}
+function vChat(v){if(window.CHAT){try{CHAT.view(v);}catch(e){console.error(e);v.innerHTML=subHead('Social','Canali, messaggi, mappa e amici','home')+`<div class="card" style="text-align:center;padding:24px"><p class="mut">Social ha avuto un problema.</p><p class="small" style="color:var(--acc2);word-break:break-word">${esc(e.message||e)}</p><button class="btn" style="margin-top:10px" onclick="render()">↻ Riprova</button></div>`;}return;}
   // il file della chat non è arrivato (rete o aggiornamento in corso): lo ricarico una volta; se va in errore lo dico
   const box=msg=>{v.innerHTML=subHead('Social','Canali, messaggi, mappa e amici','home')+`<div class="card" style="text-align:center;padding:30px">${msg}</div>`;};
   if(vChat.err){box(`<p class="mut">Social non si è caricato.</p><p class="small" style="color:var(--acc2);word-break:break-word">${esc(vChat.err)}</p><button class="btn" style="margin-top:10px" onclick="vChat.err='';render()">↻ Riprova</button>`);return;}
