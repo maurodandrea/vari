@@ -439,6 +439,16 @@
   .leaflet-tooltip.mlabel::before{display:none}.leaflet-tooltip.mlabel.me{font-size:10.5px;padding:0 6px}
   .mdot{display:inline-block;width:11px;height:11px;border-radius:50%;border:2px solid #fff;vertical-align:-1px;margin-right:2px}
   .tbadge{position:absolute;top:-6px;right:-4px;min-width:17px;height:17px;padding:0 4px;border-radius:9px;background:#ff5a5f;color:#fff;font:800 10.5px/17px 'Outfit',sans-serif;font-style:normal;text-align:center;box-shadow:0 0 0 2px var(--bg,#06141c)}
+  .fcday{padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06)}.fcday:last-of-type{border-bottom:0}.fch{display:flex;gap:6px;align-items:center;margin-bottom:3px}
+  .legal{margin-top:10px;padding:9px 11px;border-radius:12px;border:1px solid;background:rgba(255,255,255,.04)}.legal b{display:block;margin-bottom:2px}
+  #livecam{position:fixed;inset:0;z-index:300;background:#000;display:flex;flex-direction:column}
+  #livecam video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  #livecam .lcframe{position:absolute;left:8%;right:8%;top:28%;bottom:28%;border:2px dashed rgba(255,255,255,.55);border-radius:18px;pointer-events:none}
+  #livecam .lctop{position:relative;display:flex;gap:10px;align-items:center;padding:calc(env(safe-area-inset-top) + 14px) 14px 0}
+  #livecam .lcx{width:42px;height:42px;border-radius:50%;border:0;background:rgba(0,0,0,.55);color:#fff;font-size:18px;flex:none}
+  #livecam .lcres{flex:1;background:rgba(0,0,0,.55);color:#fff;border-radius:14px;padding:10px 12px;font-size:15px}
+  #livecam .lcbot{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 24px);text-align:center;color:#fff}
+  #livecam .lcshot{width:76px;height:76px;border-radius:50%;border:5px solid #fff;background:rgba(255,255,255,.25)}
   .ccode{font-size:34px;font-weight:900;letter-spacing:6px;text-align:center;margin:6px 0;color:var(--acc)}
   .crow{display:flex;gap:8px;align-items:center;padding:6px 0;cursor:pointer}.crow input{width:auto;margin:0}
   .ccatch img{width:100%;max-height:260px;object-fit:cover;border-radius:12px;display:block;margin-bottom:6px}
@@ -1599,6 +1609,7 @@ function vPesce(v){
     ${ASSIST?`<div class="cphoto big"><img src="${ASSIST.photo}" alt="" onclick="viewPhoto(ASSIST.photo)"><span onclick="ASSIST=null;render()">✕</span></div>${aiCard(ASSIST.st,'assist')}`
       :`<div class="shoot2"><label class="shoot"><input type="file" accept="image/*" capture="environment" onchange="assistSnap(this)"><span class="cam">📸</span><b>Scatta</b><small>Che pesce è?</small></label>
         <label class="shoot"><input type="file" accept="image/*" onchange="assistSnap(this)"><span class="cam">🖼️</span><b>Galleria</b><small>Foto già fatta</small></label></div>
+        <button class="btn full" style="margin:2px 0 10px" onclick="liveCam()">🎥 Fotocamera dal vivo · specie e misura minima</button>
         <p class="small mut" style="margin:0;text-align:center">Lo riconosco sul telefono, gratis e anche offline. Con una moneta o una carta accanto misuro anche lunghezza e peso.</p>`}
   </div>
   <p class="small mut" style="text-align:center">Per misurare: pesce intero e disteso, foto dall'alto, accanto una moneta, il bancomat, una scarpa, il piede nudo o la mano aperta (tutti interi nella foto).</p>`;
@@ -1612,6 +1623,7 @@ function vAI(v){
   const cand=SPECIES.map(s=>{let sc=0;if(AIQ.sh&&s.sh===AIQ.sh)sc+=2;if(AIQ.c&&s.c===AIQ.c)sc+=2;AIQ.t.forEach(t=>{if(s.t.includes(t))sc+=3;});if(s.m.includes(S.mode))sc+=.5;return {s,sc};})
     .filter(x=>x.sc>.5).sort((a,b)=>b.sc-a.sc).slice(0,4);
   v.innerHTML=subHead('Consigli','Consigli su misura, specie di stagione e riconoscimento')+`
+  <div class="card"><h3>✨ Previsione su misura per te</h3><div id="aifc">${aiFcHtml()}</div></div>
   <div class="card"><h3>🤖 Consigli per ${MODES[S.mode].n}${X?' · ora':''}</h3>${tips.map(t=>`<div class="tip"><span>${t[0]}</span><span>${t[1]}</span></div>`).join('')}</div>
   <div class="card"><h3>In stagione a ${now.toLocaleDateString('it-IT',{month:'long'})}</h3>
     ${inSeason.length?inSeason.map(s=>`<div class="species"><div class="ico">🐟</div><div><b>${s.n}</b> <i class="small mut">${s.s}</i><div class="small">🪱 ${s.b}</div>${s.sz?`<div class="small mut">Misura minima indicativa: ${s.sz} cm</div>`:''}</div></div>`).join(''):'<div class="mut">Nessuna specie di punta in questo periodo.</div>'}
@@ -1625,6 +1637,41 @@ function vAI(v){
     ${(AIQ.sh||AIQ.c||AIQ.t.length)?`<label>Risultati più probabili</label>${cand.map((x,i)=>`<div class="species"><div class="ico">${i?'🐟':'🎯'}</div><div><b>${x.s.n}</b> <i class="small mut">${x.s.s}</i><div class="small">${x.s.f}</div>${x.s.sz?`<div class="small mut">Misura minima indicativa: ${x.s.sz} cm</div>`:''}</div></div>`).join('')||'<div class="mut">Nessuna corrispondenza.</div>'}<button class="btn ghost full" style="margin-top:8px" onclick="AIQ={sh:null,c:null,t:[]};render()">Azzera</button>`:''}
   </div>
   <p class="small mut" style="text-align:center;margin-bottom:12px">Le misure minime sono indicative: verifica sempre la normativa vigente nella tua zona.</p>`;
+}
+/* ===================== Previsione personale con l'IA ===================== */
+// Gemini confronta le uscite fruttuose del diario (condizioni, orari, esche) con le previsioni dello spot attivo
+let AIFC=null;
+function aiFcHtml(){
+  const ok=S.diary.filter(e=>(e.catches||[]).length).length;
+  if(!AIFC)return `<p class="small mut" style="margin:0 0 10px">L'IA confronta le tue ${ok} uscite con catture (orari, esche, mare, vento, luna) con le previsioni dei prossimi giorni per «${esc(activeSpot()?.name||'spot')}» e ti dice quando e come uscire.</p>
+    <button class="btn full" onclick="aiForecast()">✨ Calcola la mia previsione</button>${ok<3?'<p class="small mut" style="margin:8px 0 0">Con poche uscite nel diario la previsione si basa soprattutto sulle condizioni: registra le tue catture per renderla più personale.</p>':''}`;
+  if(AIFC.loading)return `<div class="aibox"><div class="aispin"></div><div><b>Analizzo le tue uscite e il meteo…</b></div></div>`;
+  if(AIFC.err)return `<p class="small" style="color:var(--acc2)">⚠️ ${esc(AIFC.err)}</p><button class="btn ghost full" onclick="aiForecast()">Riprova</button>`;
+  const r=AIFC.r;
+  return `${r.sintesi?`<p style="margin:0 0 10px">${esc(r.sintesi)}</p>`:''}${(r.giorni||[]).map(g=>`<div class="fcday"><div class="fch"><b>${esc(g.giorno||'')}</b>${g.ora?` · ${esc(g.ora)}`:''}${g.voto!=null?`<span class="pill" style="background:${g.voto>=70?'#5ee08a22':'#ffb54722'};color:${g.voto>=70?'var(--ok)':'var(--acc2)'};margin-left:auto">${Math.round(g.voto)}</span>`:''}</div>
+    ${g.perche?`<div class="small">${esc(g.perche)}</div>`:''}${g.esca||g.tecnica?`<div class="small mut">🪱 ${esc([g.tecnica,g.esca].filter(Boolean).join(' · '))}</div>`:''}</div>`).join('')}
+    ${r.consiglio?`<p class="small" style="margin:10px 0 0">💡 ${esc(r.consiglio)}</p>`:''}<button class="btn ghost full" style="margin-top:10px" onclick="aiForecast()">↻ Ricalcola</button>`;
+}
+function aiFcDraw(){const el=document.getElementById('aifc');if(el)el.innerHTML=aiFcHtml();}
+async function aiForecast(){
+  if(!gemOn()){AIFC={err:'Serve internet per la previsione con l\'IA'};aiFcDraw();return;}
+  const X=S.wx;if(!X){AIFC={err:'Sto ancora caricando il meteo: riprova tra qualche secondo'};aiFcDraw();return;}
+  AIFC={loading:true};aiFcDraw();
+  const spot=id=>S.spots.find(s=>s.id===id)?.name||'spot';
+  const trips=S.diary.slice().sort((a,b)=>(b.start||'').localeCompare(a.start||'')).slice(0,40).map(e=>{const c=e.cond||{};
+    return `${(e.start||'').replace('T',' ')} · ${spot(e.spot)} · ${e.tech||''} · esca ${e.bait||'—'} · catture: ${(e.catches||[]).map(x=>x.sp+(x.l?' '+x.l+'cm':'')).join(', ')||'nessuna'} · vento ${c.ws!=null?Math.round(c.ws)+' km/h':'?'} · onda ${c.wave!=null?c.wave.toFixed(1)+' m':'?'} · pressione ${c.p!=null?Math.round(c.p):'?'}${c.dp!=null?(c.dp>0?' in salita':' in calo'):''} · luna ${c.moon||'?'}`;});
+  const days=X.fdays.slice(0,4).map(d=>{const hs=X.hours.filter(h=>h.t.toDateString()===d.date.toDateString());const m=hs[12]||hs[0]||{};
+    const w=bestWindows(X,d.date,2).map(x=>`${hhmm(x.from)}-${hhmm(x.to)} (indice ${x.max})`).join(', ');
+    return `${d.date.toLocaleDateString('it-IT',{weekday:'long',day:'numeric'})}: indice del giorno ${dayScore(X,d.date)}, finestre migliori ${w||'nessuna'}, a mezzogiorno vento ${Math.round(m.ws||0)} km/h, onda ${m.wave!=null?m.wave.toFixed(1)+' m':'?'}, pressione ${Math.round(m.p||0)}`;});
+  const prompt=`Sei un esperto di pesca sportiva italiano. Spot attivo: «${activeSpot()?.name}» (${MODES[S.mode]?.n||S.mode}). Oggi è ${new Date().toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'})}.
+Uscite del pescatore (più recenti prima):\n${trips.join('\n')||'nessuna uscita registrata'}
+Previsioni per lo spot attivo:\n${days.join('\n')}
+Trova nelle uscite fruttuose gli schemi ricorrenti (orari, mare, vento, pressione, luna, esche, tecniche) e confrontali con le previsioni. Consiglia i 2 o 3 momenti migliori dei prossimi giorni, con esca e tecnica, spiegando in breve il perché (cita le sue uscite simili quando ci sono). Rispetta misure minime e normativa. Rispondi in italiano, conciso, in JSON:
+{"sintesi":"una frase sugli schemi trovati","giorni":[{"giorno":"sabato 22","ora":"06:30-09:00","voto":0-100,"perche":"...","esca":"...","tecnica":"..."}],"consiglio":"un consiglio pratico"}`;
+  try{const r=await gemCall({contents:[{role:'user',parts:[{text:prompt}]}],generationConfig:{responseMimeType:'application/json',temperature:.4}});
+    if(!r||!Array.isArray(r.giorni))throw new Error('Risposta non valida');AIFC={r};}
+  catch(e){AIFC={err:GEM_ERR[e.message]||e.message||'Previsione non riuscita'};}
+  aiFcDraw();
 }
 function togTrait(t){const i=AIQ.t.indexOf(t);i<0?AIQ.t.push(t):AIQ.t.splice(i,1);render();}
 function advice(){
@@ -2174,6 +2221,45 @@ function applyMeasure(){
 // 3) il riferimento si riconosce dalla forma: cerchio (monete) o rettangolo con proporzioni note (carta, accendino…);
 // 4) muso e coda sono gli estremi del pesce lungo il suo asse principale.
 const autoRefs=()=>REFS.map((r,i)=>[r,i]).filter(([r])=>r[2]);
+/* ===================== Misura minima e limiti di pesca ===================== */
+// misure minime indicative (SPECIES.sz) e avvisi per specie con limiti particolari; da verificare sempre con la normativa
+const RULES={'Tonno rosso':'Pesca ricreativa solo con autorizzazione e nel periodo consentito: verifica prima di trattenerlo.',
+  'Anguilla':'Specie in pericolo: in molte acque la pesca è vietata o limitata. Verifica le regole locali.',
+  'Dattero di mare':'Raccolta vietata in Italia.'};
+function legalBlock(sp,len){
+  if(!sp)return '';const k=SPECIES.find(x=>x.n.toLowerCase()===String(sp).trim().toLowerCase()),min=k?.sz,rule=RULES[k?.n||sp];
+  if(!min&&!rule)return '';
+  let head='',col='var(--mut)';
+  if(min&&len){if(len>=min){head=`✅ Sopra la misura minima (${min} cm)`;col='var(--ok)';}else{head=`🚫 Sotto misura: rilascialo (minimo ${min} cm)`;col='var(--bad)';}}
+  else if(min)head=`📏 Misura minima: ${min} cm`;
+  return `<div class="legal" style="border-color:${col}">${head?`<b style="color:${col}">${head}</b>`:''}${rule?`<div class="small">⚠️ ${esc(rule)}</div>`:''}<div class="small mut">Indicativo: verifica sempre la normativa vigente nella tua zona.</div></div>`;
+}
+/* ===================== Fotocamera dal vivo ===================== */
+// anteprima della fotocamera: con il modello sul telefono la specie si aggiorna da sola ogni 2-3 secondi;
+// con «Scatta» la foto passa al riconoscimento completo (specie, misura e misura minima)
+let LIVECAM=null;
+async function liveCam(){
+  if(!navigator.mediaDevices?.getUserMedia){toast('Fotocamera non disponibile: usa «Scatta»');return;}
+  let st;try{st=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:960}},audio:false});}
+  catch(e){toast(e.name==='NotAllowedError'?'Permesso della fotocamera negato':'Fotocamera non disponibile');return;}
+  const box=document.createElement('div');box.id='livecam';
+  box.innerHTML=`<video autoplay playsinline muted></video><div class="lcframe"></div>
+    <div class="lctop"><button class="lcx" onclick="liveCamClose()" aria-label="Chiudi">✕</button><div id="lcres" class="lcres">Inquadra il pesce intero, di lato</div></div>
+    <div class="lcbot"><button class="lcshot" onclick="liveCamShot()" aria-label="Scatta"></button><div class="small" style="margin-top:6px;opacity:.85">Scatta per misura e riconoscimento completo</div></div>`;
+  document.body.appendChild(box);const v=box.querySelector('video');v.srcObject=st;
+  LIVECAM={st,v,busy:false,t:null};
+  if(await modelReady()){const loop=async()=>{if(!LIVECAM)return;
+      if(!LIVECAM.busy&&v.videoWidth){LIVECAM.busy=true;try{const r=await classifyFish(liveFrame(448,.8),S.mode);const el=document.getElementById('lcres');
+        if(el&&r&&r.is_fish){const k=SPECIES.find(x=>x.n===r.species);el.innerHTML=`<b>${esc(r.species)}</b> ${Math.round((r.confidence||0)*100)}%${k?.sz?` · minimo ${k.sz} cm`:''}${RULES[r.species]?' · ⚠️ limiti':''}`;}
+        else if(el)el.textContent='Inquadra il pesce intero, di lato';}catch(e){}LIVECAM&&(LIVECAM.busy=false);}
+      LIVECAM&&(LIVECAM.t=setTimeout(loop,2500));};loop();}
+  else document.getElementById('lcres').textContent='Inquadra il pesce e scatta';
+}
+function liveFrame(max,q){const v=LIVECAM.v,k=Math.min(1,max/Math.max(v.videoWidth,v.videoHeight)),c=document.createElement('canvas');
+  c.width=Math.round(v.videoWidth*k);c.height=Math.round(v.videoHeight*k);c.getContext('2d').drawImage(v,0,0,c.width,c.height);return c.toDataURL('image/jpeg',q);}
+function liveCamClose(){if(!LIVECAM)return;clearTimeout(LIVECAM.t);LIVECAM.st.getTracks().forEach(t=>t.stop());LIVECAM=null;document.getElementById('livecam')?.remove();}
+function liveCamShot(){if(!LIVECAM?.v.videoWidth)return;const big=liveFrame(1280,.85),photo=liveFrame(640,.68);liveCamClose();
+  ASSIST={photo,big};if(S.tab!=='pesce')go('pesce');assistAnalyze();}
 function measBlock(st,target){
   const m=st.m,sp=st.r?.species;
   if(!m)return st.r?.is_fish?`<button class="btn" style="margin-top:10px;width:100%" onclick="runMeasure('${target}')">📏 Misura lunghezza e peso</button>
@@ -2377,6 +2463,7 @@ function aiCard(st,target){
     <div class="small mut">${pick?'':`<i>${esc(r.scientific_name)}</i>`}${!pick&&pc<40?' · poco sicuro, controlla le alternative':''}</div>
     ${r.alternatives?.length?`<div class="small" style="margin-top:6px">Oppure: ${r.alternatives.map(a=>`<span class="chip" style="padding:3px 9px;font-size:12px" onclick="aiPick('${target}','${esc(a.species).replace(/'/g,"\\'")}')">${esc(a.species)} ${Math.round(a.confidence*100)}%</span>`).join(' ')}</div>`:''}
     ${measBlock(st,target)}
+    ${legalBlock(r.species,st.m?.len)}
     ${target==='assist'&&window.CHAT&&window.CLOUD?.user&&isPremium()?`<button class="btn ghost" style="margin-top:10px;width:100%" onclick="CHAT.shareCatch()">💬 Condividi su Social</button>`:''}
   </div></div>`;
 }
