@@ -183,7 +183,8 @@ function notify(title,body,rid){
 const notifies=rid=>!!CH.mine[rid]||follows().includes(rid);
 // non letti: solo quelle conversazioni (le chat eliminate contano solo per i messaggi arrivati dopo)
 CH.unread=()=>{const s=seen(),u=me()?.uid,cl=cleared(),bl=blocked();let n=0;
-  for(const id of new Set([...follows(),...Object.keys(CH.mine)])){const r=CH.rooms[id]||CH.mine[id],l=r?.last;if(l&&l.uid!==u&&l.ts>Math.max(s[id]||0,cl[id]||0)&&!bl.includes(l.uid))n++;}
+  const gn=new Set(goneRooms());
+  for(const id of new Set([...follows(),...Object.keys(CH.mine)])){if(gn.has(id))continue;const r=CH.rooms[id]||CH.mine[id],l=r?.last;if(l&&l.uid!==u&&l.ts>Math.max(s[id]||0,cl[id]||0)&&!bl.includes(l.uid))n++;}
   return n;};
 CH.badge=()=>{
   const a=document.querySelector(`#nav button[onclick="go('altro')"]`),rc=CH.isAdmin()?CH.reportCount():0;
@@ -221,7 +222,7 @@ function roomRow(rid,icon,sub){
 function listHtml(){
   if(CH.tab==='zone')return chanHtml()+notifCard()+(CH.diag?`<p class="small mut" style="text-align:center;opacity:.6">Diagnosi: ${esc(CH.diag)}</p>`:'');
   if(CH.tab==='mappa')return mapHtml();
-  if(CH.tab==='priv'){const cl=cleared();const rs=Object.values(CH.mine).filter(r=>!cl[r.id]||(r.last?.ts||0)>cl[r.id]).sort((a,b)=>(b.last?.ts||b.t||0)-(a.last?.ts||a.t||0));
+  if(CH.tab==='priv'){const cl=cleared(),gn=new Set(goneRooms());const rs=Object.values(CH.mine).filter(r=>!gn.has(r.id)&&!cl[r.id]||(r.last?.ts||0)>cl[r.id]).sort((a,b)=>(b.last?.ts||b.t||0)-(a.last?.ts||a.t||0));
     return `<div class="card"><h3>💬 Messaggi privati e gruppi</h3>${rs.length?rs.map(r=>roomRow(r.id,r.type==='group'?'👥':'💬','')).join(''):'<p class="small mut">Nessuna conversazione. Aggiungi un amico nella scheda «Amici» e scrivigli.</p>'}
       <button class="btn ghost full" style="margin-top:10px" onclick="CHAT.newGroup()">➕ Nuovo gruppo di pesca</button></div>`;}
   if(CH.tab==='bot')return `<div class="card"><h3>🤖 Assistente in chat</h3><p class="small mut">Chiedi esche, montature, tecniche e orari migliori: risponde con il meteo, il mare e l'indice di pescosità del tuo spot attivo${typeof gemOn==='function'&&gemOn()?' (con Gemini)':''}.</p>${roomRow('bot','🤖','Fai una domanda')}</div>`;
@@ -385,7 +386,14 @@ CH.acceptFriend=id=>{const n=CH.friendReqs.find(x=>x.id===id);if(!n)return;CH.fr
   F().deleteDoc(F().doc(D(),'notifs',me().uid,'items',id)).catch(()=>{});toast('🤝 '+n.from+' aggiunto agli amici');render();};
 CH.ignoreFriend=id=>{CH.friendReqs=CH.friendReqs.filter(x=>x.id!==id);F().deleteDoc(F().doc(D(),'notifs',me().uid,'items',id)).catch(()=>{});render();};
 // amici il cui account è stato cancellato (profilo sparito): li tolgo dall'elenco (e dai gruppi dove sono io ad averli creati)
-async function pruneFriends(){const ff=F(),gone=[];
+const goneRooms=()=>G('chatgone',[]).filter(x=>typeof x==='string');
+async function pruneFriends(){const ff=F(),gone=[],u=me()?.uid;
+  // conversazioni private con utenti il cui account non esiste più: le nascondo per sempre
+  await new Promise(r=>setTimeout(r,2500));  // aspetto che arrivino le mie stanze
+  const hid=new Set(goneRooms());let ch=false;
+  for(const r of Object.values(CH.mine)){if(r.type!=='dm'||hid.has(r.id))continue;const o=(r.members||[]).find(x=>x!==u);if(!o)continue;
+    try{const p=await ff.getDoc(ff.doc(D(),'profiles',o));if(!p.exists()){hid.add(r.id);ch=true;}}catch(e){}}
+  if(ch){LS.set('chatgone',[...hid]);CH.badge();if(S.tab==='chat')render();}
   for(const f of friends()){try{const p=await ff.getDoc(ff.doc(D(),'profiles',f.uid));if(!p.exists())gone.push(f);}catch(e){}}
   if(!gone.length)return;const ids=new Set(gone.map(f=>f.uid));
   LS.set('chatfriends',friends().filter(f=>!ids.has(f.uid)));CH.friendsChanged();
