@@ -2180,22 +2180,29 @@ async function gemCall(body,key=gemKey()){
   try{return await gemTry(body,key);}
   catch(e){if(e.message!=='gem-busy')throw e;await new Promise(r=>setTimeout(r,2500));return gemTry(body,key);}
 }
+// modelli sovraccarichi o che non rispondono: li salto per 10 minuti; l'ultimo che ha funzionato lo provo per primo
+const GEM_SKIP=LS.get('gemskip',{});const gemSkip=m=>{GEM_SKIP[m]=Date.now()+600000;LS.set('gemskip',GEM_SKIP);};
 async function gemTry(body,key){
-  let last='';
-  for(const m of GEM_MODELS){
-    const ac=new AbortController(),t=setTimeout(()=>ac.abort(),40000);
+  let last='';const ok=LS.get('gemok',''),now=Date.now();
+  const order=[...new Set([ok,...GEM_MODELS].filter(m=>GEM_MODELS.includes(m)))];
+  const list=[...order.filter(m=>!(GEM_SKIP[m]>now)),...order.filter(m=>GEM_SKIP[m]>now)];
+  for(const m of list){
+    const ac=new AbortController(),t=setTimeout(()=>ac.abort(),15000);
     const fb=!key,cfg=window.LENZA_FB||{};
     const url=fb?`https://firebasevertexai.googleapis.com/v1beta/projects/${cfg.projectId}/models/${m}:generateContent`:`https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent`;
     const hd={'Content-Type':'application/json','x-goog-api-key':fb?cfg.apiKey:key};if(fb&&cfg.appId)hd['X-Firebase-Appid']=cfg.appId;
     let r;try{r=await fetch(url,{method:'POST',signal:ac.signal,headers:hd,body:JSON.stringify(body)});}
-    catch(e){clearTimeout(t);throw new Error(e.name==='AbortError'?'gem-timeout':'gem-net');}
+    catch(e){clearTimeout(t);
+      // modello che non risponde: passo al successivo invece di arrendermi
+      if(e.name==='AbortError'){gemSkip(m);last=last||'gem-timeout';continue;}
+      throw new Error('gem-net');}
     clearTimeout(t);
     if(!r.ok){
       // leggo il motivo vero dell'errore: chiave errata, servizio non abilitato, limite, modello inesistente…
       let er={};try{er=(await r.json()).error||{};}catch(e){}
       const reason=(er.details||[]).map(d=>d.reason).find(Boolean)||er.status||'';GEM_LAST=`${m}: ${r.status} ${reason} ${(er.message||'').slice(0,300)}`.trim();LS.set('gemlog',new Date().toLocaleString('it-IT')+' · '+GEM_LAST);
       if(r.status===404||/not found|not supported/i.test(er.message||'')){last=last||'gem-model';continue;}
-      if(r.status>=500){last=last==='gem-limit'?last:'gem-busy';continue;}
+      if(r.status>=500){gemSkip(m);last=last==='gem-limit'?last:'gem-busy';continue;}
       if(reason==='API_KEY_INVALID'||/api key not valid/i.test(er.message||''))throw new Error('gem-key');
       if(r.status===429){last='gem-limit';continue;}
       if(r.status===403)throw new Error('gem-perm');
@@ -2249,7 +2256,7 @@ const GEM_ERR={'gem-busy':'Gemini è sovraccarico in questo momento, riprova tra
 async function recognize(src,mode){
   if(gemOn()){
     try{return await geminiFish(src);}
-    catch(e){if(!(await modelReady()))throw new Error(GEM_ERR[e.message]?GEM_ERR[e.message]+'. Scarica il modello sul telefono per usarlo anche offline':'Riconoscimento non riuscito');
+    catch(e){if(!(await modelReady()))throw new Error(GEM_ERR[e.message]?GEM_ERR[e.message]+'. Riprova tra poco, oppure scarica il modello sul telefono (Impostazioni) per usarlo anche offline':'Riconoscimento non riuscito ('+(e.message||'errore sconosciuto')+')');
       toast((GEM_ERR[e.message]||'Gemini non disponibile')+': uso il modello sul telefono');}
   }
   return classifyFish(src,mode);

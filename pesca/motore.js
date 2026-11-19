@@ -121,6 +121,8 @@ async function classifyEmb(e,mode){
 function aiErrMsg(e){
   if(e.message==='nomodel')return 'Scarica il modello di riconoscimento (una volta sola)';
   if(e.message==='download'||e.message==='ort')return navigator.onLine?'Download non riuscito: riprova':'Sei offline: serve internet solo per il primo download';
+  // messaggi già spiegati (per esempio quelli di Gemini) li mostro così come sono
+  if(e.message&&/\s/.test(e.message))return e.message;
   return 'Riconoscimento non riuscito';
 }
 
