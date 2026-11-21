@@ -8,6 +8,7 @@ let T=0;
 /* ======================= SALVATAGGIO ======================= */
 const DEF_OUTFIT={helmet:null,protector:null,top:'polo:0xffffff',pants:0xf4f4f2,boots:0x141414,gloves:null,whip:false};
 let save=LS.get('save',null);
+if(save&&save.horses&&save.horses.length<EQ.HORSES.length){while(save.horses.length<EQ.HORSES.length)save.horses.push({hunger:50,clean:40,happy:70,energy:90});}
 if(!save||!save.horses||save.horses.length!==EQ.HORSES.length)save={sel:0,outfit:Object.assign({},DEF_OUTFIT),horses:EQ.HORSES.map((h,i)=>({hunger:45+i*5,clean:30+i*6,happy:70,energy:90})),t:Date.now(),best:{}};
 {const hrs=Math.min(72,Math.max(0,(Date.now()-(save.t||Date.now()))/3.6e6));
  save.horses.forEach(s=>{s.hunger=U.clamp(s.hunger-hrs*5,5,100);s.clean=U.clamp(s.clean-hrs*3,10,100);s.energy=U.clamp(s.energy+hrs*25,0,100);});}
@@ -15,6 +16,7 @@ function persist(){save.t=Date.now();save.outfit=Object.assign({},P.outfit);LS.s
 
 /* ======================= COSTRUZIONE ======================= */
 const yard=EQ.buildYard();
+try{EQ.populate.yard(yard);}catch(e){console.error(e);}
 EQ.setSky(yard.sky);
 const Y=yard.spots;
 const P=EQ.buildGiorgia(); P.setOutfit(save.outfit); scene.add(P.root);
@@ -156,7 +158,7 @@ function quickRide(next,text){
   fade(text||'Giorgia si prepara…',()=>{
     horses.forEach(placeInBox);ensureSafe();
     const H=horses[G.sel];G.cur=H;fullTack(H);
-    placeAt(H,{x:Y.exit.x-10,z:Y.exit.z,h:-Math.PI/2},'ride');
+    placeAt(H,yard.spawnRide,'ride');
     mountNow();hud(true);
     next&&next();
   },50);
@@ -352,6 +354,8 @@ function rideUpdate(dt){
   if(block){R.x=R.px;R.z=R.pz;R.sp*=.25;if(R.bumpCd<=0){R.bumpCd=1.2;EQ.sfx.bump();msg('Salta! ⤴<small>tocca SALTA prima dell\'ostacolo</small>',1.4);}}
   const b=w.bounds;if(b){R.x=U.clamp(R.x,b.x0,b.x1);R.z=U.clamp(R.z,b.z0,b.z1);}
   if(w.boundR){const d=Math.hypot(R.x,R.z);if(d>w.boundR){R.x*=w.boundR/d;R.z*=w.boundR/d;}}
+  if(G.portalCd>0)G.portalCd-=dt;
+  else if(w.portals&&!G.course&&G.state==='ride'&&!G.busy){for(const pt of w.portals){if(Math.hypot(R.x-pt.x,R.z-pt.z)<7){G.portalCd=5;travel(pt.to,G.loc);break;}}}
   // terreno e acqua
   const gy=w.height(R.x,R.z);
   const hf=w.height(R.x+fx*1.1,R.z+fz*1.1),hb=w.height(R.x-fx*1.1,R.z-fz*1.1);
@@ -383,7 +387,6 @@ function rideUpdate(dt){
   if(!G.busy){const A=[];
     if(G.world===yard&&!G.course){
       if(R.sp<2)A.push({id:'down',icon:'⬇️',label:'Scendi',fn:dismount});
-      if(Math.hypot(R.x-Y.exit.x,R.z-Y.exit.z)<7)A.push({id:'trip',icon:'🗺️',label:'Passeggiata',fn:()=>{G.state='modal';$('trip').classList.add('on');}});
       if(Math.abs(R.x-AR.cx)<AR.hx&&Math.abs(R.z-AR.cz)<AR.hz)A.push({id:'race',icon:'🏆',label:'Gara',fn:()=>{G.state='modal';renderMenu();$('course').classList.add('on');}});
     }
     setActions(A);}
@@ -456,7 +459,7 @@ function finishCourse(){
 
 /* ======================= PASSEGGIATE ======================= */
 const ITEM_INFO={shell:['🐚','Conchiglie'],apple:['🍎','Mele'],rosette:['🎀','Coccarde']};
-const PLACE={beach:['🏖️','Spiaggia','In viaggio verso il mare…'],forest:['🌲','Bosco','Si parte per il bosco…'],city:['🏙️','Città','Si va in città…']};
+const PLACE={yard:['🏠','Maneggio','Si torna al maneggio…'],beach:['🏖️','Spiaggia','In viaggio verso il mare…'],forest:['🌲','Bosco','Si parte per il bosco…'],city:['🏙️','Città','Si va in città…']};
 function itemMesh(kind){
   const g=new THREE.Group();
   if(kind==='shell'){const s=EQ.mesh(new THREE.ConeGeometry(.18,.32,14,1,false),EQ.mat(0xf6c7b0,.4),0,.15,0,g);s.rotation.x=-1.3;const s2=EQ.mesh(EQ.G.sph(.16,14,10),EQ.mat(0xffe2d0,.35),0,.12,.05,g);s2.scale.set(1,.5,.9);}
@@ -467,21 +470,31 @@ function itemMesh(kind){
   beam.position.y=6;g.add(beam);g.userData.spin=g.children[0];
   return g;
 }
-function goTrip(kind,noFade){
-  $('trip').classList.remove('on');
-  (noFade?(t,cb)=>cb():fade)(PLACE[kind][2],()=>{
+function travel(to,from,noFade){
+  $('trip').classList.remove('on');['pause','results'].forEach(k=>$(k).classList.remove('on'));
+  const txt=to==='yard'?'Si torna al maneggio…':PLACE[to][2];
+  (noFade?(t,cb)=>cb():fade)(txt,()=>{
     endCourse(true);
-    yard.group.visible=false;horses.forEach(h=>{if(h!==G.cur)h.root.visible=false;});
-    const w=EQ['build'+{beach:'Beach',forest:'Forest',city:'City'}[kind]]();
-    G.world=w;G.loc=kind;EQ.setSky(w.sky);
-    const s=w.spawn;R.x=s.x;R.z=s.z;R.h=s.h;R.sp=0;R.y=0;R.vy=0;R.grounded=true;
-    G.cur.x=R.x;G.cur.z=R.z;
-    const ig=new THREE.Group();w.group.add(ig);
-    G.trip={kind,items:w.items.map(it=>{const m=itemMesh(w.itemKind);m.position.set(it.x,it.y,it.z);ig.add(m);return{m,got:false,x:it.x,z:it.z};}),count:0,time:0,done:false};
-    G.state='ride';setTouchMode('ride');hud(true);snapCam();$('timer').classList.add('on');
-    setTimeout(()=>msg(PLACE[kind][0]+' '+PLACE[kind][1]+'!<small>trova '+w.items.length+' '+ITEM_INFO[w.itemKind][1].toLowerCase()+'</small>',3),400);
+    const H=G.cur;
+    if(G.world!==yard){G.world.dispose();G.trip=null;EQ.stopLoops();}
+    let w;
+    if(to==='yard'){w=yard;yard.group.visible=true;horses.forEach(h=>h.root.visible=true);$('timer').classList.remove('on');}
+    else{yard.group.visible=false;horses.forEach(h=>{if(h!==H)h.root.visible=false;});
+      w=EQ['build'+{beach:'Beach',forest:'Forest',city:'City'}[to]]();try{EQ.populate[to](w);}catch(e){console.error(e);}}
+    G.world=w;G.loc=to;EQ.setSky(w.sky);
+    const pt=from&&w.portals?w.portals.find(p=>p.to===from):null;
+    let s=pt?{x:pt.x+Math.sin(pt.inH)*16,z:pt.z+Math.cos(pt.inH)*16,h:pt.inH}:(to==='yard'?w.spawnRide:w.spawn);
+    R.x=s.x;R.z=s.z;R.h=s.h;R.sp=pt?6:0;R.y=0;R.vy=0;R.grounded=true;H.x=R.x;H.z=R.z;H.h=R.h;
+    G.portalCd=3;
+    if(to!=='yard'){const ig=new THREE.Group();w.group.add(ig);
+      G.trip={kind:to,items:w.items.map(it=>{const m=itemMesh(w.itemKind);m.position.set(it.x,it.y,it.z);ig.add(m);return{m,got:false,x:it.x,z:it.z};}),count:0,time:0,done:false};
+      $('timer').classList.add('on');
+      setTimeout(()=>msg(PLACE[to][0]+' '+PLACE[to][1]+'!<small>trova '+w.items.length+' '+ITEM_INFO[w.itemKind][1].toLowerCase()+'</small>',3),400);}
+    else{applyRideDirt(H);persist();setTimeout(()=>msg('Bentornata al maneggio!<small>scendi e dai da mangiare a '+H.def.name+'</small>',3),400);}
+    G.state='ride';setTouchMode('ride');hud(true);snapCam();
   },250);
 }
+function goTrip(kind,noFade){travel(kind,null,noFade);}
 function tripLogic(dt){
   const t=G.trip;if(!t.done)t.time+=dt;
   t.items.forEach((it,i)=>{if(it.got)return;it.m.children[0].rotation.y=T*2+i;it.m.position.y=W().height(it.x,it.z)+Math.max(0,W().water(it.x,it.z)-W().height(it.x,it.z))+.4+Math.sin(T*2.5+i)*.15;
@@ -500,16 +513,7 @@ function cleanupTrip(){
   G.world.dispose();G.world=yard;G.loc='yard';G.trip=null;EQ.setSky(yard.sky);yard.group.visible=true;
   horses.forEach(h=>h.root.visible=true);$('timer').classList.remove('on');EQ.stopLoops();
 }
-function goHome(){
-  ['pause','results'].forEach(k=>$(k).classList.remove('on'));
-  fade('Si torna al maneggio…',()=>{
-    cleanupTrip();
-    const H=G.cur;R.x=Y.exit.x-10;R.z=Y.exit.z;R.h=-Math.PI/2;R.sp=0;R.y=0;R.vy=0;R.grounded=true;H.x=R.x;H.z=R.z;
-    applyRideDirt(H);
-    G.state='ride';setTouchMode('ride');hud(true);snapCam();persist();
-    msg('Bentornata!<small>scendi e dai da mangiare a '+H.def.name+'</small>',3);
-  });
-}
+function goHome(){travel('yard',G.loc);}
 
 /* ======================= ATTIVITÀ ======================= */
 const ACT=$('act');
@@ -858,5 +862,5 @@ function frame(now){
 /* avvio */
 toMenu();
 requestAnimationFrame(t=>{last=t;$('loading').style.display='none';frame(t);});
-window.__EQG={G,R,F,horses,P,startYard,goTrip,startCourse,quickRide,yardActions,openPosta,startDress,startFeed,goHome,toMenu,actList:()=>actList};
+window.__EQG={G,R,F,horses,P,travel,startYard,goTrip,startCourse,quickRide,yardActions,openPosta,startDress,startFeed,goHome,toMenu,actList:()=>actList};
 })();

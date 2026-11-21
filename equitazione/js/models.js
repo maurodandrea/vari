@@ -10,11 +10,22 @@ EQ.HORSES=[
   {id:'ombra',name:'Ombra',race:'Frisone, morello',body:0x1d1917,dark:0x110e0d,mane:0x0b0909,face:'lista',socks:[1,0,0,1],longMane:true},
   {id:'caramella',name:'Caramella',race:'Haflinger, palomino',body:0xc98f45,dark:0xa46f30,mane:0xf3e5c6,face:'lista',socks:[1,1,1,1]},
   {id:'tempesta',name:'Tempesta',race:'Paint Horse, pezzato',body:0x6a3618,dark:0x2a170c,mane:0x2a1b12,pinto:true,face:'lista',socks:[1,0,1,1]},
+  {id:'fulmine',name:'Fulmine',race:'Purosangue, sauro',body:0x9a4a1c,dark:0x7a3812,mane:0xa4561f,face:'lista',socks:[0,1,0,1]},
+  {id:'nuvola',name:'Nuvola',race:'Appaloosa, leopardato',body:0xe6e2da,dark:0x6a5f56,mane:0x4a4038,apalo:true,face:null,socks:[0,0,0,0],muzzle:0x5b5350},
+  {id:'biscotto',name:'Biscotto',race:'Pony, isabella',body:0xc8a06a,dark:0x2a1e14,mane:0x2a1e14,points:true,face:'stella',socks:[0,0,0,0],longMane:true},
 ];
+/* mantelli per i cavalli degli altri cavalieri */
+EQ.OTHER_COATS=[
+  {body:0x6e3818,dark:0x1b120c,mane:0x17100b,points:true,face:'stella'},{body:0x8a4520,dark:0x6a3010,mane:0x8a4520,face:'lista'},
+  {body:0x2a221e,dark:0x140f0d,mane:0x0e0b0a},{body:0xbdb8b0,dark:0x7a756d,mane:0xdedad2,dapple:true,muzzle:0x5b5350},
+  {body:0x5a2e16,dark:0x1a110b,mane:0x1a110b,points:true,face:'lista'},{body:0xd4a560,dark:0xa07438,mane:0xf2e4c4,face:'lista'},
+  {body:0x7a4a2a,dark:0x2a1a10,mane:0x2a1a10,pinto:true,face:'lista'},{body:0x9c8a7a,dark:0x3a2e26,mane:0x2a211b,points:true}];
 
 /* ---------- texture del mantello ---------- */
+const _coatC={},_hairC={};
 function coatTex(def){
-  return EQ.canvasTex(512,512,(g,w,h)=>{
+  const key=[def.body,def.dapple,def.pinto,def.apalo].join('_');if(_coatC[key])return _coatC[key];
+  return _coatC[key]=EQ.canvasTex(512,512,(g,w,h)=>{
     const base=new THREE.Color(def.body);
     g.fillStyle=hex(def.body);g.fillRect(0,0,w,h);
     // controombreggiatura: dorso (u≈.25) più scuro, ventre (u≈.75) più chiaro
@@ -22,13 +33,15 @@ function coatTex(def){
     gr.addColorStop(0,'rgba(0,0,0,0)');gr.addColorStop(.25,'rgba(0,0,0,.18)');gr.addColorStop(.5,'rgba(0,0,0,0)');gr.addColorStop(.75,'rgba(255,240,220,.12)');gr.addColorStop(1,'rgba(0,0,0,0)');
     g.fillStyle=gr;g.fillRect(0,0,w,h);
     if(def.dapple){for(let i=0;i<260;i++){const x=Math.random()*w,y=Math.random()*h,r=6+Math.random()*12;const rg=g.createRadialGradient(x,y,r*.2,x,y,r);rg.addColorStop(0,'rgba(255,255,255,.35)');rg.addColorStop(.6,'rgba(255,255,255,.12)');rg.addColorStop(1,'rgba(90,85,80,.18)');g.fillStyle=rg;g.beginPath();g.arc(x,y,r,0,TAU);g.fill();}}
+    if(def.apalo){for(let i=0;i<500;i++){g.fillStyle=hex(def.dark);g.beginPath();g.ellipse(Math.random()*w,Math.random()*h,3+Math.random()*5,4+Math.random()*6,Math.random()*3,0,TAU);g.fill();}}
     if(def.pinto){g.fillStyle='#f4f1ea';for(let i=0;i<9;i++){g.beginPath();const x=Math.random()*w,y=Math.random()*h;for(let k=0;k<14;k++){const a=k/14*TAU,r=40+Math.random()*45;g.lineTo(x+Math.cos(a)*r,y+Math.sin(a)*r*1.3);}g.fill();}}
     // pelo: piccoli tratti
     for(let i=0;i<9000;i++){const l=Math.random()<.5;g.fillStyle=l?'rgba(255,255,255,.05)':'rgba(0,0,0,.07)';g.fillRect(Math.random()*w,Math.random()*h,1,3+Math.random()*4);}
   },1,1);
 }
 function hairTex(col){
-  return EQ.canvasTex(64,256,(g,w,h)=>{g.fillStyle=hex(col);g.fillRect(0,0,w,h);
+  if(_hairC[col])return _hairC[col];
+  return _hairC[col]=EQ.canvasTex(64,256,(g,w,h)=>{g.fillStyle=hex(col);g.fillRect(0,0,w,h);
     for(let i=0;i<220;i++){g.strokeStyle=Math.random()<.5?'rgba(255,255,255,.12)':'rgba(0,0,0,.25)';g.lineWidth=1+Math.random();g.beginPath();const x=Math.random()*w;g.moveTo(x,0);g.bezierCurveTo(x+4,h*.3,x-4,h*.6,x+Math.random()*6-3,h);g.stroke();}});
 }
 const mudTex=EQ.canvasTex(128,128,(g,w,h)=>{
@@ -125,7 +138,7 @@ EQ.buildHorse=function(def,opt){
   const tail=new THREE.Group(); tail.position.set(0,1.41-PY,-1.06); tail.rotation.x=.3; pivot.add(tail);
   mesh(loft([[0,.04,.03,.07],[0,-.1,-.02,.065],[0,-.26,-.04,.045]],10,3),coat,0,0,0,tail);
   const strands=[];
-  for(let i=0;i<16;i++){
+  for(let i=0;i<(opt.lite?6:14);i++){
     const g=new THREE.Group(); g.position.set((Math.random()-.5)*.06,-.08-Math.random()*.16,-.03); tail.add(g);
     const L=.7+Math.random()*.28;
     mesh(loft([[0,0,0,.03,.03,.03],[0,-L*.35,-.015,.038,.038,.038],[0,-L*.75,0,.03,.03,.03],[0,-L,.01,.006,.006,.006]],7,3),hairM,0,0,0,g);
@@ -202,6 +215,7 @@ EQ.buildHorse=function(def,opt){
   // ancoraggio sella per Giorgia
   const seat=new THREE.Object3D(); seat.position.set(0,1.61-PY,.03); pivot.add(seat);
 
+  EQ.mergeStatic(head,ears);EQ.mergeStatic(neck);[T.pad,T.saddle,T.girth,T.bridle,T.halter].forEach(g=>EQ.mergeStatic(g));
   root.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
 
   Object.assign(H,{root,pivot,neck,head,tail,strands,legs,ears,mouth,bitL,bitR,chin,seat,T,
@@ -311,6 +325,14 @@ EQ.buildHorse=function(def,opt){
     pa.needsUpdate=true;
   };
   return H;
+};
+
+/* testa e collo che si affacciano dalla porta del box */
+EQ.buildHorseHead=function(def){
+  const H=EQ.buildHorse(def,{lite:true});
+  const neck=H.neck;H.pivot.remove(neck);neck.position.set(0,0,0);neck.rotation.set(0,0,0);
+  const root=new THREE.Group();root.add(neck);
+  return {root,neck,head:H.head,ears:H.ears,t:Math.random()*20,bt:0,ly:0,lx:0};
 };
 
 /* ================= GIORGIA ================= */
