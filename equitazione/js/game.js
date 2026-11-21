@@ -141,6 +141,7 @@ document.querySelectorAll('.gbtn').forEach(b=>b.addEventListener('click',()=>{EQ
 $('gTog').addEventListener('click',()=>{EQ.audio();setGender(EQ.gender()==='m'?'f':'m');renderMenu();});
 setGender(EQ.gender());
 function toMenu(){
+  if(G.fall){G.fall=null;P.root.rotation.set(0,0,0);}
   G.sit=null;G.ia=null;G.mission=null;G.swim=false;
   releaseGuest();
   cleanupTrip();endCourse(true);closeAct(true);
@@ -288,6 +289,36 @@ function yardActions(){
   careActions(A);socialActions(A,false);
   return A;
 }
+/* ---- erba e cadute ---- */
+function grazeAt(x,z){const w=W();if(w.grazeAt)return w.grazeAt(x,z);const s=w.surface(x,z);return s==='grass';}
+const jt={x:0,z:0};
+function jumpFail(cols,fx,fz){for(const c of cols){if(c.off||c.h==null||c.h>50||R.y>c.h-.3)continue;if(Math.abs(R.x-c.x)>9||Math.abs(R.z-c.z)>9)continue;
+  jt.x=R.x+fx*1.1;jt.z=R.z+fz*1.1;if(EQ.collide(jt,.4,[c]))return true;}return false;}
+function fallOff(){
+  if(G.state!=='ride'||G.fall)return;const H=G.cur;
+  scene.updateMatrixWorld();P.root.getWorldPosition(tv);scene.attach(P.root);P.root.rotation.order='YXZ';
+  const sd=Math.random()<.5?1:-1,lx=Math.cos(R.h)*sd,lz=-Math.sin(R.h)*sd,fx=Math.sin(R.h),fz=Math.cos(R.h);
+  let tx=R.x+lx*1.7+fx*1.2,tz=R.z+lz*1.7+fz*1.2;const q={x:tx,z:tz};EQ.collide(q,.4,W().colliders);tx=q.x;tz=q.z;
+  G.fall={t:0,sx:tv.x,sy:tv.y,sz:tv.z,tx,tz,h:R.h,course:G.course?G.course.l:null};
+  H.reins.visible=false;H.where='wait';H.x=R.x;H.z=R.z;H.h=R.h;H.sp=0;
+  R.sp=0;R.vy=0;R.y=0;R.grounded=true;G.grazeT=0;
+  if(G.course){G.course.state='done';}
+  G.state='fall';setActions([]);setTouchMode('foot');stat(H,'happy',-5);
+  EQ.sfx.land();EQ.sfx.bump();setTimeout(()=>EQ.sfx.neigh(),350);
+  msg('💥 Sei cadut'+EQ.A()+' da cavallo!',2.4);
+}
+function fallUpdate(dt){
+  const f=G.fall,H=G.cur;f.t+=dt;
+  const gy=W().height(f.tx,f.tz);let px=f.tx,pz=f.tz,py=gy,rx=-1.45;
+  if(f.t<.7){const k=f.t/.7;px=U.lerp(f.sx,f.tx,k);pz=U.lerp(f.sz,f.tz,k);py=U.lerp(f.sy-.9,gy,k)+Math.sin(k*Math.PI)*.7;rx=-1.45*k;}
+  else if(f.t>2.6){rx=-1.45*Math.max(0,1-(f.t-2.6)/.8);}
+  P.root.position.set(px,py+(rx<-.6?.12:0),pz);P.root.rotation.set(rx,f.h+Math.PI,0);
+  P.pose(dt,f.t>2.6?'stand':'wave',{});
+  followCam(px,py,pz,f.h,EQ.portrait?6:5,EQ.portrait?3:2.5,.5,.6,dt,4);
+  if(f.t>=3.4){P.root.rotation.set(0,f.h+Math.PI,0);F.x=px;F.z=pz;F.h=f.h+Math.PI;F.camYaw=f.h;F.sp=0;G.fall=null;G.state='foot';hud(true);setTouchMode('foot');
+    if(f.course!=null){endCourse(true);G.lastL=f.course;showResults('❌','Caduta!','Sei cadut'+EQ.A()+': percorso eliminato. Rimonta e riprova!',[['💥','Caduta'],['E','Eliminat'+EQ.A()],['💪','Coraggio!']],[['org','again','↻ Riprova'],['alt','stay','Resta al maneggio'],['alt','menu','Menu principale']]);}
+    else msg('Tutto ok! 💪<small>tocca "Monta" per risalire su '+H.def.name+'</small>',3);}
+}
 /* ---- bisogni del cavallo e cure ovunque ---- */
 const NEED_MSG={energy:['😴','è stanco: fallo riposare'],hunger:['🌾','ha fame: dagli da mangiare'],thirst:['💧','ha sete: dagli da bere'],clean:['🫧','è sporco: spazzolalo']};
 G.needCd={};
@@ -297,20 +328,21 @@ function waitHere(){const H=G.cur;if(!H)return;G.leading=false;H.where='wait';H.
 function takeRope(){const H=G.cur;H.where='lead';G.leading=true;if(!H.tack.bridle)H.setTack({halter:true});msg('Andiamo!',1);}
 const bucket=EQ.mesh(EQ.G.cyl(.2,.16,.3,14),EQ.mat(0x2a58c8,.5),0,0,0,scene);bucket.visible=false;
 function care(kind){const H=G.cur;H.head.getWorldPosition(tv);
-  const t=kind==='brush'?3.4:3;G.ia={kind:kind==='feed'?'feed':kind==='drink'?'feed':kind==='brush'?'brush':'stand',t,tx:kind==='brush'?H.x:tv.x,tz:kind==='brush'?H.z:tv.z,care:kind};
+  const t=kind==='brush'?3.4:kind==='graze'?4.5:3;G.ia={kind:kind==='feed'?'feed':kind==='drink'?'feed':kind==='brush'?'brush':'stand',t,tx:kind==='brush'?H.x:tv.x,tz:kind==='brush'?H.z:tv.z,care:kind};
   if(G.leading){waitHere();G.relead=true;}
-  H.st={eat:kind==='brush'?0:1};
+  H.st={eat:kind==='brush'?0:1,graze:kind==='graze'?1:0};
   if(kind==='drink'){const fx=Math.sin(H.h),fz=Math.cos(H.h);bucket.position.set(H.x+fx*1.6,W().height(H.x+fx*1.6,H.z+fz*1.6)+.15,H.z+fz*1.6);bucket.visible=true;}
   if(kind==='feed'){handItem.visible=true;carrotM.visible=true;appleM.visible=false;}
-  setTimeout(()=>{if(kind==='feed'){stat(H,'hunger',45);EQ.sfx.munch();}if(kind==='drink'){stat(H,'thirst',60);EQ.sfx.splash(.12);}
+  setTimeout(()=>{if(kind==='graze'){stat(H,'hunger',30);EQ.sfx.munch();setTimeout(()=>EQ.sfx.munch(),1500);}if(kind==='feed'){stat(H,'hunger',45);EQ.sfx.munch();}if(kind==='drink'){stat(H,'thirst',60);EQ.sfx.splash(.12);}
     if(kind==='rest'){stat(H,'energy',45);}if(kind==='brush'){stat(H,'clean',45);if(H.stats.clean>85)H.clearDirt();else H.dirt.slice(0,Math.ceil(H.dirt.length/2)).forEach(d=>{d.userData.v=0;d.visible=false;});}
     stat(H,'happy',4);persist();},1200);
   setTimeout(()=>{H.st={};bucket.visible=false;handItem.visible=false;if(G.relead&&G.cur===H&&H.where==='wait'){G.relead=false;takeRope();}},t*1000);
-  msg({feed:'🥕 Gnam gnam!',drink:'💧 Che sete aveva!',rest:'😴 '+H.def.name+' si riposa…',brush:'🪮 Una bella spazzolata'}[kind],2);}
+  msg({graze:'🌿 '+H.def.name+' bruca l\'erba',feed:'🥕 Gnam gnam!',drink:'💧 Che sete aveva!',rest:'😴 '+H.def.name+' si riposa…',brush:'🪮 Una bella spazzolata'}[kind],2);}
 function careActions(A){const H=G.cur;if(!H||G.state!=='foot'||H.where==='box'||H.where==='ride'||G.swim)return;
   if(Math.hypot(H.x-F.x,H.z-F.z)>4)return;const s=H.stats;
   if(H.where==='wait'){A.push({id:'rope',icon:'🪢',label:'Prendi '+H.def.name,fn:takeRope});A.push({id:'mountw',icon:'🏇',label:'Monta',fn:startMount,dis:mountBlock()});}
   if(G.leading&&G.world!==yard)A.push({id:'wait',icon:'🌿',label:'Lascialo qui',fn:()=>{waitHere();msg(H.def.name+' ti aspetta qui',1.6);}});
+  if(s.hunger<97&&grazeAt(H.x,H.z))A.push({id:'cgraze',icon:'🌿',label:'Mangia erba',fn:()=>care('graze')});
   if(s.hunger<90)A.push({id:'cfeed',icon:'🥕',label:'Dai da mangiare',fn:()=>care('feed')});
   if((s.thirst==null?80:s.thirst)<90)A.push({id:'cdrink',icon:'💧',label:'Dai da bere',fn:()=>care('drink')});
   if(s.energy<80)A.push({id:'crest',icon:'😴',label:'Fallo riposare',fn:()=>care('rest')});
@@ -471,7 +503,8 @@ function stepFor(H){return (i,sp)=>{if(H!==G.cur)return;const st=surfType(H.x,H.
 horses.forEach(H=>H.onStep=stepFor(H));
 function rideUpdate(dt){
   const H=G.cur, w=W();
-  let inp=(G.busy||G.mount||G.lock>0||G.state!=='ride')?{x:0,y:0}:EQ.readInput();
+  if(G.grazeT>0)G.grazeT-=dt;
+  let inp=(G.busy||G.mount||G.lock>0||G.grazeT>0||G.state!=='ride')?{x:0,y:0}:EQ.readInput();
   if(G.lock>0)G.lock-=dt;
   if(G.course&&G.course.state==='count')inp={x:0,y:0};
   const st0=H.stats;const maxSp=MAXSP*(.38+.62*U.clamp(st0.energy/35,0,1))*(st0.hunger<15?.8:1)*((st0.thirst==null?80:st0.thirst)<15?.8:1);
@@ -495,13 +528,14 @@ function rideUpdate(dt){
   const NOSE=1.15;
   const c={x:R.x,z:R.z};const n={x:R.x+fx*NOSE,z:R.z+fz*NOSE};
   const cols=w.colliders;
+  if(!R.grounded&&jumpFail(cols,fx,fz)){fallOff();return;}
   let hit=EQ.collide(c,.75,cols,R.y);R.x=c.x;R.z=c.z;n.x=R.x+fx*NOSE;n.z=R.z+fz*NOSE;
   if(EQ.collide(n,.4,cols,R.y)){R.x+=n.x-(R.x+fx*NOSE);R.z+=n.z-(R.z+fz*NOSE);hit=true;}
   if(hit&&R.sp>6&&R.bumpCd<=0){R.sp*=.55;R.bumpCd=1;EQ.sfx.bump();}
   else if(hit)R.sp*=Math.pow(.2,dt);
   const n0x=R.px+fx*NOSE,n0z=R.pz+fz*NOSE,n1x=R.x+fx*NOSE,n1z=R.z+fz*NOSE;
   let block=false;
-  for(const j of w.jumps){if(EQ.segX(n0x,n0z,n1x,n1z,j.ax,j.az,j.bx,j.bz)&&R.y<j.h-.2){block=true;break;}}
+  for(const j of w.jumps){if(EQ.segX(n0x,n0z,n1x,n1z,j.ax,j.az,j.bx,j.bz)&&R.y<j.h-.2){if(!R.grounded){fallOff();return;}block=true;break;}}
   if(w.deep!=null&&w.height(n1x,n1z)<w.deep){block=true;if(R.bumpCd<=0){msg('Troppo profondo!',1.2);R.bumpCd=1.2;}}
   if(block){R.x=R.px;R.z=R.pz;R.sp*=.25;if(R.bumpCd<=0){R.bumpCd=1.2;EQ.sfx.bump();msg('Salta! ⤴<small>tocca SALTA prima dell\'ostacolo</small>',1.4);}}
   const b=w.bounds;if(b){R.x=U.clamp(R.x,b.x0,b.x1);R.z=U.clamp(R.z,b.z0,b.z1);}
@@ -517,7 +551,7 @@ function rideUpdate(dt){
   if(depth>0&&R.y<.3){sink=Math.min(.12,depth*.15);if(R.sp>9)R.sp-=dt*4;EQ.loop('wade',Math.min(.25,R.sp*.03),1100,.6);}else EQ.loop('wade',0);
   H.x=R.x;H.z=R.z;H.h=R.h;
   H.root.position.set(R.x,gy+R.y,R.z);H.root.rotation.y=R.h;
-  H.animate(dt,{speed:R.sp,air:!R.grounded,vy:R.vy,turn:R.turn,slope,sink});
+  H.animate(dt,{speed:R.sp,air:!R.grounded,vy:R.vy,turn:R.turn,slope,sink,eat:G.grazeT>0?1:0,graze:1});
   // Giorgia in sella
   if(G.mount){G.mount.t+=dt/G.mount.dur;const t=Math.min(1,G.mount.t),e=t*t*(3-2*t);
     P.root.position.copy(G.mount.from).lerp(tv.set(0,-.9,0),e);P.root.position.y+=Math.sin(e*Math.PI)*.45;
@@ -543,6 +577,7 @@ function rideUpdate(dt){
       if(Math.abs(R.x-AR.cx)<AR.hx&&Math.abs(R.z-AR.cz)<AR.hz)A.push({id:'race',icon:'🏆',label:'Gara',fn:()=>{G.state='modal';renderMenu();$('course').classList.add('on');}});
     }
     else if(G.world!==yard&&R.sp<2)A.push({id:'down',icon:'⬇️',label:'Scendi',fn:dismount});
+    if(R.sp<1&&!G.course&&R.grounded&&grazeAt(R.x,R.z)&&H.stats.hunger<97&&!(G.grazeT>0))A.push({id:'rgraze',icon:'🌿',label:'Mangia erba',fn:()=>{G.grazeT=4.5;setTimeout(()=>{EQ.sfx.munch();stat(H,'hunger',30);stat(H,'happy',3);persist();},1200);msg('🌿 '+H.def.name+' bruca l\'erba',2);}});
     socialActions(A,true);
     setActions(A);}
 }
@@ -558,6 +593,9 @@ function courseLogic(list,scoring){
       const F_=a<0&&b>=0,B_=a>0&&b<=0;if(!F_&&!B_)continue;
       const lx=(R.x-cx)*o.right.x+(R.z-cz)*o.right.z;if(Math.abs(lx)>o.W/2+.25)continue;
       const clear=R.y>=pl.h-.28;
+      if(!clear&&F_&&R.grounded&&R.sp>.5){R.x=R.px-Math.sin(R.h)*1.2;R.z=R.pz-Math.cos(R.h)*1.2;R.sp=0;G.lock=.9;EQ.sfx.snort();
+        msg('🚫 Rifiuto!<small>tocca SALTA prima dell\'ostacolo</small>',1.8);if(scoring&&C.obs[C.next]===o&&!o.refused){o.refused=true;C.faults+=4;}return;}
+      if(!clear&&!R.grounded&&R.y<pl.h-.55){if(!pl.rail.userData.fall){pl.rail.userData.fall={vy:0,vz:1.2+R.sp*.08,spin:rnd(-1,1),t:0};fallen.push(pl.rail);EQ.sfx.knock();}fallOff();return;}
       if(!clear&&!pl.rail.userData.fall){pl.rail.userData.fall={vy:0,vz:1.2+R.sp*.08,spin:rnd(-1,1),t:0};fallen.push(pl.rail);EQ.sfx.knock();}
       if(!scoring){if(pi===o.planes.length-1&&F_){if(clear){msg(['Bel salto!','Brav'+EQ.A()+'!','Perfetto!'][Math.random()*3|0],1);EQ.sfx.clear();stat(G.cur,'happy',2);}else msg('Barriera giù!',1);}continue;}
       const isNext=C.obs[C.next]===o&&F_;
@@ -585,6 +623,7 @@ function startCourse(l,noFade){
     yard.arenaGate.visible=true;yard.gateColl.off=false;
     const [sx,sz]=tx(L.start[0],L.start[1]);R.x=sx;R.z=sz;R.h=L.start[2]*EQ.D2R;R.sp=0;R.y=0;R.vy=0;R.grounded=true;
     G.cur.x=R.x;G.cur.z=R.z;G.cur.h=R.h;
+    if(G.cur.where!=='ride'){G.cur.x=R.x;G.cur.z=R.z;G.cur.h=R.h;mountNow();}
     G.course={l,obs:obstacles,next:0,faults:0,time:0,state:'count'};
     G.state='ride';snapCam();setTouchMode('ride');hud(true);setActions([]);
     $('timer').classList.add('on');
@@ -892,10 +931,10 @@ $('rBtns').addEventListener('click',e=>{const b=e.target.closest('[data-r]');if(
   if(r==='menu'){toMenu();return;}
   if(r==='home'){goHome();return;}
   if(r==='cont'){G.state='ride';return;}
-  const l=G.course?G.course.l:0;
+  const l=G.course?G.course.l:(G.lastL||0);
   if(r==='again'){startCourse(l);return;}
   if(r==='next'){startCourse(Math.min(LEVELS.length-1,l+1));return;}
-  if(r==='stay'){fade('',()=>{endCourse(true);G.state='ride';R.sp=0;});}
+  if(r==='stay'){fade('',()=>{endCourse(true);G.state=G.cur&&G.cur.where==='ride'?'ride':'foot';R.sp=0;});}
 });
 let prevState=null;
 function pause(){if(G.busy||!['foot','ride','act'].includes(G.state))return;prevState=G.state;G.state='paused';
@@ -1002,6 +1041,7 @@ function frame(now){
     } else if(G.state==='foot'){footUpdate(dt);ppos=P.root.position;missionCheck(F.x,F.z);}
     else if(G.state==='ride'){rideUpdate(dt);ppos=G.cur.root.position;missionCheck(R.x,R.z);}
     else if(G.state==='act'){actUpdate(dt);ppos=P.root.position;}
+    else if(G.state==='fall'){fallUpdate(dt);ppos=P.root.position;}
     else if(G.state==='results'||G.state==='modal'){if(G.cur&&G.cur.where==='ride'){const inpSave=G.lock;G.lock=1;rideUpdate(dt);G.lock=inpSave;}ppos=G.cur?G.cur.root.position:P.root.position;}
     else ppos=G.cur&&G.cur.where==='ride'?G.cur.root.position:P.root.position;
     if(G.state!=='paused'){
