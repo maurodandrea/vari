@@ -344,10 +344,11 @@ EQ.Particles = function(max,size,color,opts){
 
 /* ---------------- collisioni ---------------- */
 // collider: {c:1,x,z,r} cerchio | {x,z,hx,hz,rot} rettangolo orientato
-EQ.collide = function(pos,r,list){
+EQ.collide = function(pos,r,list,minY){
   let hit=false;
   for(const c of list){
     if(c.off)continue;
+    if(minY!=null&&c.h!=null&&minY>c.h-.3)continue;
     if(c.r!=null){const dx=pos.x-c.x,dz=pos.z-c.z,rr=c.r+r,d2=dx*dx+dz*dz;if(d2<rr*rr){const d=Math.sqrt(d2)||1e-3;pos.x=c.x+dx/d*rr;pos.z=c.z+dz/d*rr;hit=true;}}
     else{
       const cs=Math.cos(c.rot||0), sn=Math.sin(c.rot||0);

@@ -249,7 +249,7 @@ const CARMAT=EQ.CARMAT=new THREE.MeshStandardMaterial({vertexColors:true,roughne
 EQ.CAR_COLS=[0xc0392b,0xf1c40f,0x2a58c8,0xecf0f1,0x2f6b33,0x111111,0x8e44ad,0xe67e22,0x95a5a6,0x7a1f1f,0x1f3b5a,0xd9d4c8,0x3a3a3a];
 EQ.buildCar=function(type,col){
   type=type||pick(['hatch','hatch','sedan','suv','van','sedan']);col=col!=null?col:pick(EQ.CAR_COLS);
-  const m=new THREE.Mesh(EQ.carGeo(type,col),CARMAT);m.castShadow=true;const g=new THREE.Group();g.add(m);g.userData.L=PROF[type].L;return g;
+  const m=new THREE.Mesh(EQ.carGeo(type,col),CARMAT);m.castShadow=true;const g=new THREE.Group();g.add(m);g.userData.L=PROF[type].L;g.userData.type=type;return g;
 };
 EQ.buildBike=function(col){
   col=col!=null?col:pick(TOPS);const g=new THREE.Group();const P=[];
