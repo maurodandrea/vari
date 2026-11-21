@@ -386,7 +386,7 @@ function setUI(){const p=st.phase;let h='';
       <div class="grow"><span>Amo</span>${[['piccolo','n. 6'],['medio','n. 2'],['grande','2/0']].map(([k,n])=>`<button class="gc ${st.hook===k?'on':''}" onclick="GAME.setHook('${k}')">${n}</button>`).join('')}</div>
       ${btn('Pianta i picchetti e inizia','start()','big')}</div>`;}
   else if(p==='wait'){h=`<div class="gpanel slim"><div class="grods">${st.rods.map((r,i)=>`<button class="gr ${r.state==='bite'||r.state==='hooked'?'alert':''}" onclick="GAME.rod(${i})" ${st.busy?'disabled':''}><b>Canna ${i+1}</b><small>${r.bait?B[r.bait].n:'senza esca'}${r.dist?' · '+Math.round(r.dist)+' m':''}</small><small>${rodStatus(r)}</small></button>`).join('')}</div>
-    ${st.busy?'':`<div class="grow" style="justify-content:center">${[1,2,4,8,16,32].map(s=>`<button class="gc ${st.speed===s?'on':''}" onclick="GAME.setSpeed(${s})">${s===1?'▶ 1x':s+'x'}</button>`).join('')}<button class="gc" onclick="GAME.bagView()">🧺 ${st.bag.length}</button><button class="gc" onclick="GAME.center()" title="Guarda le canne">🎯</button>${AN.target!=='sit'?'<button class="gc" onclick="GAME.sit()">🪑 Siediti</button>':''}</div>`}${st.msg?`<div class="gs" style="text-align:center">${st.msg}</div>`:''}</div>`;}
+    ${st.busy?'':`<div class="grow" style="justify-content:center">${[1,2,4,8,16,32].map(s=>`<button class="gc ${st.speed===s?'on':''}" onclick="GAME.setSpeed(${s})">${s===1?'▶ 1x':s+'x'}</button>`).join('')}<button class="gc" onclick="GAME.bagView()">🧺 ${st.bag.length}</button>${skipUp()?'<button class="gc" onclick="GAME.skip(1)">🌅 Vai all\'alba</button>':'<button class="gc" onclick="GAME.skip(0)">🌇 Vai al tramonto</button>'}<button class="gc" onclick="GAME.center()" title="Guarda le canne">🎯</button>${AN.target!=='sit'?'<button class="gc" onclick="GAME.sit()">🪑 Siediti</button>':''}</div>`}${st.msg?`<div class="gs" style="text-align:center">${st.msg}</div>`:''}</div>`;}
   else if(p==='atrod'){const r=st.rods[st.sel];h=`<div class="gpanel"><b>Canna ${st.sel+1}</b><div class="gs">${r.bait?B[r.bait].n+' a '+Math.round(r.dist)+' m · '+rodStatus(r):'Senza esca'}</div>
     ${r.state==='bite'?btn('⚡ FERRA!','strike()','big hot'):''}${r.state==='hooked'?btn('🌀 Prendi la canna e recupera','fightHooked()','big hot'):''}${r.bait?btn('🌀 Recupera e cambia esca','rebait()'):btn('🪝 Innesca','rebait()','big')}${btn('🪑 Torna a sedere','back()')}</div>`;}
   else if(p==='bait')h=`<div class="gpanel"><b>🪝 Innesca la canna ${st.sel+1}</b><div class="gbaits">${BAITS.map(b=>`<button class="gbt" onclick="GAME.bait('${b.k}')"><span>${b.e}</span><b>${b.n}</b><small>${b.d}</small></button>`).join('')}</div></div>`;
@@ -505,6 +505,15 @@ function onTap(e){if(!sittingView())return;
   RAY.r=RAY.r||new T.Raycaster();RAY.r.setFromCamera(m,camera);const hits=RAY.r.intersectObjects(st.rods.map(r=>r.hit),false);
   if(hits.length){const i=st.rods.findIndex(r=>r.hit===hits[0].object);if(i>=0)return G.rod(i);}
   if(AN.target!=='sit'&&RAY.r.intersectObject(CHAIRHIT,false).length)G.sit();}
+// poco prima dell'alba propongo il tramonto, poco prima del tramonto l'alba
+function skipUp(){const d=gameDate(),a=sunPos(d,SPOT.lat,SPOT.lon).alt,morning=d.getHours()<12;if(a<0&&a>-6&&morning)return false;if(a>=0&&a<6&&!morning)return true;return a<0;}
+// salto di tempo: alba (il sole sorge) o tramonto (il sole tramonta), 20 minuti prima
+G.skip=up=>{if(st.busy||st.phase!=='wait')return;let t=st.gt,prev=sunPos(new Date(t),SPOT.lat,SPOT.lon).alt;const end=t+36*3600e3;
+  for(t+=5*60e3;t<end;t+=5*60e3){const a=sunPos(new Date(t),SPOT.lat,SPOT.lon).alt;if(up?(prev<0&&a>=0):(prev>=0&&a<0))break;prev=a;}
+  const target=t-20*60e3;if(target<=st.gt)return;const mins=(target-st.gt)/60e3;st.gt=target;
+  // nel frattempo le esche si consumano e le abboccate finiscono
+  for(const r of st.rods){if(r.state==='bite'||r.state==='hooked'){r.state='fishing';r.bitePlan=null;}if(r.bait&&r.state==='fishing')r.baitLeft-=mins*(.6+Math.random()*.6);}
+  const d=new Date(target);st.msg=`${up?'🌅 Alba':'🌇 Tramonto'} in arrivo: sono le ${d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}.${st.rods.some(r=>r.bait&&r.baitLeft<=0)?' Controlla le esche: in queste ore sono state mangiate.':''}`;setUI();};
 G.center=()=>{LOOK.yaw=0;LOOK.pitch=0;};
 
 /* ---------- ciclo principale ---------- */
