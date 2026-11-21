@@ -11,12 +11,12 @@
   #start{min-height:100%;display:grid;place-items:center;padding:24px 16px;background:radial-gradient(1200px 600px at 50% -10%,#0f4a6b 0,#04101e 60%)}
   .box{width:100%;max-width:420px;text-align:center}
   .logo{width:84px;height:84px;border-radius:26px;margin:0 auto 14px;display:grid;place-items:center;font-size:44px;background:var(--grad);box-shadow:0 18px 40px -12px rgba(47,224,207,.7)}
-  h1{margin:0 0 6px;font-size:30px;letter-spacing:-.5px}p{color:var(--mut);margin:0 0 18px;line-height:1.45}
-  input{width:100%;padding:15px 16px;border-radius:16px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:#fff;font:600 18px Outfit,sans-serif;outline:none;text-align:center}
-  input:focus{border-color:var(--acct)}
-  button{width:100%;margin-top:12px;padding:15px;border:0;border-radius:16px;background:var(--grad);color:#03282a;font:800 18px Outfit,sans-serif;cursor:pointer}
-  button:disabled{opacity:.5}
-  .note{font-size:13.5px;margin-top:16px}
+  #start h1{margin:0 0 6px;font-size:30px;letter-spacing:-.5px}#start p{color:var(--mut);margin:0 0 18px;line-height:1.45}
+  #start input{width:100%;padding:15px 16px;border-radius:16px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.07);color:#fff;font:600 18px Outfit,sans-serif;outline:none;text-align:center}
+  #start input:focus{border-color:var(--acct)}
+  #start button{width:100%;margin-top:12px;padding:15px;border:0;border-radius:16px;background:var(--grad);color:#03282a;font:800 18px Outfit,sans-serif;cursor:pointer}
+  #start button:disabled{opacity:.5}
+  #start .note{font-size:13.5px;margin-top:16px}
   .tag{display:inline-block;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#03282a;background:#ffb547;border-radius:99px;padding:3px 10px;margin-bottom:12px}
 </style></head>
 <body>
@@ -56,7 +56,10 @@ window.build=(w,m)=>{const H=w.hourly,mi={};if(m&&m.hourly)m.hourly.time.forEach
   return {hours};};
 // uscita dal gioco: si torna alla schermata iniziale
 window.go=()=>{document.getElementById('start').style.display='';};
-function start(){const n=nm.value.trim().slice(0,24);if(n.length<2)return;try{localStorage.setItem('gp.name',n);}catch(e){}window.GP_NAME=n;
+function getPos(){return new Promise(res=>{if(!navigator.geolocation)return res(null);let done=false;const fin=v=>{if(!done){done=true;res(v);}};setTimeout(()=>fin(null),20000);
+  navigator.geolocation.getCurrentPosition(p=>fin({lat:p.coords.latitude,lon:p.coords.longitude}),()=>fin(null),{enableHighAccuracy:false,timeout:19000,maximumAge:600000});});}
+async function start(){const n=nm.value.trim().slice(0,24);if(n.length<2)return;try{localStorage.setItem('gp.name',n);}catch(e){}window.GP_NAME=n;
+  bt.disabled=true;const old=bt.textContent;bt.textContent='📍 Cerco la tua posizione…';window.GP_POS=await getPos();bt.textContent=old;bt.disabled=false;
   document.getElementById('start').style.display='none';
   if(window.GAME){GAME.mount(null);return;}
   bt.disabled=true;const sc=document.createElement('script');sc.src=PB+'gioco.js?v='+Date.now();
