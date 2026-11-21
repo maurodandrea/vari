@@ -56,10 +56,7 @@ window.build=(w,m)=>{const H=w.hourly,mi={};if(m&&m.hourly)m.hourly.time.forEach
   return {hours};};
 // uscita dal gioco: si torna alla schermata iniziale
 window.go=()=>{document.getElementById('start').style.display='';};
-function getPos(){return new Promise(res=>{if(!navigator.geolocation)return res(null);let done=false;const fin=v=>{if(!done){done=true;res(v);}};setTimeout(()=>fin(null),20000);
-  navigator.geolocation.getCurrentPosition(p=>fin({lat:p.coords.latitude,lon:p.coords.longitude}),()=>fin(null),{enableHighAccuracy:false,timeout:19000,maximumAge:600000});});}
 async function start(){const n=nm.value.trim().slice(0,24);if(n.length<2)return;try{localStorage.setItem('gp.name',n);}catch(e){}window.GP_NAME=n;
-  bt.disabled=true;const old=bt.textContent;bt.textContent='📍 Cerco la tua posizione…';window.GP_POS=await getPos();bt.textContent=old;bt.disabled=false;
   document.getElementById('start').style.display='none';
   if(window.GAME){GAME.mount(null);return;}
   bt.disabled=true;const sc=document.createElement('script');sc.src=PB+'gioco.js?v='+Date.now();
