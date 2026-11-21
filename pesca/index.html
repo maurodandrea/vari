@@ -439,7 +439,18 @@
   .cri{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:rgba(255,255,255,.07);font-size:20px;flex:none}
   .cprev{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .cdot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--acc);box-shadow:0 0 8px var(--acc);margin-top:4px}
-  .ccrumb{font-size:15px;margin:0 0 6px;opacity:.9}.ccrumb u{cursor:pointer;color:var(--acct)}
+  /* Social più grande: messaggi, canali e chat ben leggibili */
+  .cb{font-size:20px;padding:11px 14px;line-height:1.38;border-radius:20px 20px 20px 6px}.cmsg.me .cb{border-radius:20px 20px 6px 20px}
+  .cn{font-size:16.5px}.ct{font-size:14px}.crq{font-size:16.5px}.cday{font-size:15.5px}.crply{font-size:17px}
+  .chatlog{gap:9px}
+  .ccomp textarea{font-size:18px;min-height:52px;padding:14px 12px;border-radius:18px}.ccomp textarea::placeholder{font-size:15px}
+  .cbtn{width:48px;height:52px;border-radius:16px;font-size:22px}
+  .croom{padding:15px 4px;gap:14px;font-size:18.5px}.croom b{font-size:19.5px}.croom .small{font-size:16px}
+  .cri{width:52px;height:52px;border-radius:16px;font-size:27px}
+  .cdot{width:13px;height:13px}
+  #chtabs .chip{font-size:17px;padding:10px 16px}
+  .ctog{width:34px;height:34px;font-size:18px}
+  .ccrumb{font-size:17.5px;margin:0 0 8px;opacity:.9}.ccrumb u{cursor:pointer;color:var(--acct)}
   .ctree{gap:8px;padding-top:8px;padding-bottom:8px}.ctog{flex:none;width:28px;height:28px;border-radius:8px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.06);color:inherit;font-size:15.5px;cursor:pointer;padding:0}.ctog.sp{border:0;background:none}
   .leaflet-tooltip.mlabel{background:rgba(6,20,28,.55);color:#fff;border:0;box-shadow:none;border-radius:8px;padding:1px 7px;font:700 13px 'Outfit',sans-serif;opacity:.85!important;white-space:nowrap;max-width:110px;overflow:hidden;text-overflow:ellipsis}
   .leaflet-tooltip.mlabel::before{display:none}.leaflet-tooltip.mlabel.me{font-size:12px;padding:0 6px}
@@ -509,6 +520,7 @@
   /* barra in basso del telefono: 1,5 volte più grande */
   @media (max-width:999px){
     main{padding-bottom:170px;}
+    .chatlog{height:calc(100dvh - 420px);min-height:220px;}
     nav{width:calc(100% - 10px);bottom:calc(6px + env(safe-area-inset-bottom));padding:9px 4px;gap:0;border-radius:30px;}
     nav button{padding:13px 0 11px;gap:5px;font-size:14px;letter-spacing:-.2px;border-radius:24px;}
     nav button svg{width:33px;height:33px;}
