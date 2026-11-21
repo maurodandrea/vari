@@ -78,6 +78,7 @@ EQ.setSky = function(o){
   renderer.toneMappingExposure=o.exposure;
   sun.intensity=o.sun; sun.color.set(o.sunCol); hemi.intensity=o.hemi;
   EQ.envIntensity=o.envI;
+  camera.far=Math.max(300,o.far*1.08);camera.updateProjectionMatrix();
 };
 EQ.followSun = function(p){
   sun.position.copy(p).addScaledVector(EQ.sunDir,90);
@@ -119,6 +120,17 @@ EQ.merge = function(geos){
   if(hasCol)ok.forEach(g=>{if(!g.attributes.color){const a=new Float32Array(g.attributes.position.count*3).fill(1);g.setAttribute('color',new THREE.BufferAttribute(a,3));}});
   else ok.forEach(g=>{if(g.attributes.color)g.deleteAttribute('color');});
   return THREE.BufferGeometryUtils.mergeBufferGeometries(ok,false);
+};
+/* unisce i figli Mesh statici di un gruppo per materiale (meno draw call) */
+EQ.mergeStatic = function(group,keep){
+  const by=new Map();
+  group.children.slice().forEach(o=>{if(!o.isMesh||o.children.length||(keep&&keep.includes(o))||o.isInstancedMesh)return;
+    const k=o.material;if(!by.has(k))by.set(k,[]);by.get(k).push(o);});
+  by.forEach((list,m)=>{if(list.length<2)return;
+    const geos=list.map(o=>{o.updateMatrix();const g=o.geometry.clone();g.applyMatrix4(o.matrix);return g;});
+    const mg=EQ.merge(geos);geos.forEach(g=>g.dispose());
+    const mm=new THREE.Mesh(mg,m);mm.castShadow=true;mm.receiveShadow=true;
+    list.forEach(o=>group.remove(o));group.add(mm);});
 };
 /* geometria trasformata (per merge) */
 EQ.xform = function(geo,x,y,z,rx,ry,rz,sx,sy,sz){
@@ -262,6 +274,11 @@ EQ.sfx={
   bird(){const f=2500+Math.random()*1500;for(let i=0;i<3;i++)tone(f,.08,'sine',.04,f*1.3,i*.12);},
   horn(){tone(392,.3,'square',.04);tone(494,.3,'square',.03);},
   pigeons(){for(let i=0;i<10;i++)noise(.06,800,1,.1,'bandpass',i*.05);},
+  engine(v){if(!AC||!EQ.soundOn)return;tone(70+v*40,.12,'sawtooth',.03);},
+  bark(){tone(520,.08,'square',.06,380);tone(480,.09,'square',.05,340,.15);},
+  kids(){for(let i=0;i<4;i++)tone(700+Math.random()*500,.12,'sine',.03,900+Math.random()*400,i*.13);},
+  bikebell(){tone(2200,.25,'sine',.06);tone(2200,.25,'sine',.05,null,.18);},
+  whistle(){tone(2600,.35,'sine',.05,2400);},
   bell(){[0,0.9].forEach(w=>{tone(440,2.5,'sine',.08,null,w);tone(880,1.5,'sine',.03,null,w);});},
 };
 
