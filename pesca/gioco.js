@@ -5,19 +5,31 @@
 'use strict';
 // spot del Lazio, da nord a sud: orientamento della costa, sabbia, dune, vegetazione, scogli, stabilimenti, paesaggio e pesci
 const SPOTS=[
+  {id:'montalto',name:'Montalto Marina',lat:42.322,lon:11.585,face:240,sand:'#c8b08a',dune:.6,veg:.6,pines:.2,huts:1,npcs:2},
   {id:'tarquinia',name:'Tarquinia Lido',lat:42.2262,lon:11.7052,face:245,sand:'#c4ad86',dune:.5,veg:.5,pines:.3,huts:1,npcs:2},
   {id:'civitavecchia',name:'Civitavecchia · La Frasca',lat:42.1215,lon:11.768,face:250,sand:'#968b7c',dune:.15,veg:.8,rocks:1,ship:1,npcs:3,fishK:{'Sarago maggiore':1.7,'Dentice':2.5,'Spigola':1.2,'Orata':.8,'Mormora':.5,'Ombrina':.7}},
+  {id:'santamarinella',name:'Santa Marinella',lat:42.033,lon:11.852,face:215,sand:'#9c8f7e',dune:.1,veg:.7,rocks:1,city:1,npcs:3,fishK:{'Sarago maggiore':1.6,'Dentice':1.8,'Orata':.9,'Mormora':.6}},
+  {id:'santasevera',name:'Santa Severa',lat:42.021,lon:11.962,face:215,sand:'#a89a82',dune:.2,veg:.6,rocks:.5,huts:1,npcs:3,fishK:{'Sarago maggiore':1.3}},
+  {id:'cerveteri',name:'Marina di Cerveteri',lat:41.978,lon:12.052,face:225,sand:'#8f8170',dune:.2,veg:.4,huts:1,npcs:2},
+  {id:'ladispoli',name:'Ladispoli',lat:41.947,lon:12.071,face:225,sand:'#7d7266',dune:.1,veg:.3,huts:1,city:1,npcs:3},
+  {id:'passoscuro',name:'Passoscuro',lat:41.901,lon:12.155,face:230,sand:'#9a8a72',dune:.3,veg:.4,huts:1,npcs:2},
   {id:'fregene',name:'Fregene',lat:41.8507,lon:12.1982,face:235,sand:'#b6a07c',dune:.3,veg:.4,pines:1,huts:1,npcs:3},
   {id:'focene',name:'Focene',lat:41.8155,lon:12.2107,face:235,sand:'#a69172',dune:.4,veg:.5,huts:1,npcs:2},
   {id:'fiumicino',name:'Fiumicino · Isola Sacra',lat:41.7545,lon:12.2303,face:230,sand:'#9e896c',dune:.2,veg:.3,huts:1,npcs:3,fishK:{'Spigola':1.3,'Serra':1.3,'Granchio blu':1.4}},
   {id:'ostia',name:'Ostia',lat:41.73,lon:12.278,face:220,sand:'#bda780',dune:.12,veg:.2,huts:1,pier:1,city:1,npcs:4},
+  {id:'castelfusano',name:'Castel Fusano',lat:41.713,lon:12.316,face:222,sand:'#cdb488',dune:.6,veg:.8,pines:1,huts:1,npcs:3},
   {id:'castelporziano',name:'Castel Porziano',lat:41.6797,lon:12.3786,face:225,sand:'#d6b98a',dune:1,veg:1,pines:1,npcs:4},
   {id:'torvaianica',name:'Torvaianica',lat:41.6205,lon:12.4605,face:222,sand:'#c3a97f',dune:.5,veg:.6,huts:1,npcs:3},
+  {id:'torsanlorenzo',name:'Tor San Lorenzo',lat:41.552,lon:12.539,face:218,sand:'#c4a97e',dune:.6,veg:.6,huts:1,npcs:2},
+  {id:'lavinio',name:'Lavinio',lat:41.502,lon:12.587,face:212,sand:'#bfa47a',dune:.4,veg:.5,rocks:.3,huts:1,npcs:3},
   {id:'anzio',name:'Anzio',lat:41.452,lon:12.608,face:205,sand:'#b09b78',dune:.3,veg:.5,rocks:.6,city:1,npcs:3,fishK:{'Sarago maggiore':1.4,'Spigola':1.2}},
+  {id:'nettuno',name:'Nettuno',lat:41.455,lon:12.67,face:195,sand:'#b8a07a',dune:.3,veg:.4,city:1,npcs:3,fishK:{'Spigola':1.2,'Sarago maggiore':1.2}},
   {id:'latina',name:'Latina · Capo Portiere',lat:41.395,lon:12.841,face:215,sand:'#d0b27d',dune:1.1,veg:.8,huts:1,npcs:2},
-  {id:'sabaudia',name:'Sabaudia',lat:41.281,lon:13.005,face:215,sand:'#dcc08a',dune:1.7,veg:.9,npcs:2,fishK:{'Orata':1.2,'Mormora':1.2,'Leccia stella':1.3}}];
+  {id:'sabaudia',name:'Sabaudia',lat:41.281,lon:13.005,face:215,sand:'#dcc08a',dune:1.7,veg:.9,npcs:2,fishK:{'Orata':1.2,'Mormora':1.2,'Leccia stella':1.3}},
+  {id:'sanfelice',name:'San Felice Circeo',lat:41.229,lon:13.11,face:170,sand:'#d8bf90',dune:.3,veg:.9,pines:.4,rocks:.7,huts:1,npcs:3,fishK:{'Sarago maggiore':1.4,'Orata':1.2,'Dentice':1.3}},
+  {id:'terracina',name:'Terracina',lat:41.285,lon:13.22,face:190,sand:'#cdb489',dune:.3,veg:.4,huts:1,city:1,pier:1,npcs:4,fishK:{'Orata':1.2,'Spigola':1.2,'Mormora':1.1}}];
 const CIRCEO={lat:41.235,lon:13.06,h:541};
-let SPOT={...SPOTS[6],mode:'coast'};
+let SPOT={...SPOTS.find(x=>x.id==='castelporziano'),mode:'coast'};
 let FACE=SPOT.face;         // direzione in cui guarda la spiaggia (verso il mare)
 function setSpot(sp){SPOT={...sp,mode:'coast',id:'g_'+sp.id};FACE=sp.face;LSS('spot',sp.id);}
 const R=Math.PI/180,clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),lerp=(a,b,t)=>a+(b-a)*t,rnd=(a,b)=>a+Math.random()*(b-a);
@@ -405,7 +417,7 @@ function buildNpcs(){const defs=[
   const PERS=[{name:'Franco',age:64,town:'Acilia',yrs:35,bait:'bibi',lead:150,rig:'lungo',app:true,mood:'chiacchierone'},{name:'Peppe',age:51,town:'Ostia',yrs:20,bait:'arenicola',lead:175,rig:'corto',app:false,mood:'brontolone'},
     {name:'Marco',age:33,town:'Torvaianica',yrs:8,bait:'koreano',lead:125,rig:'2ami',app:true,mood:'entusiasta'},{name:'Luigi',age:72,town:'Roma, Garbatella',yrs:50,bait:'cannolicchio',lead:150,rig:'lungo',app:false,mood:'saggio'}];
   // i pescatori vengono dai paesi vicini allo spot
-  const TOWNS={tarquinia:['Tarquinia','Montalto di Castro','Viterbo','Civitavecchia'],civitavecchia:['Civitavecchia','Santa Marinella','Tolfa','Allumiere'],fregene:['Fregene','Maccarese','Fiumicino','Roma, Aurelio'],
+  const TOWNS={montalto:['Montalto di Castro','Pescia Romana','Canino','Tarquinia'],santamarinella:['Santa Marinella','Civitavecchia','Cerveteri','Tolfa'],santasevera:['Santa Severa','Santa Marinella','Cerveteri','Roma, Boccea'],cerveteri:['Cerveteri','Ladispoli','Valcanneto','Bracciano'],ladispoli:['Ladispoli','Cerveteri','Palo Laziale','Roma, Aurelio'],passoscuro:['Passoscuro','Maccarese','Fiumicino','Torrimpietra'],castelfusano:['Ostia','Acilia','Infernetto','Roma, Eur'],torsanlorenzo:['Ardea','Tor San Lorenzo','Pomezia','Aprilia'],lavinio:['Lavinio','Anzio','Ardea','Aprilia'],nettuno:['Nettuno','Anzio','Velletri','Aprilia'],sanfelice:['San Felice Circeo','Sabaudia','Terracina','Latina'],terracina:['Terracina','Fondi','Sonnino','San Felice Circeo'],tarquinia:['Tarquinia','Montalto di Castro','Viterbo','Civitavecchia'],civitavecchia:['Civitavecchia','Santa Marinella','Tolfa','Allumiere'],fregene:['Fregene','Maccarese','Fiumicino','Roma, Aurelio'],
     focene:['Focene','Fiumicino','Maccarese','Roma, Magliana'],fiumicino:['Fiumicino','Isola Sacra','Ostia','Roma, Portuense'],ostia:['Ostia','Acilia','Infernetto','Roma, EUR'],castelporziano:['Acilia','Ostia','Torvaianica','Roma, Garbatella'],
     torvaianica:['Torvaianica','Pomezia','Ardea','Roma, Laurentino'],anzio:['Anzio','Nettuno','Lavinio','Aprilia'],latina:['Latina','Borgo Sabotino','Cisterna di Latina','Sermoneta'],sabaudia:['Sabaudia','San Felice Circeo','Terracina','Pontinia']};
   const tw=TOWNS[(SPOT.id||'').replace(/^g_/,'')]||TOWNS.castelporziano;
@@ -539,7 +551,7 @@ async function startMap(){st.phase='map';
   const cs=sm(coast,2),road=sm(cs.map(q=>[q[0]-sn[0]*.9,q[1]-sn[1]*.9]),4),cum=[0];for(let i=1;i<road.length;i++)cum.push(cum[i-1]+Math.hypot(road[i][0]-road[i-1][0],road[i][1]-road[i-1][1]));
   Object.assign(MP,{segs,coast:cs,road,cum,len:cum[cum.length-1],sn,towns:(C.T||[]).filter(t=>t[1]>41.12&&t[1]<42.42&&t[2]>11.45&&t[2]<13.25)});
   MP.spots=SPOTS.map(sp=>{const q=PJ(sp.lat,sp.lon);let bi=0,bd=1e9;road.forEach((r,i)=>{const d=Math.hypot(r[0]-q[0],r[1]-q[1]);if(d<bd){bd=d;bi=i;}});return {sp,q,s:cum[bi]};});
-  const last=LSG('spot','castelporziano'),ls=MP.spots.find(x=>x.sp.id===last)||MP.spots[6];
+  const last=LSG('spot','castelporziano'),ls=MP.spots.find(x=>x.sp.id===last)||MP.spots.find(x=>x.sp.id==='castelporziano');
   MP.car={s:Math.max(0,ls.s-4),v:0,dir:1,acc:0,brk:0};MP.near=-1;MP.parking=null;MP.land=landTex();
   mapUI();sizeMap();addEventListener('resize',sizeMap);let lt=performance.now();
   const step=now=>{if(st.phase!=='map'&&st.phase!=='parking')return;const dt=Math.min(.05,(now-lt)/1000);lt=now;mapPhys(dt);drawMap(now/1000);MP.raf=requestAnimationFrame(step);};MP.raf=requestAnimationFrame(step);}
@@ -621,7 +633,7 @@ G.arrive=async i=>{cancelAnimationFrame(MP.raf);motor(false);removeEventListener
 G.toMap=()=>{stop();mount(null);};
 function stop(){cancelAnimationFrame(MP.raf);removeEventListener('resize',sizeMap);windSound(0);motor(false);reelWhir(0);cancelAnimationFrame(raf);raf=0;removeEventListener('resize',size);try{renderer?.dispose();renderer?.forceContextLoss?.();}catch(e){}renderer=null;foams=[];clouds=[];st.rods=[];NPCS=[];MYG=[];CRABS=[];LANTERNS=[];CAM.p=null;document.getElementById('gamebox')?.remove();document.body.classList.remove('gaming');seaSound(0);}
 addEventListener('hashchange',()=>{if(location.hash!=='#gioco'&&document.getElementById('gamebox'))stop();});
-G.mount=mount;G.exit=()=>{stop();if(window.go)go('altro');};
+G.mount=mount;G.exit=()=>{stop();if(window.go)go('home');};
 function size(){if(!renderer)return;const w=root.clientWidth,h=root.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.fov=w<h?68:50;camera.updateProjectionMatrix();}
 const btn=(t,f,cls='')=>`<button class="gb ${cls}" onclick="GAME.${f}">${t}</button>`;
 const suggestLead=w=>w<.3?100:w<.6?125:w<1?150:w<1.6?175:200;
