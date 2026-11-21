@@ -620,7 +620,7 @@ G.mount=mount;G.exit=()=>{stop();if(window.go)go('altro');};
 function size(){if(!renderer)return;const w=root.clientWidth,h=root.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.fov=w<h?68:50;camera.updateProjectionMatrix();}
 const btn=(t,f,cls='')=>`<button class="gb ${cls}" onclick="GAME.${f}">${t}</button>`;
 const suggestLead=w=>w<.3?100:w<.6?125:w<1?150:w<1.6?175:200;
-function rodStatus(r){if(r.dismantled)return 'smontata';if(r.broken)return 'terminale rotto';if(r.held)return 'in mano';if(r.state==='hooked')return '🐟 PESCE ALLAMATO!';if(!r.bait)return 'da innescare';if(r.state==='bite')return '🔔 ABBOCCATA!';if(r.baitLeft<=0)return 'esca finita?';return r.baitLeft>20?'in pesca':'esca consumata';}
+function rodStatus(r){if(r.state==='tangled')return '🧶 lenza incrociata';if(r.dismantled)return 'smontata';if(r.broken)return 'terminale rotto';if(r.held)return 'in mano';if(r.state==='hooked')return '🐟 PESCE ALLAMATO!';if(!r.bait)return 'da innescare';if(r.state==='bite')return '🔔 ABBOCCATA!';if(r.baitLeft<=0)return 'esca finita?';return r.baitLeft>20?'in pesca':'esca consumata';}
 function setUI(){const p=st.phase;let h='';
   if(p==='setup'){const w=wxAt(st.gt),sug=suggestLead(w.wave);
     h=`<div class="gpanel"><b>🎣 ${SPOT.name} · ${gameDate().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</b>
@@ -636,10 +636,10 @@ function setUI(){const p=st.phase;let h='';
     <div class="gbar dist" style="height:8px"><i style="width:${st.stepI/S2.length*100}%"></i></div>
     <div class="gs">${st.busy?'⏳ '+cur.e+' '+cur.t+'…':st.stepI<S2.length?'Prossimo: '+cur.e+' '+cur.t:''}${st.stepI+1<S2.length?`<br><small style="opacity:.7">poi: ${S2[st.stepI+1].t}</small>`:''}</div>
 </div>`;}
-  else if(p==='wait'){h=`<div class="gpanel slim"><div class="grods">${st.rods.map((r,i)=>`<button class="gr ${r.state==='bite'||r.state==='hooked'?'alert':''}" onclick="GAME.rod(${i})" ${st.busy?'disabled':''}><b>Canna ${i+1}</b><small>${r.bait?B[r.bait].n:'senza esca'}${r.dist?' · '+Math.round(r.dist)+' m':''}</small><small>${rodStatus(r)}</small></button>`).join('')}</div>
+  else if(p==='wait'){h=`<div class="gpanel slim"><div class="grods">${st.rods.map((r,i)=>`<button class="gr ${r.state==='bite'||r.state==='hooked'||r.state==='tangled'?'alert':''}" onclick="GAME.rod(${i})" ${st.busy?'disabled':''}><b>Canna ${i+1}</b><small>${r.bait?B[r.bait].n:'senza esca'}${r.dist?' · '+Math.round(r.dist)+' m':''}</small><small>${rodStatus(r)}</small></button>`).join('')}</div>
     ${st.busy?'':`<div class="grow" style="justify-content:center">${[1,2,4,8,16,32].map(s=>`<button class="gc ${st.speed===s?'on':''}" onclick="GAME.setSpeed(${s})">${s===1?'▶ 1x':s+'x'}</button>`).join('')}<button class="gc" onclick="GAME.bagView()">🧺 ${st.bag.length}</button>${skipUp()?'<button class="gc" onclick="GAME.skip(1)">🌅 Vai all\'alba</button>':'<button class="gc" onclick="GAME.skip(0)">🌇 Vai al tramonto</button>'}${(()=>{const ni=NPCS.findIndex(a=>a.pos.distanceTo(AN.pos)<3.2);return ni>=0?`<button class="gc" style="background:#2fe0cf;color:#03282a" onclick="GAME.talk(${ni})">💬 Parla con ${NPCS[ni].per.name}</button>`:'';})()}${nearCrab()?'<button class="gc" style="background:#ffb547;color:#3a2400" onclick="GAME.crab()">🦀 Prendi il granchio</button>':''}<button class="gc" onclick="GAME.toMap()">🚗 Cambia spot</button><button class="gc" onclick="GAME.center()" title="Guarda le canne">🎯</button>${AN.target!=='sit'?'<button class="gc" onclick="GAME.sit()">🪑 Siediti</button>':'<button class="gc" onclick="GAME.rise()">🚶 Alzati</button>'}</div>`}${st.msg?`<div class="gs" style="text-align:center">${st.msg}</div>`:''}</div>`;}
   else if(p==='atrod'){const r=st.rods[st.sel];h=`<div class="gpanel"><b>Canna ${st.sel+1}</b><div class="gs">${r.bait?B[r.bait].n+' a '+Math.round(r.dist)+' m · '+rodStatus(r):'Senza esca'}</div>
-    ${r.state==='bite'?btn('⚡ FERRA!','strike()','big hot'):''}${r.state==='hooked'?btn('🌀 Prendi la canna e recupera','fightHooked()','big hot'):''}${r.dismantled?btn('🔧 Rimonta la canna','remount()','big'):(r.bait?btn('🌀 Recupera e cambia esca','rebait()'):btn('🪝 Innesca','rebait()','big'))+btn('🔧 Montatura · '+r.lead+' g, amo '+({piccolo:'n.6',medio:'n.2',grande:'2/0'})[r.hook]+', '+({lungo:'lungo',corto:'corto','2ami':'2 ami'})[r.rig],'rigAt()')+(r.bait?'':btn('🧰 Smonta la canna','dismantle()'))}${btn('🪑 Torna a sedere','back()')}</div>`;}
+    ${r.state==='bite'?btn('⚡ FERRA!','strike()','big hot'):''}${r.state==='hooked'?btn('🌀 Prendi la canna e recupera','fightHooked()','big hot'):''}${r.state==='tangled'?btn('🧶 Recupera e districa','untangle()','big hot'):''}${r.dismantled?btn('🔧 Rimonta la canna','remount()','big'):(r.state==='tangled'?'':r.bait?btn('🌀 Recupera e cambia esca','rebait()'):btn('🪝 Innesca','rebait()','big'))+(r.state==='tangled'?'':btn('🔧 Montatura · '+r.lead+' g, amo '+({piccolo:'n.6',medio:'n.2',grande:'2/0'})[r.hook]+', '+({lungo:'lungo',corto:'corto','2ami':'2 ami'})[r.rig],'rigAt()'))+(r.bait?'':btn('🧰 Smonta la canna','dismantle()'))}${btn('🪑 Torna a sedere','back()')}</div>`;}
   else if(p==='rig'){const r=st.rods[st.sel],w=wxAt(st.gt);h=`<div class="gpanel"><b>🔧 Montatura della canna ${st.sel+1}</b>${r.broken?'<div class="gs warn">La lenza si è rotta: rifai il terminale (perdi piombo e amo).</div>':''}
     <div class="grow"><span>Piombo</span>${[80,100,125,150,175,200].map(g=>`<button class="gc ${r.lead===g?'on':''}" onclick="GAME.setRig('lead',${g})">${g} g</button>`).join('')}</div>
     <div class="gs">Con mare ${seaName(w.wave)} servono almeno ${suggestLead(w.wave)} g, sennò la corrente trascina il piombo verso riva.</div>
@@ -754,8 +754,8 @@ function doCast(){const c=st.cast;c.on=false;const r=st.rods[st.sel],w=wxAt(st.g
     const tip=new T.Vector3();r.obj.userData.tip.getWorldPosition(tip);const drift=(Math.sin((w.wd-FACE)*R))*w.ws/40*3;const end=new T.Vector3(r.x+drift+rnd(-2,2),0,-dist);
     r.flight={a:tip.clone(),b:end,t:0,dur:1.1+dist/120};r.sinker.visible=true;r.dist=0.01;r.state='flying';
     await sleep(r.flight.dur);splash();burst(end,1);r.flight=null;r.dist=dist;r.sx=end.x;r.sz=end.z;r.state='fishing';r.landT=st.gt;
-    st.msg=q>=1?`Lancio perfetto: ${Math.round(dist)} m!`:q>.8?`Buon lancio: ${Math.round(dist)} m`:`Lancio corto: ${Math.round(dist)} m`;setUI();
-    pose('hold');await sleep(.6);await putRod(st.sel);await stepBack(st.sel);st.phase='wait';st.msg='Tocca la sedia per sederti, o un\'altra canna per andarci.';setUI();});}
+    st.msg=q>=1?`Lancio perfetto: ${Math.round(dist)} m!`:q>.8?`Buon lancio: ${Math.round(dist)} m`:`Lancio corto: ${Math.round(dist)} m`;checkTangle(r);setUI();
+    pose('hold');await sleep(.6);await putRod(st.sel);await stepBack(st.sel);st.phase='wait';if(r.state!=='tangled')st.msg='Tocca la sedia per sederti, o un\'altra canna per andarci.';setUI();});}
 
 /* ---------- barchino elettrico e drone ---------- */
 G.mode=k=>{st.castMode=k;setUI();};G.cdist=v=>{st.castDist=+v;LSS('cdist',st.castDist);const e=document.getElementById('gcdv');if(e)e.textContent=v+' m';};
@@ -811,10 +811,32 @@ G.deliver=()=>{const r=st.rods[st.sel],w=wxAt(st.gt),boat=st.castMode==='barchin
     // sgancio: esca e piombo cadono in acqua
     const drop=new T.Vector3(VEH.obj.position.x,0,VEH.obj.position.z);r.ride=null;
     if(!boat){const pay=VEH.obj.userData.pay;pay.visible=false;VEH.obj.userData.hook.visible=false;const fall=r.sinker;fall.position.set(drop.x,20,drop.z);for(let y=20;y>0;y-=2.5){fall.position.y=y;await sleep(.04);}}
-    splash();burst(drop,1);r.dist=dist;r.sx=drop.x;r.sz=drop.z;r.state='fishing';r.landT=st.gt;st.msg=`✅ Esca sganciata a ${dist} m.`;setUI();await sleep(1.2);st.follow=null;
+    splash();burst(drop,1);r.dist=dist;r.sx=drop.x;r.sz=drop.z;r.state='fishing';r.landT=st.gt;st.msg=`✅ Esca sganciata a ${dist} m.`;checkTangle(r);setUI();await sleep(1.2);st.follow=null;
     // torna a riva da solo mentre il pescatore rimette la canna sul picchetto
     vehTo(boat?r.x+1:AN.pos.x+1,boat?.02:6,boat?-.6:AN.pos.z-1,sp*1.2).then(async()=>{if(!boat)await vehTo(VEH.obj.position.x,.3,VEH.obj.position.z,3);motor(false);await sleep(.6);if(VEH.obj){VEH.obj.visible=false;if(!boat){VEH.obj.userData.pay.visible=true;VEH.obj.userData.hook.visible=true;}}});
     await putRod(st.sel);await stepBack(st.sel);st.phase='wait';setUI();});};
+
+/* ---------- lenze incrociate ---------- */
+// ogni lenza in acqua è un segmento dalla canna al piombo: se due si tagliano o i piombi sono a meno di 3 m, si incrociano
+function lineSeg(x,sx,dist){return [x,ROD_Z,sx,-dist];}
+function segX(a,b){const [x1,y1,x2,y2]=a,[x3,y3,x4,y4]=b,d=(x2-x1)*(y4-y3)-(y2-y1)*(x4-x3);if(Math.abs(d)<1e-9)return false;
+  const t=((x3-x1)*(y4-y3)-(y3-y1)*(x4-x3))/d,u=((x3-x1)*(y2-y1)-(y3-y1)*(x2-x1))/d;return t>.08&&t<1&&u>.08&&u<1;}
+function checkTangle(r){if(r.state!=='fishing'||!(r.dist>5))return false;const me=lineSeg(r.x,r.sx,r.dist),near=(a,b)=>Math.hypot(a[2]-b[2],a[3]-b[3])<3;
+  for(const o of st.rods){if(o===r||o.state!=='fishing'&&o.state!=='bite'&&o.state!=='hooked'||!(o.dist>5))continue;const os=lineSeg(o.x,o.sx,o.dist);
+    if(segX(me,os)||near(me,os)){r.state='tangled';r.tangle={own:o.i};o.state='tangled';o.tangle={own:r.i};o.bitePlan=null;vib([80,40,80]);st.msg=`🧶 La canna ${r.i+1} si è incrociata con la canna ${o.i+1}!`;return true;}}
+  for(const [ai,a] of NPCS.entries())for(const [ri,o] of a.rods.entries()){if(o.held)continue;const os=lineSeg(o.x,o.sx,o.dist);
+    if(segX(me,os)||near(me,os)){r.state='tangled';r.tangle={npc:ai,rod:ri};o.tangled=true;say(a,pick(['Ehi! Mi hai incrociato la lenza!','Ma dove lanci?! Siamo incrociati!','Occhio, hai preso la mia lenza!']),4.5);
+      if(a.st==='sit'||a.st==='sitEat'||a.st==='watch'||a.st==='stand'){a.eating=0;a.st='going';npcGo(a,o.x+.6,ROD_Z+1.3,()=>{a.faceTo=0;a.st='watch';a.t=rnd(20,40);});}
+      vib([80,40,80]);st.msg=`🧶 La tua lenza si è incrociata con quella di ${a.per.name}!`;return true;}}
+  return false;}
+G.untangle=()=>seq(async()=>{const r=st.rods[st.sel],tg=r.tangle;if(!tg)return;st.phase='busy';st.msg='🧶 Recupera piano e prova a districare…';setUI();
+  if(!r.held)await pickRod(st.sel);pose('reel');const d0=r.dist;for(let t=0;t<1;t+=.05){r.dist=d0*(1-t*.85);AN.reelSpin=1;await sleep(.09);}AN.reelSpin=0;pose('bend');await sleep(1.4);
+  const u=Math.random(),other=tg.own!=null?st.rods[tg.own]:null,npc=tg.npc!=null?NPCS[tg.npc]:null;let txt;
+  const reset=o=>{o.state='idle';o.bait=null;o.dist=0;o.bitePlan=null;o.sinker.visible=false;o.tangle=null;};
+  if(u<.55){txt='Districate! Le lenze sono libere, ma le esche vanno rimesse.';if(other)reset(other);if(npc){const o=npc.rods[tg.rod];o.tangled=false;o.dist=rnd(70,110);say(npc,'Grazie, tutto a posto!',3);}}
+  else if(u<.85){txt='Niente da fare: hai dovuto tagliare. Il tuo terminale è perso.';r.broken=true;if(other)reset(other);if(npc){const o=npc.rods[tg.rod];o.tangled=false;say(npc,'Va be\', capita…',3);}}
+  else{txt='Groviglio tremendo: persi tutti e due i terminali.';r.broken=true;if(other){reset(other);other.broken=true;}if(npc){const o=npc.rods[tg.rod];o.tangled=false;o.dist=rnd(70,110);say(npc,'Mannaggia! Mi tocca rifare il terminale.',3.5);}}
+  r.tangle=null;r.state='fishing';st.msg=txt;afterRecover(r);});
 
 /* ---------- abboccate, ferrata e combattimento ---------- */
 function startBite(r){
@@ -940,14 +962,14 @@ function loop(){raf=requestAnimationFrame(loop);if(!renderer)return;const dt=Mat
   if(st.cast?.on){st.cast.p+=st.cast.dir*dt*1.15;if(st.cast.p>1){st.cast.p=1;st.cast.dir=-1;}if(st.cast.p<0){st.cast.p=0;st.cast.dir=1;}const el=document.getElementById('gpw');if(el)el.style.width=(st.cast.p*100)+'%';}
   // canne
   for(const r of st.rods){
-    if(r.state==='fishing'&&r.dist>8){const need=suggestLead(w.wave||0);if((r.lead||st.lead)<need-20){const k=(need-(r.lead||st.lead))/100;r.dist-=gmin*k*6;r.sx+=gmin*k*Math.sin((w.wd-FACE)*R)*3;if(!r.driftMsg){r.driftMsg=1;st.msg=`Canna ${r.i+1}: il piombo da ${r.lead} g «ara», la corrente lo trascina verso riva. Metti un piombo più pesante.`;if(st.phase==='wait')setUI();}}}
+    if(r.state==='fishing'&&r.dist>8){const need=suggestLead(w.wave||0);if((r.lead||st.lead)<need-20){const k=(need-(r.lead||st.lead))/100;r.dist-=gmin*k*6;r.sx+=gmin*k*Math.sin((w.wd-FACE)*R)*3;r.tgT=(r.tgT||0)-gmin;if(r.tgT<=0){r.tgT=1;if(checkTangle(r)&&st.phase==='wait')setUI();}if(!r.driftMsg){r.driftMsg=1;st.msg=`Canna ${r.i+1}: il piombo da ${r.lead} g «ara», la corrente lo trascina verso riva. Metti un piombo più pesante.`;if(st.phase==='wait')setUI();}}}
     if(r.state==='fishing'){r.baitLeft-=gmin*(1+(w.wave||0)*.6);if(Math.random()<biteRate(r)*gmin)startBite(r);}
     if(r.state==='bite'){r.biteT+=dt;if(r.biteT>r.bitePlan.len){const pl=r.bitePlan,auto={partenza:.6,violenta:.45,decisa:.3,nervosa:.15,picchiettata:.05}[pl.kind]||0;
         if(pl.sp&&!pl.steal&&Math.random()<auto){r.state='hooked';r.hookT=0;bell(4,.3);try{navigator.vibrate?.([200,80,200]);}catch(e){}st.msg=`🐟 Canna ${r.i+1}: il pesce si è allamato da solo! Vai a recuperarlo.`;if(st.phase==='wait'||st.phase==='atrod')setUI();continue;}
         r.state='fishing';r.baitLeft-=pl.steal?999:10;st.msg=`Canna ${r.i+1}: ha smesso di battere${pl.steal?' (forse ti hanno rubato l\'esca)':''}.`;if(st.phase==='wait'||st.phase==='atrod')setUI();}}
     if(r.state==='hooked'){r.hookT+=dt;if(Math.random()<dt*.012||r.hookT>150){r.state='fishing';r.baitLeft=0;r.bitePlan=null;st.msg=`Canna ${r.i+1}: il pesce si è slamato. Controlla l'esca.`;if(st.phase==='wait'||st.phase==='atrod')setUI();}
       else if(Math.random()<dt*.25)bell(1,.15);}
-    const swell=r.dist>0?Math.sin(t*2*Math.PI/Math.max(3,w.wper||5)+r.i)*(w.wave||.3)*.12:0;let bite=r.state==='bite'?r.bitePlan.pattern(r.biteT):r.state==='hooked'?.55+.35*Math.max(0,Math.sin(t*2.3+r.i))*Math.max(0,Math.sin(t*.7)):0;if(st.fight?.r===r)bite=st.fight.ten*1.1;if(r.state==='flying')bite=0;
+    const swell=r.dist>0?Math.sin(t*2*Math.PI/Math.max(3,w.wper||5)+r.i)*(w.wave||.3)*.12:0;let bite=r.state==='tangled'?.3+.2*Math.max(0,Math.sin(t*1.7+r.i*2)):r.state==='bite'?r.bitePlan.pattern(r.biteT):r.state==='hooked'?.55+.35*Math.max(0,Math.sin(t*2.3+r.i))*Math.max(0,Math.sin(t*.7)):0;if(st.fight?.r===r)bite=st.fight.ten*1.1;if(r.state==='flying')bite=0;
     r.bend=lerp(r.bend,(r.dist>0?.12:0)+swell+bite,.25);bendRod(r.obj,clamp(r.bend,0,1.3)*(r.held?.8:1));
     if(r.held)rodInHand(r);
     // mulinello: rotore e manovella girano quando si recupera
@@ -1060,7 +1082,7 @@ function updCam(dt,t){let p,l;const a=AN.pos;
 function drawHud(w){const d=gameDate(),mp=moonPosG(d,SPOT.lat,SPOT.lon);
   const wi=w.code>=95?'⛈️':w.code>=80?'🌦️':w.code>=51?'🌧️':w.code>=45?'🌫️':w.cc>75?'☁️':w.cc>35?'⛅':sunPos(d,SPOT.lat,SPOT.lon).alt>0?'☀️':'🌙';
   hud.innerHTML=`<div>📍 ${escH(SPOT.name.split(' · ')[0])}</div><div><b>${d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</b>${st.speed>1&&st.phase==='wait'&&!st.busy?' ⏩':''}</div><div>${wi} ${Math.round(w.temp)}°</div><div>🌬️ ${Math.round(w.ws)} ${windName(w.wd)}</div><div>🌊 ${(w.wave||0).toFixed(1).replace('.',',')} m · ${Math.round(w.sst)}°</div><div>${['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'][Math.round(mp.ph/45)%8]}</div><div>🎣 ${w.idx}</div>${st.sim?'<div title="dati simulati">⚠️</div>':''}`;}
-G._bite=i=>startBite(st.rods[i]);G._sp=n=>SP.find(x=>x.n===n);G._ui=()=>setUI();G._an=AN;G._cam=()=>camera;G._npcs=()=>NPCS;G._crabs=()=>CRABS;G._look=(y,p)=>{LOOK.yaw=y;LOOK.pitch=p;};
+G._bite=i=>startBite(st.rods[i]);G._sp=n=>SP.find(x=>x.n===n);G._ui=()=>setUI();G._an=AN;G._cam=()=>camera;G._npcs=()=>NPCS;G._crabs=()=>CRABS;G._tangle=r=>checkTangle(r);G._look=(y,p)=>{LOOK.yaw=y;LOOK.pitch=p;};
 /* ---------- meteo reale per l'ora di gioco ---------- */
 async function loadWx(){
   try{const r=await window.fetchRaw(SPOT);st.sim=!!r.sim;st.X=window.build(r.w,r.m,SPOT,'coast');}catch(e){st.X=null;st.sim=true;}
