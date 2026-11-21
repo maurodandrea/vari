@@ -1117,8 +1117,8 @@ function bestWindows(X,date,n=3){
 }
 
 /* ===================== Render ===================== */
-const PAGES=['home','meteo','spot','chat','mod','diario','altro','stats','ai','pesce','live','trofei','cal','compare','guide','settings'];
-const SUBS=['mod','stats','ai','diario','trofei','cal','compare','guide','settings'];
+const PAGES=['home','meteo','spot','chat','mod','diario','altro','stats','ai','pesce','live','trofei','cal','compare','guide','settings','gioco'];
+const SUBS=['mod','stats','ai','diario','trofei','cal','compare','guide','settings','gioco'];
 function go(t){if(location.hash.slice(1)!==t)location.hash=t;else{S.tab=t;window.scrollTo(0,0);render();}}
 window.addEventListener('hashchange',()=>{const t=location.hash.slice(1)||'home';if(!PAGES.includes(t))return;closeSheet();S.tab=t;window.scrollTo(0,0);render();});
 function setMode(m){}
@@ -1135,7 +1135,7 @@ function render(){
   const v=document.getElementById('view');
   if(S.tab!=='spot'&&MAP){MAP.remove();MAP=null;NEWPIN=null;}
   if(PREMIUM_TABS[S.tab]&&!isPremium()){premiumPage(v,S.tab);countUp(v);return;}
-  ({home:vHome,meteo:vMeteo,spot:vSpot,diario:vDiario,stats:vStats,ai:vAI,pesce:vPesce,altro:vAltro,live:vLive,trofei:vTrofei,cal:vCal,compare:vCompare,guide:vGuide,settings:vSettings,chat:vChat,mod:v=>window.CHAT?CHAT.modView(v):vHome(v)}[S.tab]||vHome)(v);
+  ({home:vHome,meteo:vMeteo,spot:vSpot,diario:vDiario,stats:vStats,ai:vAI,pesce:vPesce,altro:vAltro,live:vLive,trofei:vTrofei,cal:vCal,compare:vCompare,guide:vGuide,settings:vSettings,chat:vChat,gioco:vGioco,mod:v=>window.CHAT?CHAT.modView(v):vHome(v)}[S.tab]||vHome)(v);
   countUp(v);bindCharts(v);
   window.CHAT?.start();window.CHAT?.badge();
   if(S.tab==='home'&&!COMP_ON)compassStart();
@@ -1152,6 +1152,14 @@ function vChat(v){if(window.CHAT){try{CHAT.view(v);}catch(e){console.error(e);v.
   const sc=document.createElement('script');sc.src='chat.js?r='+Date.now();
   sc.onload=()=>{vChat.busy=false;window.removeEventListener('error',onErr);if(!window.CHAT)vChat.err=vChat.jsErr||'Il file è arrivato ma non è partito';if(S.tab==='chat')render();};
   sc.onerror=()=>{vChat.busy=false;window.removeEventListener('error',onErr);vChat.err='Il file non è arrivato: controlla la connessione';if(S.tab==='chat')render();};
+  document.body.appendChild(sc);}
+// Gioco di surfcasting (gioco.js, caricato solo quando serve)
+function vGioco(v){
+  if(window.GAME){GAME.mount(v);return;}
+  v.innerHTML=subHead('Gioco','Surfcasting a Castelporziano')+'<div class="card" style="text-align:center;padding:30px"><span class="aispin" style="width:28px;height:28px;border-width:3px;display:inline-block"></span><p class="mut">Preparo la spiaggia…</p></div>';
+  if(vGioco.busy)return;vGioco.busy=true;const sc=document.createElement('script');sc.src='gioco.js?v='+(window.APPV||Date.now());
+  sc.onload=()=>{vGioco.busy=false;if(S.tab==='gioco'&&window.GAME)GAME.mount(document.getElementById('view'));};
+  sc.onerror=()=>{vGioco.busy=false;v.innerHTML=subHead('Gioco','Surfcasting a Castelporziano')+'<div class="card" style="text-align:center;padding:30px"><p class="mut">Il gioco non si è caricato: controlla la connessione.</p><button class="btn" onclick="render()">↻ Riprova</button></div>';};
   document.body.appendChild(sc);}
 function countUp(root){
   root.querySelectorAll('[data-count]').forEach(el=>{
@@ -2249,6 +2257,7 @@ function vAltro(v){
     ['cal','🌙','Calendario','Luna e solunare','linear-gradient(140deg,#6a4bd6,#2c1f6e)'],
     ['ai','🤖','Consigli','Su misura e specie di stagione','linear-gradient(140deg,#159a6b,#0b4a3a)'],
     ['guide','🪢','Guida','Nodi, montature, esche','linear-gradient(140deg,#b8436e,#5a1d3a)'],
+    ['gioco','🎮','Gioco','Surfcasting a Castelporziano','linear-gradient(140deg,#e07a2f,#7a2a5a)'],
     ['settings','⚙️','Impostazioni',window.LENZA_FB?.apiKey?(window.CLOUD?.user?'Account attivo · dati online':'Accedi · backup e dati'):'Backup e dati','linear-gradient(140deg,#3d5671,#1b2a3c)']
   ];
   if(window.CHAT?.isAdmin())hub.unshift(['mod','🛡️','Segnalazioni',(n=>n?`${n} da controllare`:'Nessuna in attesa')(CHAT.reportCount()),'linear-gradient(140deg,#d94b4b,#6e1a1a)']);
