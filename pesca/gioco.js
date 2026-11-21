@@ -133,7 +133,7 @@ function moonTex(ph){return canvasTex(128,128,(g)=>{const r=56,c=64,waxing=ph<18
 /* ---------- materiali ---------- */
 const MAT={};
 function mats(){const S=(c,r=.8,m=0)=>new T.MeshStandardMaterial({color:c,roughness:r,metalness:m});
-  Object.assign(MAT,{skin:S('#c99a78',.65),jacket:S('#2f5544',.85),jacket2:S('#264638',.9),pants:S('#2c3445',.9),boot:S('#3a2a1e',.7),cap:S('#b8352a',.85),hair:S('#2a2018',.95),
+  Object.assign(MAT,{skin:S('#cf9878',.6),lips:S('#a8615a',.5),eyeW:S('#f2efe8',.25),iris:S('#3a2a1c',.2),brow:S('#3a2a1e',.9),stubble:S('#a9806a',.9),jacket:S('#2f5544',.85),jacket2:S('#264638',.9),pants:S('#2c3445',.9),boot:S('#3a2a1e',.7),cap:S('#b8352a',.85),hair:S('#2a2018',.95),
     alu:S('#b9c2cb',.35,.8),blank:S('#18222e',.35,.3),blank2:S('#2c3f55',.35,.3),tip:S('#e9eef2',.4),cork:S('#9c7a52',.95),reel:S('#3d4550',.35,.7),spool:S('#c9a24a',.3,.8),
     chair:S('#2a5d8a',.8),chairF:S('#9aa3ad',.4,.7),bag:S('#4a5a32',.9),bucket:S('#e8e8e8',.6),lead:S('#666a70',.4,.6),line:new T.LineBasicMaterial({color:0xd6e0e6,transparent:true,opacity:.2,depthWrite:false})});}
 
@@ -153,15 +153,27 @@ function makeAngler(col){if(col){const c=(m,v)=>{const n=m.clone();n.color.set(v
   const zip=new T.Mesh(new T.BoxGeometry(.012,.5,.01),MAT.jacket2);zip.position.set(0,.3,-.155);spine.add(zip);
   const neck=new T.Group();neck.position.y=.62;spine.add(neck);J.neck=neck;
   const nk=new T.Mesh(new T.CylinderGeometry(.05,.055,.1,10),MAT.skin);nk.position.y=.04;neck.add(nk);
-  const head=new T.Group();head.position.y=.17;neck.add(head);J.head=head;
-  const skull=new T.Mesh(new T.SphereGeometry(.105,20,16),MAT.skin);skull.scale.set(.92,1.1,1);skull.castShadow=true;head.add(skull);
-  const nose=new T.Mesh(new T.ConeGeometry(.02,.05,8),MAT.skin);nose.rotation.x=-Math.PI/2;nose.position.set(0,-.01,-.105);head.add(nose);
-  for(const s of[-1,1]){const ear=new T.Mesh(new T.SphereGeometry(.025,8,8),MAT.skin);ear.scale.set(.5,1,.8);ear.position.set(s*.098,0,.005);head.add(ear);}
-  const beard=new T.Mesh(new T.SphereGeometry(.09,14,10,0,6.3,1.6,1.4),MAT.hair);beard.position.set(0,-.03,-.01);head.add(beard);
-  const hair=new T.Mesh(new T.SphereGeometry(.108,16,12,0,6.3,0,1.7),MAT.hair);hair.position.y=.005;head.add(hair);
+  const head=new T.Group();head.position.y=.15;neck.add(head);J.head=head;
+  // volto: cranio, mascella, zigomi, occhi con iride, sopracciglia, naso, bocca, orecchie, un filo di barba
+  const skull=new T.Mesh(new T.SphereGeometry(.1,24,18),MAT.skin);skull.scale.set(.9,1.08,1);skull.castShadow=true;head.add(skull);
+  const jaw=new T.Mesh(new T.SphereGeometry(.075,20,14),MAT.skin);jaw.scale.set(.95,.78,.95);jaw.position.set(0,-.055,-.018);head.add(jaw);
+  const chin=new T.Mesh(new T.SphereGeometry(.03,12,10),MAT.skin);chin.scale.set(1.1,.8,.8);chin.position.set(0,-.1,-.058);head.add(chin);
+  const stub=new T.Mesh(new T.SphereGeometry(.078,20,12,0,6.3,1.75,1.1),MAT.stubble);stub.scale.set(.96,.8,.97);stub.position.set(0,-.052,-.02);head.add(stub);
+  for(const s of[-1,1]){
+    const eye=new T.Mesh(new T.SphereGeometry(.0135,12,10),MAT.eyeW);eye.position.set(s*.034,.012,-.088);eye.scale.z=.6;head.add(eye);
+    const iris=new T.Mesh(new T.SphereGeometry(.0078,10,8),MAT.iris);iris.position.set(s*.034,.012,-.0955);head.add(iris);
+    const lid=new T.Mesh(new T.SphereGeometry(.0142,12,8,0,6.3,0,1),MAT.skin);lid.position.set(s*.034,.013,-.087);lid.scale.z=.65;lid.rotation.x=-.35;head.add(lid);
+    const brow=new T.Mesh(new T.BoxGeometry(.032,.006,.01),MAT.brow);brow.position.set(s*.035,.036,-.094);brow.rotation.z=-s*.12;head.add(brow);
+    const ear=new T.Mesh(new T.SphereGeometry(.024,10,8),MAT.skin);ear.scale.set(.45,1,.75);ear.position.set(s*.093,.002,.008);head.add(ear);}
+  const nose=new T.Mesh(new T.ConeGeometry(.012,.034,10),MAT.skin);nose.rotation.x=-1.15;nose.position.set(0,-.01,-.098);head.add(nose);
+  const tipN=new T.Mesh(new T.SphereGeometry(.0095,10,8),MAT.skin);tipN.position.set(0,-.022,-.106);head.add(tipN);
+  const lipU=new T.Mesh(new T.CylinderGeometry(.005,.005,.032,8),MAT.lips);lipU.rotation.z=Math.PI/2;lipU.position.set(0,-.052,-.094);head.add(lipU);
+  const lipL=new T.Mesh(new T.CylinderGeometry(.0055,.0055,.026,8),MAT.lips);lipL.rotation.z=Math.PI/2;lipL.position.set(0,-.061,-.092);head.add(lipL);
+  const hair=new T.Mesh(new T.SphereGeometry(.104,18,12,-.25,Math.PI+.5,.5,1.35),MAT.hair);hair.position.set(0,.008,.006);head.add(hair);// capelli solo ai lati e dietro
   const cap=new T.Mesh(new T.SphereGeometry(.112,18,12,0,6.3,0,1.45),MAT.cap);cap.position.y=.02;head.add(cap);
   const brim=new T.Mesh(new T.CylinderGeometry(.11,.11,.012,16,1,false,-1.2,2.4),MAT.cap);brim.position.set(0,.03,-.07);brim.scale.z=.9;head.add(brim);
-  const lamp=new T.Mesh(new T.BoxGeometry(.05,.03,.02),new T.MeshStandardMaterial({color:'#222',emissive:'#fffbe0',emissiveIntensity:0}));lamp.position.set(0,.06,-.11);head.add(lamp);J.lamp=lamp;
+  const band=new T.Mesh(new T.TorusGeometry(.108,.006,6,28),new T.MeshStandardMaterial({color:'#3d434b',roughness:.8}));band.rotation.x=Math.PI/2;band.position.y=.055;head.add(band);
+  const lamp=new T.Mesh(new T.BoxGeometry(.03,.02,.014),new T.MeshStandardMaterial({color:'#6b7480',metalness:.4,roughness:.4,emissive:'#fffbe0',emissiveIntensity:0}));lamp.position.set(0,.058,-.112);head.add(lamp);J.lamp=lamp;
   // braccia e gambe
   for(const s of[-1,1]){const k=s<0?'l':'r';
     const sh=new T.Group();sh.position.set(s*.23,.53,0);spine.add(sh);J[k+'Sh']=sh;
@@ -232,7 +244,7 @@ function makeSpike(){const g=new T.Group(),p=new T.Mesh(new T.CylinderGeometry(.
   const v=new T.Mesh(new T.TorusGeometry(.04,.006,6,12,Math.PI),MAT.alu);v.position.y=1.32;v.rotation.z=Math.PI;g.add(v);g.traverse(o=>{if(o.isMesh)o.castShadow=true;});return g;}
 
 /* ---------- mondo ---------- */
-let CHAIRHIT=null,NPCS=[],foams=[],swash,clouds=[],stars,moon,rain,cityL,grass,lineObjs=[],sinkers=[],splashP,fishMesh,bushes;
+let SAND=null,CHAIRHIT=null,NPCS=[],foams=[],swash,clouds=[],stars,moon,rain,cityL,grass,lineObjs=[],sinkers=[],splashP,fishMesh,bushes;
 function buildWorld(){
   scene=new T.Scene();camera=new T.PerspectiveCamera(55,1,.1,20000);
   renderer.toneMapping=T.ACESFilmicToneMapping;renderer.outputEncoding=T.sRGBEncoding;renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;
@@ -251,7 +263,7 @@ function buildWorld(){
   for(let i=0;i<pa.count;i++){const x=pa.getX(i),z=pa.getZ(i)+30;let y=z<-6?-1.2+(z+6)*.05:z<0?z*.06-.15:z<24?z*.035+Math.sin(x*.21+z*.3)*.015:.84+Math.pow((z-24)/10,1.6)*1.4+Math.sin(x*.07)*.8+Math.sin(x*.19+1)*.35;
     if(z>24)y+=Math.max(0,Math.sin(x*.13+z*.2))*.6;pa.setXYZ(i,x,y,z);const wet=clamp(1-(z+1)/5,0,1);col.push(lerp(1,.62,wet),lerp(1,.56,wet),lerp(1,.48,wet));}
   sg.setAttribute('color',new T.Float32BufferAttribute(col,3));sg.computeVertexNormals();
-  const sand=new T.Mesh(sg,new T.MeshStandardMaterial({map:sandTex(),vertexColors:true,roughness:1}));sand.receiveShadow=true;scene.add(sand);
+  SAND=new T.Mesh(sg,new T.MeshStandardMaterial({map:sandTex(),vertexColors:true,roughness:1}));SAND.receiveShadow=true;scene.add(SAND);
   // macchia mediterranea e ammofila sulle dune
   const bg=new T.SphereGeometry(1,10,8),bm=new T.MeshStandardMaterial({color:'#3a5a2c',roughness:1});bushes=new T.InstancedMesh(bg,bm,260);const mtx=new T.Matrix4(),q=new T.Quaternion();
   for(let i=0;i<260;i++){const x=rnd(-200,200),z=rnd(27,58),s=rnd(.6,1.8),y=.84+Math.pow((z-24)/10,1.6)*1.4+Math.sin(x*.07)*.8+Math.sin(x*.19+1)*.35;mtx.compose(new T.Vector3(x,y+s*.25,z),q,new T.Vector3(s*1.4,s*.75,s*1.2));bushes.setMatrixAt(i,mtx);bushes.setColorAt(i,new T.Color().setHSL(.25+rnd(-.03,.04),.35,rnd(.16,.26)));}
@@ -335,6 +347,7 @@ function updNpcs(dt,t){const w=wxAt(st.gt);
       else if(a.st==='atrod'){if(Math.random()<.45){a.target='bend';a.st='reel';a.t=1.2;}else{a.st='watch';a.t=rnd(4,12);}}
       else if(a.st==='reel'){const r2=a.cur;if(!r2.held){r2.held=true;a.holding=0;a.target='reel';a.reelSpin=1;a.t=rnd(5,9);}else{r2.held=false;a.holding=-1;a.reelSpin=0;placeRodOnSpike(r2);a.target='stand';a.st='watch';a.t=rnd(3,8);r2.dist=rnd(70,115);}}
       else if(a.st==='watch'){if(Math.random()<.6){a.st='back';npcGo(a,a.home.x,a.home.z-.05,()=>{a.faceTo=0;a.target='sit';a.st='sit';a.t=rnd(25,90);});}else{a.st='stand';a.t=rnd(15,40);}}}
+    if(!a.moving&&a.st!=='reel'&&AN.pos.distanceTo(a.pos)<5)a.faceTo=Math.atan2(-(AN.pos.x-a.pos.x),-(AN.pos.z-a.pos.z));else if(!a.moving&&a.faceTo!==0&&a.st!=='reel'&&AN.pos.distanceTo(a.pos)>=5)a.faceTo=0;
     moveActor(a,dt);lerpPose(dt,6,a);applyPose(t,a);
     if(a.reelSpin){a.crank+=dt*7;}
     for(const r of a.rods){const swell=Math.sin(t*2*Math.PI/Math.max(3,w.wper||5)+r.x)*(w.wave||.3)*.12;r.bend=lerp(r.bend,(r.held?.5+Math.sin(t*3)*.15:.12)+swell,.2);bendRod(r.obj,r.bend);
@@ -386,7 +399,7 @@ function setUI(){const p=st.phase;let h='';
       <div class="grow"><span>Amo</span>${[['piccolo','n. 6'],['medio','n. 2'],['grande','2/0']].map(([k,n])=>`<button class="gc ${st.hook===k?'on':''}" onclick="GAME.setHook('${k}')">${n}</button>`).join('')}</div>
       ${btn('Pianta i picchetti e inizia','start()','big')}</div>`;}
   else if(p==='wait'){h=`<div class="gpanel slim"><div class="grods">${st.rods.map((r,i)=>`<button class="gr ${r.state==='bite'||r.state==='hooked'?'alert':''}" onclick="GAME.rod(${i})" ${st.busy?'disabled':''}><b>Canna ${i+1}</b><small>${r.bait?B[r.bait].n:'senza esca'}${r.dist?' · '+Math.round(r.dist)+' m':''}</small><small>${rodStatus(r)}</small></button>`).join('')}</div>
-    ${st.busy?'':`<div class="grow" style="justify-content:center">${[1,2,4,8,16,32].map(s=>`<button class="gc ${st.speed===s?'on':''}" onclick="GAME.setSpeed(${s})">${s===1?'▶ 1x':s+'x'}</button>`).join('')}<button class="gc" onclick="GAME.bagView()">🧺 ${st.bag.length}</button>${skipUp()?'<button class="gc" onclick="GAME.skip(1)">🌅 Vai all\'alba</button>':'<button class="gc" onclick="GAME.skip(0)">🌇 Vai al tramonto</button>'}<button class="gc" onclick="GAME.center()" title="Guarda le canne">🎯</button>${AN.target!=='sit'?'<button class="gc" onclick="GAME.sit()">🪑 Siediti</button>':''}</div>`}${st.msg?`<div class="gs" style="text-align:center">${st.msg}</div>`:''}</div>`;}
+    ${st.busy?'':`<div class="grow" style="justify-content:center">${[1,2,4,8,16,32].map(s=>`<button class="gc ${st.speed===s?'on':''}" onclick="GAME.setSpeed(${s})">${s===1?'▶ 1x':s+'x'}</button>`).join('')}<button class="gc" onclick="GAME.bagView()">🧺 ${st.bag.length}</button>${skipUp()?'<button class="gc" onclick="GAME.skip(1)">🌅 Vai all\'alba</button>':'<button class="gc" onclick="GAME.skip(0)">🌇 Vai al tramonto</button>'}<button class="gc" onclick="GAME.center()" title="Guarda le canne">🎯</button>${AN.target!=='sit'?'<button class="gc" onclick="GAME.sit()">🪑 Siediti</button>':'<button class="gc" onclick="GAME.rise()">🚶 Alzati</button>'}</div>`}${st.msg?`<div class="gs" style="text-align:center">${st.msg}</div>`:''}</div>`;}
   else if(p==='atrod'){const r=st.rods[st.sel];h=`<div class="gpanel"><b>Canna ${st.sel+1}</b><div class="gs">${r.bait?B[r.bait].n+' a '+Math.round(r.dist)+' m · '+rodStatus(r):'Senza esca'}</div>
     ${r.state==='bite'?btn('⚡ FERRA!','strike()','big hot'):''}${r.state==='hooked'?btn('🌀 Prendi la canna e recupera','fightHooked()','big hot'):''}${r.bait?btn('🌀 Recupera e cambia esca','rebait()'):btn('🪝 Innesca','rebait()','big')}${btn('🪑 Torna a sedere','back()')}</div>`;}
   else if(p==='bait')h=`<div class="gpanel"><b>🪝 Innesca la canna ${st.sel+1}</b><div class="gbaits">${BAITS.map(b=>`<button class="gbt" onclick="GAME.bait('${b.k}')"><span>${b.e}</span><b>${b.n}</b><small>${b.d}</small></button>`).join('')}</div></div>`;
@@ -504,7 +517,21 @@ function onTap(e){if(!sittingView())return;
   const rect=cvs.getBoundingClientRect(),m=new T.Vector2((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);
   RAY.r=RAY.r||new T.Raycaster();RAY.r.setFromCamera(m,camera);const hits=RAY.r.intersectObjects(st.rods.map(r=>r.hit),false);
   if(hits.length){const i=st.rods.findIndex(r=>r.hit===hits[0].object);if(i>=0)return G.rod(i);}
-  if(AN.target!=='sit'&&RAY.r.intersectObject(CHAIRHIT,false).length)G.sit();}
+  if(AN.target!=='sit'&&RAY.r.intersectObject(CHAIRHIT,false).length)return G.sit();
+  // in piedi: tocco sulla sabbia = cammina fin lì (anche fino agli altri pescatori)
+  if(AN.target!=='sit'){const h=RAY.r.intersectObject(SAND,false)[0];if(h&&h.point.z>-.3&&h.point.z<26)G.walk(clamp(h.point.x,-110,110),Math.max(.4,h.point.z));}}
+G.walk=(x,z)=>seq(async()=>{st.phase='busy';st.msg='';setUI();await walkTo(x,z,2.8);AN.faceTo=null;pose('stand');st.phase='wait';talkNear();setUI();});
+G.rise=()=>seq(async()=>{st.phase='busy';setUI();await standUp();await walkTo(AN.pos.x+.4,AN.pos.z-1.2,1.6);AN.faceTo=0;st.phase='wait';st.msg='Tocca la sabbia per camminare, una canna per andarci o la sedia per sederti.';setUI();});
+// due chiacchiere con i vicini
+const NPC_NAMES=['Franco','Peppe','Marco','Luigi'];
+function talkNear(){let best=null,bd=4.5;NPCS.forEach((a,i)=>{const d=a.pos.distanceTo(AN.pos);if(d<bd){bd=d;best=i;}});if(best==null)return;
+  const a=NPCS[best],w=wxAt(st.gt),per=period(gameDate()),hrs=gameDate().getHours();AN.faceTo=Math.atan2(-(a.pos.x-AN.pos.x),-(a.pos.z-AN.pos.z));
+  const sp=SP.filter(x=>(x.mo[gameDate().getMonth()+1]||0)>.6&&!x.crab).map(x=>x.n.toLowerCase());
+  const L=[`Ciao! ${a.st==='reel'?'Aspetta che recupero…':'Tutto tranquillo qui.'}`,`Stamattina ${pick(['due mormore','un sarago','niente, solo granchi','una bella orata','un\'ombrina'])}${pick([' con il bibi',' con l\'arenicola',' con il koreano',''])}.`,
+    w.wave>1?`Con questo mare ci vogliono almeno ${suggestLead(w.wave)} grammi, sennò ti porta via.`:`Mare ${seaName(w.wave)}: ${w.wave<.3?'troppo calmo, si pesca poco':'buono per le orate'}.`,
+    per==='notte'?'Di notte vengono sotto riva le spigole: lancia corto.':per==='alba'||per==='tramonto'?'Questo è il momento migliore, tieni d\'occhio le cime!':'Di giorno si pesca lontano, oltre gli 80 metri.',
+    sp.length?`In questo periodo girano ${sp.slice(0,3).join(', ')}.`:'Periodo difficile, ci vuole pazienza.'];
+  st.msg=`💬 ${NPC_NAMES[best]}: ${pick(L)}`;}
 // poco prima dell'alba propongo il tramonto, poco prima del tramonto l'alba
 function skipUp(){const d=gameDate(),a=sunPos(d,SPOT.lat,SPOT.lon).alt,morning=d.getHours()<12;if(a<0&&a>-6&&morning)return false;if(a>=0&&a<6&&!morning)return true;return a<0;}
 // salto di tempo: alba (il sole sorge) o tramonto (il sole tramonta), 20 minuti prima
