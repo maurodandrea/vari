@@ -263,7 +263,7 @@ function mountBlock(){const H=G.cur;
   return null;}
 function yardActions(){
   const A=[], H=G.cur;
-  if(G.world!==yard){if(G.leading)A.push({id:'mount',icon:'🏇',label:'Monta',fn:startMount,dis:mountBlock()});careActions(A);socialActions(A,false);return A;}
+  if(G.world!==yard){if(G.leading)A.push({id:'mount',icon:'🏇',label:'Monta',fn:startMount,dis:mountBlock()});if(!G.leading)otherHorseActions(A);careActions(A);socialActions(A,false);return A;}
   if(near(Y.selleria,2.6))A.push({id:'dress',icon:'👕',label:'Spogliatoio',fn:startDress,dis:G.leading?'Prima lega il cavallo<small>alla posta o rimettilo nel box</small>':null});
   Y.boxes.forEach((b,i)=>{if(!near(b.front,2.3))return;const h=horses[i];
     if(h.where==='box'){
@@ -281,11 +281,8 @@ function yardActions(){
   if(H&&H.where==='posta'&&near(Y.posta.horse,3.6))A.push({id:'care',icon:'🪮',label:'Cura '+H.def.name,fn:openPosta});
   if(H&&H.where==='wash'&&near(Y.wash.horse,3.6))A.push({id:'wash2',icon:'🚿',label:'Doccia',fn:startWash});
   if(H&&(H.where==='posta'||H.where==='wash')&&near({x:H.x,z:H.z},3.6))A.push({id:'untie',icon:'🔓',label:'Slega',fn:untie});
-  if(H&&H.guest&&G.leading)A.push({id:'letgo',icon:'🌿',label:'Lascia libero '+H.def.name,fn:letGo});
-  if(!G.leading){const fh=nearFree(3.8);
-    if(fh){A.push({id:'petf',icon:'💛',label:'Accarezza '+fh.name,fn:()=>startPet({head:fh.h.head,H:fh.h,name:fh.name,agent:fh.agent})});
-      A.push({id:'ridef',icon:'🏇',label:'Monta '+fh.name,fn:()=>adopt(fh),dis:H?'Prima rimetti '+H.def.name+' nel box':(!P.ready()?'Per sicurezza servono casco e corpetto!<small>vai allo spogliatoio</small>':null)});}
-    else if(!A.some(a=>a.id.startsWith('pet'))){const ph=nearPet(3.4);if(ph)A.push({id:'peth',icon:'💛',label:'Accarezza '+ph.def.name,fn:()=>{startPet({head:ph.head,name:ph.def.name});if(ph.hh){ph.hh.ly=0;ph.hh.lx=.45;ph.hh.bt=3;}}});}}
+  if(!G.leading&&!otherHorseActions(A)){
+    if(!A.some(a=>a.id.startsWith('pet'))){const ph=nearPet(3.4);if(ph)A.push({id:'peth',icon:'💛',label:'Accarezza '+ph.def.name,fn:()=>{startPet({head:ph.head,name:ph.def.name});if(ph.hh){ph.hh.ly=0;ph.hh.lx=.45;ph.hh.bt=3;}}});}}
   careActions(A);socialActions(A,false);
   return A;
 }
@@ -341,7 +338,8 @@ function care(kind){const H=G.cur;H.head.getWorldPosition(tv);
 function careActions(A){const H=G.cur;if(!H||G.state!=='foot'||H.where==='box'||H.where==='ride'||G.swim)return;
   if(Math.hypot(H.x-F.x,H.z-F.z)>4)return;const s=H.stats;
   if(H.where==='wait'){A.push({id:'rope',icon:'🪢',label:'Prendi '+H.def.name,fn:takeRope});A.push({id:'mountw',icon:'🏇',label:'Monta',fn:startMount,dis:mountBlock()});}
-  if(G.leading&&G.world!==yard)A.push({id:'wait',icon:'🌿',label:'Lascialo qui',fn:()=>{waitHere();msg(H.def.name+' ti aspetta qui',1.6);}});
+  if(H.guest)A.push({id:'letgo',icon:'🌿',label:(H.guest.rider?'Restituisci a '+H.guest.owner:'Lascia libero '+H.def.name),fn:letGo});
+  if(G.leading)A.push({id:'wait',icon:'🌿',label:'Lascialo qui',fn:()=>{waitHere();msg(H.def.name+' ti aspetta qui',1.6);}});
   if(s.hunger<97&&grazeAt(H.x,H.z))A.push({id:'cgraze',icon:'🌿',label:'Mangia erba',fn:()=>care('graze')});
   if(s.hunger<90)A.push({id:'cfeed',icon:'🥕',label:'Dai da mangiare',fn:()=>care('feed')});
   if((s.thirst==null?80:s.thirst)<90)A.push({id:'cdrink',icon:'💧',label:'Dai da bere',fn:()=>care('drink')});
@@ -410,32 +408,55 @@ function socialFoot(dt){
 }
 /* ---- cavalli degli altri: accarezzare e montare ---- */
 const paddockFree=paddockHorses.map(h=>({h,pad:true,home:{x:h.x,z:h.z},name:EQ.pick(EQ.HORSE_NAMES)}));
-function freeList(){return (yard.freeHorses||[]).concat(paddockFree);}
+function riderList(){return (W().agents||[]).filter(a=>a.ent.horse&&a.ent.npc&&!a.disabled).map(a=>a._fh||(a._fh={h:a.ent.horse,agent:a,rider:true,owner:a.ent.name||'il cavaliere',name:EQ.pick(EQ.HORSE_NAMES)}));}
+function freeList(){return (W()===yard?(yard.freeHorses||[]).concat(paddockFree):[]).concat(riderList()).filter(f=>!f.taken);}
+const helmetMsg='Per sicurezza servono casco e corpetto!<small>vai allo spogliatoio</small>';
+function otherHorseActions(A){
+  let any=false;const fh=nearFree(3.8);
+  if(fh){any=true;A.push({id:'petf',icon:'💛',label:'Accarezza '+fh.name,fn:()=>startPet({head:fh.h.head,H:fh.h,name:fh.name,agent:fh.agent})});
+    A.push({id:'ridef',icon:'🏇',label:fh.rider?'Chiedi '+fh.name+' a '+fh.owner:'Monta '+fh.name,fn:()=>adopt(fh),dis:!P.ready()?helmetMsg:null});}
+  for(const h of horses){if(h===G.cur||!['wait','posta','wash'].includes(h.where))continue;const p=h.root.position;if(Math.hypot(p.x-F.x,p.z-F.z)>3.6)continue;any=true;
+    A.push({id:'take'+h.i,icon:'🪢',label:'Prendi '+h.def.name,fn:()=>switchTo(h,false)});
+    A.push({id:'mnt'+h.i,icon:'🏇',label:'Monta '+h.def.name,fn:()=>switchTo(h,true),dis:!P.ready()?helmetMsg:(!(h.tack.saddle&&h.tack.bridle)?'Prima sellalo alla posta':null)});break;}
+  return any;
+}
+function parkCurrent(){const H=G.cur;if(!H)return;if(H.guest){releaseGuest();return;}if(G.leading||H.where==='lead')waitHere();G.cur=null;G.leading=false;}
+function switchTo(h,mount){parkCurrent();G.cur=h;h.x=h.root.position.x;h.z=h.root.position.z;h.h=h.root.rotation.y;if(mount)startMount();else takeRope();}
+G.standers=[];
 function nearFree(r){let b=null,bd=r;for(const f of freeList()){if(f.h===G.cur)continue;const p=f.h.root.position;const d=Math.hypot(p.x-F.x,p.z-F.z);if(d<bd){bd=d;b=f;}}return b;}
 function nearPet(r){let b=null,bd=r;
   for(const f of (yard.petHorses||[])){const p=f.h.root.position;const d=Math.hypot(p.x-F.x,p.z-F.z);if(d<bd){bd=d;b={head:f.h.head,def:{name:f.name}};}}
   for(const h of (yard.heads||[])){if(!h.wp){h.wp=new V3();h.head.getWorldPosition(h.wp);}const d=Math.hypot(h.wp.x-F.x,h.wp.z-F.z);if(d<bd){bd=d;b={head:h.head,def:{name:h.name||'Cavallo'},hh:h};}}
   return b;}
 function adopt(fh){
+  parkCurrent();
+  fh.world=W();
+  if(fh.rider){const a=fh.agent,e=a.ent,n=e.npc;fh.owner=e.name||fh.owner;scene.updateMatrixWorld();
+    W().group.attach(n.root);const lx=Math.cos(a.h),lz=-Math.sin(a.h);n.root.position.set(a.x+lx*1.3,W().height(a.x+lx*1.3,a.z+lz*1.3),a.z+lz*1.3);n.root.rotation.set(0,a.h-Math.PI/2,0);n.pose(1,'stand',{snap:true});
+    if(a.label){n.root.add(a.label);a.label.position.set(0,2.15,0);}if(a.col)a.col.off=true;if(a.col2)a.col2.off=true;G.standers.push(n);
+    setTimeout(()=>msg('👋 '+fh.owner+': <small>Te lo presto volentieri!</small>',2.4),900);}
   const H=fh.h;fh.taken=true;if(fh.agent)fh.agent.disabled=true;if(fh.col)fh.col.off=true;H.adopted=true;
   scene.attach(H.root);H.i=-1;H.guest=fh;H.def=Object.assign({},H.def,{name:fh.name});
   H.stats=H.stats||{hunger:70,clean:80,happy:70,energy:90,thirst:75};H.st={};
   H.x=H.root.position.x;H.z=H.root.position.z;H.h=H.root.rotation.y;H.sp=0;
-  H.setTack({pad:true,saddle:true,girth:true,bridle:true,halter:false});
+  H.setTack({pad:true,saddle:true,girth:true,bridle:true,halter:false});H.root.visible=true;
   if(!H.reins.parent)scene.add(H.reins,H.rope);H.onStep=stepFor(H);
   G.cur=H;startMount();msg('In sella su '+fh.name+'!<small>abbiamo messo sella e briglia</small>',2.5);
 }
 function releaseGuest(){
   const H=G.cur;if(!H||!H.guest)return;const fh=H.guest;
   if(H.where==='ride'){detachRider();}
-  H.setTack({pad:false,saddle:false,girth:false,bridle:false,halter:false,wraps:false});H.rope.visible=false;H.reins.visible=false;
-  H.root.position.set(fh.home.x,0,fh.home.z);yard.group.attach(H.root);H.adopted=false;H.guest=null;fh.taken=false;
+  H.rope.visible=false;H.reins.visible=false;H.adopted=false;H.guest=null;fh.taken=false;
+  if(fh.rider){const a=fh.agent,e=a.ent,n=e.npc;(fh.world||yard).group.attach(H.root);H.seat.add(n.root);n.root.position.set(0,-.92*n.s,0);n.root.rotation.set(0,0,0);
+    if(a.label){e.root.add(a.label);a.label.position.set(0,3.15,0);}G.standers=G.standers.filter(x=>x!==n);a.disabled=false;H.setTack({halter:false});G.cur=null;G.leading=false;return;}
+  H.setTack({pad:false,saddle:false,girth:false,bridle:false,halter:false,wraps:false});
+  H.root.position.set(fh.home.x,0,fh.home.z);(fh.world||yard).group.attach(H.root);
   if(fh.agent){const a=fh.agent;a.disabled=false;a.x=a.tx=fh.home.x;a.z=a.tz=fh.home.z;}
   if(fh.col)fh.col.off=false;
   if(fh.pad){H.x=H.tx=fh.home.x;H.z=H.tz=fh.home.z;H.wait=2;}
   G.cur=null;G.leading=false;
 }
-function letGo(){const H=G.cur;fade('',()=>{const n=H.def.name;releaseGuest();snapCam();msg(n+' è di nuovo libero 🐴',2);});}
+function letGo(){const H=G.cur;fade('',()=>{const n=H.def.name,fh=H.guest;releaseGuest();snapCam();msg(fh&&fh.rider?'Grazie '+fh.owner+'! 👋':n+' è di nuovo libero 🐴',2);});}
 function doorAnim(i,open){Y.boxes[i].doorT=open?1.8:0;}
 function takeOut(i){
   fade('',()=>{const H=horses[i],b=Y.boxes[i];G.cur=H;H.where='lead';G.leading=true;H.setTack({halter:true});
@@ -670,7 +691,8 @@ function travel(to,from,noFade){
   (noFade?(t,cb)=>cb():fade)(txt,()=>{
     endCourse(true);
     const H=G.cur;
-    if(G.world!==yard){G.world.dispose();G.trip=null;EQ.stopLoops();}
+    horses.forEach(h=>{if(h!==H&&h.where==='wait')placeInBox(h);});
+    if(G.world!==yard){G.standers=[];G.world.dispose();G.trip=null;EQ.stopLoops();}
     let w;
     if(to==='yard'){w=yard;yard.group.visible=true;horses.forEach(h=>h.root.visible=true);$('timer').classList.remove('on');}
     else{yard.group.visible=false;horses.forEach(h=>{if(h!==H)h.root.visible=false;});
@@ -1046,6 +1068,7 @@ function frame(now){
     else ppos=G.cur&&G.cur.where==='ride'?G.cur.root.position:P.root.position;
     if(G.state!=='paused'){
       idleHorses(dt);updateFallen(dt);
+      G.standers.forEach(n=>{if(n.root.parent){const p=G.state==='ride'?{x:R.x,z:R.z}:{x:F.x,z:F.z};const q=n.root.position;n.root.rotation.y+=U.wrapA(Math.atan2(p.x-q.x,p.z-q.z)-n.root.rotation.y)*Math.min(1,dt*2);n.pose(dt,Math.sin(T*.6)>.8?'wave':'stand',{});}});
       W().update(dt,T,ppos?{x:ppos.x,z:ppos.z}:null);
       for(const k in FX)FX[k].update(dt,k==='dust'?.4:k==='heart'?1:-9);
       if(G.course&&G.course.next<G.course.obs.length){const o=G.course.obs[G.course.next];marker.visible=chev.visible=true;
