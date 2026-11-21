@@ -732,6 +732,7 @@ function makeCar3(col,rods){const g=new T.Group(),m=c=>new T.MeshLambertMaterial
   const bl=new T.MeshBasicMaterial({color:0x661111});g.userData.brake=bl;[-.007,.007].forEach(x=>{const l=new T.Mesh(new T.BoxGeometry(.004,.002,.001),bl);l.position.set(x,.0075,-.0211);g.add(l);});
   if(rods){const rm=m(0x222222);for(const x of [-.004,0,.004]){const r=new T.Mesh(new T.CylinderGeometry(.0004,.0004,.03,4),rm);r.rotation.x=Math.PI/2;r.position.set(x,.0178,-.004);g.add(r);}
     const bm=new T.MeshBasicMaterial({color:0xffa31a});g.userData.blink=[];[[-1],[1]].forEach(([sx])=>{const b=new T.Mesh(new T.BoxGeometry(.002,.003,.004),bm);b.position.set(sx*.0102,.0075,.017);b.visible=false;g.add(b);const b2=b.clone();b2.position.z=-.017;g.add(b2);g.userData.blink.push([b,b2]);});}
+  if(M3.beamMat){const bm=new T.Mesh(new T.PlaneGeometry(.05,.13),M3.beamMat);bm.rotation.x=-Math.PI/2;bm.position.set(0,.0012,.086);g.add(bm);}
   const sh=new T.Mesh(new T.PlaneGeometry(.03,.052),new T.MeshBasicMaterial({map:M3.blob,transparent:true,depthWrite:false}));sh.rotation.x=-Math.PI/2;sh.position.y=.0008;g.add(sh);
   return g;}
 function blobTex(){return canvasTex(64,64,(g)=>{const r=g.createRadialGradient(32,32,4,32,32,32);r.addColorStop(0,'rgba(0,0,0,.45)');r.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=r;g.fillRect(0,0,64,64);});}
@@ -760,7 +761,7 @@ async function approachRoute(pos){const q=PJ(pos.lat,pos.lon),nr=nearRoad(q),dis
 const SAT={cache:new Map(),any:false};
 function satLoad(z,x,y,k){const o={m:null,ok:false,t:M3.t};SAT.cache.set(k,o);
   const n=2**z,lo=i=>i/n*360-180,la=j=>Math.atan(Math.sinh(Math.PI*(1-2*j/n)))/R,a=PJ(la(y),lo(x)),b=PJ(la(y+1),lo(x+1)),h=z<15?-.001:0;
-  const m=new T.Mesh(flatGeo([a[0],h,-a[1],b[0],h,-a[1],a[0],h,-b[1],b[0],h,-b[1]],[0,1,1,1,0,0,1,0],[0,2,1,1,2,3]),new T.MeshBasicMaterial({color:0xffffff,side:T.DoubleSide,toneMapped:false}));m.visible=false;M3.S.add(m);o.m=m;
+  const m=new T.Mesh(flatGeo([a[0],h,-a[1],b[0],h,-a[1],a[0],h,-b[1],b[0],h,-b[1]],[0,1,1,1,0,0,1,0],[0,2,1,1,2,3]),new T.MeshBasicMaterial({color:M3.tint?M3.tint.clone():0xffffff,side:T.DoubleSide,toneMapped:false}));m.visible=false;M3.S.add(m);o.m=m;
   new T.TextureLoader().setCrossOrigin('anonymous').load(`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`,t=>{if(!M3.S||!o.m){t.dispose();return;}t.encoding=T.sRGBEncoding;t.anisotropy=4;m.material.map=t;m.material.needsUpdate=true;o.ok=true;SAT.any=true;},undefined,()=>{});}
 function satTiles(cx,cy,z,rad,on,need){const lat=cy/KY+LAT0,lon=cx/KX+LON0,n=2**z,tx=Math.floor((lon+180)/360*n),ty=Math.floor((1-Math.log(Math.tan(lat*R)+1/Math.cos(lat*R))/Math.PI)/2*n);
   if(!on)return;for(let dx=-rad;dx<=rad;dx++)for(let dy=-rad;dy<=rad;dy++){const k=z+'/'+(tx+dx)+'/'+(ty+dy);need.add(k);if(!SAT.cache.has(k))satLoad(z,tx+dx,ty+dy,k);}}
@@ -782,7 +783,9 @@ function build3D(){SAT.cache.clear();SAT.any=false;
   const S=new T.Scene();S.background=new T.Color('#9fd3f0');S.fog=new T.Fog('#b4dcf2',2.2,6.5);
   const cam=new T.PerspectiveCamera(52,1,.02,80);Object.assign(M3,{R,S,cam,on:true,blob:blobTex(),cars:[],pins:[],t:0});
   const sun=new T.DirectionalLight(0xfff1dc,1.15);S.add(sun);S.add(sun.target);M3.sun=sun;M3.sunDir=new T.Vector3(-.45,.8,.4).normalize();
-  S.add(new T.HemisphereLight(0xcfe6ff,0x6d7a4a,.75));
+  M3.hemi=new T.HemisphereLight(0xcfe6ff,0x6d7a4a,.75);S.add(M3.hemi);M3.N=0;M3.Nap=-1;M3.nT=0;
+  M3.beamMat=new T.MeshBasicMaterial({map:canvasTex(64,128,(g,w,h)=>{const gr=g.createLinearGradient(0,h,0,0);gr.addColorStop(0,'rgba(255,240,190,.95)');gr.addColorStop(1,'rgba(255,240,190,0)');g.fillStyle=gr;g.beginPath();g.moveTo(w*.38,h);g.lineTo(w*.62,h);g.lineTo(w,0);g.lineTo(0,0);g.closePath();g.fill();}),transparent:true,opacity:0,depthWrite:false,blending:T.AdditiveBlending});
+  M3.glowMat=new T.SpriteMaterial({map:glowTex('rgba(255,200,120,1)'),transparent:true,opacity:0,depthWrite:false,depthTest:false,blending:T.AdditiveBlending,fog:false});
   // mare
   const wn=normalTex();wn.encoding=T.LinearEncoding;wn.wrapS=wn.wrapT=T.RepeatWrapping;const mid=MP.road[MP.road.length>>1];
   wn.repeat.set(420,420);const wat=new T.Mesh(new T.PlaneGeometry(160,160),new T.MeshPhongMaterial({color:0x1b78a8,specular:0xbfe6ff,shininess:70,normalMap:wn,normalScale:new T.Vector2(.55,.55)}));M3.wn=wn;
@@ -810,6 +813,7 @@ function build3D(){SAT.cache.clear();SAT.any=false;
   const houses=[],exitZ=[];MP.spots.forEach(q=>{const J=roadAt(q.s),n=seaN(J);exitZ.push([J.x+n[0]*.1,J.y+n[1]*.1,.17]);for(const d of [-1,1]){const A=roadAt(clamp(q.s-d*.15,0,MP.len));exitZ.push([A.x+n[0]*.04,A.y+n[1]*.04,.08]);}});const big=/Ostia|Civitavecchia|Terracina|Anzio|Nettuno|Ladispoli|Fiumicino|Sabaudia|Santa Marinella|Torvaianica/;
   for(const tw of MP.towns){if(/Diocese/.test(tw[0]))continue;let q=PJ(tw[1],tw[2]);const nr=nearRoad(q);if(nr.o>.05)q=[q[0]-nr.n[0]*(nr.o-.05),q[1]-nr.n[1]*(nr.o-.05)];tw.q=q;
     const N=big.test(tw[0])?220:90;for(let k=0;k<N;k++){const a=Math.random()*7,r=(big.test(tw[0])?.9:.5)*Math.sqrt(Math.random()),p=[q[0]+Math.cos(a)*r,q[1]+Math.sin(a)*r],o=nearRoad(p);if(Math.abs(o.o)<.03||o.o>.15||exitZ.some(e=>Math.hypot(e[0]-p[0],e[1]-p[1])<e[2]))continue;houses.push([p,Math.atan2(o.t.ty,o.t.tx)+(Math.random()<.5?0:Math.PI/2)]);}
+    {const gl=new T.Sprite(M3.glowMat);const big2=big.test(tw[0]);gl.scale.set(big2?1.2:.7,big2?1.2:.7,1);gl.renderOrder=2;gl.position.set(q[0],.02,-q[1]);S.add(gl);}
     const lb=labelSprite(tw[0].replace(/-Foce Verde|Marina di Ardea-/,''),{fs:44,k:.03});lb.position.set(q[0],.06,-q[1]);S.add(lb);}
   const HM=new T.InstancedMesh(bx,new T.MeshLambertMaterial(),houses.length),RM=new T.InstancedMesh(rf,new T.MeshLambertMaterial(),houses.length),o3=new T.Object3D(),HC=['#f3ead8','#ead4a6','#f6f1e7','#dfb88c','#efe1c2','#e9c9a8'].map(c=>new T.Color(c));
   houses.forEach(([p,a],i)=>{const w=rnd(.014,.032),d=rnd(.012,.026),h=rnd(.008,.026);o3.position.set(p[0],0,-p[1]);o3.rotation.set(0,a,0);o3.scale.set(w,h,d);o3.updateMatrix();HM.setMatrixAt(i,o3.matrix);HM.setColorAt(i,pick(HC));
@@ -898,6 +902,11 @@ function draw3D(dt){const c=MP.car,P=carPose(),car=M3.car;M3.t+=dt;const t=M3.t;
   M3.pins.forEach((p,i)=>{p.position.y=.008+Math.sin(t*2.2+i)*.006;p.children[0].parent.rotation.y=t*.8;});
   for(const k of M3.cars){k.s+=k.d*k.v*dt;if(k.s<0)k.s+=MP.len;if(k.s>MP.len)k.s-=MP.len;const r=roadAt(k.s),h=roadDir(k.s),hx=h[0]*k.d,hy=h[1]*k.d;k.o.position.set(r.x+hy*.0075,0,-(r.y-hx*.0075));k.o.rotation.y=Math.atan2(hx,-hy);}
   if(!(M3.lmT>0)){M3.lmT=.5;let best=null,bd=1.3;for(const L of LMK){const q=L.q||(L.q=PJ(L.lat,L.lon)),d=Math.hypot(q[0]-P.x,q[1]-P.y);if(d<bd){bd=d;best=L;}}const h=best?`<div>📍 ${best.n} · ${Math.round(bd*20)*50} m</div>`:'';if(hud.innerHTML!==h)hud.innerHTML=h;}else M3.lmT-=dt;
+  // giorno e notte: sole vero dove si trova l'auto (con la stessa mezz'ora di luce in più della spiaggia)
+  if(!(M3.nT>0)){M3.nT=1;const d=new Date(),la=P.y/KY+LAT0,lo=P.x/KX+LON0,s0=sunPos(d,la,lo),sun=sunPos(new Date(d.getTime()+30*60e3*clamp((180-s0.az)/30,-1,1)),la,lo);M3.N=clamp((-sun.alt+2)/10,0,1);}else M3.nT-=dt;
+  if(Math.abs(M3.N-M3.Nap)>.01){const N=M3.N;M3.Nap=N;M3.tint=new T.Color().setRGB(1-N*.84,1-N*.82,1-N*.7);for(const o of SAT.cache.values())if(o.m)o.m.material.color.copy(M3.tint);
+    const sky=new T.Color('#9fd3f0').lerp(new T.Color('#08111f'),N),fogc=new T.Color('#b4dcf2').lerp(new T.Color('#08111f'),N);M3.S.background.copy(sky);M3.S.fog.color.copy(fogc);
+    M3.sun.intensity=1.15*(1-N*.92);M3.hemi.intensity=.75*(1-N*.78);M3.beamMat.opacity=clamp((N-.25)*1.4,0,.85);M3.glowMat.opacity=clamp((N-.2)*1.2,0,.9);}
   M3.R.render(M3.S,cam);drawMini(P);}
 function drawMini(P){const c=M3.mini;if(!c)return;const g=c.getContext('2d'),d=MP.d||1,W=c.width,H=c.height;
   if(!M3.mbg||M3.mbg.width!==W){const b=document.createElement('canvas');b.width=W;b.height=H;const bg=b.getContext('2d');const all=MP.app?MP.road.concat(MP.app.pts):MP.road,xs=all.map(q=>q[0]),ys=all.map(q=>q[1]),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys),ks=Math.min((W-16*d)/(x1-x0),(H-16*d)/(y1-y0));
