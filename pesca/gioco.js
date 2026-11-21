@@ -1167,8 +1167,8 @@ function carSound(v){const c=AU.on&&v>.015?ac():null,S=AU.car;if(!c){if(S&&AU.ct
   const A=AU.car,t=c.currentTime,kmh=Math.min(v*100,320),G=[0,25,50,80,115,160,1e9];let g=1;while(kmh>G[g])g++;
   const lo=G[g-1],hi=Math.min(G[g],330),rpm=900+(g>1?700:0)+clamp((kmh-lo)/(hi-lo),0,1)*(g===1?2600:2300),fire=rpm/30;// 4 cilindri: 2 scoppi a giro
   A.o1.frequency.setTargetAtTime(fire,t,.08);A.o2.frequency.setTargetAtTime(fire,t,.08);A.o3.frequency.setTargetAtTime(fire/2,t,.08);A.lfo.frequency.setTargetAtTime(rpm/60,t,.08);
-  A.lp.frequency.setTargetAtTime(160+rpm*.11,t,.1);A.out.gain.setTargetAtTime(.05,t,.2);
-  A.tire.gain.setTargetAtTime(Math.min(.55,kmh/220),t,.2);A.wind.gain.setTargetAtTime(clamp((kmh-90)/260,0,.45),t,.3);}
+  A.lp.frequency.setTargetAtTime(160+rpm*.11,t,.1);A.out.gain.setTargetAtTime(.11,t,.2);
+  A.tire.gain.setTargetAtTime(Math.min(.3,kmh/400),t,.2);A.wind.gain.setTargetAtTime(clamp((kmh-120)/900,0,.12),t,.3);}
 function motor(on,f){if(!on)carSound(0);const c=AU.on&&on?ac():null;if(!c){if(AU.mot)AU.mot.v.gain.setTargetAtTime(0,AU.ctx.currentTime,.2);return;}
   if(!AU.mot){const o=c.createOscillator();o.type='sawtooth';const fl=c.createBiquadFilter();fl.type='lowpass';fl.frequency.value=700;const v=c.createGain();v.gain.value=0;o.connect(fl).connect(v).connect(c.destination);o.start();AU.mot={o,v};}
   AU.mot.o.frequency.setTargetAtTime(f,c.currentTime,.1);AU.mot.v.gain.setTargetAtTime(.018,c.currentTime,.2);}
