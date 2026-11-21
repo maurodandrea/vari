@@ -904,9 +904,9 @@ function draw3D(dt){const c=MP.car,P=carPose(),car=M3.car;M3.t+=dt;const t=M3.t;
   if(!(M3.lmT>0)){M3.lmT=.5;let best=null,bd=1.3;for(const L of LMK){const q=L.q||(L.q=PJ(L.lat,L.lon)),d=Math.hypot(q[0]-P.x,q[1]-P.y);if(d<bd){bd=d;best=L;}}const h=best?`<div>📍 ${best.n} · ${Math.round(bd*20)*50} m</div>`:'';if(hud.innerHTML!==h)hud.innerHTML=h;}else M3.lmT-=dt;
   // giorno e notte: sole vero dove si trova l'auto, con il buio che arriva mezz'ora prima (e la luce mezz'ora dopo)
   if(!(M3.nT>0)){M3.nT=1;const d=new Date(),la=P.y/KY+LAT0,lo=P.x/KX+LON0,s0=sunPos(d,la,lo),sun=sunPos(new Date(d.getTime()+30*60e3*clamp((s0.az-180)/30,-1,1)),la,lo);M3.N=clamp((-sun.alt+4)/11,0,1);}else M3.nT-=dt;
-  if(Math.abs(M3.N-M3.Nap)>.01){const N=M3.N;M3.Nap=N;M3.tint=new T.Color().setRGB(1-N*.84,1-N*.82,1-N*.7);for(const o of SAT.cache.values())if(o.m)o.m.material.color.copy(M3.tint);
+  if(Math.abs(M3.N-M3.Nap)>.01){const N=M3.N;M3.Nap=N;M3.tint=new T.Color().setRGB(1-N*.93,1-N*.91,1-N*.82);for(const o of SAT.cache.values())if(o.m)o.m.material.color.copy(M3.tint);
     const sky=new T.Color('#9fd3f0').lerp(new T.Color('#08111f'),N),fogc=new T.Color('#b4dcf2').lerp(new T.Color('#08111f'),N);M3.S.background.copy(sky);M3.S.fog.color.copy(fogc);
-    M3.sun.intensity=1.15*(1-N*.92);M3.hemi.intensity=.75*(1-N*.78);M3.beamMat.opacity=clamp((N-.25)*1.4,0,.85);M3.glowMat.opacity=clamp((N-.2)*1.2,0,.9);}
+    M3.sun.intensity=1.15*(1-N*.97);M3.hemi.intensity=.75*(1-N*.88);M3.beamMat.opacity=clamp((N-.25)*1.6,0,1);M3.glowMat.opacity=clamp((N-.2)*1.2,0,.9);}
   M3.R.render(M3.S,cam);drawMini(P);}
 function drawMini(P){const c=M3.mini;if(!c)return;const g=c.getContext('2d'),d=MP.d||1,W=c.width,H=c.height;
   if(!M3.mbg||M3.mbg.width!==W){const b=document.createElement('canvas');b.width=W;b.height=H;const bg=b.getContext('2d');const all=MP.app?MP.road.concat(MP.app.pts):MP.road,xs=all.map(q=>q[0]),ys=all.map(q=>q[1]),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys),ks=Math.min((W-16*d)/(x1-x0),(H-16*d)/(y1-y0));
