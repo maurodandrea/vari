@@ -578,7 +578,8 @@ function updEnv(w,t,dt){const d=gameDate(),sun=sunPos(d,SPOT.lat,SPOT.lon),mo=mo
   if(w.code>=95&&Math.random()<dt*.06)st.lightning=1;st.lightning=Math.max(0,st.lightning-dt*3);if(st.lightning>0)hemi.intensity+=st.lightning*2;
   // ammofila mossa dal vento
   grass.rotation.z=Math.sin(t*1.5)*w.ws*.0006;
-  seaSound(0);windSound(w.ws>12?clamp((w.ws-12)/45,0,.16):0,t);}
+  // mare: fruscio continuo come prima, ma solo con mare mosso; vento: appena percettibile e solo con vento vero
+  seaSound((w.wave||0)>=.5?clamp(.05+(w.wave-.5)*.12,.05,.3):0);windSound(w.ws>20?clamp((w.ws-20)/60,0,.05):0,t);}
 // telecamera: dietro al pescatore quando si muove, larga sulle canne quando è seduto, vicina al mulinello nel combattimento
 const CAM={p:null,l:null};
 function updCam(dt,t){let p,l;const a=AN.pos;
