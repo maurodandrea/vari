@@ -16,6 +16,23 @@ save.horses.forEach(h=>{if(h.thirst==null)h.thirst=80;});
 function persist(){save.t=Date.now();save.outfit=Object.assign({},P.outfit);LS.set('save',save);}
 
 /* ======================= COSTRUZIONE ======================= */
+/* personalizzazione dei cavalli (nome e mantello) */
+const COATS=[
+  {k:'baio',l:'Baio',body:0x7b3e1b,dark:0x1b120c,mane:0x17100b,points:true},
+  {k:'sauro',l:'Sauro',body:0x9a4a1c,dark:0x7a3812,mane:0xa4561f},
+  {k:'morello',l:'Morello',body:0x1d1917,dark:0x110e0d,mane:0x0b0909},
+  {k:'grigio',l:'Grigio',body:0xd8d4cc,dark:0x8f8a82,mane:0xece8df,dapple:true,muzzle:0x5b5350},
+  {k:'bianco',l:'Bianco',body:0xf2efe9,dark:0xd8d4cc,mane:0xf6f4ef,muzzle:0x8a7f7a},
+  {k:'palomino',l:'Palomino',body:0xc98f45,dark:0xa46f30,mane:0xf3e5c6},
+  {k:'isabella',l:'Isabella',body:0xc8a06a,dark:0x2a1e14,mane:0x2a1e14,points:true},
+  {k:'pezzato',l:'Pezzato',body:0x6a3618,dark:0x2a170c,mane:0x2a1b12,pinto:true},
+  {k:'leopardato',l:'Leopardato',body:0xe6e2da,dark:0x6a5f56,mane:0x4a4038,apalo:true,muzzle:0x5b5350}];
+save.custom=save.custom||{};
+EQ.HORSES.forEach(h=>{h.breed=h.breed||h.race.split(',')[0];});
+function applyCustom(i){const c=save.custom[i];if(!c)return;const h=EQ.HORSES[i];
+  if(c.name)h.name=c.name;
+  if(c.coat){const co=COATS.find(x=>x.k===c.coat);if(co){['points','dapple','pinto','apalo','muzzle'].forEach(k=>delete h[k]);Object.assign(h,{body:co.body,dark:co.dark,mane:co.mane},co.points?{points:true}:{},co.dapple?{dapple:true}:{},co.pinto?{pinto:true}:{},co.apalo?{apalo:true}:{},co.muzzle?{muzzle:co.muzzle}:{});h.race=h.breed+', '+co.l.toLowerCase();}}}
+EQ.HORSES.forEach((h,i)=>applyCustom(i));
 const yard=EQ.buildYard();
 try{EQ.populate.yard(yard);}catch(e){console.error(e);}
 EQ.setSky(yard.sky);
@@ -115,6 +132,8 @@ function ensureSafe(){if(P.outfit.helmet==null||P.outfit.protector==null){P.setO
 function renderMenu(){
   $('horses').innerHTML=EQ.HORSES.map((h,i)=>`<button class="hz${i===G.sel?' sel':''}" data-i="${i}"><i style="background:#${h.body.toString(16).padStart(6,'0')}${h.pinto?';background-image:radial-gradient(circle at 30% 40%,#fff 25%,transparent 26%),radial-gradient(circle at 70% 70%,#fff 20%,transparent 21%)':''}"></i>${h.name}</button>`).join('');
   const s=horses[G.sel].stats;
+  {const cur=(save.custom[G.sel]&&save.custom[G.sel].coat)||null;const html=COATS.map(c=>`<button class="chip${cur===c.k?' sel':''}" data-coat="${c.k}"><s style="background:#${c.body.toString(16).padStart(6,'0')}${c.pinto?';background-image:radial-gradient(circle at 30% 40%,#fff 30%,transparent 31%)':c.apalo?';background-image:radial-gradient(circle at 40% 40%,#4a4038 18%,transparent 19%),radial-gradient(circle at 70% 70%,#4a4038 14%,transparent 15%)':''}"></s>${c.l}</button>`).join('');
+   if(G.coatHtml!==html){G.coatHtml=html;$('coats').innerHTML=html;$('coats2').innerHTML=html;}if(document.activeElement!==$('hName'))$('hName').value=EQ.HORSES[G.sel].name;if(document.activeElement!==$('hName2'))$('hName2').value=EQ.HORSES[G.sel].name;}
   $('hdesc').textContent=EQ.HORSES[G.sel].race+` · 🌾${s.hunger|0} 🫧${s.clean|0} ⚡${s.energy|0}`;
   const lv=LEVELS.map((L,i)=>{const b=save.best['c'+i];return `<button class="lvl" data-l="${i}">${['🐎','🏅','🏆'][i]} ${L.name}<small>${b?b.m+' '+fmt(b.t)+'s':L.sub}</small></button>`;}).join('');
   $('lvls').innerHTML=lv;$('lvls2').innerHTML=lv;
@@ -132,7 +151,7 @@ function setName(v){v=String(v||'').replace(/[<>]/g,'').trim().slice(0,14);if(v)
 $('nameIn').addEventListener('change',e=>setName(e.target.value));$('nameIn').addEventListener('blur',e=>setName(e.target.value));
 $('nameIn').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')e.target.blur();});
 $('nameIn2').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')$('nameOk').click();});
-$('nameOk').addEventListener('click',()=>{const v=setName($('nameIn2').value);if(!v){$('nameIn2').focus();$('nameIn2').style.borderColor='#d62828';return;}EQ.audio();$('nameBox').classList.remove('on');$('menu').classList.add('on');});
+$('nameOk').addEventListener('click',()=>{setHorseName($('hName2').value);const v=setName($('nameIn2').value);if(!v){$('nameIn2').focus();$('nameIn2').style.borderColor='#d62828';return;}EQ.audio();$('nameBox').classList.remove('on');$('menu').classList.add('on');});
 function setGender(g){LS.set('pgender',g);P.setGender(g);
   if(g==='m'){const o=P.outfit,pk=[0xe86aa6,0xe25d9a,0xf08cb8,0x7b3fb0,0x5b2a86],ch={};
     if(/0xf08cb8|0x5b2a86/.test(String(o.top)))ch.top='polo:0x2c3e66';if(pk.includes(o.helmet))ch.helmet=0x1b1b22;if(pk.includes(o.protector))ch.protector=0x23407f;if(pk.includes(o.gloves))ch.gloves=0x1a1a1a;
@@ -140,6 +159,17 @@ function setGender(g){LS.set('pgender',g);P.setGender(g);
 document.querySelectorAll('.gbtn').forEach(b=>b.addEventListener('click',()=>{EQ.audio();setGender(b.dataset.g);}));
 $('gTog').addEventListener('click',()=>{EQ.audio();setGender(EQ.gender()==='m'?'f':'m');renderMenu();});
 setGender(EQ.gender());
+function rebuildHorse(i){const old=horses[i];const H=EQ.buildHorse(EQ.HORSES[i]);H.i=i;H.stats=old.stats;
+  scene.remove(old.root,old.reins,old.rope);scene.add(H.root,H.reins,H.rope);
+  Object.assign(H,{x:old.x,z:old.z,h:old.h,sp:0,st:{},bt:2,where:old.where});H.setTack(Object.assign({},old.tack));
+  H.root.position.copy(old.root.position);H.root.rotation.copy(old.root.rotation);H.addDirt(Math.round((100-H.stats.clean)/4));H.dirt0=H.dirtLeft();H.onStep=stepFor(H);
+  horses[i]=H;if(G.cur===old)G.cur=H;}
+function boxTag(i){const t=yard.boxTags&&yard.boxTags[i];if(!t)return;const nt=EQ.labelTex(EQ.HORSES[i].name,{bg:'#f6efe0',fg:'#4a2a14',w:256,h:80,radius:10,font:'bold 44px Fredoka, Trebuchet MS, sans-serif',border:'#8a5a34'});const old=t.material.map;t.material.map=nt;t.material.needsUpdate=true;if(old)old.dispose();}
+function setHorseName(v){v=String(v||'').replace(/[<>]/g,'').trim().slice(0,14);if(!v)return;v=v.charAt(0).toUpperCase()+v.slice(1);const i=G.sel;
+  save.custom[i]=Object.assign(save.custom[i]||{},{name:v});EQ.HORSES[i].name=v;horses[i].def=EQ.HORSES[i];boxTag(i);persist();renderMenu();}
+function setCoat(k){const i=G.sel;save.custom[i]=Object.assign(save.custom[i]||{},{coat:k});applyCustom(i);rebuildHorse(i);persist();menuPose();renderMenu();EQ.sfx.neigh();}
+['hName','hName2'].forEach(id=>{const el=$(id);el.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')el.blur();});el.addEventListener('change',e=>setHorseName(e.target.value));el.addEventListener('blur',e=>setHorseName(e.target.value));});
+['coats','coats2'].forEach(id=>$(id).addEventListener('click',e=>{const b=e.target.closest('[data-coat]');if(!b)return;EQ.audio();setCoat(b.dataset.coat);}));
 function toMenu(){
   G.climb=null;
   if(G.veh)leaveVeh(true);

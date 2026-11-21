@@ -429,7 +429,7 @@ EQ.buildYard=function(){
     // targhetta nome
     const hd=EQ.HORSES[i];
     const nt=EQ.labelTex(hd.name,{bg:'#f6efe0',fg:'#4a2a14',w:256,h:80,radius:10,font:'bold 44px Fredoka, Trebuchet MS, sans-serif',border:'#8a5a34'});W.tex.push(nt);
-    const np=mesh(new THREE.PlaneGeometry(.9,.28),new THREE.MeshStandardMaterial({map:nt,roughness:.6}),cx,2.7,SB.z0-.11,grp);np.rotation.y=Math.PI;
+    const np=mesh(new THREE.PlaneGeometry(.9,.28),new THREE.MeshStandardMaterial({map:nt,roughness:.6}),cx,2.7,SB.z0-.11,grp);np.rotation.y=Math.PI;W.boxTags=W.boxTags||[];W.boxTags[i]=np;
     // mangiatoia, fieno, secchio
     mesh(G.box(.7,.4,.45),mat(0x9a9a95,.8),cx+bw/2-.5,1.0,SB.z0+.35,grp);
     const hay=mesh(G.sph(.3,10,8),new THREE.MeshStandardMaterial({map:TX.straw(),color:C(0xd6c070),roughness:1}),cx+bw/2-.5,1.18,SB.z0+.35,grp);hay.scale.set(1,.45,.7);hay.visible=false;
