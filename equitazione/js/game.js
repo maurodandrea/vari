@@ -645,7 +645,7 @@ function rideUpdate(dt){
     }
     else if(G.world!==yard&&R.sp<2)A.push({id:'down',icon:'⬇️',label:'Scendi',fn:dismount});
     if(R.sp<1&&!G.course&&R.grounded&&grazeAt(R.x,R.z)&&H.stats.hunger<97&&!(G.grazeT>0))A.push({id:'rgraze',icon:'🌿',label:'Mangia erba',fn:()=>{G.grazeT=4.5;setTimeout(()=>{EQ.sfx.munch();stat(H,'hunger',30);stat(H,'happy',3);persist();},1200);msg('🌿 '+H.def.name+' bruca l\'erba',2);}});
-    socialActions(A,true);
+    navAction(A);socialActions(A,true);
     setActions(A);}
 }
 EQ.onRightTap=()=>{if(G.state==='ride'){EQ.input.jumpQ=.18;const j=$('jumpBtn');j.classList.add('press');setTimeout(()=>j.classList.remove('press'),120);}};
@@ -833,24 +833,28 @@ const VEH={car:{name:'l\'auto',verb:'🚗 Guida l\'auto',max:22,acc:6,r:1.0,pose
   bike:{name:'la bici',verb:'🚲 Prendi la bici',max:8.5,acc:3.2,r:.5,pose:'pedal',seat:[0,-.02,-.2]},
   scooter:{name:'il monopattino',verb:'🛴 Prendi il monopattino',max:7,acc:2.8,r:.45,pose:'scooter',seat:[0,.14,-.05]},
   moto:{name:'la moto',verb:'🏍️ Guida la moto',max:20,acc:7,r:.6,pose:'moto',seat:[0,-.05,-.28]}};
-function makeVeh(w,kind,x,z,h,col){
+function makeVeh(w,kind,x,z,h,col,tp){
   const g=new THREE.Group(),inner=new THREE.Group();g.add(inner);
-  const m=kind==='car'?EQ.buildCar(EQ.pick(['hatch','sedan','suv','hatch']),col):kind==='bike'?EQ.buildBike(col):kind==='scooter'?EQ.buildScooter(col):EQ.buildMoto(col);
+  const m=kind==='car'?EQ.buildCar(tp||EQ.pick(['hatch','sedan','suv','hatch']),col):kind==='bike'?EQ.buildBike(col):kind==='scooter'?EQ.buildScooter(col):EQ.buildMoto(col);
   inner.add(m);g.position.set(x,w.height(x,z),z);g.rotation.y=h;w.group.add(g);
   const V={kind,g,inner,x,z,h,sp:0,tip:0,lean:0,cols:kind==='car'?[{x:0,z:0,r:1.05,h:1.4,car:true},{x:0,z:0,r:1.05,h:1.4,car:true}]:[{x:0,z:0,r:.45,h:.9}]};
   w.colliders.push(...V.cols);parkCols(V);(w.vehicles=w.vehicles||[]).push(V);return V;}
 function parkCols(V){const fx=Math.sin(V.h),fz=Math.cos(V.h);V.cols.forEach((c,i)=>{const k=V.cols.length>1?(i?-1.2:1.2):0;c.x=V.x+fx*k;c.z=V.z+fz*k;c.off=false;});}
 function spawnVehicles(w){if(w.vehSpawned)return;w.vehSpawned=true;const n=w.name,mk=(k,x,z,h,c)=>makeVeh(w,k,x,z,h,c);
-  if(n==='yard'){mk('car',20.2,49,0);mk('car',26.6,41,Math.PI);mk('car',13.8,41,Math.PI);mk('car',5.6,66,0);mk('bike',5,40,0);mk('bike',5,41.6,0);mk('scooter',5,43.2,0);mk('moto',5.2,45.6,0);}
+  if(n==='yard'){mk('car',30,45,-Math.PI/2);mk('car',36.5,45,-Math.PI/2);mk('car',5.6,66,0);mk('bike',5,30,0);mk('bike',5,31.6,0);mk('scooter',5,33.2,0);mk('moto',5.2,35.4,0);}
   else if(n==='city'){mk('car',14,-23.3,Math.PI/2);mk('car',-14,-32.7,-Math.PI/2);mk('car',32.7,-62,0);mk('car',-32.7,-90,Math.PI);
     mk('bike',-8,-24.2,Math.PI/2);mk('bike',-6.5,-24.2,Math.PI/2);mk('scooter',-5,-24.2,Math.PI/2);mk('scooter',-3.8,-24.2,Math.PI/2);mk('moto',4,-24.2,Math.PI/2);mk('moto',6,-24.2,Math.PI/2);}
   else if(n==='beach'){const sh=w.shore;mk('bike',-40,5,Math.PI/2);mk('scooter',-40,7,Math.PI/2);mk('moto',-44,5.5,Math.PI/2);mk('car',sh(260)-49.6,260,0);mk('bike',sh(-30)-18,-26,Math.PI/2);}
   else if(n==='forest'){const s=w.spawn,rx=-Math.cos(s.h),rz=Math.sin(s.h);mk('bike',s.x+rx*3,s.z+rz*3,s.h);mk('bike',s.x+rx*3.4-Math.sin(s.h)*2,s.z+rz*3.4-Math.cos(s.h)*2,s.h);mk('moto',s.x-rx*3.4,s.z-rz*3.4,s.h);}
 }
 spawnVehicles(yard);
-function nearVeh(){let b=null,bd=9;for(const V of (W().vehicles||[])){if(V===G.veh)continue;const d=Math.hypot(V.x-F.x,V.z-F.z)-(V.kind==='car'?1.4:0);if(d<2.2&&d<bd){bd=d;b=V;}}return b;}
+function nearVeh(){let b=null,bd=9;for(const V of (W().vehicles||[])){if(V===G.veh)continue;const d=Math.hypot(V.x-F.x,V.z-F.z)-(V.kind==='car'?1.4:0);if(d<2.2&&d<bd){bd=d;b=V;}}
+  for(const p of (W().parked||[])){if(p.taken)continue;if(Math.abs(p.x-F.x)>5||Math.abs(p.z-F.z)>5)continue;const d=Math.hypot(p.x-F.x,p.z-F.z)-1.4;if(d<2.2&&d<bd){bd=d;b={parked:p,kind:'car'};}}
+  return b;}
+function unpark(p){const w=W();p.taken=true;const pa=p.mesh.geometry.attributes.position;for(let i=p.start;i<p.start+p.count;i++)pa.setXYZ(i,0,-50,0);pa.needsUpdate=true;
+  p.coll.off=true;w.colliders=w.colliders.filter(c=>c!==p.coll);return makeVeh(w,'car',p.x,p.z,p.ry,p.col,p.tp);}
 function vehActions(A){if(G.state!=='foot'||G.swim||G.sit)return;const V=nearVeh();if(!V)return;
-  A.push({id:'veh',icon:V.tip?'🔧':VEH[V.kind].verb.split(' ')[0],label:V.tip?'Rialza '+VEH[V.kind].name:VEH[V.kind].verb.slice(VEH[V.kind].verb.indexOf(' ')+1),fn:()=>enterVeh(V)});}
+  A.push({id:'veh',icon:V.tip?'🔧':VEH[V.kind].verb.split(' ')[0],label:V.tip?'Rialza '+VEH[V.kind].name:VEH[V.kind].verb.slice(VEH[V.kind].verb.indexOf(' ')+1),fn:()=>enterVeh(V.parked?unpark(V.parked):V)});}
 function enterVeh(V){
   if(G.leading){waitHere();msg((G.cur?G.cur.def.name:'Il cavallo')+' ti aspetta qui',1.6);}
   const w=W();w.colliders=w.colliders.filter(c=>!V.cols.includes(c));w.vehicles=w.vehicles.filter(x=>x!==V);
@@ -858,6 +862,7 @@ function enterVeh(V){
   const D=VEH[V.kind];V.g.add(P.root);P.root.position.set(D.seat[0],D.seat[1],D.seat[2]);P.root.rotation.set(0,0,0);P.pose(1,D.pose,{snap:true});
   G.veh=V;G.state='drive';setTouchMode('foot');$('gait').classList.add('on');snapCam();
   if(V.kind==='car'){EQ.sfx.buckle();setTimeout(()=>EQ.sfx.engine(.5),300);}else EQ.sfx.click();
+  setTimeout(()=>{if(!G.navTo&&G.veh&&W().portals)msg('🧭 Scegli dove andare<small>tocca il pulsante 🧭</small>',2.6);},2400);
   msg({car:'🚗 Si parte!',bike:'🚲 Pedala!',scooter:'🛴 Via!',moto:'🏍️ Brum brum!'}[V.kind]+'<small>trascina in su per andare, in giù per frenare</small>',2.2);
 }
 function leaveVeh(quiet){const V=G.veh;if(!V)return;G.veh=null;EQ.loop('myengine',0);
@@ -874,6 +879,10 @@ function vehFall(V,sp0){
   G.state='fall';setActions([]);setTouchMode('foot');impactShake(.5);EQ.sfx.crash();EQ.sfx.thud();
   msg('💥 Sei cadut'+EQ.A()+' da '+VEH[V.kind].name.replace(/^(la |il |l')/,m=>({"la ":'lla ',"il ":'l ',"l'":"ll'"}[m]))+'!',2.4);
 }
+const NAVN={yard:'🏠 Maneggio',city:'🏙️ Città',beach:'🏖️ Spiaggia',forest:'🌲 Bosco'};
+function navAction(A){const ps=(W().portals||[]).map(p=>p.to);if(!ps.length)return;
+  A.push({id:'nav',icon:'🧭',label:G.navTo?'Vai a: '+NAVN[G.navTo]:'Dove vuoi andare?',fn:()=>{const i=ps.indexOf(G.navTo);G.navTo=i<ps.length-1?ps[i+1]:null;
+    msg(G.navTo?'🧭 '+NAVN[G.navTo]+'<small>segui la freccia gialla in alto</small>':'🧭 Navigatore spento',1.8);EQ.sfx.click();actSig='';}});}
 function driveUpdate(dt){
   const V=G.veh,D=VEH[V.kind],w=W();
   const inp=G.busy?{x:0,y:0}:EQ.readInput();
@@ -915,6 +924,7 @@ function driveUpdate(dt){
   const por=EQ.portrait,cd=V.kind==='car'?(por?9:7.5):(por?6.5:5.2);
   followCam(V.x,gy,V.z,V.h,cd+Math.abs(V.sp)*.06,V.kind==='car'?(por?3.8:3.1):(por?3:2.5),3,1.2,dt,6);
   if(!G.busy){const A=[];if(Math.abs(V.sp)<1.5)A.push({id:'vout',icon:'⬇️',label:'Scendi',fn:()=>leaveVeh()});
+    navAction(A);
     A.push({id:'horn',icon:V.kind==='car'||V.kind==='moto'?'📯':'🔔',label:V.kind==='car'||V.kind==='moto'?'Clacson':'Campanello',fn:()=>{(V.kind==='car'||V.kind==='moto'?EQ.sfx.honk2:EQ.sfx.bikebell)();}});
     setActions(A);}
 }
@@ -945,7 +955,7 @@ function travel(to,from,noFade){
       setTimeout(()=>msg(PLACE[to][0]+' '+PLACE[to][1]+'!<small>trova '+w.items.length+' '+ITEM_INFO[w.itemKind][1].toLowerCase()+'</small>',3),400);}
     else if(H){applyRideDirt(H);persist();setTimeout(()=>msg('Bentornat'+EQ.A()+' al maneggio!<small>scendi e dai da mangiare a '+H.def.name+'</small>',3),400);}
     if(G.mission&&from==='city'&&G.mission.k===to){G.stars++;LS.set('stars',G.stars);setTimeout(()=>msg('⭐ Obiettivo completato!<small>'+G.mission.t+' · stelle: '+G.stars+'</small>',2.6),3600);}
-    G.mission=null;if(to==='city')newMission();
+    G.navTo=null;G.mission=null;if(to==='city')newMission();
     if(G.veh){G.state='drive';setTouchMode('foot');$('gait').classList.add('on');}else{G.state='ride';setTouchMode('ride');}hud(true);snapCam();
   },250);
 }
@@ -1230,6 +1240,7 @@ function updateHud(dt){
 function needsLine(){const H=G.cur;if(!H||!H.stats||H.where==='box')return'';const s=H.stats,c=v=>v<25?'#ff8a8a':'#e8f5d0';const th=s.thirst==null?80:s.thirst;
   return `<br><span style="font-size:12.5px">${H.def.name}: <b style="color:${c(s.energy)}">⚡${s.energy|0}</b> <b style="color:${c(s.hunger)}">🌾${s.hunger|0}</b> <b style="color:${c(th)}">💧${th|0}</b> <b style="color:${c(s.clean)}">🫧${s.clean|0}</b></span>`;}
 function dirTarget(){
+  if(G.navTo&&(G.state==='drive'||G.state==='ride')){const p=(W().portals||[]).find(p=>p.to===G.navTo);if(p)return p;}
   if(G.mission&&W().name==='city')return G.mission;
   if(G.course&&G.course.next<G.course.obs.length){const o=G.course.obs[G.course.next];const lz=(R.x-o.pos.x)*o.fwd.x+(R.z-o.pos.z)*o.fwd.z,lx=(R.x-o.pos.x)*o.right.x+(R.z-o.pos.z)*o.right.z;
     return (lz>-1||Math.abs(lx)>Math.max(4,-lz*.8))?{x:o.pos.x-o.fwd.x*10,z:o.pos.z-o.fwd.z*10}:o.pos;}
@@ -1244,7 +1255,7 @@ function dirTarget(){
   return null;
 }
 function updateDir(){
-  const el=$('dir');const t=(G.state==='foot'||G.state==='ride')?dirTarget():null;
+  const el=$('dir');const t=(G.state==='foot'||G.state==='ride'||G.state==='drive')?dirTarget():null;
   if(!t){el.classList.remove('on');return;}
   const px=(G.state==='ride'||G.state==='drive')?R.x:F.x,pz=(G.state==='ride'||G.state==='drive')?R.z:F.z;
   if(Math.hypot(t.x-px,t.z-pz)<3.5){el.classList.remove('on');return;}
