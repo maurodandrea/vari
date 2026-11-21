@@ -146,7 +146,7 @@ function terrain(W,sx,sz,cx,cz,nx,nz,hf,cf,tex,rep){
   m.position.set(cx,0,cz); m.receiveShadow=true; W.group.add(m); return m;
 }
 function sign(W,text,x,y,z,ry,w,h,bg,fg){
-  const t=EQ.labelTex(text,{bg:bg||'#2f4d2a',fg:fg||'#fff',w:512,h:128}); W.tex.push(t);
+  const t=EQ.labelTex(text,{bg:bg||'#2f4d2a',fg:fg||'#fff',w:1024,h:Math.max(64,Math.round(1024*h/w)),radius:12,font:'bold 90px Fredoka, Trebuchet MS, sans-serif'}); W.tex.push(t);
   const m=mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshStandardMaterial({map:t,roughness:.6}),x,y,z,W.group);m.rotation.y=ry||0;
   const b=mesh(G.box(w+.1,h+.1,.05),mat(0x4a3420,.8),0,0,-.03,m);
   return m;
@@ -342,7 +342,7 @@ function stableBlock(W,cx,cz,ry,n){
     for(const sd of [-1,1]){const w=(bw-1.5)/2,x=bx+sd*(.75+w/2);wood.push(EQ.xform(G.box(w,1.35,.12),x,.675,0));for(let xx=x-w/2+.08;xx<x+w/2;xx+=.14)bars.push(EQ.xform(G.cyl(.012,.012,1,4),xx,1.85,0));}
     wood.push(EQ.xform(G.box(1.46,1.3,.08),bx,.68,-.02));pl.push(EQ.xform(G.box(bw,.8,.2),bx,2.82,0));
     if(Math.random()<.88){const def=Object.assign({},EQ.pick(EQ.OTHER_COATS),{socks:[0,0,0,0]});const nm=EQ.pick(EQ.HORSE_NAMES);
-      const h=EQ.buildHorseHead(def);h.root.position.set(bx,1.38,1.55);h.root.rotation.y=Math.PI;g.add(h.root);h.lx=.15;W.heads.push(h);
+      const h=EQ.buildHorseHead(def);h.name=nm;h.root.position.set(bx,1.38,1.55);h.root.rotation.y=Math.PI;g.add(h.root);h.lx=.15;W.heads.push(h);
       const nt=EQ.labelTex(nm,{bg:'#f6efe0',fg:'#4a2a14',w:256,h:80,radius:10,font:'bold 44px Fredoka, Trebuchet MS, sans-serif',border:'#8a5a34'});W.tex.push(nt);
       const np=mesh(new THREE.PlaneGeometry(.9,.28),new THREE.MeshStandardMaterial({map:nt,roughness:.6}),bx,2.7,-.11,g);np.rotation.y=Math.PI;}}
   mesh(EQ.merge(bars),mat(0x2c2c2c,.4,.7),0,0,0,g);mesh(EQ.merge(wood),new THREE.MeshStandardMaterial({map:woodD,roughness:.85}),0,0,0,g);mesh(EQ.merge(pl),new THREE.MeshStandardMaterial({map:plaster,roughness:.9}),0,0,0,g);
@@ -522,7 +522,7 @@ EQ.buildYard=function(){
   }
   /* ---- paddock con cavalli al pascolo ---- */
   W.spots.paddock={x0:24,x1:48,z0:6,z1:32};
-  woodFence(W,[[24,6],[48,6],[48,32],[24,32],[24,6]],{h:1.3,rails:3});
+  woodFence(W,[[34,6],[24,6],[24,32],[48,32],[48,6],[38,6]],{h:1.3,rails:3});
   /* ---- altre scuderie (cavalli degli altri cavalieri) ---- */
   W.heads=[];
   W.spots.stableB=stableBlock(W,-32,40,0,10);
@@ -594,7 +594,7 @@ EQ.buildYard=function(){
    sign(W,'🅿️ PARCHEGGIO',PK.x-PK.hx+.3,2.2,PK.z-PK.hz-.4,0,2.6,.55,'#1d4ed8');
    const dirtP=TX.sand('#8a6a48');W.spots.dirtPads=[];
    [[60,45,15,8],[64,18,11,13],[64,-24,11,15]].forEach(([x,z,hx,hz])=>{patch(W,x,z,hx*2,hz*2,dirtP,4,.03,1);
-     woodFence(W,[[x-hx,z-hz],[x+hx,z-hz],[x+hx,z+hz],[x-hx,z+hz],[x-hx,z-hz]],{h:1.4,rails:3,post:2.6});
+     woodFence(W,[[x-hx,z-2.2],[x-hx,z-hz],[x+hx,z-hz],[x+hx,z+hz],[x-hx,z+hz],[x-hx,z+2.2]],{h:1.4,rails:3,post:2.6});
      const tr2=mesh(G.box(2.2,.5,.7),mat(0x6b6b6b,.4,.5),x-hx+1.6,.25,z+hz-1,grp);mesh(G.box(2,.05,.5),new THREE.MeshStandardMaterial({color:C(0x4a7a8a),roughness:.1}),x-hx+1.6,.48,z+hz-1,grp);
      const hy=mesh(G.cyl(.7,.7,1.1,14),new THREE.MeshStandardMaterial({map:TX.straw(),roughness:1}),x+hx-1.6,.55,z-hz+1.6,grp);
      W.colliders.push({x:x-hx+1.6,z:z+hz-1,hx:1.1,hz:.4},{x:x+hx-1.6,z:z-hz+1.6,r:.8});

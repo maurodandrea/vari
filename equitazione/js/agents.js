@@ -26,6 +26,7 @@ function agents(W){
   W.updaters.push((dt,t,p)=>{
     for(const a of list){
       const d=p?Math.hypot(a.x-p.x,a.z-p.z):0;
+      if(a.disabled)continue;
       a.near=d;const vis=d<a.far;
       if(a.ent.root.visible!==vis)a.ent.root.visible=vis;
       if(a.extra)a.extra.forEach(o=>o.visible=vis);
@@ -141,7 +142,7 @@ EQ.populate.yard=function(W){
   // giro attorno al paddock
   {const e=rider(W,true);const a=pathAgent(W,e,Path(rect(36,19,15,16.5),true),{speed:3.2,stopR:6,colR:.75,colOff:.7,two:true});a.label=label(e,EQ.randName(true),3.15);}
   // pulizia alla seconda posta
-  {const sp=S.posta2.horse;const h=horseOnly(W);h.root.position.set(sp.x,0,sp.z);h.root.rotation.y=sp.h;h.addDirt(6);
+  {const sp=S.posta2.horse;const h=horseOnly(W);(W.petHorses=W.petHorses||[]).push({h,name:pick(EQ.HORSE_NAMES)});h.root.position.set(sp.x,0,sp.z);h.root.rotation.y=sp.h;h.addDirt(6);
    const e=addTo(W,person(Object.assign(riderOpts(true),{helmet:null,hairStyle:'pony'})));const lx=Math.cos(sp.h),lz=-Math.sin(sp.h);
    const brush=mesh(G.box(.07,.05,.14),mat(0x8a5a34,.7),0,0,.02,e.npc.handR);
    const a=staticAgent(W,e,sp.x+lx,sp.z+lz,sp.h-Math.PI/2,(dt,t,a)=>{const al=Math.sin(t*.25)*1.1;a.x=sp.x+lx*1.0+Math.sin(sp.h)*al;a.z=sp.z+lz*1.0+Math.cos(sp.h)*al;e.root.position.set(a.x,0,a.z);
@@ -150,7 +151,7 @@ EQ.populate.yard=function(W){
    a.extra=[h.root];a.label=label(e,EQ.randName(true),2.1);
    const c={x:sp.x,z:sp.z,r:1.2};W.colliders.push(c);}
   // doccia alla seconda postazione
-  {const sp=S.wash2.horse;const h=horseOnly(W);h.root.position.set(sp.x,0,sp.z);h.root.rotation.y=sp.h;
+  {const sp=S.wash2.horse;const h=horseOnly(W);(W.petHorses=W.petHorses||[]).push({h,name:pick(EQ.HORSE_NAMES)});h.root.position.set(sp.x,0,sp.z);h.root.rotation.y=sp.h;
    const e=addTo(W,person({fem:false,top:0x2a58c8,pants:0x2c3e66,boots:0x2f6b33}));const lx=Math.cos(sp.h),lz=-Math.sin(sp.h);
    const hose=mesh(G.cyl(.02,.025,.22,8),mat(0x3cb043,.5),0,-.07,.06,e.npc.handR);hose.rotation.x=1.4;
    const drops=EQ.Particles(160,.08,0xcfeeff,{floor:.03});W.group.add(drops.obj);
@@ -190,7 +191,8 @@ EQ.populate.yard=function(W){
   // cavalli liberi nei recinti in terra
   (S.dirtPads||[]).forEach(pd=>{for(let i=0;i<2;i++){const h=horseOnly(W,{});const e={root:h.root,anim:(dt,sp,a,t)=>h.animate(dt,{speed:sp,eat:sp<.2&&Math.sin(t*.2+a.tx)>-.3?1:0,graze:1})};
     const a=wanderAgent(W,e,{x:pd.x,z:pd.z,hx:pd.hx-2.5,hz:pd.hz-2.5},{speed:1.2,run:4,idle:[4,14],step:8,far:170});
-    const c={x:0,z:0,r:.9};W.colliders.push(c);const u=a.update;a.update=(dt,t,p,d)=>{u(dt,t,p,d);c.x=a.x;c.z=a.z;};}});
+    const c={x:0,z:0,r:.9};W.colliders.push(c);const u=a.update;a.update=(dt,t,p,d)=>{u(dt,t,p,d);c.x=a.x;c.z=a.z;};
+    (W.freeHorses=W.freeHorses||[]).push({h,agent:a,col:c,home:{x:pd.x,z:pd.z},name:pick(EQ.HORSE_NAMES)});}});
   // persone che passeggiano nel maneggio
   for(let i=0;i<3;i++){const fem=Math.random()<.5;const e=addTo(W,person({fem}));const a=wanderAgent(W,e,{x:-10,z:6,hx:30,hz:6},{speed:1.2,idle:[3,9],step:12,cols:.3});a.label=label(e,EQ.randName(fem),2.15);addCol(W,a,.35);}
 };
