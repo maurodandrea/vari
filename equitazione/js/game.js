@@ -862,7 +862,7 @@ function enterVeh(V){
   const D=VEH[V.kind];V.g.add(P.root);P.root.position.set(D.seat[0],D.seat[1],D.seat[2]);P.root.rotation.set(0,0,0);P.pose(1,D.pose,{snap:true});
   G.veh=V;G.state='drive';setTouchMode('foot');$('gait').classList.add('on');snapCam();
   if(V.kind==='car'){EQ.sfx.buckle();setTimeout(()=>EQ.sfx.engine(.5),300);}else EQ.sfx.click();
-  if(!G.navTo&&W().portals)setTimeout(()=>msg('🧭 Tocca "Dove vuoi andare?"<small>per scegliere città, bosco o spiaggia</small>',2.8),2400);
+  setTimeout(()=>{if(!G.navTo&&G.veh&&W().portals)msg('🧭 Scegli dove andare<small>tocca il pulsante 🧭</small>',2.6);},2400);
   msg({car:'🚗 Si parte!',bike:'🚲 Pedala!',scooter:'🛴 Via!',moto:'🏍️ Brum brum!'}[V.kind]+'<small>trascina in su per andare, in giù per frenare</small>',2.2);
 }
 function leaveVeh(quiet){const V=G.veh;if(!V)return;G.veh=null;EQ.loop('myengine',0);
