@@ -415,14 +415,14 @@ const sleep=s=>new Promise(r=>setTimeout(r,s*1000));
 function pose(name){AN.target=name;}
 function walkTo(x,z,speed=1.4){return new Promise(res=>{AN.walkTarget={x,z,res};AN.speed=speed;AN.moving=true;});}
 function faceSea(){AN.faceTo=0;}
-async function standUp(){if(AN.target!=='sit')return;pose('stand');AN.pos.z-=.05;await sleep(.7);}
-async function sitDown(){AN.faceTo=0;pose('sit');await sleep(.7);}
-async function goToRod(i,run){const r=st.rods[i];await standUp();await walkTo(r.x+.55,ROD_Z+1.3,run?3.4:1.5);AN.faceTo=0;await sleep(.25);}
+async function standUp(){if(AN.target!=='sit')return;pose('stand');AN.pos.z-=.05;await sleep(.4);}
+async function sitDown(){AN.faceTo=0;pose('sit');await sleep(.45);}
+async function goToRod(i,run){const r=st.rods[i];await standUp();await walkTo(r.x+.55,ROD_Z+1.3,run?4.6:2.8);AN.faceTo=0;await sleep(.25);}
 async function pickRod(i){const r=st.rods[i];pose('bend');await sleep(.55);r.held=true;AN.holding=i;pose('hold');await sleep(.5);}
 async function putRod(i){const r=st.rods[i];pose('bend');await sleep(.55);r.held=false;AN.holding=-1;placeRodOnSpike(r);pose('stand');await sleep(.4);}
-async function stepBack(i){const r=st.rods[i];await walkTo(r.x+.9,ROD_Z+3,1.2);AN.faceTo=0;pose('stand');}
+async function stepBack(i){const r=st.rods[i];await walkTo(r.x+.9,ROD_Z+3,2);AN.faceTo=0;pose('stand');}
 G.sit=()=>seq(async()=>{st.phase='busy';st.msg='';setUI();if(AN.holding>=0)await putRod(AN.holding);await backToChair();LOOK.yaw=0;LOOK.pitch=0;st.msg='';st.phase='wait';setUI();});
-async function backToChair(){await walkTo(CHAIR.x,CHAIR.z-.05,1.4);await sitDown();}
+async function backToChair(){await walkTo(CHAIR.x,CHAIR.z-.05,2.8);await sitDown();}
 const seq=async f=>{if(st.busy)return;st.busy=true;try{await f();}finally{st.busy=false;if(st.phase==='wait')setUI();}};
 
 G.rod=i=>seq(async()=>{st.sel=i;const r=st.rods[i];st.phase='busy';st.msg=r.state==='bite'||r.state==='hooked'?'🏃 Corre alla canna!':'🚶 Va alla canna '+(i+1)+'…';setUI();
