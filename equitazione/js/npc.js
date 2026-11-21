@@ -124,6 +124,7 @@ EQ.buildNPC=function(o){
     else if(name==='swim'){g.sh[0]=[time*4%TAU-Math.PI,.25];g.sh[1]=[(time*4+Math.PI)%TAU-Math.PI,-.25];g.th=[[Math.sin(time*6)*.3,.1],[-Math.sin(time*6)*.3,-.1]];}
     else if(name==='crouch'){g.hy=.42*s;g.th=[[-1.9,.25],[-1.9,-.25]];g.kn=[2.4,2.4];g.lean=.5;g.sh=[[-1.2+Math.sin(time*3)*.2,.2],[-1.2-Math.sin(time*3)*.2,-.2]];}
     else if(name==='wave'){g.sh[1]=[0,-2.6+Math.sin(time*9)*.35];}
+    else if(name==='talk'){g.sh[1]=[-.6+Math.sin(time*4)*.25,-.25];g.sh[0]=[-.3+Math.cos(time*3)*.15,.2];}
     else if(name==='feed'){g.sh[1]=[-1.35,-.1];}
     else if(name==='play'){N.phase+=dt*8;g.sh=[[Math.sin(N.phase)*1.2,.4],[-Math.sin(N.phase)*1.2,-.4]];g.hy=hipY+Math.abs(Math.sin(N.phase))*.12*s;}
     const J=N.J,L=(a,b)=>U.lerp(a,b,t);
@@ -164,6 +165,7 @@ EQ.buildDog=function(o){
   const legs=[];
   for(const [x,z] of [[.06,.2],[-.06,.2],[.06,-.22],[-.06,-.22]]){const l=new THREE.Group();l.position.set(x*s,0,z*s);body.add(l);
     const g=T(X(G.cyl(.028,.022,lh,6),0,-lh/2,0),c);const m=new THREE.Mesh(g,NPCMAT);l.add(m);legs.push(l);}
+  root.userData.pet='cane';
   const D={root,body,legs,ph:Math.random()*9,s};
   D.animate=function(dt,sp){D.ph+=dt*(4+sp*3)*Math.min(1,sp/.2);const a=Math.min(.7,sp*.3);
     legs.forEach((l,i)=>l.rotation.x=Math.sin(D.ph+(i===0||i===3?0:Math.PI))*a);body.position.y=lh+Math.abs(Math.sin(D.ph))*.02*Math.min(1,sp);};
@@ -179,10 +181,11 @@ const AN={
   rabbit:{len:.13,lh:.06,r:.09,col:0x8a7a66,belly:0xe8e0d0,neck:.02,head:.07,ears:.13,tail:'puff',hop:true},
   squirrel:{len:.09,lh:.05,r:.055,col:0xa0522d,belly:0xf2e2c8,neck:.02,head:.05,ears:.03,tail:'curl',hop:true},
   cow:{len:.85,lh:.72,r:.33,col:0xf2f0ea,belly:0xf2f0ea,neck:.25,head:.2,ears:.08,tail:'thin',spots:0x1a1a1a,horns:true},
+  cat:{len:.17,lh:.15,r:.075,col:0xd9782a,belly:0xf2ece2,neck:.05,head:.075,ears:.06,tail:'up'},
   sheep:{len:.45,lh:.42,r:.26,col:0xf2eee4,belly:0xe8e2d4,neck:.1,head:.11,ears:.06,tail:'puff',face:0x2a2420},
 };
-EQ.buildAnimal=function(kind){
-  const S=AN[kind],root=new THREE.Group(),body=new THREE.Group();body.position.y=S.lh;root.add(body);
+EQ.buildAnimal=function(kind,ov){
+  const S=Object.assign({},AN[kind],ov||{}),root=new THREE.Group(),body=new THREE.Group();body.position.y=S.lh;root.add(body);
   const P=[],L=S.len,r=S.r,c=S.col;
   P.push(T(loft([[0,.02,-L-.02,r*.3],[0,.02,-L,r*.75,r*.8,r*.85],[0,0,-L*.4,r,r*.95,r],[0,.02,L*.4,r*.95,r,r],[0,.05,L,r*.75,r*.8,r*.85],[0,.06,L+.02,r*.3]],12,3),c));
   P.push(T(loft([[0,-r*.55,-L*.5,r*.6,r*.1,r*.25],[0,-r*.55,L*.5,r*.6,r*.1,r*.25]],8,2),S.belly));
@@ -199,6 +202,7 @@ EQ.buildAnimal=function(kind){
   if(S.tail==='short')P.push(T(X(G.sph(.06,6,5),0,.08,-L-.02,0,0,0,1,1.4,.7),0xf6f2ea));
   if(S.tail==='bushy'){P.push(T(loft([[0,.03,-L,.03],[0,-.05,-L-.18,.07],[0,-.08,-L-.38,.06],[0,-.08,-L-.46,.02]],8,2),c));P.push(T(X(G.sph(.04,6,5),0,-.08,-L-.44),0xf6f2ea));}
   if(S.tail==='thin')P.push(T(X(G.cyl(.015,.01,.45,5),0,-.15,-L-.06,.3,0,0),c));
+  if(S.tail==='up')P.push(T(loft([[0,.02,-L,.022],[0,.12,-L-.08,.025],[0,.3,-L-.1,.022],[0,.38,-L-.04,.012]],8,2),c));
   if(S.tail==='puff')P.push(T(X(G.sph(r*.35,6,5),0,.05,-L-.02),0xf6f2ea));
   if(S.tail==='curl')P.push(T(loft([[0,0,-L,.02],[0,.12,-L-.08,.045],[0,.24,-L-.04,.05],[0,.28,-L+.04,.03]],8,2),c));
   const bm=new THREE.Mesh(EQ.merge(P),NPCMAT);bm.castShadow=true;body.add(bm);
@@ -206,6 +210,7 @@ EQ.buildAnimal=function(kind){
   for(const [x,z] of [[r*.55,L*.72],[-r*.55,L*.72],[r*.55,-L*.72],[-r*.55,-L*.72]]){const l=new THREE.Group();l.position.set(x,-r*.3,z);body.add(l);
     const g=EQ.merge([T(X(G.cyl(lr*1.2,lr*.8,S.lh-r*.3+.02,6),0,-(S.lh-r*.3)/2,0),c),T(X(G.cyl(lr*.9,lr,.04,6),0,-(S.lh-r*.3),0),0x2a2220)]);
     const m=new THREE.Mesh(g,NPCMAT);m.castShadow=true;l.add(m);legs.push(l);}
+  if(kind==='cat')root.userData.pet='gatto';
   const A={root,body,legs,ph:Math.random()*9,S,kind};
   A.animate=function(dt,sp){
     if(S.hop){A.ph+=dt*sp*4;const k=Math.abs(Math.sin(A.ph));body.position.y=S.lh+(sp>.2?k*S.lh*2.5:0);legs.forEach((l,i)=>l.rotation.x=(i<2?-1:1)*k*.8*Math.min(1,sp));return;}
@@ -214,6 +219,7 @@ EQ.buildAnimal=function(kind){
   return A;
 };
 
+EQ.buildCat=function(){return EQ.buildAnimal('cat',{col:pick([0xd9782a,0x2a2a2a,0x8a8a8a,0xf2eee6,0x6b4a30,0xc8a070])});};
 /* ============ VEICOLI ============ */
 const PROF={
   hatch:{L:3.8,W:1.72,b:[[-1.9,.32],[-1.97,.58],[-1.92,.98],[-1.6,1.45],[-.1,1.5],[.7,1.4],[1.3,1.0],[1.88,.9],[1.97,.58],[1.9,.32]],w:[[-1.6,1.0],[-1.48,1.4],[-.1,1.45],[.68,1.36],[1.22,1.0]],wh:[-1.25,1.25],wr:.32},

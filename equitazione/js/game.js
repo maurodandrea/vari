@@ -132,11 +132,15 @@ $('nameIn').addEventListener('change',e=>setName(e.target.value));$('nameIn').ad
 $('nameIn').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')e.target.blur();});
 $('nameIn2').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')$('nameOk').click();});
 $('nameOk').addEventListener('click',()=>{const v=setName($('nameIn2').value);if(!v){$('nameIn2').focus();$('nameIn2').style.borderColor='#d62828';return;}EQ.audio();$('nameBox').classList.remove('on');$('menu').classList.add('on');});
-function setGender(g){LS.set('pgender',g);P.setGender(g);document.querySelectorAll('.gbtn').forEach(b=>b.classList.toggle('sel',b.dataset.g===g));$('gTog').textContent=g==='m'?'👦':'👧';}
+function setGender(g){LS.set('pgender',g);P.setGender(g);
+  if(g==='m'){const o=P.outfit,pk=[0xe86aa6,0xe25d9a,0xf08cb8,0x7b3fb0,0x5b2a86],ch={};
+    if(/0xf08cb8|0x5b2a86/.test(String(o.top)))ch.top='polo:0x2c3e66';if(pk.includes(o.helmet))ch.helmet=0x1b1b22;if(pk.includes(o.protector))ch.protector=0x23407f;if(pk.includes(o.gloves))ch.gloves=0x1a1a1a;
+    if(Object.keys(ch).length){P.setOutfit(ch);persist();}}document.querySelectorAll('.gbtn').forEach(b=>b.classList.toggle('sel',b.dataset.g===g));$('gTog').textContent=g==='m'?'👦':'👧';}
 document.querySelectorAll('.gbtn').forEach(b=>b.addEventListener('click',()=>{EQ.audio();setGender(b.dataset.g);}));
 $('gTog').addEventListener('click',()=>{EQ.audio();setGender(EQ.gender()==='m'?'f':'m');renderMenu();});
 setGender(EQ.gender());
 function toMenu(){
+  G.sit=null;G.ia=null;
   releaseGuest();
   cleanupTrip();endCourse(true);closeAct(true);
   G.state='menu';G.cur=null;G.leading=false;G.didRide=false;
@@ -200,6 +204,7 @@ function followCam(x,y,z,yaw,dist,h,lookAhead,lookY,dt,k){
 
 /* ======================= A PIEDI ======================= */
 function footUpdate(dt){
+  if(G.sit||G.ia){socialFoot(dt);return;}
   const inp=G.busy?{x:0,y:0}:EQ.readInput();const m=Math.min(1,Math.hypot(inp.x,inp.y));
   let tsp=0;
   if(m>.15){const want=F.camYaw-Math.atan2(inp.x,-inp.y);F.h+=U.wrapA(want-F.h)*Math.min(1,dt*9);tsp=m>.8?3.8:1.6;}
@@ -210,6 +215,8 @@ function footUpdate(dt){
   const H=G.cur;
   if(H&&!G.leading&&H.where!=='box'){const fx=Math.sin(H.h),fz=Math.cos(H.h);EQ.collide(p,.3,[{x:H.x,z:H.z,r:.55},{x:H.x+fx*.7,z:H.z+fz*.7,r:.45},{x:H.x-fx*.7,z:H.z-fz*.7,r:.45},{x:H.x+fx*1.5,z:H.z+fz*1.5,r:.25}]);}
   const b=W().bounds;if(b){p.x=U.clamp(p.x,b.x0,b.x1);p.z=U.clamp(p.z,b.z0,b.z1);}
+  if(W().boundR){const d=Math.hypot(p.x,p.z);if(d>W().boundR){p.x*=W().boundR/d;p.z*=W().boundR/d;}}
+  if(W().deep!=null&&W().height(p.x,p.z)<-.5){p.x=px;p.z=pz;}
   F.x=p.x;F.z=p.z;
   const realSp=Math.hypot(F.x-px,F.z-pz)/Math.max(dt,1e-4);
   P.root.position.set(F.x,W().height(F.x,F.z),F.z);P.root.rotation.y=F.h;
@@ -248,11 +255,12 @@ function mountBlock(){const H=G.cur;
   return null;}
 function yardActions(){
   const A=[], H=G.cur;
+  if(G.world!==yard){if(G.leading)A.push({id:'mount',icon:'🏇',label:'Monta',fn:startMount,dis:mountBlock()});socialActions(A,false);return A;}
   if(near(Y.selleria,2.6))A.push({id:'dress',icon:'👕',label:'Spogliatoio',fn:startDress,dis:G.leading?'Prima lega il cavallo<small>alla posta o rimettilo nel box</small>':null});
   Y.boxes.forEach((b,i)=>{if(!near(b.front,2.3))return;const h=horses[i];
     if(h.where==='box'){
       A.push({id:'feed'+i,icon:'🥕',label:'Dai da mangiare',fn:()=>startFeed(i)});
-      A.push({id:'pet'+i,icon:'💛',label:'Accarezza '+h.def.name,fn:()=>pet(h)});
+      A.push({id:'pet'+i,icon:'💛',label:'Accarezza '+h.def.name,fn:()=>startPet({head:h.head,H:h,name:h.def.name})});
       if(!H)A.push({id:'out'+i,icon:'🐴',label:'Porta fuori '+h.def.name,fn:()=>takeOut(i)});
     } else if(G.leading&&H===h)A.push({id:'in'+i,icon:'🏠',label:'Rimetti nel box',fn:putBack});
   });
@@ -267,10 +275,64 @@ function yardActions(){
   if(H&&(H.where==='posta'||H.where==='wash')&&near({x:H.x,z:H.z},3.6))A.push({id:'untie',icon:'🔓',label:'Slega',fn:untie});
   if(H&&H.guest&&G.leading)A.push({id:'letgo',icon:'🌿',label:'Lascia libero '+H.def.name,fn:letGo});
   if(!G.leading){const fh=nearFree(3.8);
-    if(fh){A.push({id:'petf',icon:'💛',label:'Accarezza '+fh.name,fn:()=>pet(fh.h)});
+    if(fh){A.push({id:'petf',icon:'💛',label:'Accarezza '+fh.name,fn:()=>startPet({head:fh.h.head,H:fh.h,name:fh.name,agent:fh.agent})});
       A.push({id:'ridef',icon:'🏇',label:'Monta '+fh.name,fn:()=>adopt(fh),dis:H?'Prima rimetti '+H.def.name+' nel box':(!P.ready()?'Per sicurezza servono casco e corpetto!<small>vai allo spogliatoio</small>':null)});}
-    else if(!A.some(a=>a.id.startsWith('pet'))){const ph=nearPet(3.4);if(ph)A.push({id:'peth',icon:'💛',label:'Accarezza '+ph.def.name,fn:()=>{pet(ph);if(ph.hh){ph.hh.ly=0;ph.hh.lx=.45;ph.hh.bt=3;}}});}}
+    else if(!A.some(a=>a.id.startsWith('pet'))){const ph=nearPet(3.4);if(ph)A.push({id:'peth',icon:'💛',label:'Accarezza '+ph.def.name,fn:()=>{startPet({head:ph.head,name:ph.def.name});if(ph.hh){ph.hh.ly=0;ph.hh.lx=.45;ph.hh.bt=3;}}});}}
+  socialActions(A,false);
   return A;
+}
+/* ---- persone, animali, sedie ---- */
+const TALK=['Che bel cavallo!','Oggi è una giornata perfetta per cavalcare.','Hai visto i cervi nel bosco?','Al mare si galoppa sulla riva, è stupendo!','In città le auto si fermano per i cavalli.','Domani faccio la gara di salto!','Ricordati di pulire gli zoccoli!','Il mio cavallo adora le carote.','Ci vediamo al club house per una merenda?','Dalla strada a nord si arriva in città.','Il sentiero a est porta alla spiaggia.','Nel bosco ci sono anche i cinghiali!','Hai già fatto la doccia al tuo cavallo?','Che caldo oggi, ci vorrebbe un gelato!','In campo stanno saltando gli ostacoli.'];
+const TALK_KID=['Giochiamo a rincorrerci!','Mi fai accarezzare il cavallo?','Da grande voglio fare le gare di salto!','Hai visto il gatto? È velocissimo!','Io ho un pony che si chiama Biscotto!'];
+function socialTargets(){const pp=G.state==='ride'?{x:R.x,z:R.z}:{x:F.x,z:F.z};let per=null,pd=G.state==='ride'?4.5:2.8,pet=null,ptd=2.2;
+  for(const a of (W().agents||[])){if(a.disabled||!a.ent.root.visible)continue;const e=a.ent;
+    if(e.npc&&!e.horse){const d=Math.hypot(a.x-pp.x,a.z-pp.z);if(d<pd){pd=d;per=a;}}
+    const cands=[];if(e.root.userData.pet)cands.push(e.root);if(a.extra)a.extra.forEach(o=>{if(o.userData&&o.userData.pet)cands.push(o);});
+    cands.forEach(o=>{const d=Math.hypot(o.position.x-pp.x,o.position.z-pp.z);if(d<ptd){ptd=d;pet={o,a};}});}
+  return {per,pet};}
+function socialActions(A,riding){
+  if(G.busy)return;const {per,pet}=socialTargets();
+  if(per){const nm=per.ent.name||(per.ent.name=EQ.randName(per.ent.npc.o.fem));
+    A.push({id:'hi'+nm,icon:'👋',label:'Saluta '+nm,fn:()=>interact(per,'wave')});
+    A.push({id:'talk'+nm,icon:'💬',label:'Parla',fn:()=>interact(per,'talk')});
+    if(!riding)A.push({id:'play'+nm,icon:'⚽',label:'Gioca',fn:()=>interact(per,'play')});}
+  if(pet&&!riding){const k=pet.o.userData.pet;A.push({id:'petan',icon:'🐾',label:'Accarezza il '+k,fn:()=>{const o=pet.o;startPet({root:o,low:true,name:'il '+k,agent:pet.a,sound:k==='cane'?EQ.sfx.bark:EQ.sfx.meow});}});}
+  if(!riding&&!G.leading&&W().seats){for(const st of W().seats){if(Math.hypot(st.x-F.x,st.z-F.z)<1.8){A.push({id:'sit',icon:'🪑',label:'Siediti',fn:()=>{G.sit=st;msg('Che bello riposarsi un po\'!',1.6);}});break;}}}
+}
+function interact(a,kind){
+  const e=a.ent,n=e.npc,nm=e.name;a.talkT=kind==='play'?4:3.2;
+  const pp=G.state==='ride'?{x:R.x,z:R.z}:{x:F.x,z:F.z};
+  if(G.state==='foot')G.ia={kind,t:a.talkT,tx:a.x,tz:a.z};
+  if(kind==='wave'){a.talkPose='wave';msg('👋 '+nm+': <small>Ciao '+EQ.pname()+'!</small>',2.4);EQ.sfx.ok();}
+  else if(kind==='talk'){a.talkPose='talk';const L=n.o.kid?TALK_KID:TALK;msg('💬 '+nm+'<small>“'+EQ.pick(L)+'”</small>',3.4);EQ.sfx.click();}
+  else{a.talkPose='play';msg('🎉 Giochi con '+nm+'!',2.4);EQ.sfx.kids();}
+}
+function startPet(o){
+  const p=new V3();(o.head||o.root).getWorldPosition(p);
+  G.ia={kind:o.low?'petlow':'pet',t:2.6,tx:p.x,tz:p.z,o};
+  if(o.agent)o.agent.talkT=2.8;
+  if(o.H&&o.H.wait!=null)o.H.wait=Math.max(o.H.wait,3);
+  if(o.H){o.H.st=Object.assign(o.H.st||{},{neckX:.3,headX:.15});setTimeout(()=>{if(o.H.st){o.H.st.neckX=0;o.H.st.headX=0;}},2600);if(o.H.stats)stat(o.H,'happy',6);}
+  setTimeout(()=>{for(let i=0;i<8;i++)FX.heart.emit(p.x,p.y+.35,p.z,rnd(-.4,.4),rnd(.8,1.5),rnd(-.4,.4),1.2);(o.sound||EQ.sfx.snort)();},700);
+  msg('💛 '+(o.name||'')+' è contento!',2);if(o.H&&o.H.stats)persist();
+}
+function socialFoot(dt){
+  if(G.sit){const st=G.sit;F.x=st.x;F.z=st.z;F.h=st.h;F.sp=0;
+    P.root.position.set(st.x,st.y,st.z);P.root.rotation.y=st.h;P.pose(dt,'sit',{talk:Math.sin(T*.7)>.6});
+    F.camYaw+=U.wrapA(st.h-F.camYaw)*Math.min(1,dt*1.5);
+    followCam(st.x,st.y,st.z,F.camYaw,EQ.portrait?4.6:3.8,EQ.portrait?2.3:1.9,.8,.9,dt,4);
+    const inp=EQ.readInput();
+    if(!G.busy)setActions([{id:'up',icon:'⬆️',label:'Alzati',fn:()=>{G.sit=null;F.x=st.x-Math.sin(st.h)*.9;F.z=st.z-Math.cos(st.h)*.9;}}]);return;}
+  const ia=G.ia;ia.t-=dt;
+  const dx=ia.tx-F.x,dz=ia.tz-F.z,d=Math.hypot(dx,dz);const want=Math.atan2(dx,dz);F.h+=U.wrapA(want-F.h)*Math.min(1,dt*8);
+  const stop=ia.kind==='pet'?.85:ia.kind==='petlow'?.55:1.3;
+  if(d>stop+.05){const k=Math.min(1,dt*3);F.x+=dx/d*(d-stop)*k;F.z+=dz/d*(d-stop)*k;const p={x:F.x,z:F.z};EQ.collide(p,.25,W().colliders.filter(c=>!c.fence));F.x=p.x;F.z=p.z;}
+  P.root.position.set(F.x,W().height(F.x,F.z),F.z);P.root.rotation.y=F.h;
+  P.pose(dt,ia.kind==='wave'?'wave':ia.kind==='talk'?'talk':ia.kind==='play'?'play':ia.kind,{});
+  if(G.leading)leadUpdate(dt);
+  followCam(F.x,W().height(F.x,F.z),F.z,F.camYaw,EQ.portrait?5.6:4.6,EQ.portrait?2.6:2.1,1.2,1.15,dt,5);
+  if(ia.t<=0)G.ia=null;
+  if(!G.busy)setActions([]);
 }
 /* ---- cavalli degli altri: accarezzare e montare ---- */
 const paddockFree=paddockHorses.map(h=>({h,pad:true,home:{x:h.x,z:h.z},name:EQ.pick(EQ.HORSE_NAMES)}));
@@ -349,7 +411,6 @@ function mountNow(){const H=G.cur;H.where='ride';G.state='ride';G.leading=false;
 function applyRideDirt(H){const dirt=Math.round(G.rideDirt||0);if(dirt>0){H.addDirt(Math.min(20,dirt));stat(H,'clean',-Math.min(80,dirt*4));}G.rideDirt=0;}
 function dismount(){
   const H=G.cur;
-  if(G.world!==yard){msg('Scendi al maneggio',1.4);return;}
   detachRider();H.where='lead';G.leading=true;H.reins.visible=false;applyRideDirt(H);H.setTack({halter:!H.tack.bridle});
   const lx=Math.cos(R.h),lz=-Math.sin(R.h);
   F.x=R.x+lx*1.1+Math.sin(R.h)*.6;F.z=R.z+lz*1.1+Math.cos(R.h)*.6;F.h=R.h;F.camYaw=R.h;F.sp=0;
@@ -438,6 +499,8 @@ function rideUpdate(dt){
       if(R.sp<2)A.push({id:'down',icon:'⬇️',label:'Scendi',fn:dismount});
       if(Math.abs(R.x-AR.cx)<AR.hx&&Math.abs(R.z-AR.cz)<AR.hz)A.push({id:'race',icon:'🏆',label:'Gara',fn:()=>{G.state='modal';renderMenu();$('course').classList.add('on');}});
     }
+    else if(G.world!==yard&&R.sp<2)A.push({id:'down',icon:'⬇️',label:'Scendi',fn:dismount});
+    socialActions(A,true);
     setActions(A);}
 }
 EQ.onRightTap=()=>{if(G.state==='ride'){EQ.input.jumpQ=.18;const j=$('jumpBtn');j.classList.add('press');setTimeout(()=>j.classList.remove('press'),120);}};

@@ -27,6 +27,10 @@ function agents(W){
     for(const a of list){
       const d=p?Math.hypot(a.x-p.x,a.z-p.z):0;
       if(a.disabled)continue;
+      if(a.talkT>0){a.talkT-=dt;a.near=p?Math.hypot(a.x-p.x,a.z-p.z):0;const e=a.ent;
+        if(p&&!e.horse){const ang=Math.atan2(p.x-a.x,p.z-a.z);a.h+=U.wrapA(ang-a.h)*Math.min(1,dt*6);if(e.place)e.place(a.x,e.root.position.y,a.z,a.h);else e.root.rotation.y=a.h;}
+        if(e.npc&&!e.horse)e.npc.pose(dt,a.talkPose||'stand',{speed:0});else if(e.anim&&!e.npc)e.anim(dt,0,a,t);
+        if(e.wag)e.wag(dt,t);if(a.label)a.label.visible=true;continue;}
       a.near=d;const vis=d<a.far;
       if(a.ent.root.visible!==vis)a.ent.root.visible=vis;
       if(a.extra)a.extra.forEach(o=>o.visible=vis);
@@ -95,7 +99,7 @@ function staticAgent(W,ent,x,z,h,anim,o){
 
 /* ---------- entità ---------- */
 function person(o){const n=EQ.buildNPC(o);return {root:n.root,npc:n,anim(dt,sp,a,t,mode){n.pose(dt,mode||(sp>.12?(sp>2.6?'run':'walk'):'stand'),{speed:sp});}};}
-function label(ent,name,y){const s=EQ.nameSprite(name);s.position.y=y;ent.root.add(s);return s;}
+function label(ent,name,y){ent.name=name;const s=EQ.nameSprite(name);s.position.y=y;ent.root.add(s);return s;}
 const RIDE_TOPS=[0x1c2a55,0x5b2a86,0xffffff,0xf08cb8,0x3fae7a,0x111111,0xc0392b,0x2a58c8];
 const HELMETS=[0x1b1b22,0x1f3b7a,0xe86aa6,0xf5f5f5,0x2f6b33,0x5b2a86];
 function riderOpts(fem){return {fem,helmet:pick(HELMETS),top:pick(RIDE_TOPS),pants:pick([0xf4f4f2,0xd9c7a5,0x2a2a30,0x2c3e66]),boots:pick([0x141414,0x5a3418]),sleeves:pick(['short','long']),gloves:0x1a1a1a,glasses:false};}
@@ -193,6 +197,12 @@ EQ.populate.yard=function(W){
     const a=wanderAgent(W,e,{x:pd.x,z:pd.z,hx:pd.hx-2.5,hz:pd.hz-2.5},{speed:1.2,run:4,idle:[4,14],step:8,far:170});
     const c={x:0,z:0,r:.9};W.colliders.push(c);const u=a.update;a.update=(dt,t,p,d)=>{u(dt,t,p,d);c.x=a.x;c.z=a.z;};
     (W.freeHorses=W.freeHorses||[]).push({h,agent:a,col:c,home:{x:pd.x,z:pd.z},name:pick(EQ.HORSE_NAMES)});}});
+  // gatti del maneggio
+  for(let i=0;i<5;i++){const c=EQ.buildCat();W.group.add(c.root);wanderAgent(W,{root:c.root,anim:(dt,sp)=>c.animate(dt,sp)},i<3?{x:-35,z:15.6,hx:16,hz:1.2}:{x:8,z:12,hx:7,hz:4},{speed:.8,run:3,idle:[3,10],step:6,far:90});}
+  // sedie del club house (una libera per tavolo)
+  W.seats=W.seats||[];
+  for(let i=-1;i<=1;i++){const tx=14+i*4,tz=18.5;for(const [dx,dz] of [[0,-.8],[0,.8],[-.8,0],[.8,0]]){mesh(G.box(.42,.06,.42),mat(0x6b4a2a,.7),tx+dx,.45,tz+dz,W.group);mesh(G.cyl(.03,.03,.45,6),mat(0x333333,.4,.6),tx+dx,.22,tz+dz,W.group);}
+    W.seats.push({x:tx+.8,z:tz,h:-Math.PI/2,y:0});}
   // persone che passeggiano nel maneggio
   for(let i=0;i<3;i++){const fem=Math.random()<.5;const e=addTo(W,person({fem}));const a=wanderAgent(W,e,{x:-10,z:6,hx:30,hz:6},{speed:1.2,idle:[3,9],step:12,cols:.3});a.label=label(e,EQ.randName(fem),2.15);addCol(W,a,.35);}
 };
@@ -296,7 +306,7 @@ EQ.populate.forest=function(W){
     W.group.add(q);const ent={root:q,anim:(dt,sp,a,t)=>{e.npc.pose(dt,'quad',{bob:Math.sin(t*14)*.01*Math.min(1,sp)});if(a.near<45&&sp>1&&Math.random()<dt*10)EQ.sfx.engine(sp/8);}};
     const P2=Path(W.roads[i],false);const a=pathAgent(W,ent,P2,{speed:rnd(6,9),lat:-1.3,stopR:12,stopW:3,pause:8,far:200});addCol(W,a,.9);}
   // famiglia al picnic
-  if(W.spots.picnic){const pc=W.spots.picnic;const vars=bakedVariants(4,'sit',()=>({}));placeBaked(W,vars,[{x:pc.x,y:H(pc.x,pc.z-1.6),z:pc.z-1.6,ry:0},{x:pc.x+.7,y:H(pc.x,pc.z-1.6),z:pc.z-1.6,ry:0},{x:pc.x,y:H(pc.x,pc.z+.6),z:pc.z+.6,ry:Math.PI}]);
+  if(W.spots.picnic){const pc=W.spots.picnic;W.seats=W.seats||[];W.seats.push({x:pc.x-.5,z:pc.z+1.6,h:Math.PI,y:H(pc.x,pc.z+1.6)});const vars=bakedVariants(4,'sit',()=>({}));placeBaked(W,vars,[{x:pc.x,y:H(pc.x,pc.z-1.6),z:pc.z-1.6,ry:0},{x:pc.x+.7,y:H(pc.x,pc.z-1.6),z:pc.z-1.6,ry:0},{x:pc.x,y:H(pc.x,pc.z+.6),z:pc.z+.6,ry:Math.PI}]);
     for(let i=0;i<2;i++){const e=addTo(W,person({kid:true}));const a=wanderAgent(W,e,{x:pc.x+4,z:pc.z,hx:5,hz:5},{speed:2.5,idle:[.5,2],step:4});e.anim=(dt,sp)=>e.npc.pose(dt,sp>.2?'run':'play',{speed:sp});}}
 };
 
@@ -360,9 +370,11 @@ EQ.populate.city=function(W){
     let kt=0;W.updaters.push((dt,t,p)=>{kt-=dt;if(kt<0){kt=rnd(2,5);if(p&&Math.hypot(p.x-sc.x,p.z-sc.z)<60)EQ.sfx.kids();}});}
   // gente seduta ai tavolini e sulle panchine
   {const vars=bakedVariants(8,'sit',()=>({}));const L=[];
-   for(let i=0;i<6;i++){const x=-15+(i%2)*3.2,z=-12+(i>>1)*5;for(const [dx,ry] of [[-.7,Math.PI/2],[.7,-Math.PI/2]])if(Math.random()<.8)L.push({x:x+dx,y:.15,z,ry});}
+   for(let i=0;i<6;i++){const x=-15+(i%2)*3.2,z=-12+(i>>1)*5;for(const [dx,ry] of [[-.7,Math.PI/2]])if(Math.random()<.8)L.push({x:x+dx,y:.15,z,ry});}
    blocks.filter(b=>b.type==='park'||b.type==='park2').forEach(b=>{for(let i=0;i<4;i++){if(Math.random()<.4)continue;const a=i*Math.PI/2,x=b.x+Math.cos(a)*6,z=b.z+Math.sin(a)*6;L.push({x,y:.2,z,ry:-a-Math.PI/2});}});
    placeBaked(W,vars,L);}
+  W.seats=W.seats||[];for(let i=0;i<6;i++){const x=-15+(i%2)*3.2,z=-12+(i>>1)*5;W.seats.push({x:x+.7,z,h:-Math.PI/2,y:.15});}
+  W.blocks.filter(b=>b.type==='park'||b.type==='park2').forEach(b=>{for(let i=0;i<2;i++){const c=EQ.buildCat();W.group.add(c.root);wanderAgent(W,{root:c.root,anim:(dt,sp)=>c.animate(dt,sp)},{x:b.x,z:b.z,hx:16,hz:16},{speed:.8,run:3,idle:[3,10],step:6,yOff:.15,far:90});}});
   // ciclisti lungo le strade
   for(let i=0;i<5;i++){const b=EQ.buildBike();const e=person({fem:i%2===0,helmet:pick([0xf1c40f,0xc0392b,0x2a58c8,0xffffff])});b.add(e.root);e.root.position.set(0,.18,-.18);W.group.add(b);
     const c=pick(lines),vert=i%2===0;const pth=Path(vert?[[c,-ext],[c,ext]]:[[-ext,c],[ext,c]],false);

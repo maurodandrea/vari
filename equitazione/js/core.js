@@ -275,6 +275,7 @@ EQ.sfx={
   horn(){tone(392,.3,'square',.04);tone(494,.3,'square',.03);},
   pigeons(){for(let i=0;i<10;i++)noise(.06,800,1,.1,'bandpass',i*.05);},
   engine(v){if(!AC||!EQ.soundOn)return;tone(70+v*40,.12,'sawtooth',.03);},
+  meow(){tone(700,.35,'triangle',.05,520);tone(900,.2,'sine',.03,700,.05);},
   bark(){tone(520,.08,'square',.06,380);tone(480,.09,'square',.05,340,.15);},
   kids(){for(let i=0;i<4;i++)tone(700+Math.random()*500,.12,'sine',.03,900+Math.random()*400,i*.13);},
   bikebell(){tone(2200,.25,'sine',.06);tone(2200,.25,'sine',.05,null,.18);},
