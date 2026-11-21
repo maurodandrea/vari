@@ -136,6 +136,8 @@
   input{font:inherit;-webkit-user-select:text;user-select:text;touch-action:manipulation}
   .pname{display:flex;align-items:center;gap:8px;font-size:18px;font-weight:600;margin-bottom:10px;color:#2b3a24}
   .pname input{flex:1;min-width:0;padding:8px 12px;border-radius:12px;border:2px solid #e3d9bd;background:#fff;font-size:18px;font-weight:600;color:#2b3a24}
+  .gsel{display:flex;gap:8px;margin-bottom:10px}.gbtn{flex:1;padding:11px;border-radius:14px;background:#f1ecdc;font-size:18px;font-weight:600;color:#2b3a24;border:3px solid transparent}.gbtn.sel{border-color:#ff9f1c;background:#fff4dc}
+  .gtog{width:44px;height:44px;border-radius:50%;background:#f1ecdc;font-size:24px}
   .nameIn2{display:block;width:100%;padding:12px 14px;border-radius:14px;border:3px solid #ffb347;font-size:22px;font-weight:600;text-align:center;color:#2b3a24;background:#fff}
   #count{position:fixed;inset:0;z-index:6;display:none;align-items:center;justify-content:center;pointer-events:none;font-size:min(30vw,150px);font-weight:700;text-shadow:0 6px 0 #2f6b33,0 12px 30px rgba(0,0,0,.4)}
   #count.on{display:flex}
@@ -185,7 +187,7 @@
   <div class="title"><h1>In Sella!</h1><p>Il maneggio, le passeggiate e le gare</p></div>
   <div class="spacer"></div>
   <div class="card">
-    <div class="pname"><span>👋 Ciao</span><input id="nameIn" maxlength="14" placeholder="il tuo nome" autocomplete="off" autocapitalize="words"><span>!</span></div>
+    <div class="pname"><span>👋 Ciao</span><input id="nameIn" maxlength="14" placeholder="il tuo nome" autocomplete="off" autocapitalize="words"><span>!</span><button class="gtog" id="gTog">👧</button></div>
     <h3>Il tuo cavallo</h3>
     <div class="horses" id="horses"></div>
     <div class="hdesc" id="hdesc"></div>
@@ -239,8 +241,9 @@
 
 <div id="nameBox" class="screen modal"><div class="card">
   <div style="font-size:54px">🐴</div>
-  <div class="bigt">Benvenuta in sella!</div>
+  <div class="bigt">Benvenuti in sella!</div>
   <p style="color:#56664a;margin:4px 0 12px">Come ti chiami?</p>
+  <div class="gsel"><button class="gbtn" data-g="f">👧 Ragazza</button><button class="gbtn" data-g="m">👦 Ragazzo</button></div>
   <input id="nameIn2" class="nameIn2" maxlength="14" placeholder="Scrivi il tuo nome" autocomplete="off" autocapitalize="words">
   <button class="btn org" id="nameOk">Iniziamo! ➜</button>
 </div></div>

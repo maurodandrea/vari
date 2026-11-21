@@ -346,6 +346,7 @@ EQ.OUTFIT_OPTS={
   whip:{label:'Frustino',icon:'🪄',opts:[[false,'No'],[true,'Sì']]},
 };
 EQ.buildGiorgia=function(){
+  const cheeks=[];
   const P={};
   const root=new THREE.Group();
   const skin=mat(0xd9a07a,.7), hair=mat(0x6a3c1c,.55), eyeW=mat(0xf4f4f4,.25), iris=mat(0x4a2e1a,.1), lip=mat(0xc8566e,.5), brow=mat(0x4a2a14,.7);
@@ -383,7 +384,7 @@ EQ.buildGiorgia=function(){
     mesh(G.sph(.0125,10,8),iris,s*.037,.012,.1,head);
     const b=mesh(G.box(.036,.007,.01),brow,s*.04,.048,.097,head); b.rotation.z=s*.12;
     mesh(G.sph(.02,10,8),skin,s*.1,-.005,0,head).scale.set(.5,1,.8);
-    const ch=mesh(G.sph(.022,10,8),mat(0xf29a9a,.7),s*.06,-.03,.085,head); ch.scale.set(1,.7,.4);
+    const ch=mesh(G.sph(.022,10,8),mat(0xf29a9a,.7),s*.06,-.03,.085,head); ch.scale.set(1,.7,.4);cheeks.push(ch);
   }
   mesh(G.sph(.016,10,8),skin,0,-.012,.11,head);
   const mo=mesh(G.tor(.018,.0045,6,12,Math.PI),lip,0,-.048,.094,head); mo.rotation.z=Math.PI;
@@ -439,6 +440,9 @@ EQ.buildGiorgia=function(){
     whip.visible=!!f.whip;
   };
   P.setOutfit({});
+  P.setGender=function(g){P.gender=g;const m=g==='m';pony.visible=!m;cheeks.forEach(c=>c.visible=!m);
+    hb.scale.set(1.04,m?.92:1.14,m?1.02:1.1);hb.position.y=m?.03:.012;mo.material=mat(m?0xa86a60:0xc8566e,.5);};
+  P.setGender('f');
   P.ready=function(){return P.outfit.helmet!=null&&P.outfit.protector!=null;};
 
   /* pose */

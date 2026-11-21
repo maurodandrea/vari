@@ -374,7 +374,9 @@ EQ.labelTex=function(text,opt){
   return EQ.canvasTex(opt.w,opt.h,(g,w,h)=>{
     g.fillStyle=opt.bg;const r=opt.radius;g.beginPath();g.moveTo(r,0);g.arcTo(w,0,w,h,r);g.arcTo(w,h,0,h,r);g.arcTo(0,h,0,0,r);g.arcTo(0,0,w,0,r);g.fill();
     if(opt.border){g.strokeStyle=opt.border;g.lineWidth=8;g.stroke();}
-    g.fillStyle=opt.fg;g.font=opt.font;g.textAlign='center';g.textBaseline='middle';g.fillText(text,w/2,h/2+4);
+    g.fillStyle=opt.fg;g.font=opt.font;g.textAlign='center';g.textBaseline='middle';
+    const m=/(\d+)px/.exec(opt.font);if(m){let px=Math.min(+m[1],Math.floor(h*.7));const mw=w-2*opt.radius-12;g.font=opt.font.replace(/\d+px/,px+'px');while(px>10&&g.measureText(text).width>mw){px-=2;g.font=opt.font.replace(/\d+px/,px+'px');}}
+    g.fillText(text,w/2,h/2+3);
   });
 };
 
