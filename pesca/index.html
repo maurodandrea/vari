@@ -2276,10 +2276,19 @@ function vAltro(v){
     <div class="minis"><div><b data-count="${c.out}">0</b><span>uscite</span></div><div><b data-count="${c.n}">0</b><span>catture</span></div><div><b data-count="${c.species}">0</b><span>specie</span></div><div><b>${(Math.round(c.kg*10)/10)}</b><span>kg</span></div></div></div>
   <div class="hub">${hub.map(([t,e,n,s,bg])=>`<button style="background:${bg}" ${lockedTab(t)?'class="locked"':''} onclick="${t==='install'?'installApp()':`go('${t}')`}"><span class="he">${e}</span><b>${n}</b><span>${lockedTab(t)?'⭐ Premium':s}</span></button>`).join('')}</div>`;
 }
+// foto profilo: ritaglio quadrato al centro (un po' verso l'alto, dove di solito c'è il viso), 192 px in JPEG
+function setProfilePhoto(inp){
+  const save=u=>{LS.set('photo',u);try{const C=window.CLOUD;if(C?.user&&C.db&&C.ff)C.ff.setDoc(C.ff.doc(C.db,'profiles',C.user.uid),{photo:u||null},{merge:true}).catch(()=>{});}catch(e){}render();toast(u?'📷 Foto profilo salvata':'Foto profilo tolta');};
+  if(!inp){save(null);return;}const f=inp.files&&inp.files[0];if(!f)return;const img=new Image(),url=URL.createObjectURL(f);
+  img.onload=()=>{const s=Math.min(img.width,img.height),sx=(img.width-s)/2,sy=Math.max(0,(img.height-s)*.3),c=document.createElement('canvas');c.width=c.height=192;c.getContext('2d').drawImage(img,sx,sy,s,s,0,0,192,192);URL.revokeObjectURL(url);save(c.toDataURL('image/jpeg',.82));};
+  img.onerror=()=>toast('Foto non leggibile');img.src=url;}
 function vSettings(v){
   let bytes=0;try{for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k.startsWith('lenza.'))bytes+=(localStorage.getItem(k)||'').length*2;}}catch(e){}
   v.innerHTML=subHead('Impostazioni','Account, dati, backup e informazioni')+`
   ${window.CLOUD?CLOUD.card():''}
+  <div class="card"><h3>📷 Foto profilo</h3><div class="row" style="gap:14px;align-items:center">${LS.get('photo',null)?`<img src="${LS.get('photo',null)}" alt="" style="width:72px;height:72px;border-radius:50%;object-fit:cover;border:2px solid var(--acct)">`:'<div style="width:72px;height:72px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.08);font-size:30px">🙂</div>'}
+    <div style="flex:1"><p class="small mut" style="margin:0 0 8px">Il tuo viso nel Gioco e accanto al tuo nome per gli amici. Meglio una foto del viso, dritta e ben illuminata.</p>
+    <div class="row" style="gap:8px"><label class="btn" style="cursor:pointer">📸 ${LS.get('photo',null)?'Cambia':'Scegli foto'}<input type="file" accept="image/*" style="display:none" onchange="setProfilePhoto(this)"></label>${LS.get('photo',null)?'<button class="btn ghost" onclick="setProfilePhoto(null)">Togli</button>':''}</div></div></div></div>
   <div class="card"><h3>⭐ Premium</h3>${isPremium()?`<p style="color:var(--ok);font-weight:700;margin:0 0 6px">● Premium attivo</p><p class="small mut">Attivato il ${new Date(LS.get('premium',{}).since||Date.now()).toLocaleDateString('it-IT')}. Hai accesso a riconoscimento dei pesci, spot illimitati, previsioni per tutta la settimana e Social.</p>`
     :`<p class="small mut" style="margin:0 0 10px">Con Premium: riconoscimento dei pesci, più di ${FREE_SPOTS} spot, previsioni oltre ${FREE_DAYS} giorni e Social.</p>
     <div class="row" style="gap:8px"><input id="pcode" inputmode="numeric" placeholder="Codice Premium" style="flex:1" autocomplete="off"><button class="btn" onclick="activatePremium()">Attiva</button></div>`}</div>
