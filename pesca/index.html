@@ -1087,7 +1087,7 @@ function smartCheck(X){
 }
 function dayLbl(t){const d=new Date(t),o=new Date();if(d.toDateString()===o.toDateString())return 'oggi';o.setDate(o.getDate()+1);if(d.toDateString()===o.toDateString())return 'domani';return d.toLocaleDateString('it-IT',{weekday:'long'});}
 function smartAlert(X,sp){
-  if(!alertOn()||!sp||sp.approx)return;const a=smartCheck(X);if(!a)return;
+  if(!alertOn()||!sp||sp.approx||sp.here)return;  // niente avvisi sulla posizione attualeconst a=smartCheck(X);if(!a)return;
   const day=new Date().toDateString(),last=LS.get('smartlast',{})||{};if(last[sp.id]===day)return;last[sp.id]=day;LS.set('smartlast',last);
   const title='🎣 Momento buono a '+sp.name,body=a.txt;
   showBanner(title,body);
@@ -1271,7 +1271,7 @@ function vHome(v){
   <div class="quick">${[['pesce','📸','Che pesce è?'],['compare','🧭','Dove pescare'],['ai','🤖','Consigli'],['cal','🌙','Calendario']].map(([t,e,n])=>`<button onclick="go('${t}')" ${lockedTab(t)?'class="locked"':''}><span>${e}</span>${n}${lockedTab(t)?'<b class="lk">⭐</b>':''}</button>`).join('')}</div>
   ${(()=>{const th=dayHours(X,today);return `<div class="card"><h3>Indice di pescosità oggi</h3>${chart(th)}</div>`+(X.marine&&th.some(q=>q.lvl!=null)?`<div class="card"><h3>Marea oggi</h3>${tideChart(th)}</div>`:'')+(th.some(q=>q.wave!=null)?`<div class="card"><h3>Altezza onda oggi</h3>${waveChart(th)}</div>`:'');})()}
   ${compassCard(h,X)}
-  <div class="card"><h3>Prossime ore</h3><div class="hstrip">${X.hours.slice(Math.max(0,i),Math.max(0,i)+18).map((x,k)=>`<div class="hcell ${k?'':'now'}"><span>${k?pad(x.t.getHours()):'Ora'}</span><div class="wi">${wmo(x.code)[0]}</div><b>${fmt0(x.temp)}°</b><div class="ib"><i style="height:${noWater()?0:x.idx}%;background:${idxColor(x.idx)}"></i></div><em style="color:${idxColor(x.idx)}">${x.idx}</em></div>`).join('')}</div></div>
+  <div class="card"><h3>Prossime ore</h3><div class="hstrip">${X.hours.slice(Math.max(0,i),Math.max(0,i)+18).map((x,k)=>`<div class="hcell ${k?'':'now'}"><span>${k?pad(x.t.getHours()):'Ora'}</span><div class="wi">${wmo(x.code)[0]}</div><b>${fmt0(x.temp)}°</b><div class="ib"><i style="height:${noWater()?0:x.idx}%;background:${idxColor(x.idx)}"></i></div>${noWater()?'<em style="color:#8fa0b0">NA</em>':`<em style="color:${idxColor(x.idx)}">${x.idx}</em>`}</div>`).join('')}</div></div>
   <div class="card"><h3>Finestre migliori oggi</h3>
     ${noWater()?'<p class="small mut">Indice NA: il mare è a più di 5 km.</p>':wins.length?wins.map(w=>{const c=idxColor(w.max),hr=w.from.getHours();return `<div class="win"><div class="clock" style="background:${c}22">${hr<6||hr>=20?'🌙':hr<9?'🌅':hr>=17?'🌇':'☀️'}</div><div class="t"><b>${hhmm(w.from)} – ${hhmm(w.to)}</b><div class="meter"><div style="width:${w.max}%;background:${c}"></div></div></div><span class="pill solid" style="background:${c}">${w.max}</span></div>`;}).join(''):'<div class="mut">Nessuna finestra favorevole rimasta oggi: guarda i prossimi giorni.</div>'}
   </div>
@@ -1316,19 +1316,20 @@ function vMeteo(v){
   if(needWx(v))return;
   if(!isPremium()&&S.day>=FREE_DAYS)S.day=0;
   const X=S.wx,d=X.fdays[S.day]||X.fdays[0],hs=dayHours(X,d.date),ph=moonPhase(new Date(d.date.getTime()+12*3600e3));
-  const sc=dayScore(X,d.date),sol=X.sol[d.date.toDateString()]||[];
+  const sc=dayScore(X,d.date),sol=X.sol[d.date.toDateString()]||[],nw=noWater();
+  const naRing=`<div class="ring-num"><svg viewBox="0 0 44 44"><circle cx="22" cy="22" r="18" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="4"/></svg><b style="color:#8fa0b0">NA</b></div>`;
   v.innerHTML=simBanner()+`
   <div class="days" style="margin-bottom:12px">${X.fdays.map((x,k)=>k>=FREE_DAYS&&!isPremium()?`<div class="day locked" onclick="needPremium('Vedere le previsioni oltre ${FREE_DAYS} giorni')"><div class="d">${dayName(x.date)}</div><div class="small">${dateStr(x.date)}</div><div class="ic">🔒</div><div class="small mut">Premium</div></div>`
-    :`<div class="day ${k===S.day?'on':''}" onclick="S.day=${k};render()"><div class="d">${k?dayName(x.date):'Oggi'}</div><div class="small">${dateStr(x.date)}</div><div class="ic">${wmo(x.code)[0]}</div>${miniRing(dayScore(X,x.date))}<div class="small mut">${fmt0(x.tmax)}°/${fmt0(x.tmin)}°</div></div>`).join('')}</div>
+    :`<div class="day ${k===S.day?'on':''}" onclick="S.day=${k};render()"><div class="d">${k?dayName(x.date):'Oggi'}</div><div class="small">${dateStr(x.date)}</div><div class="ic">${wmo(x.code)[0]}</div>${nw?naRing:miniRing(dayScore(X,x.date))}<div class="small mut">${fmt0(x.tmax)}°/${fmt0(x.tmin)}°</div></div>`).join('')}</div>
   ${X.marine?weekWave(X):''}
   <div class="card"><div class="grid2">
-    <div class="tile"><div class="k">Indice del giorno</div><div class="v" style="color:${idxColor(sc)}">${sc} · ${idxLabel(sc)[0]}</div></div>
+    <div class="tile"><div class="k">Indice del giorno</div>${nw?'<div class="v" style="color:#8fa0b0">NA</div><div class="s">Mare lontano</div>':`<div class="v" style="color:${idxColor(sc)}">${sc} · ${idxLabel(sc)[0]}</div>`}</div>
     <div class="tile"><div class="k">Temperatura</div><div class="v">${fmt0(d.tmax)}° / ${fmt0(d.tmin)}°</div></div>
     <div class="tile"><div class="k">Sole</div><div class="v" style="font-size:17.5px">🌅 ${hhmm(d.sr)} · 🌇 ${hhmm(d.ss)}</div></div>
     <div class="tile"><div class="k">Luna</div><div class="v" style="font-size:17.5px">${ph.e} ${ph.name}</div><div class="s">${Math.round(ph.illum*100)}% illuminata</div></div>
   </div>
   <div style="margin-top:12px">${timeline(sol,d)}</div></div>
-  <div class="card"><h3>Indice di pescosità</h3>${chart(hs)}</div>
+  <div class="card"><h3>Indice di pescosità</h3>${nw?'<p class="small mut" style="margin:0">Indice NA: il mare è a più di 5 km dalla tua posizione.</p>':chart(hs)}</div>
   ${X.marine&&hs.some(h=>h.lvl!=null)?`<div class="card"><h3>Marea</h3>${tideChart(hs)}</div>`:''}
   ${hs.some(h=>h.wave!=null)?`<div class="card"><h3>Altezza onda</h3>${waveChart(hs)}</div>`:''}
   <div class="card"><h3>Ora per ora</h3>
@@ -1336,7 +1337,7 @@ function vMeteo(v){
     <div class="hours">${hs.map(h=>`<div class="hr ${Math.abs(h.t.getTime()+1800e3-Date.now())<1800e3?'now':''}"><b>${pad(h.t.getHours())}:00</b><span>${wmo(h.code)[0]}</span><span>${fmt0(h.temp)}°</span>
       <span>${arrow(h.wd)} ${fmt0(h.ws)} <span class="mut small">(${fmt0(h.wg)}) ${dirName(h.wd)}</span></span>
       <span>${X.marine&&h.wave!=null?fmtOnda(h.wave):fmt0(h.p)}</span>
-      <span><div class="bar"><div style="width:${h.idx}%;background:linear-gradient(90deg,${idxColor(h.idx)}88,${idxColor(h.idx)})"></div></div><span class="small" style="color:${idxColor(h.idx)}">${h.idx}</span></span></div>`).join('')}</div>
+      ${nw?'<span class="small mut">NA</span>':`<span><div class="bar"><div style="width:${h.idx}%;background:linear-gradient(90deg,${idxColor(h.idx)}88,${idxColor(h.idx)})"></div></div><span class="small" style="color:${idxColor(h.idx)}">${h.idx}</span></span>`}</div>`).join('')}</div>
   </div>`;
 }
 function var_(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim();}
