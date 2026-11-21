@@ -84,6 +84,19 @@ service cloud.firestore {
     }
 
     // posizione condivisa sulla mappa della chat: visibile a tutti (vis 'all') o solo agli amici scelti
+    // giocatori nel Gioco: li vedono gli amici indicati o tutti se «Tutti» (stessa scelta della posizione in Social)
+    match /gamers/{uid} {
+      allow read: if attivo() && (request.auth.uid == uid || resource.data.vis == 'all' || request.auth.uid in resource.data.friends);
+      allow write: if attivo() && request.auth.uid == uid;
+      allow delete: if admin();
+    }
+    // messaggi scritti nel Gioco: li leggono solo mittente e destinatario
+    match /gamemsgs/{id} {
+      allow read, delete: if attivo() && (resource.data.to == request.auth.uid || resource.data.from == request.auth.uid);
+      allow create: if attivo() && request.resource.data.from == request.auth.uid
+        && request.resource.data.text is string && request.resource.data.text.size() <= 300;
+    }
+
     match /locations/{uid} {
       // le posizioni pubbliche le vede solo chi condivide la propria con «Tutti»;
       // quelle condivise con me da un amico le vedo sempre (l'ha scelto lui); il resto lo regola l'app
