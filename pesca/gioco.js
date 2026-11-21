@@ -257,7 +257,8 @@ function buildWorld(){
   // stelle
   const sv=[];for(let i=0;i<1500;i++){const th=Math.random()*6.283,ph=Math.acos(Math.random()*.95);sv.push(Math.sin(ph)*Math.cos(th)*9000,Math.cos(ph)*9000,Math.sin(ph)*Math.sin(th)*9000);}
   const sgeo=new T.BufferGeometry();sgeo.setAttribute('position',new T.Float32BufferAttribute(sv,3));stars=new T.Points(sgeo,new T.PointsMaterial({color:0xffffff,size:14,sizeAttenuation:true,transparent:true,opacity:0,fog:false,depthWrite:false}));scene.add(stars);
-  moon=new T.Sprite(new T.SpriteMaterial({map:moonTex(90),transparent:true,fog:false,depthWrite:false}));moon.scale.set(260,260,1);scene.add(moon);
+  moon=new T.Sprite(new T.SpriteMaterial({map:moonTex(90),transparent:true,fog:false,depthWrite:false,toneMapped:false}));moon.scale.set(420,420,1);scene.add(moon);
+  const halo=new T.Sprite(new T.SpriteMaterial({map:glowTex('rgba(210,225,255,1)'),transparent:true,fog:false,depthWrite:false,blending:T.AdditiveBlending,toneMapped:false,opacity:.35}));halo.scale.set(1700,1700,1);moon.add(halo);halo.scale.set(4,4,1);moon.userData.halo=halo;
   // luci di Ostia (destra) e Torvaianica (sinistra) di notte
   const cv=[];for(let i=0;i<260;i++){const left=i<110;const x=left?rnd(-2600,-900):rnd(900,3200),z=left?rnd(-200,400):rnd(-300,500);cv.push(x,rnd(1,6),z);}
   const cg=new T.BufferGeometry();cg.setAttribute('position',new T.Float32BufferAttribute(cv,3));cityL=new T.Points(cg,new T.PointsMaterial({color:0xffd59a,size:6,transparent:true,opacity:0,fog:false,depthWrite:false}));scene.add(cityL);
@@ -300,11 +301,12 @@ function buildWorld(){
   const tail=new T.Mesh(new T.ConeGeometry(.16,.25,4),fb.material);tail.rotation.z=Math.PI/2;tail.position.x=.58;tail.scale.z=.2;fishMesh.add(tail);fishMesh.visible=false;fishMesh.userData.body=fb;scene.add(fishMesh);
   clock=new T.Clock();
 }
-function setupRods(){st.rods.forEach(r=>{scene.remove(r.obj);scene.remove(r.spike);scene.remove(r.line);scene.remove(r.sinker);});
+function setupRods(){st.rods.forEach(r=>{scene.remove(r.hit);scene.remove(r.obj);scene.remove(r.spike);scene.remove(r.line);scene.remove(r.sinker);});
   st.rods=Array.from({length:st.nRods},(_,i)=>{const x=rodX(i,st.nRods),spike=makeSpike();spike.position.set(x,ROD_Z*.035,ROD_Z);scene.add(spike);
     const obj=makeRod();scene.add(obj);const lg=new T.BufferGeometry();lg.setAttribute('position',new T.Float32BufferAttribute(new Float32Array(40*3),3));const line=new T.Line(lg,MAT.line);line.frustumCulled=false;scene.add(line);
     const sinker=new T.Mesh(new T.SphereGeometry(.05,8,6),MAT.lead);sinker.visible=false;scene.add(sinker);
-    return {i,x,spike,obj,line,sinker,bait:null,dist:0,state:'idle',baitLeft:0,bend:0,bitePlan:null,held:false,sx:x,sz:-1};});}
+    const hit=new T.Mesh(new T.CylinderGeometry(.6,.6,4.6,8),new T.MeshBasicMaterial({visible:false}));hit.position.set(x,2,ROD_Z-1.1);hit.rotation.x=-40*R;scene.add(hit);
+    return {i,x,spike,obj,line,sinker,hit,bait:null,dist:0,state:'idle',baitLeft:0,bend:0,bitePlan:null,held:false,sx:x,sz:-1};});}
 function placeRodOnSpike(r){const by=ROD_Z*.035;r.obj.position.set(r.x,by+.12,ROD_Z);r.obj.rotation.set(-40*R,0,0,'YXZ');}
 function rodInHand(r){const J=AN.obj.userData.J,hp=new T.Vector3();J.rHand.getWorldPosition(hp);const p=AN.pose.rod||{p:45,f:0,y:0};
   r.obj.rotation.set((p.p-90)*R,AN.rotY+(p.y||0),0,'YXZ');const dir=new T.Vector3(0,1,0).applyEuler(r.obj.rotation);r.obj.position.copy(hp).addScaledVector(dir,-.5);}
@@ -321,7 +323,7 @@ function mount(v){
   if(v)v.innerHTML='<div class="card" style="text-align:center;padding:30px"><p class="mut">Il gioco è aperto a tutto schermo.</p><button class="btn" onclick="GAME.mount()">🎣 Riapri il gioco</button></div>';
   Promise.all([loadThree(),loadWx()]).then(([three])=>{T=three;if(!document.getElementById('gamebox'))return;
     renderer=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(1.6,devicePixelRatio||1));cvs=renderer.domElement;root.querySelector('#g3').appendChild(cvs);
-    buildWorld();size();addEventListener('resize',size);cvs.addEventListener('pointerdown',onTap);
+    buildWorld();size();addEventListener('resize',size);bindLook();
     st.phase='setup';setUI();raf=requestAnimationFrame(loop);}).catch(e=>{ui.innerHTML=`<div class="gpanel"><b>Il gioco 3D non si è caricato</b><div class="gs">${escH(e.message||e)}</div>${btn('↻ Riprova','mount()','big')}</div>`;});
 }
 function stop(){cancelAnimationFrame(raf);raf=0;removeEventListener('resize',size);try{renderer?.dispose();renderer?.forceContextLoss?.();}catch(e){}renderer=null;foams=[];clouds=[];st.rods=[];document.getElementById('gamebox')?.remove();document.body.classList.remove('gaming');seaSound(0);}
@@ -341,7 +343,7 @@ function setUI(){const p=st.phase;let h='';
       <div class="grow"><span>Amo</span>${[['piccolo','n. 6'],['medio','n. 2'],['grande','2/0']].map(([k,n])=>`<button class="gc ${st.hook===k?'on':''}" onclick="GAME.setHook('${k}')">${n}</button>`).join('')}</div>
       ${btn('Pianta i picchetti e inizia','start()','big')}</div>`;}
   else if(p==='wait'){h=`<div class="gpanel slim"><div class="grods">${st.rods.map((r,i)=>`<button class="gr ${r.state==='bite'?'alert':''}" onclick="GAME.rod(${i})" ${st.busy?'disabled':''}><b>Canna ${i+1}</b><small>${r.bait?B[r.bait].n:'senza esca'}${r.dist?' · '+Math.round(r.dist)+' m':''}</small><small>${rodStatus(r)}</small></button>`).join('')}</div>
-    ${st.busy?'':`<div class="grow" style="justify-content:center">${[1,2,4,8,16,32].map(s=>`<button class="gc ${st.speed===s?'on':''}" onclick="GAME.setSpeed(${s})">${s===1?'▶ 1x':s+'x'}</button>`).join('')}<button class="gc" onclick="GAME.bagView()">🧺 ${st.bag.length}</button></div>`}${st.msg?`<div class="gs" style="text-align:center">${st.msg}</div>`:''}</div>`;}
+    ${st.busy?'':`<div class="grow" style="justify-content:center">${[1,2,4,8,16,32].map(s=>`<button class="gc ${st.speed===s?'on':''}" onclick="GAME.setSpeed(${s})">${s===1?'▶ 1x':s+'x'}</button>`).join('')}<button class="gc" onclick="GAME.bagView()">🧺 ${st.bag.length}</button><button class="gc" onclick="GAME.center()" title="Guarda le canne">🎯</button></div>`}${st.msg?`<div class="gs" style="text-align:center">${st.msg}</div>`:''}</div>`;}
   else if(p==='atrod'){const r=st.rods[st.sel];h=`<div class="gpanel"><b>Canna ${st.sel+1}</b><div class="gs">${r.bait?B[r.bait].n+' a '+Math.round(r.dist)+' m · '+rodStatus(r):'Senza esca'}</div>
     ${r.state==='bite'?btn('⚡ FERRA!','strike()','big hot'):''}${r.bait?btn('🌀 Recupera e cambia esca','rebait()'):btn('🪝 Innesca','rebait()','big')}${btn('🪑 Torna a sedere','back()')}</div>`;}
   else if(p==='bait')h=`<div class="gpanel"><b>🪝 Innesca la canna ${st.sel+1}</b><div class="gbaits">${BAITS.map(b=>`<button class="gbt" onclick="GAME.bait('${b.k}')"><span>${b.e}</span><b>${b.n}</b><small>${b.d}</small></button>`).join('')}</div></div>`;
@@ -363,7 +365,7 @@ function setUI(){const p=st.phase;let h='';
 }
 G.setN=n=>{st.nRods=n;LSS('nrods',n);setUI();};G.setLead=g=>{st.lead=g;LSS('lead',g);setUI();};G.setHook=k=>{st.hook=k;LSS('hook',k);setUI();};
 G.setSpeed=s=>{st.speed=s;LSS('speed',s);setUI();};G.bagView=()=>{st.phase='bag';setUI();};G.toWait=()=>{st.phase='wait';setUI();};G.drag=v=>{if(st.fight)st.fight.drag=+v;};
-G.start=()=>{setupRods();st.rods.forEach(placeRodOnSpike);st.phase='wait';st.msg='Tocca una canna per innescarla e lanciare.';setUI();};
+G.start=()=>{setupRods();st.rods.forEach(placeRodOnSpike);st.phase='wait';st.msg='Tocca una canna per andarci. Trascina il dito per guardarti attorno.';setUI();};
 
 /* ---------- movimenti del pescatore (sequenze) ---------- */
 const sleep=s=>new Promise(r=>setTimeout(r,s*1000));
@@ -440,9 +442,20 @@ function showCatch(c){st.catchShow=c;st.phase='catch';setUI();}
 G.release=()=>{record(true);st.msg='💚 Rilasciato. Bravo!';G.rebait();};
 G.keep=()=>{record(false);st.msg='🧺 Nel carniere';G.rebait();};
 function burst(p,k){const s=splashP.userData;s.t=1;s.o=p.clone();s.v.forEach(v=>v.set(rnd(-1,1)*k,rnd(1.5,3.5)*k,rnd(-1,1)*k));const a=splashP.geometry.attributes.position;for(let i=0;i<60;i++)a.setXYZ(i,p.x,p.y,p.z);a.needsUpdate=true;}
-function onTap(e){ac();if(st.phase!=='wait'||st.busy)return;// tocco sulla scena: la canna più vicina
-  const rect=cvs.getBoundingClientRect(),m=new T.Vector2((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);let bi=-1,bd=.25;
-  st.rods.forEach((r,i)=>{const p=new T.Vector3(r.x,2,ROD_Z).project(camera);const d=Math.abs(p.x-m.x);if(d<bd){bd=d;bi=i;}});if(bi>=0)G.rod(bi);}
+// seduto: trascinando ti giri e guardi attorno; solo toccando una canna il pescatore si alza e ci va
+const LOOK={yaw:0,pitch:0};
+function bindLook(){let d=null;
+  cvs.addEventListener('pointerdown',e=>{ac();d={x:e.clientX,y:e.clientY,t:performance.now(),y0:LOOK.yaw,p0:LOOK.pitch,moved:false};cvs.setPointerCapture?.(e.pointerId);});
+  cvs.addEventListener('pointermove',e=>{if(!d)return;const dx=e.clientX-d.x,dy=e.clientY-d.y;if(Math.hypot(dx,dy)>8)d.moved=true;if(!d.moved||!sittingView())return;
+    LOOK.yaw=d.y0-dx*.006;LOOK.pitch=clamp(d.p0+dy*.005,-.35,1.25);});
+  const up=e=>{if(!d)return;const tap=!d.moved&&performance.now()-d.t<450;d=null;if(tap)onTap(e);};cvs.addEventListener('pointerup',up);cvs.addEventListener('pointercancel',()=>{d=null;});}
+const sittingView=()=>st.phase==='wait'&&!st.busy;
+const RAY={r:null};
+function onTap(e){if(!sittingView())return;
+  const rect=cvs.getBoundingClientRect(),m=new T.Vector2((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);
+  RAY.r=RAY.r||new T.Raycaster();RAY.r.setFromCamera(m,camera);const hits=RAY.r.intersectObjects(st.rods.map(r=>r.hit),false);
+  if(hits.length){const i=st.rods.findIndex(r=>r.hit===hits[0].object);if(i>=0)G.rod(i);}}
+G.center=()=>{LOOK.yaw=0;LOOK.pitch=0;};
 
 /* ---------- ciclo principale ---------- */
 function loop(){raf=requestAnimationFrame(loop);if(!renderer)return;const dt=Math.min(.05,clock.getDelta()),t=clock.elapsedTime;
@@ -502,7 +515,7 @@ function updEnv(w,t,dt){const d=gameDate(),sun=sunPos(d,SPOT.lat,SPOT.lon),mo=mo
   const fogCol=new T.Color().setHSL(.58,lerp(.15,.3,day),lerp(.03,.62,day)*(1-cc*.25));
   scene.fog=scene.fog||new T.FogExp2(0xffffff,.0004);scene.fog.color.copy(fogCol);scene.fog.density=.00015+(w.code===45||w.code===48?.006:0)+(w.pr>.1?.0015:0)+cc*.0002;
   stars.material.opacity=NIGHT*(1-cc)*.9;cityL.material.opacity=NIGHT*.85;
-  moon.position.copy(md).multiplyScalar(8000);moon.visible=mo.alt>-3;moon.material.opacity=clamp(.25+NIGHT,0,1)*(1-cc*.6);if(moon.userData.ph==null||Math.abs(moon.userData.ph-mo.ph)>6){moon.material.map=moonTex(mo.ph);moon.material.needsUpdate=true;moon.userData.ph=mo.ph;}
+  moon.position.copy(md).multiplyScalar(8000);moon.visible=mo.alt>-3;moon.material.opacity=clamp(.25+NIGHT,0,1)*(1-cc*.6);moon.userData.halo.material.opacity=.3*NIGHT*mo.illum*(1-cc*.7);if(moon.userData.ph==null||Math.abs(moon.userData.ph-mo.ph)>6){moon.material.map=moonTex(mo.ph);moon.material.needsUpdate=true;moon.userData.ph=mo.ph;}
   const n=Math.round(cc*clouds.length),tint=new T.Color().setHSL(.07,sun.alt<10&&sun.alt>-6?.5:.05,lerp(.12,.92,day));
   clouds.forEach((c,i)=>{c.visible=i<n;c.material.color.copy(tint);c.material.opacity=clamp(.55+cc*.4,0,1);c.position.x+=Math.sin((w.wd-FACE+90)*R)*w.ws*dt*.15;if(c.position.x>3000)c.position.x=-3000;if(c.position.x<-3000)c.position.x=3000;});
   const lampOn=NIGHT>.5&&st.lamp;headLamp.intensity=lampOn?1.6:0;AN.obj.userData.J.lamp.material.emissiveIntensity=lampOn?2:0;
@@ -528,12 +541,16 @@ function updCam(dt,t){let p,l;const a=AN.pos;
   if(G.camOv){camera.position.set(...G.camOv.p);camera.lookAt(...G.camOv.l);return;}
   if(st.phase==='fight'||(AN.holding>=0&&st.phase!=='wait')){p=new T.Vector3(a.x+1.5,a.y+1.9,a.z+4.6);l=new T.Vector3(a.x-.2,a.y+1.7,a.z-6);}
   else if(st.busy||st.phase==='atrod'||st.phase==='bait'||st.phase==='cast'){const dx=Math.sin(AN.rotY),dz=Math.cos(AN.rotY);p=new T.Vector3(a.x+dx*4.6+.8,a.y+2.2,a.z+dz*4.6);l=new T.Vector3(a.x-dx*4,a.y+1.3,a.z-dz*4);}
-  else{const por=camera.aspect<1;p=new T.Vector3(CHAIR.x+(por?.6:1),CHAIR.z*.035+(por?3.4:2.7),CHAIR.z+(por?9:6.5));l=new T.Vector3(0,.9,-14);}
-  if(!CAM.p){CAM.p=p.clone();CAM.l=l.clone();}const f=1-Math.exp(-2.5*dt);CAM.p.lerp(p,f);CAM.l.lerp(l,f);camera.position.copy(CAM.p);camera.position.y+=Math.sin(t*.4)*.02;camera.lookAt(CAM.l);}
+  else{const por=camera.aspect<1,H=new T.Vector3(CHAIR.x,CHAIR.z*.035+1.2,CHAIR.z),rad=por?9:6.5,yb=Math.atan2(CHAIR.x-.6,14+(por?9:6.5))*0+0;
+    const fy=LOOK.yaw+.05,fx=Math.sin(fy),fz=-Math.cos(fy),cp=Math.cos(LOOK.pitch),sp=Math.sin(LOOK.pitch);
+    p=new T.Vector3(H.x-fx*rad+(por?.6:1)*Math.cos(fy),H.y+(por?2.2:1.5)-sp*1.5,H.z-fz*rad);
+    l=new T.Vector3(H.x+fx*28*cp,H.y-.3+sp*28,H.z+fz*28*cp);
+    if(AN.target==='sit'){AN.obj.userData.J.head.rotation.y=clamp(-LOOK.yaw,-1.1,1.1);AN.obj.userData.J.head.rotation.x=clamp(-LOOK.pitch*.5,-.4,.2);}}
+  if(!CAM.p){CAM.p=p.clone();CAM.l=l.clone();}const f=1-Math.exp(-(sittingView()?7:2.5)*dt);CAM.p.lerp(p,f);CAM.l.lerp(l,f);camera.position.copy(CAM.p);camera.position.y+=Math.sin(t*.4)*.02;camera.lookAt(CAM.l);}
 function drawHud(w){const d=gameDate(),mp=moonPosG(d,SPOT.lat,SPOT.lon);
   const wi=w.code>=95?'⛈️':w.code>=80?'🌦️':w.code>=51?'🌧️':w.code>=45?'🌫️':w.cc>75?'☁️':w.cc>35?'⛅':sunPos(d,SPOT.lat,SPOT.lon).alt>0?'☀️':'🌙';
   hud.innerHTML=`<div><b>${d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</b>${st.speed>1&&st.phase==='wait'&&!st.busy?' ⏩':''}</div><div>${wi} ${Math.round(w.temp)}°</div><div>🌬️ ${Math.round(w.ws)} ${windName(w.wd)}</div><div>🌊 ${(w.wave||0).toFixed(1).replace('.',',')} m · ${Math.round(w.sst)}°</div><div>${['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'][Math.round(mp.ph/45)%8]}</div><div>🎣 ${w.idx}</div>${st.sim?'<div title="dati simulati">⚠️</div>':''}`;}
-G._bite=i=>startBite(st.rods[i]);G._sp=n=>SP.find(x=>x.n===n);G._ui=()=>setUI();G._an=AN;
+G._bite=i=>startBite(st.rods[i]);G._sp=n=>SP.find(x=>x.n===n);G._ui=()=>setUI();G._an=AN;G._cam=()=>camera;
 /* ---------- meteo reale per l'ora di gioco ---------- */
 async function loadWx(){
   try{const r=await window.fetchRaw(SPOT);st.sim=!!r.sim;st.X=window.build(r.w,r.m,SPOT,'coast');}catch(e){st.X=null;st.sim=true;}
