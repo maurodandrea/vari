@@ -286,6 +286,27 @@ function yardActions(){
   careActions(A);socialActions(A,false);
   return A;
 }
+/* ---- voce del cavallo: nitriti, sbuffi, fiatone ---- */
+G.voiceT=8;G.breathT=0;G.exert=0;
+function horseVoice(dt,H,sp,riding){
+  if(!H||!H.stats)return;
+  G.exert=U.clamp(G.exert+(sp>8?dt*.08:-dt*.05),0,1);
+  const tired=U.clamp((40-H.stats.energy)/40,0,1);
+  const pantLvl=Math.max(tired,G.exert*(sp<3?1:.6));
+  G.breathT-=dt;
+  if(pantLvl>.15&&G.breathT<=0){G.breathT=sp>7?.55:sp>2.5?.75:1.0-.3*pantLvl;EQ.sfx.pant(.05+pantLvl*.16);}
+  G.voiceT-=dt;
+  if(G.voiceT<=0){G.voiceT=12+Math.random()*18;const r=Math.random();
+    if(tired>.5){EQ.sfx.blow(.2);msg('😮‍💨 '+H.def.name+' ha il fiatone…',1.6);}
+    else if(r<.35)EQ.sfx.neigh();else if(r<.75)EQ.sfx.snort();else EQ.sfx.blow(.15);}
+}
+/* ---- rumori d'ambiente ---- */
+G.ambT=5;
+function ambient(dt){G.ambT-=dt;if(G.ambT>0)return;G.ambT=4+Math.random()*9;const n=W().name,r=Math.random();
+  if(n==='yard'){if(r<.35)EQ.sfx.whinnyFar();else if(r<.5)EQ.sfx.rooster();else if(r<.65)EQ.sfx.moo();else if(r<.8)EQ.sfx.bark();else EQ.sfx.bird();}
+  else if(n==='city'){if(r<.3)EQ.sfx.horn(.2+Math.random()*.3);else if(r<.4)EQ.sfx.siren();else if(r<.6)EQ.sfx.bikebell();else if(r<.8)EQ.sfx.pigeons();else EQ.sfx.bark();}
+  else if(n==='forest'){if(r<.3)EQ.sfx.woodpecker();else if(r<.45)EQ.sfx.owl();else if(r<.6)EQ.sfx.whinnyFar();else EQ.sfx.bird();}
+  else if(n==='beach'){if(r<.5)EQ.sfx.gull();else if(r<.7)EQ.sfx.kids();else if(r<.8)EQ.sfx.whistle();else EQ.sfx.whinnyFar();}}
 /* ---- erba e cadute ---- */
 function grazeAt(x,z){const w=W();if(w.grazeAt)return w.grazeAt(x,z);const s=w.surface(x,z);return s==='grass';}
 const jt={x:0,z:0};
@@ -582,6 +603,7 @@ function rideUpdate(dt){
   // statistiche
   stat(H,'energy',R.sp<2.6?dt*.2:-dt*R.sp*.016);stat(H,'hunger',-dt*.05);if(H.stats.thirst!=null)stat(H,'thirst',-dt*(.06+R.sp*.008));stat(H,'happy',dt*.04);
   needsCheck(dt);
+  horseVoice(dt,H,R.sp,true);
   if(G.world!==yard||surfType(R.x,R.z)==='sand')G.rideDirt=(G.rideDirt||0)+dt*R.sp*.004;
   // logica
   if(G.course&&G.course.state==='run'){G.course.time+=dt;courseLogic(G.course.obs,true);}
@@ -1060,14 +1082,14 @@ function frame(now){
       const cx=Y.posta.horse.x+.6,cz=Y.posta.horse.z;
       camGo(cx+Math.cos(a)*r,por?2.6:2.0,cz+Math.sin(a)*r,cx,por?-.6:1.2,cz,dt,3,por?0:r*.34);
       ppos=P.root.position;
-    } else if(G.state==='foot'){footUpdate(dt);ppos=P.root.position;missionCheck(F.x,F.z);}
+    } else if(G.state==='foot'){footUpdate(dt);ppos=P.root.position;missionCheck(F.x,F.z);if(G.cur&&G.cur.where!=='box'&&Math.hypot(G.cur.x-F.x,G.cur.z-F.z)<12)horseVoice(dt,G.cur,G.cur.sp||0,false);}
     else if(G.state==='ride'){rideUpdate(dt);ppos=G.cur.root.position;missionCheck(R.x,R.z);}
     else if(G.state==='act'){actUpdate(dt);ppos=P.root.position;}
     else if(G.state==='fall'){fallUpdate(dt);ppos=P.root.position;}
     else if(G.state==='results'||G.state==='modal'){if(G.cur&&G.cur.where==='ride'){const inpSave=G.lock;G.lock=1;rideUpdate(dt);G.lock=inpSave;}ppos=G.cur?G.cur.root.position:P.root.position;}
     else ppos=G.cur&&G.cur.where==='ride'?G.cur.root.position:P.root.position;
     if(G.state!=='paused'){
-      idleHorses(dt);updateFallen(dt);
+      idleHorses(dt);updateFallen(dt);if(G.state!=='menu')ambient(dt);
       G.standers.forEach(n=>{if(n.root.parent){const p=G.state==='ride'?{x:R.x,z:R.z}:{x:F.x,z:F.z};const q=n.root.position;n.root.rotation.y+=U.wrapA(Math.atan2(p.x-q.x,p.z-q.z)-n.root.rotation.y)*Math.min(1,dt*2);n.pose(dt,Math.sin(T*.6)>.8?'wave':'stand',{});}});
       W().update(dt,T,ppos?{x:ppos.x,z:ppos.z}:null);
       for(const k in FX)FX[k].update(dt,k==='dust'?.4:k==='heart'?1:-9);

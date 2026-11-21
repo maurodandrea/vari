@@ -328,6 +328,7 @@ EQ.populate.city=function(W){
   for(let i=0;i<2;i++)makeCar('bus',[0xe67e22,0x2a58c8][i],6.5);
   const tvp=new V3();
   W.updaters.push((dt,t,p)=>{
+    let eng=0,engF=0;
     cars.forEach(c=>{
       const dx=DIRS[c.d][0],dz=DIRS[c.d][1];
       const ax=lines[c.i],az=lines[c.j];
@@ -336,9 +337,11 @@ EQ.populate.city=function(W){
       const off=U.clamp(c.t*P/7,0,1);const ox=U.lerp(c.pox,rx*lane,off),oz=U.lerp(c.poz,rz*lane,off);
       c.x=ax+dx*c.t*P+ox;c.z=az+dz*c.t*P+oz;
       let tgt=c.vmax;const fx=Math.sin(c.h),fz=Math.cos(c.h);
-      if(p){const qx=p.x-c.x,qz=p.z-c.z,ah=qx*fx+qz*fz,sd=Math.abs(qx*fz-qz*fx);if(ah>0&&ah<13&&sd<3.2)tgt=0;}
+      let byP=false;if(p){const qx=p.x-c.x,qz=p.z-c.z,ah=qx*fx+qz*fz,sd=Math.abs(qx*fz-qz*fx);if(ah>0&&ah<13&&sd<3.2){tgt=0;byP=true;}}
       for(const o of cars){if(o===c)continue;const qx=o.x-c.x,qz=o.z-c.z,ah=qx*fx+qz*fz,sd=Math.abs(qx*fz-qz*fx);if(ah>0&&ah<(c.L+o.L)/2+3.5&&sd<2)tgt=0;}
-      if(tgt===0){c.blocked+=dt;if(c.blocked>2.5&&p&&Math.hypot(p.x-c.x,p.z-c.z)<20&&Math.random()<dt*.5)EQ.sfx.horn();}else c.blocked=0;
+      if(tgt===0){c.blocked+=dt;if(byP&&c.blocked>1.8&&Math.random()<dt*.6){(Math.random()<.5?EQ.sfx.honk2:EQ.sfx.horn)();c.blocked=-1.5;}else if(c.blocked>3&&p&&Math.hypot(p.x-c.x,p.z-c.z)<25&&Math.random()<dt*.3)EQ.sfx.horn();}else c.blocked=0;
+      if(p){const d=Math.hypot(p.x-c.x,p.z-c.z);if(d<45){const k=(1-d/45);eng=Math.max(eng,k*(.35+c.v/12));engF=Math.max(engF,70+c.v*9);}
+        if(d<8&&c.v>5&&!c.passed){c.passed=true;EQ.sfx.carpass(.08+c.v*.008);if(Math.random()<.25)setTimeout(()=>EQ.sfx.horn(.2),200);}if(d>14)c.passed=false;}
       if(c.blocked>8){c.blocked=0;tgt=c.vmax*.3;}
       c.v=U.lerp(c.v,tgt,Math.min(1,dt*(tgt<c.v?3:.8)));
       c.t+=c.v*dt/P;
@@ -349,7 +352,7 @@ EQ.populate.city=function(W){
       const vis=!p||Math.hypot(p.x-c.x,p.z-c.z)<380;c.g.visible=vis;
       const k=c.L*.28;c.col.x=c.x+fx*k;c.col.z=c.z+fz*k;c.col2.x=c.x-fx*k;c.col2.z=c.z-fz*k;
     });
-    if(p)EQ.loop('city',.07,250,.4,'lowpass');
+    if(p){EQ.loop('city',.07,250,.4,'lowpass');EQ.loop('engine',eng*.22,engF||90,1.2,'lowpass');}
   });
   // pedoni sui marciapiedi attorno agli isolati
   const blocks=W.blocks;

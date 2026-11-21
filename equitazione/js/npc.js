@@ -222,30 +222,68 @@ EQ.buildAnimal=function(kind,ov){
 EQ.buildCat=function(){return EQ.buildAnimal('cat',{col:pick([0xd9782a,0x2a2a2a,0x8a8a8a,0xf2eee6,0x6b4a30,0xc8a070])});};
 /* ============ VEICOLI ============ */
 const PROF={
-  hatch:{L:3.8,W:1.72,b:[[-1.9,.32],[-1.97,.58],[-1.92,.98],[-1.6,1.45],[-.1,1.5],[.7,1.4],[1.3,1.0],[1.88,.9],[1.97,.58],[1.9,.32]],w:[[-1.6,1.0],[-1.48,1.4],[-.1,1.45],[.68,1.36],[1.22,1.0]],wh:[-1.25,1.25],wr:.32},
-  sedan:{L:4.6,W:1.8,b:[[-2.3,.33],[-2.35,.62],[-2.25,.95],[-1.6,1.02],[-1.15,1.42],[.45,1.45],[1.15,1.02],[2.2,.88],[2.33,.6],[2.25,.33]],w:[[-1.55,1.02],[-1.13,1.38],[.43,1.4],[1.08,1.02]],wh:[-1.45,1.45],wr:.33},
-  suv:{L:4.5,W:1.85,b:[[-2.25,.42],[-2.3,.7],[-2.25,1.2],[-2.05,1.72],[.6,1.75],[1.25,1.2],[2.2,1.05],[2.28,.7],[2.2,.42]],w:[[-2.0,1.2],[-1.92,1.66],[.55,1.68],[1.15,1.2]],wh:[-1.4,1.45],wr:.4},
-  van:{L:5.0,W:1.9,b:[[-2.5,.4],[-2.52,2.15],[1.3,2.15],[2.05,1.3],[2.5,1.05],[2.52,.4]],w:[[1.0,1.3],[1.25,2.0],[1.95,1.3]],wh:[-1.6,1.65],wr:.36},
-  bus:{L:11,W:2.5,b:[[-5.5,.45],[-5.52,3.0],[5.3,3.0],[5.5,2.6],[5.52,.45]],w:[[-5.2,1.5],[-5.2,2.6],[5.4,2.6],[5.45,1.3]],wh:[-3.6,3.6],wr:.5},
+  hatch:{L:3.95,W:1.76,wr:.31,wh:[-1.27,1.3],
+    low:[[-1.97,.28],[-2.0,.62],[-1.93,.93],[1.25,.97],[1.82,.86],[1.98,.66],[1.96,.28]],
+    cab:[[-1.93,.92],[-1.78,1.47],[-.15,1.53],[.62,1.43],[1.25,.97]],
+    glass:[[-1.83,1.0],[-1.71,1.42],[-.15,1.47],[.56,1.39],[1.12,1.0]]},
+  sedan:{L:4.65,W:1.82,wr:.32,wh:[-1.45,1.5],
+    low:[[-2.32,.3],[-2.36,.62],[-2.28,.96],[-1.62,1.0],[1.15,1.0],[2.2,.86],[2.33,.62],[2.3,.3]],
+    cab:[[-1.75,.98],[-1.18,1.43],[.42,1.46],[1.18,.99]],
+    glass:[[-1.62,1.03],[-1.12,1.38],[.4,1.41],[1.06,1.03]]},
+  suv:{L:4.6,W:1.9,wr:.38,wh:[-1.45,1.48],
+    low:[[-2.28,.4],[-2.3,.72],[-2.26,1.12],[1.2,1.14],[2.18,1.0],[2.3,.75],[2.26,.4]],
+    cab:[[-2.24,1.1],[-2.12,1.78],[.6,1.8],[1.25,1.13]],
+    glass:[[-2.14,1.18],[-2.04,1.72],[.56,1.74],[1.12,1.18]]},
+  van:{L:5.0,W:1.95,wr:.36,wh:[-1.6,1.65],
+    low:[[-2.5,.38],[-2.52,1.05],[2.2,1.05],[2.5,.95],[2.52,.38]],
+    cab:[[-2.52,1.02],[-2.5,2.2],[1.3,2.2],[2.05,1.25],[2.2,1.03]],
+    glass:[[1.05,1.15],[1.22,2.0],[1.94,1.25],[2.0,1.15]]},
+  bus:{L:11,W:2.5,wr:.5,wh:[-3.6,3.6],
+    low:[[-5.5,.45],[-5.52,1.25],[5.5,1.25],[5.52,.45]],
+    cab:[[-5.52,1.22],[-5.5,3.0],[5.3,3.0],[5.5,2.6],[5.52,1.22]],
+    glass:[[-5.3,1.4],[-5.3,2.65],[5.25,2.65],[5.42,1.35]]},
 };
 const geoCache={};
 EQ.carGeo=function(type,col){
   const k=type+col;if(geoCache[k])return geoCache[k];
-  const pf=PROF[type];const parts=[];
-  const ext=(pts,depth,c,y0)=>{const sh=new THREE.Shape();pts.forEach((p,i)=>i?sh.lineTo(p[0],p[1]):sh.moveTo(p[0],p[1]));sh.closePath();
-    const g=new THREE.ExtrudeGeometry(sh,{depth,bevelEnabled:true,bevelSize:.06,bevelThickness:.06,bevelSegments:2,curveSegments:3});g.translate(0,y0||0,-depth/2);g.rotateY(-Math.PI/2);return T(g,c);};
-  parts.push(ext(pf.b,pf.W-.12,col));
-  parts.push(ext(pf.w,pf.W-.08,type==='bus'?0x2a3a48:0x1b232c));
-  if(type==='bus'){for(let i=0;i<7;i++)parts.push(T(X(G.box(pf.W+.02,.06,.08),0,2.0,-4.4+i*1.4),col));parts.push(T(X(G.box(pf.W+.04,.25,pf.L*.98),0,.8,0),0xffffff));}
-  const L=pf.L, wy=pf.wr;
-  for(const sd of [1,-1])for(const z of pf.wh){parts.push(T(X(G.cyl(pf.wr,pf.wr,.24,14),sd*(pf.W/2-.08),wy,z,0,0,Math.PI/2),0x151515));parts.push(T(X(G.cyl(pf.wr*.55,pf.wr*.55,.25,10),sd*(pf.W/2-.06),wy,z,0,0,Math.PI/2),0xb8bcc0));}
-  for(const sd of [1,-1]){parts.push(T(X(G.box(.32,.14,.06),sd*(pf.W/2-.3),.72,L/2+.02),0xfffbe8));parts.push(T(X(G.box(.3,.12,.06),sd*(pf.W/2-.28),.82,-L/2-.02),0xd01818));
-    if(type!=='bus')parts.push(T(X(G.box(.05,.08,.18),sd*(pf.W/2+.04),1.0,L*.16),col));}
-  parts.push(T(X(G.box(pf.W-.1,.18,.12),0,.42,L/2+.03),0x222222));parts.push(T(X(G.box(pf.W-.1,.18,.12),0,.42,-L/2-.03),0x222222));
-  parts.push(T(X(G.box(.5,.12,.02),0,.5,-L/2-.1),0xf2f2f2));
-  return geoCache[k]=EQ.merge(parts);
+  const pf=PROF[type];const P=[];const W=pf.W,L=pf.L;
+  const ext=(pts,depth,c,bev)=>{const sh=new THREE.Shape();pts.forEach((p,i)=>i?sh.lineTo(p[0],p[1]):sh.moveTo(p[0],p[1]));sh.closePath();
+    const b=bev==null?.07:bev;const g=new THREE.ExtrudeGeometry(sh,{depth:depth-2*b,bevelEnabled:b>0,bevelSize:b,bevelThickness:b,bevelSegments:3,curveSegments:4});g.translate(0,0,-(depth-2*b)/2);g.rotateY(-Math.PI/2);P.push(T(g,c));};
+  const big=type==='bus'||type==='van';
+  ext(pf.low,W,col,.09);
+  ext(pf.cab,W*(big?.99:.86),col,.06);
+  ext(pf.glass,W*(big?1.0:.875),0x18222c,.02);
+  if(!big){const c=pf.cab.reduce((a,p)=>[a[0]+p[0]/pf.cab.length,a[1]+p[1]/pf.cab.length],[0,0]);
+    const gr=pf.cab.map(p=>{const dx=p[0]-c[0],dy=p[1]-c[1],l=Math.hypot(dx,dy)||1;return[p[0]+dx/l*.085,p[1]+dy/l*.085];});
+    ext(gr,W*.78,0x18222c,.02);
+    const my=Math.max(...pf.cab.map(p=>p[1])),top=pf.cab.filter(p=>p[1]>my-.09),x0=Math.min(...top.map(p=>p[0])),x1=Math.max(...top.map(p=>p[0]));
+    P.push(T(X(G.box(W*.84,.07,x1-x0+.1),0,my+.035,(x0+x1)/2),col));}
+  // montante centrale
+  if(!big){const gx=(pf.glass[1][0]+pf.glass[pf.glass.length-2][0])/2;P.push(T(X(G.box(W*.885,(pf.glass[2][1]-pf.glass[0][1])*.95,.09),0,(pf.glass[0][1]+pf.glass[2][1])/2,gx),col));}
+  if(type==='bus'){for(let i=0;i<8;i++)P.push(T(X(G.box(W+.04,1.3,.1),0,2.02,-4.6+i*1.3),col));P.push(T(X(G.box(W+.05,.22,L*.96),0,1.0,0),0xffffff));
+    P.push(T(X(G.box(.9,1.9,.05),W/2+.01,1.4,3.8,0,Math.PI/2,0),0x222a33));}
+  // passaruota, gomme, cerchi
+  for(const sd of [1,-1])for(const z of pf.wh){
+    P.push(T(X(new THREE.CylinderGeometry(pf.wr+.07,pf.wr+.07,.18,16,1,true,0,Math.PI),sd*(W/2-.05),pf.wr,z,0,0,Math.PI/2),0x0d0d0d));
+    P.push(T(X(G.cyl(pf.wr,pf.wr,.24,18),sd*(W/2-.1),pf.wr,z,0,0,Math.PI/2),0x141414));
+    P.push(T(X(G.cyl(pf.wr*.62,pf.wr*.62,.03,16),sd*(W/2+.02),pf.wr,z,0,0,Math.PI/2),0xc5cad0));
+    for(let r=0;r<5;r++){const a=r/5*Math.PI*2;P.push(T(X(G.box(.035,pf.wr*.5,.06),sd*(W/2+.04),pf.wr+Math.cos(a)*pf.wr*.28,z+Math.sin(a)*pf.wr*.28,a,0,0),0x8a9096));}
+    P.push(T(X(G.cyl(pf.wr*.16,pf.wr*.16,.04,10),sd*(W/2+.05),pf.wr,z,0,0,Math.PI/2),0x2a2a2a));}
+  // fari, fanali, griglia, targhe, paraurti
+  const fz=pf.low[pf.low.length-2][0],fy=pf.low[pf.low.length-2][1];
+  for(const sd of [1,-1]){
+    P.push(T(X(G.box(.36,.13,.1),sd*(W/2-.3),big?.95:fy-.06,L/2-.01,0,0,0),0xfff8e0));
+    P.push(T(X(G.box(.38,.15,.07),sd*(W/2-.28),big?1.0:.86,-L/2+.0),0xb81010));
+    P.push(T(X(G.box(.3,.04,.04),sd*(W/2-.3),big?.86:.74,-L/2-.01),0xff8c00));
+    if(!big){P.push(T(X(G.box(.06,.1,.2),sd*(W*.43+.04),pf.cab[0][1]+.13,pf.glass[pf.glass.length-1][0]-.05),col));P.push(T(X(G.box(.025,.08,.15),sd*(W*.43+.06),pf.cab[0][1]+.13,pf.glass[pf.glass.length-1][0]-.08),0x111111));}
+    for(const dz of (big?[]:[-.35,.55]))P.push(T(X(G.box(.03,.035,.16),sd*(W/2+.01),pf.low[3][1]-.12,dz),0xbfc4c8));
+    P.push(T(X(G.box(.02,.12,L*.6),sd*(W/2+.005),.38,0),0x1a1a1a));}
+  P.push(T(X(G.box(W*.42,.16,.06),0,big?.75:.62,L/2+.02),0x16181a));P.push(T(X(G.box(W*.42,.025,.07),0,big?.82:.69,L/2+.025),0xc5cad0));
+  P.push(T(X(G.box(W-.12,.2,.14),0,.36,L/2+.04),0x1e1f22));P.push(T(X(G.box(W-.12,.2,.14),0,.36,-L/2-.04),0x1e1f22));
+  for(const zz of [L/2+.12,-L/2-.12]){P.push(T(X(G.box(.52,.12,.02),0,.5,zz),0xf2f2f2));P.push(T(X(G.box(.06,.12,.025),-.24,.5,zz),0x1d4ed8));}
+  return geoCache[k]=EQ.merge(P);
 };
-const CARMAT=EQ.CARMAT=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.32,metalness:.35});
+const CARMAT=EQ.CARMAT=new THREE.MeshStandardMaterial({vertexColors:true,roughness:.24,metalness:.5,envMapIntensity:1.2});
 EQ.CAR_COLS=[0xc0392b,0xf1c40f,0x2a58c8,0xecf0f1,0x2f6b33,0x111111,0x8e44ad,0xe67e22,0x95a5a6,0x7a1f1f,0x1f3b5a,0xd9d4c8,0x3a3a3a];
 EQ.buildCar=function(type,col){
   type=type||pick(['hatch','hatch','sedan','suv','van','sedan']);col=col!=null?col:pick(EQ.CAR_COLS);
