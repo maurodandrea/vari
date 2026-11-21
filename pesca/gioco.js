@@ -895,6 +895,58 @@ function drawMini(P){const c=M3.mini;if(!c)return;const g=c.getContext('2d'),d=M
   g.clearRect(0,0,W,H);g.drawImage(M3.mbg,0,0);g.fillStyle='#ff4d5e';g.beginPath();g.arc(M3.MX(P.x),M3.MY(P.y),4*d,0,7);g.fill();}
 function dispose3D(){if(M3.R){try{M3.R.dispose();M3.R.forceContextLoss?.();}catch(e){}}M3.R=null;M3.on=false;M3.S=null;SAT.cache.clear();M3.cp=null;M3.sn=null;M3.mbg=null;document.getElementById('gmini')?.remove();}
 
+/* ---------- giocatori veri: amici (cappello verde) e utenti pubblici (cappello blu) nello stesso spot ----------
+   gamers/{uid}: {name, photo, spot, x, z, ry, vis:'friends'|'all', friends:[uid], t}  (la visibilità è quella della posizione in Social › Mappa)
+   gamemsgs/{id}: {from, name, to, spot, text, t}: messaggi scritti nel gioco, li legge solo il destinatario */
+const RP={list:new Map(),subs:[],pubT:0,last:null,log:{},chk:0};
+const rpLS=(k,d)=>{try{const v=JSON.parse(localStorage.getItem('lenza.'+k));return v==null?d:v;}catch(e){return d;}};
+const rpVis=()=>{const v=rpLS('chatloc','off');return v==='friends'||v==='all'?v:'off';};
+const rpFriends=()=>(rpLS('chatfriends',[])||[]).filter(f=>f&&typeof f.uid==='string');
+const rpCloud=()=>{const C=window.CLOUD;return C&&C.user&&C.db&&C.ff?C:null;};
+function rpStart(){rpStop();const C=rpCloud(),v=rpVis();if(!C||v==='off')return;const ff=C.ff,db=C.db,me=C.user.uid,sid=SPOT.id,col=ff.collection(db,'gamers');RP.me=me;RP.on=true;RP.photoSent=false;
+  const on=snap=>snap.docChanges().forEach(ch=>{const d=ch.doc.data(),id=ch.doc.id;if(id===me)return;if(ch.type==='removed'||d.spot!==sid||Date.now()-(d.t||0)>90000){rpDrop(id);return;}rpUpsert(id,d);});
+  RP.subs.push(ff.onSnapshot(ff.query(col,ff.where('spot','==',sid),ff.where('friends','array-contains',me)),on,e=>console.warn('gamers amici',e)));
+  if(v==='all')RP.subs.push(ff.onSnapshot(ff.query(col,ff.where('spot','==',sid),ff.where('vis','==','all')),on,e=>console.warn('gamers tutti',e)));
+  RP.subs.push(ff.onSnapshot(ff.query(ff.collection(db,'gamemsgs'),ff.where('to','==',me)),snap=>snap.docChanges().forEach(ch=>{if(ch.type!=='added')return;const m=ch.doc.data();ff.deleteDoc(ch.doc.ref).catch(()=>{});if(Date.now()-(m.t||0)<180000)rpGotMsg(m);}),e=>console.warn('gamemsgs',e)));
+  rpPublish(true);}
+function rpStop(){RP.subs.forEach(u=>{try{u();}catch(e){}});RP.subs=[];for(const id of [...RP.list.keys()])rpDrop(id);
+  const C=rpCloud();if(RP.on&&C){C.ff.deleteDoc(C.ff.doc(C.db,'gamers',C.user.uid)).catch(()=>{});}RP.on=false;RP.last=null;}
+function rpPublish(force){const C=rpCloud();if(!RP.on||!C||!AN.pos)return;const p={x:+AN.pos.x.toFixed(2),z:+AN.pos.z.toFixed(2)},L=RP.last,now=Date.now();
+  if(!force&&L&&Math.hypot(p.x-L.x,p.z-L.z)<.4&&now-L.t<20000)return;RP.last={...p,t:now};
+  const d={name:C.name()||'Pescatore',spot:SPOT.id,x:p.x,z:p.z,ry:+AN.rotY.toFixed(2),vis:rpVis(),friends:rpFriends().map(f=>f.uid),t:now};if(!RP.photoSent){d.photo=myPhoto()||null;RP.photoSent=true;}
+  C.ff.setDoc(C.ff.doc(C.db,'gamers',C.user.uid),d,{merge:true}).catch(e=>console.warn('gamers',e));}
+function rpLabel(name,friend){const t=canvasTex(512,96,(g)=>{g.font='800 46px Outfit,sans-serif';const w=Math.min(500,g.measureText(name).width+60);g.fillStyle=friend?'rgba(46,155,79,.92)':'rgba(36,89,201,.92)';const x=(512-w)/2,r=40;g.beginPath();g.moveTo(x+r,8);g.arcTo(x+w,8,x+w,88,r);g.arcTo(x+w,88,x,88,r);g.arcTo(x,88,x,8,r);g.arcTo(x,8,x+w,8,r);g.fill();g.fillStyle='#fff';g.textAlign='center';g.textBaseline='middle';g.fillText(name,256,50);});
+  const s=new T.Sprite(new T.SpriteMaterial({map:t,depthTest:false,transparent:true}));s.scale.set(1.5,.28,1);s.position.y=2.05;s.renderOrder=9;return s;}
+function rpUpsert(id,d){let a=RP.list.get(id);const friend=rpFriends().some(f=>f.uid===id)||(d.friends||[]).includes(RP.me);
+  if(!a||a.friend!==friend||(d.photo!==undefined&&d.photo!==a.photo)){const keep=a;if(a)rpDrop(id);const ph=d.photo!==undefined?d.photo:keep?.photo;
+    a={real:true,id,name:String(d.name||'Pescatore').slice(0,24),friend,photo:ph||null,obj:makeAngler({suit:'jacket',hat:'cap',c:friend?'#2e9b4f':'#2459c9',j:friend?'#3d5a3a':'#34465e',j2:friend?'#30492e':'#2a394d',p:'#2c3445',beard:ph?'none':'stubble',photo:ph||null}),
+      pose:JSON.parse(JSON.stringify(POSES.stand)),target:'stand',walk:0,moving:false,speed:2.2,pos:keep?keep.pos.clone():new T.Vector3((d.x||0)+3.5,0,d.z||10),off:keep?keep.off:null,rotY:d.ry||0,holding:-1,reelSpin:0,crank:0,faceTo:null};
+    a.lab=rpLabel(a.name,friend);a.obj.add(a.lab);scene.add(a.obj);RP.list.set(id,a);
+    if(!keep){st.msg=`${friend?'🟢 Il tuo amico':'🔵'} ${a.name} è qui a pescare: toccalo per scrivergli.`;if(st.phase==='wait')setUI();}}
+  // ognuno pesca dalla sua postazione: chi è nello stesso punto lo mostro qualche metro più in là
+  if(a.off==null){let h=0;for(const ch of id)h=(h*31+ch.charCodeAt(0))>>>0;a.off=(h%2?1:-1)*(3.5+h%4);}
+  a.name=String(d.name||a.name);a.seen=Date.now();a.tx=(d.x||0)+a.off;a.tz=d.z;a.try=d.ry;}
+function rpDrop(id){const a=RP.list.get(id);if(!a)return;scene?.remove(a.obj);RP.list.delete(id);if(st.rtalk===id&&st.phase==='rtalk'){st.phase='wait';setUI();}}
+function rpUpd(dt,t){if(AN.bub){AN.bubT-=dt;if(AN.bubT<=0){AN.obj.remove(AN.bub);AN.bub=null;}}if(!RP.on)return;RP.pubT-=dt;if(RP.pubT<=0){RP.pubT=3;rpPublish(false);}
+  for(const a of RP.list.values()){if(a.tx!=null){const d=Math.hypot(a.tx-a.pos.x,a.tz-a.pos.z);if(d>15){a.pos.set(a.tx,0,a.tz);}else if(d>.15&&!a.moving){a.walkTarget={x:a.tx,z:a.tz,res:()=>{a.target='stand';a.faceTo=a.try;}};a.moving=true;a.target='stand';}}
+    if(a.bub){a.bubT-=dt;if(a.bubT<=0){a.obj.remove(a.bub);a.bub=null;}}moveActor(a,dt);lerpPose(dt,6,a);applyPose(t,a);}
+  RP.chk-=dt;if(RP.chk<=0){RP.chk=10;for(const [id,a] of RP.list)if(Date.now()-a.seen>90000)rpDrop(id);}}
+function rpGotMsg(m){const a=RP.list.get(m.from);(RP.log[m.from]=RP.log[m.from]||[]).push({me:false,text:String(m.text||'').slice(0,300)});
+  if(a)say(a,m.text,8);try{navigator.vibrate?.(80);}catch(e){}
+  if(st.phase==='rtalk'&&st.rtalk===m.from){const el=document.getElementById('grlog');if(el)el.innerHTML=rpLog(m.from);}
+  else{st.msg=`💬 ${escH(m.name||'Pescatore')}: ${escH(m.text)}${a?' (toccalo per rispondere)':''}`;if(st.phase==='wait')setUI();}}
+const rpLog=id=>(RP.log[id]||[]).slice(-6).map(m=>`<div class="gs" style="margin:2px 0"><b>${m.me?'Tu':escH(RP.list.get(id)?.name||'')}:</b> ${escH(m.text)}</div>`).join('')||'<div class="gs">Scrivi un messaggio: lo vedrà sopra la tua testa nel suo gioco.</div>';
+function rtalkHtml(){const a=RP.list.get(st.rtalk);if(!a)return `<div class="gpanel"><b>Non è più qui</b><div class="grow">${btn('↩ Torna a pescare','rback()','big')}</div></div>`;
+  return `<div class="gpanel"><div class="grow" style="justify-content:space-between"><b>${a.friend?'🟢':'🔵'} ${escH(a.name)}</b><span class="gs">${a.friend?'tuo amico':'utente LenzApp'}</span></div><div id="grlog" style="max-height:30vh;overflow:auto">${rpLog(a.id)}</div>
+    <div class="grow" style="gap:6px;margin-top:6px"><input id="grtx" maxlength="200" placeholder="Scrivi un messaggio…" autocomplete="off" style="flex:1;min-width:0;padding:11px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;font:500 16px Outfit,sans-serif;user-select:text;-webkit-user-select:text" onkeydown="if(event.key==='Enter')GAME.rsend()"><button class="gb" style="margin:0" onclick="GAME.rsend()">Invia</button></div>
+    <div class="grow">${btn('↩ Torna a pescare','rback()')}</div></div>`;}
+G.rtalk=id=>{const a=RP.list.get(id);if(!a)return;st.rtalk=id;a.faceTo=Math.atan2(-(AN.pos.x-a.pos.x),-(AN.pos.z-a.pos.z));AN.faceTo=Math.atan2(-(a.pos.x-AN.pos.x),-(a.pos.z-AN.pos.z));st.phase='rtalk';setUI();setTimeout(()=>document.getElementById('grtx')?.focus(),50);};
+G.rback=()=>{st.phase='wait';st.msg='';setUI();};
+G.rsend=()=>{const el=document.getElementById('grtx'),txt=(el?.value||'').trim().slice(0,200),C=rpCloud(),a=RP.list.get(st.rtalk);if(!txt||!C||!a)return;el.value='';
+  C.ff.setDoc(C.ff.doc(C.db,'gamemsgs',C.user.uid+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,6)),{from:C.user.uid,name:C.name()||'Pescatore',to:a.id,spot:SPOT.id,text:txt,t:Date.now()}).catch(e=>{st.msg='Messaggio non inviato: '+(e.code||e.message);});
+  (RP.log[a.id]=RP.log[a.id]||[]).push({me:true,text:txt});say(AN,txt,6);const lg=document.getElementById('grlog');if(lg)lg.innerHTML=rpLog(a.id);};
+G._rp=RP;
+
 /* ---------- interfaccia ---------- */
 function mount(v){
   stop();root=document.createElement('div');root.id='gamebox';
@@ -917,10 +969,10 @@ G.arrive=async i=>{cancelAnimationFrame(MP.raf);motor(false);dispose3D();removeE
     buildWorld();size();addEventListener('resize',size);bindLook();
     // all'inizio la mia postazione è ancora da montare
     MYG.forEach(o=>o.visible=false);if(CHAIRG)CHAIRG.visible=false;AN.pos.set(CHAIR.x+1.5,sandY(25),25);AN.target='stand';AN.pose=JSON.parse(JSON.stringify(POSES.stand));AN.rotY=0;
-    st.phase='setup';setUI();raf=requestAnimationFrame(loop);}
+    st.phase='setup';setUI();raf=requestAnimationFrame(loop);rpStart();}
   catch(e){ui.innerHTML=`<div class="gpanel"><b>Il gioco 3D non si è caricato</b><div class="gs">${escH(e.message||e)}</div>${btn('↻ Riprova','mount()','big')}</div>`;}};
 G.toMap=()=>{stop();mount(null);};
-function stop(){cancelAnimationFrame(MP.raf);dispose3D();removeEventListener('resize',sizeMap);windSound(0);motor(false);reelWhir(0);cancelAnimationFrame(raf);raf=0;removeEventListener('resize',size);try{renderer?.dispose();renderer?.forceContextLoss?.();}catch(e){}renderer=null;foams=[];clouds=[];st.rods=[];NPCS=[];MYG=[];CRABS=[];LANTERNS=[];CAM.p=null;document.getElementById('gamebox')?.remove();document.body.classList.remove('gaming');seaSound(0);}
+function stop(){rpStop();cancelAnimationFrame(MP.raf);dispose3D();removeEventListener('resize',sizeMap);windSound(0);motor(false);reelWhir(0);cancelAnimationFrame(raf);raf=0;removeEventListener('resize',size);try{renderer?.dispose();renderer?.forceContextLoss?.();}catch(e){}renderer=null;foams=[];clouds=[];st.rods=[];NPCS=[];MYG=[];CRABS=[];LANTERNS=[];CAM.p=null;document.getElementById('gamebox')?.remove();document.body.classList.remove('gaming');seaSound(0);}
 addEventListener('hashchange',()=>{if(location.hash!=='#gioco'&&document.getElementById('gamebox'))stop();});
 G.mount=mount;G.exit=()=>{if(st.phase!=='map'&&st.phase!=='parking'&&renderer&&SPOT){MP.from=String(SPOT.id||'').replace(/^g_/,'');stop();mount(null);return;}MP.from=null;stop();if(window.go)go('home');};
 function size(){if(!renderer)return;const w=root.clientWidth,h=root.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.fov=w<h?68:50;camera.updateProjectionMatrix();}
@@ -971,6 +1023,7 @@ function setUI(){const p=st.phase;let h='';
   else if(p==='bag')h=`<div class="gpanel"><b>🧺 Il tuo carniere</b><div class="gs">Oggi: ${st.bag.length} pesci · ${st.bag.reduce((a,c)=>a+c.w,0).toFixed(2).replace('.',',')} kg · Totale: ${st.total.n} pesci, ${st.total.pts} punti</div>
     <div class="glist">${st.bag.slice().reverse().map(c=>`<div>${c.rel?'💚':'🧺'} <b>${escH(c.n)}</b> ${c.l} cm · ${c.w<1?Math.round(c.w*1000)+' g':c.w.toFixed(2).replace('.',',')+' kg'} <small>${new Date(c.t).toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})} · ${escH(c.bait)}</small></div>`).join('')||'<div class="gs">Ancora niente: pazienza, è surfcasting!</div>'}</div>
     <div class="gs">Record: ${Object.entries(st.best).map(([k,v])=>`${escH(k)} ${v.toFixed(2).replace('.',',')} kg`).join(' · ')||'nessuno'}</div>${btn('↩ Torna alle canne','toWait()','big')}</div>`;
+  else if(p==='rtalk')h=rtalkHtml();
   else if(p==='busy')h=st.msg?`<div class="gpanel slim"><div class="gs" style="text-align:center">${st.msg}</div></div>`:'';
   ui.innerHTML=h;
   const cb=document.getElementById('gcastb');if(cb){cb.onpointerdown=e=>{e.preventDefault();ac();st.cast={p:0,dir:1,on:true};AN.target='castBack';};const rel=()=>{if(st.cast?.on)doCast();};cb.onpointerup=rel;cb.onpointerleave=rel;}
@@ -1219,6 +1272,7 @@ function onTap(e){if(!sittingView())return;
   if(hits.length){const i=st.rods.findIndex(r=>r.hit===hits[0].object);if(i>=0)return G.rod(i);}
   if(AN.target!=='sit'&&RAY.r.intersectObject(CHAIRHIT,false).length)return G.sit();
   const ci=CRABS.findIndex(c=>c.visible&&RAY.r.ray.distanceToPoint(c.position)<.6);if(ci>=0&&nearCrab()===CRABS[ci])return G.crab();
+  for(const a of RP.list.values())if(RAY.r.ray.distanceToPoint(a.pos.clone().add(new T.Vector3(0,1,0)))<.8&&a.pos.distanceTo(AN.pos)<8)return G.rtalk(a.id);
   const ni=NPCS.findIndex(a=>RAY.r.ray.distanceToPoint(a.pos.clone().add(new T.Vector3(0,1,0)))<.8);if(ni>=0&&NPCS[ni].pos.distanceTo(AN.pos)<4)return G.talk(ni);}
 G.walk=(x,z)=>seq(async()=>{st.phase='busy';st.msg='';setUI();await walkTo(x,z,2.8);AN.faceTo=null;pose('stand');st.phase='wait';talkNear();setUI();});
 G.rise=()=>seq(async()=>{st.phase='busy';setUI();await standUp();await walkTo(AN.pos.x+.4,AN.pos.z-1.2,1.6);AN.faceTo=0;st.phase='wait';st.msg='Usa il joystick per camminare (anche in acqua), tocca una canna per andarci o la sedia per sederti.';setUI();});
@@ -1264,7 +1318,7 @@ function loop(){raf=requestAnimationFrame(loop);if(!renderer)return;const dt=Mat
   const gmul=(st.phase==='wait'&&!st.busy)?st.speed:1;st.gmul=gmul;st.gt+=dt*1000*gmul;const gmin=dt*gmul/60;const w=wxAt(st.gt);
   // pescatore e vicini di spiaggia
   joyMove(dt,t);moveActor(AN,dt);lerpPose(dt,AN.target==='castFwd'||AN.target==='strike'?14:6);applyPose(t);updCrabs(dt,t);nearUI(t);
-  updNpcs(dt,t);
+  updNpcs(dt,t);rpUpd(dt,t);
   if(st.cast?.on){st.cast.p+=st.cast.dir*dt*1.15;if(st.cast.p>1){st.cast.p=1;st.cast.dir=-1;}if(st.cast.p<0){st.cast.p=0;st.cast.dir=1;}const el=document.getElementById('gpw');if(el)el.style.width=(st.cast.p*100)+'%';}
   // canne
   for(const r of st.rods){
