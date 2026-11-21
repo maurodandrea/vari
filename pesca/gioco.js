@@ -257,8 +257,9 @@ function makeAngler(o={}){
     const sole=new T.Mesh(new T.BoxGeometry(.1,.035,.27),bt==='shoes'?S('#f0f0ea'):S('#1e1d1b'));sole.position.set(0,-.025,-.05);foot.add(sole);
     const up=new T.Mesh(new T.SphereGeometry(.07,14,10),bt==='shoes'?bootM:(suit==='waders'?rubber:bootM));up.scale.set(.75,.6,1.7);up.position.set(0,.01,-.055);foot.add(up);J[k+'Foot']=foot;}
   // foto profilo come viso: copre la parte davanti della testa al posto di occhi, naso e bocca disegnati
-  if(o.photo){const hd=J.head;hd.children.forEach(m=>{if(m.position.z<-.075)m.visible=false;});
-    const mk=new T.Mesh(new T.SphereGeometry(.1015,26,20,Math.PI*1.5-1.2,2.4,Math.PI*.2,Math.PI*.62),new T.MeshStandardMaterial({map:photoTex(o.photo),roughness:.75}));mk.scale.set(.9,1.08,1);hd.add(mk);}
+  if(o.photo){const hd=J.head;hd.children.forEach((m,i)=>{if(i>0&&(m.position.z<-.075||m.position.y<-.04))m.visible=false;});
+    // viso intero: dalla fronte al mento (foto 4:5), un po' più largo e più basso della testa disegnata
+    const mk=new T.Mesh(new T.SphereGeometry(.104,28,24,Math.PI*1.5-1.25,2.5,Math.PI*.18,Math.PI*.7),new T.MeshStandardMaterial({map:photoTex(o.photo),roughness:.75}));mk.scale.set(.92,1.22,1);mk.position.y=-.018;hd.add(mk);}
   A.traverse(m=>{if(m.isMesh)m.castShadow=true;});return A;}
 const PHOTOT={};function photoTex(u){if(PHOTOT[u])return PHOTOT[u];const t=new T.TextureLoader().load(u);t.encoding=T.sRGBEncoding;return PHOTOT[u]=t;}
 function myPhoto(){try{return JSON.parse(localStorage.getItem('lenza.photo'))||null;}catch(e){return null;}}
@@ -1353,7 +1354,7 @@ function loop(){raf=requestAnimationFrame(loop);if(!renderer)return;const dt=Mat
   // schizzi
   const sp=splashP.userData;if(sp.t>0){sp.t-=dt*1.2;const a=splashP.geometry.attributes.position;for(let i=0;i<60;i++){const v=sp.v[i];v.y-=9.8*dt;a.setXYZ(i,a.getX(i)+v.x*dt,Math.max(0,a.getY(i)+v.y*dt),a.getZ(i)+v.z*dt);}a.needsUpdate=true;splashP.material.opacity=clamp(sp.t,0,1);}
   updEnv(w,t,dt);updCam(dt,t);
-  if(!loop.h||t-loop.h>.5){loop.h=t;drawHud(w);if(st.phase==='wait'){const els=ui.querySelectorAll('.gr small:last-child');st.rods.forEach((r,i)=>{if(els[i])els[i].textContent=rodStatus(r);});}}
+  if(!loop.h||t-loop.h>.5||t<loop.h){loop.h=t;drawHud(w);if(st.phase==='wait'){const els=ui.querySelectorAll('.gr small:last-child');st.rods.forEach((r,i)=>{if(els[i])els[i].textContent=rodStatus(r);});}}
   renderer.setScissorTest(false);renderer.setViewport(0,0,root.clientWidth,root.clientHeight);renderer.render(scene,camera);
   if((st.phase==='fight'||(st.phase==='busy'&&AN.reelSpin))&&AN.holding>=0){const r=st.rods[AN.holding],rp=new T.Vector3();r.obj.userData.reel.getWorldPosition(rp);
     if(!G.rc)G.rc=new T.PerspectiveCamera(32,1,.02,200);const W=root.clientWidth,H=root.clientHeight,sz=Math.round(Math.min(W,H)*.38),x=10,y=H-sz-Math.round(H*.13);
@@ -1375,7 +1376,7 @@ function joyMove(dt,t){const m=Math.hypot(JOY.x,JOY.y);const free=st.phase==='wa
   AN.rotY=lerpAng(AN.rotY,Math.atan2(-dir.x,-dir.z),1-Math.exp(-10*dt));
   if(inWater){AN.splT=(AN.splT||0)-dt;if(AN.splT<=0){AN.splT=deep?.5:.35;burst(new T.Vector3(AN.pos.x,.05,AN.pos.z-.2),deep?.4:.25);if(deep&&Math.random()<.3)splash(.05);}}}
 // pulsanti che compaiono quando sei vicino a un granchio o a un altro pescatore
-function nearUI(t){if(!nearUI.t||t-nearUI.t>.3){nearUI.t=t;const c=nearCrab(),ni=NPCS.findIndex(a=>a.pos.distanceTo(AN.pos)<3.2),k=(c?'c':'')+ni+(AN.pos.z<-.1?'w':'')+(AN.target==='sit'?'s':'');
+function nearUI(t){if(!nearUI.t||t-nearUI.t>.3||t<nearUI.t){nearUI.t=t;const c=nearCrab(),ni=NPCS.findIndex(a=>a.pos.distanceTo(AN.pos)<3.2),k=(c?'c':'')+ni+(AN.pos.z<-.1?'w':'')+(AN.target==='sit'?'s':'');
   if(k!==nearUI.k){nearUI.k=k;if(st.phase==='wait'&&!st.busy)setUI();}
   const jb=root?.querySelector('#gjoy');if(jb){jb.style.display=(st.phase==='wait'&&!st.busy)||st.phase==='pilot'?'block':'none';const pn=ui.firstElementChild;jb.style.bottom=((pn?.offsetHeight||0)+24)+'px';}}}
 const sandY=z=>z<-6?-1.2+(z+6)*.05:z<0?z*.06-.15:z*.035;
