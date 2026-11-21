@@ -243,6 +243,11 @@ EQ.loop = function(name,vol,freq,q,type){
 EQ.stopLoops=function(){for(const k in loops)EQ.loop(k,0);};
 let lastClop=0;
 EQ.sfx={
+  crash(){noise(.5,500,.4,.35,'lowpass',0,.005);noise(.25,2500,.8,.15,'bandpass',.02);tone(160,.3,'square',.06,70);for(let i=0;i<4;i++)tone(1800+Math.random()*1500,.12,'triangle',.03,null,.05+i*.07);},
+  glass(){noise(.15,4000,.6,.3,'highpass',0,.003);for(let i=0;i<10;i++)tone(2500+Math.random()*3500,.15+Math.random()*.2,'sine',.04,null,.03+Math.random()*.5);},
+  ouch(fem){tone(fem?620:300,.25,'sawtooth',.05,fem?420:200);},
+  thud(){noise(.25,200,.6,.3,'lowpass',0,.005);tone(70,.2,'sine',.3,45);},
+  alarm(){for(let i=0;i<6;i++){tone(900,.18,'square',.03,null,i*.4);tone(700,.18,'square',.03,null,i*.4+.2);}},
   clop(v,surface){
     if(!AC||!EQ.soundOn)return;const now=performance.now();if(now-lastClop<40)return;lastClop=now;
     v=Math.min(.4,v);
