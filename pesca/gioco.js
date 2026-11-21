@@ -127,7 +127,7 @@ function mats(){const S=(c,r=.8,m=0)=>new T.MeshStandardMaterial({color:c,roughn
 function limb(len,r1,r2,mat){// segmento che pende verso il basso dal suo perno, con articolazione arrotondata
   const g=new T.Group(),m=new T.Mesh(new T.CylinderGeometry(r2,r1,len,12),mat);m.position.y=-len/2;m.castShadow=true;g.add(m);
   const j=new T.Mesh(new T.SphereGeometry(r1*1.02,12,10),mat);j.castShadow=true;g.add(j);g.userData.len=len;return g;}
-function makeAngler(){
+function makeAngler(col){if(col){const c=(m,v)=>{const n=m.clone();n.color.set(v);return n;};var M0={jacket:MAT.jacket,jacket2:MAT.jacket2,cap:MAT.cap,pants:MAT.pants};MAT.jacket=c(MAT.jacket,col.j);MAT.jacket2=c(MAT.jacket2,col.j2);MAT.cap=c(MAT.cap,col.c);MAT.pants=c(MAT.pants,col.p);}
   const A=new T.Group(),J={};A.userData.J=J;
   const hips=new T.Group();hips.position.y=.95;A.add(hips);J.hips=hips;
   const pelvis=new T.Mesh(new T.SphereGeometry(.17,16,12),MAT.pants);pelvis.scale.set(1.15,.75,.85);pelvis.castShadow=true;hips.add(pelvis);
@@ -158,7 +158,7 @@ function makeAngler(){
     const th=limb(.44,.085,.065,MAT.pants);hp.add(th);const kn=new T.Group();kn.position.y=-.44;th.add(kn);J[k+'Knee']=kn;
     const sn=limb(.42,.062,.05,MAT.pants);kn.add(sn);
     const boot=new T.Mesh(new T.BoxGeometry(.1,.09,.26),MAT.boot);boot.position.set(0,-.45,-.05);boot.castShadow=true;sn.add(boot);J[k+'Foot']=boot;}
-  A.traverse(o=>{if(o.isMesh)o.castShadow=true;});return A;}
+  A.traverse(o=>{if(o.isMesh)o.castShadow=true;});if(col)Object.assign(MAT,M0);return A;}
 // pose: angoli delle articolazioni (x avanti/indietro, z apertura, y torsione)
 const POSES={
   stand:{hy:.95,sp:[0,0,0],hd:[0,0,0],lSh:[.05,0,.12],rSh:[.05,0,-.12],lEl:[.15,0,0],rEl:[.15,0,0],lHip:[0,0,0],rHip:[0,0,0],lKnee:[0,0,0],rKnee:[0,0,0],rod:null},
@@ -170,21 +170,21 @@ const POSES={
   strike:{hy:.96,sp:[.3,.1,0],hd:[-.25,0,0],lSh:[2.4,0,.3],rSh:[2.5,0,-.2],lEl:[.5,0,0],rEl:[.4,0,0],lHip:[-.2,0,0],rHip:[.25,0,0],lKnee:[-.1,0,0],rKnee:[-.25,0,0],rod:{p:80,f:0}},
   reel:{hy:.93,sp:[.12,.05,0],hd:[-.1,0,0],lSh:[.9,0,.35],rSh:[1.15,0,-.05],lEl:[1.25,0,0],rEl:[.7,0,0],lHip:[-.15,0,0],rHip:[.2,0,0],lKnee:[-.12,0,0],rKnee:[-.2,0,0],rod:{p:42,f:0}},
 };
-const AN={obj:null,pose:JSON.parse(JSON.stringify(POSES.sit)),target:'sit',walk:0,moving:false,speed:1.4,pos:null,rotY:0,holding:-1,reelSpin:0,crank:0};
-function lerpPose(dt,k=6){const tp=POSES[AN.target],p=AN.pose,f=1-Math.exp(-k*dt);p.hy=lerp(p.hy,tp.hy,f);
+const AN={faceTo:null,obj:null,pose:JSON.parse(JSON.stringify(POSES.sit)),target:'sit',walk:0,moving:false,speed:1.4,pos:null,rotY:0,holding:-1,reelSpin:0,crank:0};
+function lerpPose(dt,k=6,a=AN){const tp=POSES[a.target],p=a.pose,f=1-Math.exp(-k*dt);p.hy=lerp(p.hy,tp.hy,f);
   for(const j of['sp','hd','lSh','rSh','lEl','rEl','lHip','rHip','lKnee','rKnee'])for(let i=0;i<3;i++)p[j][i]=lerp(p[j][i],tp[j][i],f);
   if(tp.rod){if(!p.rod)p.rod={...tp.rod};p.rod.p=lerp(p.rod.p,tp.rod.p,f);p.rod.f=lerp(p.rod.f||0,tp.rod.f||0,f);p.rod.y=lerp(p.rod.y||0,tp.rod.y||0,f);}}
-function applyPose(t){const J=AN.obj.userData.J,p=AN.pose,set=(o,a)=>o.rotation.set(a[0],a[1],a[2]);
-  let wk=AN.moving?Math.sin(AN.walk):0,wk2=AN.moving?Math.sin(AN.walk+Math.PI):0,amp=AN.moving?Math.min(1,AN.speed/1.4)*.55:0;
-  J.hips.position.y=p.hy+(AN.moving?Math.abs(Math.cos(AN.walk))*.035-.02:Math.sin(t*1.3)*.004);
-  set(J.spine,[p.sp[0]+(AN.moving?.06:0),p.sp[1]+wk*.06*amp,p.sp[2]]);set(J.head,p.hd);
-  set(J.lSh,[p.lSh[0]+(AN.holding<0?wk2*amp*.7:0),p.lSh[1],p.lSh[2]]);set(J.rSh,[p.rSh[0]+(AN.holding<0?wk*amp*.7:0),p.rSh[1],p.rSh[2]]);
+function applyPose(t,a=AN){const J=a.obj.userData.J,p=a.pose,set=(o,v)=>o.rotation.set(v[0],v[1],v[2]);
+  let wk=a.moving?Math.sin(a.walk):0,wk2=a.moving?Math.sin(a.walk+Math.PI):0,amp=a.moving?Math.min(1,a.speed/1.4)*.55:0;
+  J.hips.position.y=p.hy+(a.moving?Math.abs(Math.cos(a.walk))*.035-.02:Math.sin(t*1.3)*.004);
+  set(J.spine,[p.sp[0]+(a.moving?.06:0),p.sp[1]+wk*.06*amp,p.sp[2]]);set(J.head,p.hd);
+  set(J.lSh,[p.lSh[0]+(a.holding<0?wk2*amp*.7:0),p.lSh[1],p.lSh[2]]);set(J.rSh,[p.rSh[0]+(a.holding<0?wk*amp*.7:0),p.rSh[1],p.rSh[2]]);
   set(J.lEl,p.lEl);set(J.rEl,p.rEl);
   // recupero: la mano sinistra gira la manovella
-  if(AN.reelSpin>0&&AN.holding>=0){const c=AN.crank;J.lSh.rotation.x+=Math.sin(c)*.14;J.lSh.rotation.z+=Math.cos(c)*.09;J.lEl.rotation.x+=Math.sin(c)*.18;}
+  if(a.reelSpin>0&&a.holding>=0){const c=a.crank;J.lSh.rotation.x+=Math.sin(c)*.14;J.lSh.rotation.z+=Math.cos(c)*.09;J.lEl.rotation.x+=Math.sin(c)*.18;}
   set(J.lHip,[p.lHip[0]+wk*amp,p.lHip[1],p.lHip[2]]);set(J.rHip,[p.rHip[0]+wk2*amp,p.rHip[1],p.rHip[2]]);
-  set(J.lKnee,[p.lKnee[0]-Math.max(0,-Math.cos(AN.walk))*amp*1.3,0,0]);set(J.rKnee,[p.rKnee[0]-Math.max(0,Math.cos(AN.walk))*amp*1.3,0,0]);
-  AN.obj.position.copy(AN.pos);AN.obj.rotation.y=AN.rotY;}
+  set(J.lKnee,[p.lKnee[0]-Math.max(0,-Math.cos(a.walk))*amp*1.3,0,0]);set(J.rKnee,[p.rKnee[0]-Math.max(0,Math.cos(a.walk))*amp*1.3,0,0]);
+  a.obj.position.copy(a.pos);a.obj.rotation.y=a.rotY;}
 
 /* ---------- canne con fusto che si piega, anelli e mulinello ---------- */
 const ROD_LEN=4.2,SEG=14;
@@ -218,7 +218,7 @@ function makeSpike(){const g=new T.Group(),p=new T.Mesh(new T.CylinderGeometry(.
   const v=new T.Mesh(new T.TorusGeometry(.04,.006,6,12,Math.PI),MAT.alu);v.position.y=1.32;v.rotation.z=Math.PI;g.add(v);g.traverse(o=>{if(o.isMesh)o.castShadow=true;});return g;}
 
 /* ---------- mondo ---------- */
-let foams=[],swash,clouds=[],stars,moon,rain,cityL,grass,lineObjs=[],sinkers=[],splashP,fishMesh,bushes;
+let CHAIRHIT=null,NPCS=[],foams=[],swash,clouds=[],stars,moon,rain,cityL,grass,lineObjs=[],sinkers=[],splashP,fishMesh,bushes;
 function buildWorld(){
   scene=new T.Scene();camera=new T.PerspectiveCamera(55,1,.1,20000);
   renderer.toneMapping=T.ACESFilmicToneMapping;renderer.outputEncoding=T.sRGBEncoding;renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;
@@ -276,6 +276,7 @@ function buildWorld(){
   const back=new T.Mesh(new T.BoxGeometry(.4,.34,.02),tela);back.position.set(0,.77,.215);back.rotation.x=-.22;ch.add(back);
   for(const sx of[-1,1]){tube(V(sx*.22,.75,-.15),V(sx*.22,.75,.2),.014);tube(V(sx*.22,.75,-.15),V(sx*.2,.55,-.15));const pad=new T.Mesh(new T.BoxGeometry(.05,.02,.3),MAT.boot);pad.position.set(sx*.22,.765,.03);ch.add(pad);}
   const rh=new T.Mesh(new T.CylinderGeometry(.025,.02,.22,10,1,true),MAT.chairF);rh.position.set(.27,.68,-.05);rh.rotation.x=-.5;ch.add(rh);// porta-canna laterale
+  CHAIRHIT=new T.Mesh(new T.BoxGeometry(1.6,1.6,1.4),new T.MeshBasicMaterial({visible:false}));CHAIRHIT.position.set(CHAIR.x+.3,CHAIR.z*.035+.7,CHAIR.z);scene.add(CHAIRHIT);
   ch.position.set(CHAIR.x,CHAIR.z*.035,CHAIR.z);ch.traverse(o=>{if(o.isMesh)o.castShadow=true;});scene.add(ch);
   const bag=new T.Mesh(new T.BoxGeometry(.4,.35,.25),MAT.bag);bag.position.set(CHAIR.x+.8,CHAIR.z*.035+.17,CHAIR.z+.6);bag.castShadow=true;scene.add(bag);
   // cassettina da pesca con coperchio aperto, scomparti e minuteria colorata, e scatola delle esche
@@ -294,13 +295,40 @@ function buildWorld(){
   const buck=new T.Mesh(new T.CylinderGeometry(.16,.13,.3,16),MAT.bucket);buck.position.set(CHAIR.x-.75,CHAIR.z*.035+.15,CHAIR.z-.2);buck.castShadow=true;scene.add(buck);
   const fodero=new T.Mesh(new T.CylinderGeometry(.08,.08,1.4,10),MAT.bag);fodero.rotation.z=Math.PI/2;fodero.position.set(CHAIR.x+1.6,CHAIR.z*.035+.08,CHAIR.z+.9);scene.add(fodero);
   // il pescatore e la sua frontale
-  AN.obj=makeAngler();scene.add(AN.obj);AN.pos=new T.Vector3(CHAIR.x,CHAIR.z*.035,CHAIR.z-.05);AN.rotY=0;
+  AN.obj=makeAngler();scene.add(AN.obj);buildNpcs();AN.pos=new T.Vector3(CHAIR.x,CHAIR.z*.035,CHAIR.z-.05);AN.rotY=0;
   headLamp=new T.SpotLight(0xfff6d8,0,40,.45,.5,1.2);AN.obj.userData.J.head.add(headLamp);headLamp.position.set(0,.06,-.12);const lt=new T.Object3D();lt.position.set(0,-1.2,-6);AN.obj.userData.J.head.add(lt);headLamp.target=lt;
   // pesce che esce dall'acqua alla fine
   fishMesh=new T.Group();const fb=new T.Mesh(new T.SphereGeometry(1,18,12),new T.MeshStandardMaterial({color:'#b8c2c8',roughness:.3,metalness:.6}));fb.scale.set(.5,.2,.08);fishMesh.add(fb);
   const tail=new T.Mesh(new T.ConeGeometry(.16,.25,4),fb.material);tail.rotation.z=Math.PI/2;tail.position.x=.58;tail.scale.z=.2;fishMesh.add(tail);fishMesh.visible=false;fishMesh.userData.body=fb;scene.add(fishMesh);
   clock=new T.Clock();
 }
+// vicini di spiaggia: ognuno con sedia, due canne sui picchetti e le sue abitudini
+function buildNpcs(){const defs=[{x:-22,col:{j:'#b5562a',j2:'#8f4220',c:'#2b3a55',p:'#3a3a3a'}},{x:25,col:{j:'#2e4f7a',j2:'#233d60',c:'#d9b24a',p:'#4a4436'}},{x:-46,col:{j:'#5a5f66',j2:'#464a50',c:'#2f6b3a',p:'#2c3445'}},{x:52,col:{j:'#7a2e3a',j2:'#5c222b',c:'#222',p:'#2c3445'}}];
+  for(const d of defs){const a={obj:makeAngler(d.col),pose:JSON.parse(JSON.stringify(POSES.sit)),target:'sit',walk:0,moving:false,speed:1.2,pos:new T.Vector3(d.x,12*.035,12),rotY:rnd(-.2,.2),holding:-1,reelSpin:0,crank:0,faceTo:null,
+      home:{x:d.x,z:12},rods:[],t:rnd(5,30),st:'sit'};scene.add(a.obj);
+    const ch=new T.Mesh(new T.BoxGeometry(.42,.03,.36),new T.MeshStandardMaterial({color:'#4b5a36'}));ch.position.set(d.x,12*.035+.56,12.05);scene.add(ch);
+    for(const sx of[-1,1])for(const sz of[-1,1]){const l=new T.Mesh(new T.CylinderGeometry(.014,.014,.58,6),MAT.chairF);l.position.set(d.x+sx*.2,12*.035+.28,12.05+sz*.16);scene.add(l);}
+    const bk=new T.Mesh(new T.BoxGeometry(.4,.32,.02),ch.material);bk.position.set(d.x,12*.035+.78,12.24);bk.rotation.x=-.2;scene.add(bk);
+    for(let k=0;k<2;k++){const x=d.x+(k?2.5:-2.5),sp=makeSpike();sp.position.set(x,ROD_Z*.035,ROD_Z);scene.add(sp);const rod=makeRod();scene.add(rod);
+      const r={x,obj:rod,dist:rnd(70,115),bend:0,held:false,line:null,sx:x+rnd(-4,4)};const lg=new T.BufferGeometry();lg.setAttribute('position',new T.Float32BufferAttribute(new Float32Array(20*3),3));r.line=new T.Line(lg,MAT.line);r.line.frustumCulled=false;scene.add(r.line);placeRodOnSpike(r);a.rods.push(r);}
+    NPCS.push(a);}}
+const npcGo=(a,x,z,cb)=>{a.walkTarget={x,z,res:cb};a.moving=true;};
+function updNpcs(dt,t){const w=wxAt(st.gt);
+  for(const a of NPCS){a.t-=dt;
+    // abitudini: seduto, poi va a controllare una canna, a volte recupera e rilancia, poi torna o resta in piedi a guardare
+    if(a.t<=0&&!a.moving){const r=a.rods[Math.floor(Math.random()*2)];
+      if(a.st==='sit'||a.st==='stand'){a.st='going';a.target='stand';npcGo(a,r.x+.6,ROD_Z+1.3,()=>{a.faceTo=0;a.st='atrod';a.cur=r;a.t=rnd(2,6);});}
+      else if(a.st==='atrod'){if(Math.random()<.45){a.target='bend';a.st='reel';a.t=1.2;}else{a.st='watch';a.t=rnd(4,12);}}
+      else if(a.st==='reel'){const r2=a.cur;if(!r2.held){r2.held=true;a.holding=0;a.target='reel';a.reelSpin=1;a.t=rnd(5,9);}else{r2.held=false;a.holding=-1;a.reelSpin=0;placeRodOnSpike(r2);a.target='stand';a.st='watch';a.t=rnd(3,8);r2.dist=rnd(70,115);}}
+      else if(a.st==='watch'){if(Math.random()<.6){a.st='back';npcGo(a,a.home.x,a.home.z-.05,()=>{a.faceTo=0;a.target='sit';a.st='sit';a.t=rnd(25,90);});}else{a.st='stand';a.t=rnd(15,40);}}}
+    moveActor(a,dt);lerpPose(dt,6,a);applyPose(t,a);
+    if(a.reelSpin){a.crank+=dt*7;}
+    for(const r of a.rods){const swell=Math.sin(t*2*Math.PI/Math.max(3,w.wper||5)+r.x)*(w.wave||.3)*.12;r.bend=lerp(r.bend,(r.held?.5+Math.sin(t*3)*.15:.12)+swell,.2);bendRod(r.obj,r.bend);
+      if(r.held){rodInHand(r,a);r.obj.userData.rotor.rotation.y+=dt*22;r.obj.userData.lineOn.rotation.y+=dt*22;r.dist=Math.max(5,r.dist-dt*6);}
+      r.obj.userData.glow.visible=night()>.25;
+      const tip=new T.Vector3();r.obj.userData.tip.getWorldPosition(tip);const L=r.line.geometry.attributes.position;
+      for(let i=0;i<20;i++){const u=i/19;L.setXYZ(i,lerp(tip.x,r.sx,u),lerp(tip.y,-.02,u)-Math.sin(u*Math.PI)*.8,lerp(tip.z,-r.dist,u));}L.needsUpdate=true;}
+    a.obj.userData.J.lamp.material.emissiveIntensity=night()>.5?2:0;}}
 function setupRods(){st.rods.forEach(r=>{scene.remove(r.hit);scene.remove(r.obj);scene.remove(r.spike);scene.remove(r.line);scene.remove(r.sinker);});
   st.rods=Array.from({length:st.nRods},(_,i)=>{const x=rodX(i,st.nRods),spike=makeSpike();spike.position.set(x,ROD_Z*.035,ROD_Z);scene.add(spike);
     const obj=makeRod();scene.add(obj);const lg=new T.BufferGeometry();lg.setAttribute('position',new T.Float32BufferAttribute(new Float32Array(40*3),3));const line=new T.Line(lg,MAT.line);line.frustumCulled=false;scene.add(line);
@@ -308,8 +336,8 @@ function setupRods(){st.rods.forEach(r=>{scene.remove(r.hit);scene.remove(r.obj)
     const hit=new T.Mesh(new T.CylinderGeometry(.6,.6,4.6,8),new T.MeshBasicMaterial({visible:false}));hit.position.set(x,2,ROD_Z-1.1);hit.rotation.x=-40*R;scene.add(hit);
     return {i,x,spike,obj,line,sinker,hit,bait:null,dist:0,state:'idle',baitLeft:0,bend:0,bitePlan:null,held:false,sx:x,sz:-1};});}
 function placeRodOnSpike(r){const by=ROD_Z*.035;r.obj.position.set(r.x,by+.12,ROD_Z);r.obj.rotation.set(-40*R,0,0,'YXZ');}
-function rodInHand(r){const J=AN.obj.userData.J,hp=new T.Vector3();J.rHand.getWorldPosition(hp);const p=AN.pose.rod||{p:45,f:0,y:0};
-  r.obj.rotation.set((p.p-90)*R,AN.rotY+(p.y||0),0,'YXZ');const dir=new T.Vector3(0,1,0).applyEuler(r.obj.rotation);r.obj.position.copy(hp).addScaledVector(dir,-.5);}
+function rodInHand(r,a=AN){const J=a.obj.userData.J,hp=new T.Vector3();J.rHand.getWorldPosition(hp);const p=a.pose.rod||{p:45,f:0,y:0};
+  r.obj.rotation.set((p.p-90)*R,a.rotY+(p.y||0),0,'YXZ');const dir=new T.Vector3(0,1,0).applyEuler(r.obj.rotation);r.obj.position.copy(hp).addScaledVector(dir,-.5);}
 
 /* ---------- interfaccia ---------- */
 function mount(v){
@@ -326,7 +354,7 @@ function mount(v){
     buildWorld();size();addEventListener('resize',size);bindLook();
     st.phase='setup';setUI();raf=requestAnimationFrame(loop);}).catch(e=>{ui.innerHTML=`<div class="gpanel"><b>Il gioco 3D non si è caricato</b><div class="gs">${escH(e.message||e)}</div>${btn('↻ Riprova','mount()','big')}</div>`;});
 }
-function stop(){cancelAnimationFrame(raf);raf=0;removeEventListener('resize',size);try{renderer?.dispose();renderer?.forceContextLoss?.();}catch(e){}renderer=null;foams=[];clouds=[];st.rods=[];document.getElementById('gamebox')?.remove();document.body.classList.remove('gaming');seaSound(0);}
+function stop(){cancelAnimationFrame(raf);raf=0;removeEventListener('resize',size);try{renderer?.dispose();renderer?.forceContextLoss?.();}catch(e){}renderer=null;foams=[];clouds=[];st.rods=[];NPCS=[];document.getElementById('gamebox')?.remove();document.body.classList.remove('gaming');seaSound(0);}
 addEventListener('hashchange',()=>{if(location.hash!=='#gioco'&&document.getElementById('gamebox'))stop();});
 G.mount=mount;G.exit=()=>{stop();if(window.go)go('altro');};
 function size(){if(!renderer)return;const w=root.clientWidth,h=root.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.fov=w<h?68:50;camera.updateProjectionMatrix();}
@@ -343,7 +371,7 @@ function setUI(){const p=st.phase;let h='';
       <div class="grow"><span>Amo</span>${[['piccolo','n. 6'],['medio','n. 2'],['grande','2/0']].map(([k,n])=>`<button class="gc ${st.hook===k?'on':''}" onclick="GAME.setHook('${k}')">${n}</button>`).join('')}</div>
       ${btn('Pianta i picchetti e inizia','start()','big')}</div>`;}
   else if(p==='wait'){h=`<div class="gpanel slim"><div class="grods">${st.rods.map((r,i)=>`<button class="gr ${r.state==='bite'?'alert':''}" onclick="GAME.rod(${i})" ${st.busy?'disabled':''}><b>Canna ${i+1}</b><small>${r.bait?B[r.bait].n:'senza esca'}${r.dist?' · '+Math.round(r.dist)+' m':''}</small><small>${rodStatus(r)}</small></button>`).join('')}</div>
-    ${st.busy?'':`<div class="grow" style="justify-content:center">${[1,2,4,8,16,32].map(s=>`<button class="gc ${st.speed===s?'on':''}" onclick="GAME.setSpeed(${s})">${s===1?'▶ 1x':s+'x'}</button>`).join('')}<button class="gc" onclick="GAME.bagView()">🧺 ${st.bag.length}</button><button class="gc" onclick="GAME.center()" title="Guarda le canne">🎯</button></div>`}${st.msg?`<div class="gs" style="text-align:center">${st.msg}</div>`:''}</div>`;}
+    ${st.busy?'':`<div class="grow" style="justify-content:center">${[1,2,4,8,16,32].map(s=>`<button class="gc ${st.speed===s?'on':''}" onclick="GAME.setSpeed(${s})">${s===1?'▶ 1x':s+'x'}</button>`).join('')}<button class="gc" onclick="GAME.bagView()">🧺 ${st.bag.length}</button><button class="gc" onclick="GAME.center()" title="Guarda le canne">🎯</button>${AN.target!=='sit'?'<button class="gc" onclick="GAME.sit()">🪑 Siediti</button>':''}</div>`}${st.msg?`<div class="gs" style="text-align:center">${st.msg}</div>`:''}</div>`;}
   else if(p==='atrod'){const r=st.rods[st.sel];h=`<div class="gpanel"><b>Canna ${st.sel+1}</b><div class="gs">${r.bait?B[r.bait].n+' a '+Math.round(r.dist)+' m · '+rodStatus(r):'Senza esca'}</div>
     ${r.state==='bite'?btn('⚡ FERRA!','strike()','big hot'):''}${r.bait?btn('🌀 Recupera e cambia esca','rebait()'):btn('🪝 Innesca','rebait()','big')}${btn('🪑 Torna a sedere','back()')}</div>`;}
   else if(p==='bait')h=`<div class="gpanel"><b>🪝 Innesca la canna ${st.sel+1}</b><div class="gbaits">${BAITS.map(b=>`<button class="gbt" onclick="GAME.bait('${b.k}')"><span>${b.e}</span><b>${b.n}</b><small>${b.d}</small></button>`).join('')}</div></div>`;
@@ -377,8 +405,10 @@ async function sitDown(){AN.faceTo=0;pose('sit');await sleep(.7);}
 async function goToRod(i,run){const r=st.rods[i];await standUp();await walkTo(r.x+.55,ROD_Z+1.3,run?3.4:1.5);AN.faceTo=0;await sleep(.25);}
 async function pickRod(i){const r=st.rods[i];pose('bend');await sleep(.55);r.held=true;AN.holding=i;pose('hold');await sleep(.5);}
 async function putRod(i){const r=st.rods[i];pose('bend');await sleep(.55);r.held=false;AN.holding=-1;placeRodOnSpike(r);pose('stand');await sleep(.4);}
+async function stepBack(i){const r=st.rods[i];await walkTo(r.x+.9,ROD_Z+3,1.2);AN.faceTo=0;pose('stand');}
+G.sit=()=>seq(async()=>{st.phase='busy';st.msg='';setUI();if(AN.holding>=0)await putRod(AN.holding);await backToChair();LOOK.yaw=0;LOOK.pitch=0;st.msg='';st.phase='wait';setUI();});
 async function backToChair(){await walkTo(CHAIR.x,CHAIR.z-.05,1.4);await sitDown();}
-const seq=async f=>{if(st.busy)return;st.busy=true;st.speed=1;try{await f();}finally{st.busy=false;}};
+const seq=async f=>{if(st.busy)return;st.busy=true;st.speed=1;try{await f();}finally{st.busy=false;if(st.phase==='wait')setUI();}};
 
 G.rod=i=>seq(async()=>{st.sel=i;const r=st.rods[i];st.phase='busy';st.msg=r.state==='bite'?'🏃 Corre alla canna!':'🚶 Va alla canna '+(i+1)+'…';setUI();
   await goToRod(i,r.state==='bite');st.phase='atrod';st.msg='';setUI();});
@@ -387,7 +417,7 @@ G.rebait=()=>seq(async()=>{const r=st.rods[st.sel];st.phase='busy';st.msg=r.dist
   if(!r.held)await pickRod(st.sel);
   if(r.dist>0){pose('reel');const d0=r.dist;for(let t=0;t<1;t+=.05){r.dist=d0*(1-t);AN.reelSpin=1;await sleep(.07);}r.dist=0;AN.reelSpin=0;}
   r.bait=null;r.state='idle';r.bitePlan=null;r.sinker.visible=false;pose('bend');st.phase='bait';setUI();});
-G.putBack=()=>seq(async()=>{st.phase='busy';setUI();await putRod(st.sel);await backToChair();st.phase='wait';setUI();});
+G.putBack=()=>seq(async()=>{st.phase='busy';setUI();await putRod(st.sel);await stepBack(st.sel);st.phase='wait';setUI();});
 G.bait=k=>{const r=st.rods[st.sel];r.bait=k;r.baitLeft=B[k].life*(k==='cozza'&&st.hook==='piccolo'?1.2:1);click();pose('hold');st.phase='cast';setUI();};
 function doCast(){const c=st.cast;c.on=false;const r=st.rods[st.sel],w=wxAt(st.gt);
   const p=c.p,q=p>.78&&p<.92?1:p>.92?.8-(p-.92)*3:p/.78*.95;
@@ -399,7 +429,7 @@ function doCast(){const c=st.cast;c.on=false;const r=st.rods[st.sel],w=wxAt(st.g
     r.flight={a:tip.clone(),b:end,t:0,dur:1.1+dist/120};r.sinker.visible=true;r.dist=0.01;r.state='flying';
     await sleep(r.flight.dur);splash();burst(end,1);r.flight=null;r.dist=dist;r.sx=end.x;r.sz=end.z;r.state='fishing';r.landT=st.gt;
     st.msg=q>=1?`Lancio perfetto: ${Math.round(dist)} m!`:q>.8?`Buon lancio: ${Math.round(dist)} m`:`Lancio corto: ${Math.round(dist)} m`;setUI();
-    pose('hold');await sleep(.6);await putRod(st.sel);await backToChair();st.phase='wait';setUI();});}
+    pose('hold');await sleep(.6);await putRod(st.sel);await stepBack(st.sel);st.phase='wait';st.msg='Tocca la sedia per sederti, o un\'altra canna per andarci.';setUI();});}
 
 /* ---------- abboccate, ferrata e combattimento ---------- */
 function startBite(r){
@@ -454,18 +484,16 @@ const RAY={r:null};
 function onTap(e){if(!sittingView())return;
   const rect=cvs.getBoundingClientRect(),m=new T.Vector2((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);
   RAY.r=RAY.r||new T.Raycaster();RAY.r.setFromCamera(m,camera);const hits=RAY.r.intersectObjects(st.rods.map(r=>r.hit),false);
-  if(hits.length){const i=st.rods.findIndex(r=>r.hit===hits[0].object);if(i>=0)G.rod(i);}}
+  if(hits.length){const i=st.rods.findIndex(r=>r.hit===hits[0].object);if(i>=0)return G.rod(i);}
+  if(AN.target!=='sit'&&RAY.r.intersectObject(CHAIRHIT,false).length)G.sit();}
 G.center=()=>{LOOK.yaw=0;LOOK.pitch=0;};
 
 /* ---------- ciclo principale ---------- */
 function loop(){raf=requestAnimationFrame(loop);if(!renderer)return;const dt=Math.min(.05,clock.getDelta()),t=clock.elapsedTime;
   const gmul=(st.phase==='wait'&&!st.busy)?st.speed:1;st.gt+=dt*1000*gmul;const gmin=dt*gmul/60;const w=wxAt(st.gt);
-  // pescatore
-  if(AN.moving&&AN.walkTarget){const wt=AN.walkTarget,dx=wt.x-AN.pos.x,dz=wt.z-AN.pos.z,d=Math.hypot(dx,dz);
-    if(d<.05){AN.moving=false;AN.walkTarget=null;wt.res();}else{const s=Math.min(d,AN.speed*dt);AN.pos.x+=dx/d*s;AN.pos.z+=dz/d*s;AN.walk+=dt*AN.speed*5.2;const ty=Math.atan2(-dx,-dz);AN.rotY=lerpAng(AN.rotY,ty,1-Math.exp(-10*dt));}
-    AN.pos.y=Math.max(0,AN.pos.z*.035);if(AN.target==='sit'||AN.target==='bend')pose(AN.holding>=0?'hold':'stand');}
-  else if(AN.faceTo!=null){AN.rotY=lerpAng(AN.rotY,AN.faceTo,1-Math.exp(-8*dt));}
-  lerpPose(dt,AN.target==='castFwd'||AN.target==='strike'?14:6);applyPose(t);
+  // pescatore e vicini di spiaggia
+  moveActor(AN,dt);lerpPose(dt,AN.target==='castFwd'||AN.target==='strike'?14:6);applyPose(t);
+  updNpcs(dt,t);
   if(st.cast?.on){st.cast.p+=st.cast.dir*dt*1.15;if(st.cast.p>1){st.cast.p=1;st.cast.dir=-1;}if(st.cast.p<0){st.cast.p=0;st.cast.dir=1;}const el=document.getElementById('gpw');if(el)el.style.width=(st.cast.p*100)+'%';}
   // canne
   for(const r of st.rods){
@@ -498,6 +526,11 @@ function loop(){raf=requestAnimationFrame(loop);if(!renderer)return;const dt=Mat
     const side=new T.Vector3(Math.cos(AN.rotY),0,-Math.sin(AN.rotY));G.rc.position.copy(rp).addScaledVector(side,-.8).add(new T.Vector3(0,.3,.35));G.rc.lookAt(rp.x,rp.y+.04,rp.z);G.rc.aspect=1;G.rc.updateProjectionMatrix();
     renderer.setScissorTest(true);renderer.setScissor(x-3,y-3,sz+6,sz+6);renderer.setViewport(x-3,y-3,sz+6,sz+6);renderer.setClearColor(0xffffff,1);renderer.clear();
     renderer.setScissor(x,y,sz,sz);renderer.setViewport(x,y,sz,sz);renderer.render(scene,G.rc);renderer.setScissorTest(false);}}
+function moveActor(a,dt){
+  if(a.moving&&a.walkTarget){const wt=a.walkTarget,dx=wt.x-a.pos.x,dz=wt.z-a.pos.z,d=Math.hypot(dx,dz);
+    if(d<.05){a.moving=false;a.walkTarget=null;wt.res();}else{const s=Math.min(d,a.speed*dt);a.pos.x+=dx/d*s;a.pos.z+=dz/d*s;a.walk+=dt*a.speed*5.2;const ty=Math.atan2(-dx,-dz);a.rotY=lerpAng(a.rotY,ty,1-Math.exp(-10*dt));}
+    a.pos.y=Math.max(0,a.pos.z*.035);if(a.target==='sit'||a.target==='bend')a.target=a.holding>=0?'hold':'stand';}
+  else if(a.faceTo!=null){a.rotY=lerpAng(a.rotY,a.faceTo,1-Math.exp(-8*dt));}}
 const lerpAng=(a,b,f)=>{let d=((b-a+Math.PI*3)%(Math.PI*2))-Math.PI;return a+d*f;};
 let NIGHT=0;const night=()=>NIGHT;
 function updEnv(w,t,dt){const d=gameDate(),sun=sunPos(d,SPOT.lat,SPOT.lon),mo=moonPosG(d,SPOT.lat,SPOT.lon);
@@ -534,14 +567,14 @@ function updEnv(w,t,dt){const d=gameDate(),sun=sunPos(d,SPOT.lat,SPOT.lon),mo=mo
   if(w.code>=95&&Math.random()<dt*.06)st.lightning=1;st.lightning=Math.max(0,st.lightning-dt*3);if(st.lightning>0)hemi.intensity+=st.lightning*2;
   // ammofila mossa dal vento
   grass.rotation.z=Math.sin(t*1.5)*w.ws*.0006;
-  seaSound(clamp(.05+(w.wave||.3)*.12,.05,.35));}
+  seaSound(0);}
 // telecamera: dietro al pescatore quando si muove, larga sulle canne quando è seduto, vicina al mulinello nel combattimento
 const CAM={p:null,l:null};
 function updCam(dt,t){let p,l;const a=AN.pos;
   if(G.camOv){camera.position.set(...G.camOv.p);camera.lookAt(...G.camOv.l);return;}
   if(st.phase==='fight'||(AN.holding>=0&&st.phase!=='wait')){p=new T.Vector3(a.x+1.5,a.y+1.9,a.z+4.6);l=new T.Vector3(a.x-.2,a.y+1.7,a.z-6);}
-  else if(st.busy||st.phase==='atrod'||st.phase==='bait'||st.phase==='cast'){const dx=Math.sin(AN.rotY),dz=Math.cos(AN.rotY);p=new T.Vector3(a.x+dx*4.6+.8,a.y+2.2,a.z+dz*4.6);l=new T.Vector3(a.x-dx*4,a.y+1.3,a.z-dz*4);}
-  else{const por=camera.aspect<1,H=new T.Vector3(CHAIR.x,CHAIR.z*.035+1.2,CHAIR.z),rad=por?9:6.5,yb=Math.atan2(CHAIR.x-.6,14+(por?9:6.5))*0+0;
+  else if(st.busy||st.phase==='atrod'||st.phase==='bait'||st.phase==='cast'){p=new T.Vector3(a.x+.9,a.y+2.3,a.z+5.4);l=new T.Vector3(a.x,a.y+1.2,a.z-8);}
+  else{const por=camera.aspect<1,sitting=AN.target==='sit',H=sitting?new T.Vector3(CHAIR.x,CHAIR.z*.035+1.2,CHAIR.z):AN.pos.clone().add(new T.Vector3(0,1.4,0)),rad=sitting?(por?9:6.5):(por?7:5.5),yb=Math.atan2(CHAIR.x-.6,14+(por?9:6.5))*0+0;
     const fy=LOOK.yaw+.05,fx=Math.sin(fy),fz=-Math.cos(fy),cp=Math.cos(LOOK.pitch),sp=Math.sin(LOOK.pitch);
     p=new T.Vector3(H.x-fx*rad+(por?.6:1)*Math.cos(fy),H.y+(por?2.2:1.5)-sp*1.5,H.z-fz*rad);
     l=new T.Vector3(H.x+fx*28*cp,H.y-.3+sp*28,H.z+fz*28*cp);
@@ -550,7 +583,7 @@ function updCam(dt,t){let p,l;const a=AN.pos;
 function drawHud(w){const d=gameDate(),mp=moonPosG(d,SPOT.lat,SPOT.lon);
   const wi=w.code>=95?'⛈️':w.code>=80?'🌦️':w.code>=51?'🌧️':w.code>=45?'🌫️':w.cc>75?'☁️':w.cc>35?'⛅':sunPos(d,SPOT.lat,SPOT.lon).alt>0?'☀️':'🌙';
   hud.innerHTML=`<div><b>${d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</b>${st.speed>1&&st.phase==='wait'&&!st.busy?' ⏩':''}</div><div>${wi} ${Math.round(w.temp)}°</div><div>🌬️ ${Math.round(w.ws)} ${windName(w.wd)}</div><div>🌊 ${(w.wave||0).toFixed(1).replace('.',',')} m · ${Math.round(w.sst)}°</div><div>${['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'][Math.round(mp.ph/45)%8]}</div><div>🎣 ${w.idx}</div>${st.sim?'<div title="dati simulati">⚠️</div>':''}`;}
-G._bite=i=>startBite(st.rods[i]);G._sp=n=>SP.find(x=>x.n===n);G._ui=()=>setUI();G._an=AN;G._cam=()=>camera;
+G._bite=i=>startBite(st.rods[i]);G._sp=n=>SP.find(x=>x.n===n);G._ui=()=>setUI();G._an=AN;G._cam=()=>camera;G._npcs=()=>NPCS;G._look=(y,p)=>{LOOK.yaw=y;LOOK.pitch=p;};
 /* ---------- meteo reale per l'ora di gioco ---------- */
 async function loadWx(){
   try{const r=await window.fetchRaw(SPOT);st.sim=!!r.sim;st.X=window.build(r.w,r.m,SPOT,'coast');}catch(e){st.X=null;st.sim=true;}
