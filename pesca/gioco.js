@@ -77,6 +77,7 @@ function reelTick(){const c=ac();if(!c)return;const t=c.currentTime,o=c.createOs
 function reelWhir(level,rate){const c=AU.on&&level>0?ac():null;if(!c){if(AU.whir)AU.whir.v.gain.setTargetAtTime(0,AU.ctx.currentTime,.05);return;}
   if(!AU.whir){const o=c.createOscillator();o.type='sawtooth';const f=c.createBiquadFilter();f.type='lowpass';f.frequency.value=900;const v=c.createGain();v.gain.value=0;o.connect(f).connect(v).connect(c.destination);o.start();AU.whir={o,v};}
   AU.whir.o.frequency.setTargetAtTime(90+rate*25,c.currentTime,.05);AU.whir.v.gain.setTargetAtTime(level,c.currentTime,.05);}
+function vib(p){try{if(LSG('vib',true))navigator.vibrate?.(p);}catch(e){}}
 function click(){const c=ac();if(!c)return;const o=c.createOscillator(),v=c.createGain();o.type='square';o.frequency.value=1800;v.gain.setValueAtTime(.04,c.currentTime);v.gain.exponentialRampToValueAtTime(.0001,c.currentTime+.03);o.connect(v).connect(c.destination);o.start();o.stop(c.currentTime+.04);}
 function whoosh(){const c=ac();if(!c)return;const s=c.createBufferSource();s.buffer=noiseBuf(c);const f=c.createBiquadFilter();f.type='highpass';f.frequency.setValueAtTime(400,c.currentTime);f.frequency.linearRampToValueAtTime(2500,c.currentTime+.5);const v=c.createGain();v.gain.setValueAtTime(.0001,c.currentTime);v.gain.linearRampToValueAtTime(.25,c.currentTime+.12);v.gain.exponentialRampToValueAtTime(.001,c.currentTime+.8);s.connect(f).connect(v).connect(c.destination);s.start();s.stop(c.currentTime+.9);}
 // onda che si rompe a riva: rumore filtrato con attacco morbido e coda lunga
@@ -279,7 +280,7 @@ function buildWorld(){
     const tx=foamTex2();const m=new T.Mesh(g,new T.MeshBasicMaterial({map:tx,transparent:true,depthWrite:false,opacity:0}));m.position.y=.06;m.userData={base,cyc:Math.random(),rate:rnd(.75,1.35)};newWave(m);scene.add(m);foams.push(m);}
   swash=new T.Mesh(new T.PlaneGeometry(420,3),new T.MeshBasicMaterial({map:ft.clone(),transparent:true,depthWrite:false,opacity:.5,color:0xdff3f5}));swash.material.map.needsUpdate=true;swash.rotation.x=-Math.PI/2;scene.add(swash);
   // nuvole
-  for(let i=0;i<16;i++){const sp=new T.Sprite(new T.SpriteMaterial({map:cloudTex(i*977+13),transparent:true,depthWrite:false,fog:false}));const a=rnd(-1.4,1.4),d=rnd(900,2600);sp.position.set(Math.sin(a)*d,rnd(140,420),-Math.cos(a)*d*.9+200);sp.scale.set(rnd(700,1300),rnd(260,420),1);sp.userData.a=a;scene.add(sp);clouds.push(sp);}
+  for(let i=0;i<18;i++){const sp=new T.Sprite(new T.SpriteMaterial({map:cloudTex(Math.floor(Math.random()*1e6)),transparent:true,depthWrite:false,fog:false,opacity:0}));respawnCloud(sp,true);scene.add(sp);clouds.push(sp);}
   // stelle
   const sv=[];for(let i=0;i<1500;i++){const th=Math.random()*6.283,ph=Math.acos(Math.random()*.95);sv.push(Math.sin(ph)*Math.cos(th)*9000,Math.cos(ph)*9000,Math.sin(ph)*Math.sin(th)*9000);}
   const sgeo=new T.BufferGeometry();sgeo.setAttribute('position',new T.Float32BufferAttribute(sv,3));stars=new T.Points(sgeo,new T.PointsMaterial({color:0xffffff,size:14,sizeAttenuation:true,transparent:true,opacity:0,fog:false,depthWrite:false}));scene.add(stars);
@@ -356,6 +357,9 @@ function updNpcs(dt,t){const w=wxAt(st.gt);
       const tip=new T.Vector3();r.obj.userData.tip.getWorldPosition(tip);const L=r.line.geometry.attributes.position;
       for(let i=0;i<20;i++){const u=i/19;L.setXYZ(i,lerp(tip.x,r.sx,u),lerp(tip.y,-.02,u)-Math.sin(u*Math.PI)*.8,lerp(tip.z,-r.dist,u));}L.needsUpdate=true;}
     a.obj.userData.J.lamp.material.emissiveIntensity=night()>.5?2:0;}}
+function respawnCloud(sp,first){const a=rnd(-Math.PI,Math.PI),d=rnd(700,3000);sp.position.set(Math.sin(a)*d,rnd(160,520),-Math.cos(a)*d);
+  sp.userData.w=rnd(700,1400);sp.userData.h=rnd(240,440);sp.userData.life=first?Math.random():0;sp.userData.dur=rnd(900,2400);sp.userData.ph=Math.random()*6.3;sp.userData.vis=0;
+  if(!first){sp.material.map.dispose();sp.material.map=cloudTex(Math.floor(Math.random()*1e6));sp.material.needsUpdate=true;}}
 function setupRods(){st.rods.forEach(r=>{scene.remove(r.hit);scene.remove(r.obj);scene.remove(r.spike);scene.remove(r.line);scene.remove(r.sinker);});
   st.rods=Array.from({length:st.nRods},(_,i)=>{const x=rodX(i,st.nRods),spike=makeSpike();spike.position.set(x,ROD_Z*.035,ROD_Z);scene.add(spike);
     const obj=makeRod();scene.add(obj);const lg=new T.BufferGeometry();lg.setAttribute('position',new T.Float32BufferAttribute(new Float32Array(40*3),3));const line=new T.Line(lg,MAT.line);line.frustumCulled=false;scene.add(line);
@@ -468,7 +472,7 @@ function startBite(r){
   bell(kind==='picchiettata'?2:kind==='partenza'||kind==='violenta'?5:3,kind==='picchiettata'?.12:.3);try{navigator.vibrate?.(kind==='violenta'||kind==='partenza'?[120,60,200]:[60]);}catch(e){}
   st.msg=`🔔 Canna ${r.i+1}: ${kind==='picchiettata'?'piccole tocche…':kind==='nervosa'?'tocche nervose':kind==='decisa'?'la cima si piega decisa!':'partenza violenta!'}`;st.speed=1;const sb=document.getElementById('gspd');if(sb)sb.textContent='⏩ 1x';if(st.phase==='wait'||st.phase==='atrod')setUI();}
 function beginFight(r,sp){const w=sizeOf(sp);st.fight={r,sp,w,len:lenOf(sp,w),dist:r.dist,ten:.3,reel:false,drag:5,run:0,slack:0,t:0,pow:sp.pow*(0.6+Math.min(1.6,w/sp.w[1])*.45)};
-  r.state='fight';pose('reel');st.phase='fight';setUI();}
+  r.state='fight';pose('reel');st.phase='fight';vib([160,60,90]);setUI();}
 G.fightHooked=()=>seq(async()=>{const r=st.rods[st.sel];if(r.state!=='hooked')return;st.phase='busy';setUI();await pickRod(st.sel);pose('reel');beginFight(r,r.bitePlan.sp);});
 G.strike=()=>seq(async()=>{const r=st.rods[st.sel];if(r.state!=='bite')return;const p=r.bitePlan,strong=p.pattern(r.biteT)>.4;
   st.phase='busy';setUI();await pickRod(st.sel);pose('strike');whoosh();await sleep(.35);
@@ -476,9 +480,11 @@ G.strike=()=>seq(async()=>{const r=st.rods[st.sel];if(r.state!=='bite')return;co
   if(!ok){r.state='fishing';const lost=p.steal||Math.random()<.5;if(lost)r.baitLeft=0;pose('hold');await sleep(.4);
     showCatch({fish:false,txt:strong?'Mancato!':'Troppo presto',why:strong?'Hai ferrato ma il pesce non era allamato.':'Erano solo tocche: aspetta che la cima si pieghi decisa prima di ferrare.',left:!lost});return;}
   const sp=p.sp,w=sizeOf(sp);st.fight={r,sp,w,len:lenOf(sp,w),dist:r.dist,ten:.3,reel:false,drag:5,run:0,slack:0,t:0,pow:sp.pow*(0.6+Math.min(1.6,w/sp.w[1])*.45)};
-  r.state='fight';pose('reel');st.phase='fight';setUI();});
+  r.state='fight';pose('reel');st.phase='fight';vib([160,60,90]);setUI();});
 function updFight(dt){const f=st.fight;if(!f||st.phase!=='fight')return;f.t+=dt;const r=f.r,w=wxAt(st.gt);
-  if(f.run<=0&&Math.random()<dt*.5*f.pow)f.run=rnd(.6,2)*f.pow;f.run=Math.max(0,f.run-dt);
+  if(f.run<=0&&Math.random()<dt*.5*f.pow){f.run=rnd(.6,2)*f.pow;vib([90+Math.round(f.pow*60),50,140+Math.round(f.pow*80)]);}f.run=Math.max(0,f.run-dt);
+  // durante la fuga e con la tensione alta: piccoli strattoni
+  f.vt=(f.vt||0)-dt;if(f.vt<=0&&(f.run>0||f.ten>.75)){vib(f.run>0?Math.round(35+f.pow*30):25);f.vt=f.run>0?rnd(.25,.5):rnd(.6,1.1);}
   const pull=(f.run>0?.6:.18)*f.pow+(w.wave||0)*.08*Math.max(0,Math.sin(performance.now()/700));const dragMax=.35+f.drag*.07;
   let ten=(f.reel?.45:.12)+pull;if(ten>dragMax){f.dist+=(ten-dragMax)*dt*25;ten=dragMax+(ten-dragMax)*.25;if(Math.random()<dt*3)click();AN.reelSpin=-.6;}
   else AN.reelSpin=f.reel?1:0;
@@ -545,7 +551,7 @@ G.center=()=>{LOOK.yaw=0;LOOK.pitch=0;};
 
 /* ---------- ciclo principale ---------- */
 function loop(){raf=requestAnimationFrame(loop);if(!renderer)return;const dt=Math.min(.05,clock.getDelta()),t=clock.elapsedTime;
-  const gmul=(st.phase==='wait'&&!st.busy)?st.speed:1;st.gt+=dt*1000*gmul;const gmin=dt*gmul/60;const w=wxAt(st.gt);
+  const gmul=(st.phase==='wait'&&!st.busy)?st.speed:1;st.gmul=gmul;st.gt+=dt*1000*gmul;const gmin=dt*gmul/60;const w=wxAt(st.gt);
   // pescatore e vicini di spiaggia
   moveActor(AN,dt);lerpPose(dt,AN.target==='castFwd'||AN.target==='strike'?14:6);applyPose(t);
   updNpcs(dt,t);
@@ -611,7 +617,13 @@ function updEnv(w,t,dt){const d=gameDate(),sun=sunPos(d,SPOT.lat,SPOT.lon),mo=mo
   stars.material.opacity=NIGHT*(1-cc)*.9;cityL.material.opacity=NIGHT*.85;
   moon.position.copy(md).multiplyScalar(8000);moon.visible=mo.alt>-3;moon.material.opacity=clamp(.25+NIGHT,0,1)*(1-cc*.6);moon.userData.halo.material.opacity=.3*NIGHT*mo.illum*(1-cc*.7);if(moon.userData.ph==null||Math.abs(moon.userData.ph-mo.ph)>6){moon.material.map=moonTex(mo.ph);moon.material.needsUpdate=true;moon.userData.ph=mo.ph;}
   const n=Math.round(cc*clouds.length),tint=new T.Color().setHSL(.07,sun.alt<10&&sun.alt>-6?.5:.05,lerp(.12,.92,day));
-  clouds.forEach((c,i)=>{c.visible=i<n;c.material.color.copy(tint);c.material.opacity=clamp(.55+cc*.4,0,1);c.position.x+=Math.sin((w.wd-FACE+90)*R)*w.ws*dt*.15;if(c.position.x>3000)c.position.x=-3000;if(c.position.x<-3000)c.position.x=3000;});
+  // le nuvole vanno dove spira il vento (in quota un po' più forte) e vivono: nascono, crescono, si sfaldano e svaniscono
+  const gm=st.gmul||1,wa=(w.wd+180-FACE)*R,vx=Math.sin(wa)*(w.ws/3.6)*1.6,vz=-Math.cos(wa)*(w.ws/3.6)*1.6;
+  clouds.forEach((c,i)=>{const u=c.userData;u.life+=dt*gm/u.dur;if(u.life>=1||Math.hypot(c.position.x,c.position.z)>3600){respawnCloud(c,false);}
+    c.position.x+=vx*dt*gm;c.position.z+=vz*dt*gm;
+    const env=Math.sin(Math.min(1,u.life)*Math.PI),want=i<n?1:0;u.vis=lerp(u.vis,want,1-Math.exp(-dt*gm/40));
+    const grow=.75+.35*u.life+.06*Math.sin(u.ph+st.gt/9e5);c.scale.set(u.w*grow,u.h*(.85+.3*env),1);
+    c.material.color.copy(tint);c.material.opacity=clamp(.55+cc*.4,0,1)*Math.pow(env,.6)*u.vis;c.visible=c.material.opacity>.01;});
   const lampOn=NIGHT>.5&&st.lamp;headLamp.intensity=lampOn?1.6:0;AN.obj.userData.J.lamp.material.emissiveIntensity=lampOn?2:0;
   // frangenti e risacca: più numerosi e alti con mare grosso
   const per=Math.max(3,w.wper||5),wh=w.wave||.3,nb=wh<.2?1:wh<.6?2:wh<1.2?3:4;
@@ -630,7 +642,7 @@ function updEnv(w,t,dt){const d=gameDate(),sun=sunPos(d,SPOT.lat,SPOT.lon),mo=mo
   // ammofila mossa dal vento
   grass.rotation.z=Math.sin(t*1.5)*w.ws*.0006;
   // mare: fruscio continuo come prima, ma solo con mare mosso; vento: appena percettibile e solo con vento vero
-  seaSound((w.wave||0)>=.5?clamp(.05+(w.wave-.5)*.12,.05,.3):0);windSound(w.ws>20?clamp((w.ws-20)/80,0,.018):0,t);}
+  seaSound(clamp(((w.wave||0)-.3)*.11,0,.25));windSound(w.ws>20?clamp((w.ws-20)/80,0,.018):0,t);}
 // telecamera: dietro al pescatore quando si muove, larga sulle canne quando è seduto, vicina al mulinello nel combattimento
 const CAM={p:null,l:null};
 function updCam(dt,t){let p,l;const a=AN.pos;
