@@ -12,6 +12,14 @@ let fa,ff,auth,db;
 // conversazioni lette: per ognuna tengo la lettura più recente tra dispositivo e account
 const mergeSeen=v=>{const a=raw.get('chatseen'),o=a&&typeof a==='object'&&!Array.isArray(a)?{...a}:{};if(v&&typeof v==='object'&&!Array.isArray(v))for(const [k,t] of Object.entries(v))if(typeof t==='number'&&t>(o[k]||0))o[k]=t;return o;};
 const noHere=v=>Array.isArray(v)?v.filter(x=>!x?.here):v;
+// copia di sicurezza: gli spot che stanno per sparire dal telefono (cancellati qui, da un altro dispositivo o da un errore)
+// restano in «spotsbak», sul telefono e online, e si possono ripristinare dalla pagina Spot
+function backupSpots(next){try{const cur=noHere(raw.get('spots'))||[],nx=noHere(next)||[],gone=cur.filter(s=>s&&s.id&&!nx.some(n=>n.id===s.id));if(!gone.length)return;
+  const bak=raw.get('spotsbak')||[],m=new Map(bak.map(x=>[x.id,x]));gone.forEach(s=>m.set(s.id,{...s,gone:Date.now()}));const list=[...m.values()].slice(-60);raw.set('spotsbak',list);
+  if(C.user&&ff&&db)ff.setDoc(ff.doc(dataCol(),'spotsbak'),{v:JSON.stringify(list),t:Date.now()}).catch(()=>{});}catch(e){}}
+C.spotsBak=()=>{const cur=raw.get('spots')||[];return (raw.get('spotsbak')||[]).filter(b=>b&&!cur.some(s=>s.id===b.id||(s.name===b.name&&Math.abs(s.lat-b.lat)<.0005&&Math.abs(s.lon-b.lon)<.0005)));};
+C.restoreSpots=ids=>{const cur=raw.get('spots')||[],add=C.spotsBak().filter(b=>!ids||ids.includes(b.id)).map(({gone,...s})=>s);if(!add.length)return 0;LS.set('spots',[...cur,...add]);S.spots=LS.get('spots',[]);return add.length;};
+C.forgetBak=()=>{raw.set('spotsbak',[]);if(C.user&&ff&&db)ff.setDoc(ff.doc(dataCol(),'spotsbak'),{v:'[]',t:Date.now()}).catch(()=>{});};
 const keepHere=v=>{const h=(Array.isArray(raw.get('spots'))?raw.get('spots'):[]).filter(x=>x?.here).slice(0,1);return [...noHere(v),...h];};
 const raw={get:k=>{try{const v=localStorage.getItem('lenza.'+k);return v?JSON.parse(v):null;}catch(e){return null;}},
   set:(k,v)=>{try{localStorage.setItem('lenza.'+k,JSON.stringify(v));}catch(e){}}};
@@ -22,6 +30,7 @@ const set0=LS.set;
 LS.set=function(k,v){
   const sync=C.user&&!C.applying&&(k==='diary'||SYNC_KEYS.includes(k));
   let before=null;if(sync){try{before=localStorage.getItem('lenza.'+k);}catch(e){}}
+  if(k==='spots')backupSpots(v);
   const r=set0.call(LS,k,v);
   if(sync&&before!==JSON.stringify(v)){C.dirty.add(k);clearTimeout(C.timer);C.timer=setTimeout(push,3000);}
   return r;};
@@ -84,7 +93,7 @@ C.logout=async()=>{if(!confirm('Uscire dall\'account? I tuoi dati restano salvat
   // se qualcosa non è stato salvato online (per esempio il Premium) non cancello i dati dal dispositivo senza chiedere
   if(!ok||C.dirty.size){if(!confirm('Attenzione: alcune modifiche (per esempio il Premium) non sono ancora salvate online e uscendo andrebbero perse. Uscire comunque?'))return;}
   C.unsub.forEach(f=>f());C.unsub=[];window.CHAT?.stop();await fa.signOut(auth);
-  try{[...SYNC_KEYS,'diary','cloudts','cloudhash','cloudsent','clouduid','chatbot','chatseen','chatreported'].forEach(k=>localStorage.removeItem('lenza.'+k));}catch(e){}
+  try{[...SYNC_KEYS,'diary','cloudts','cloudhash','cloudsent','clouduid','chatbot','chatseen','chatreported','spotsbak'].forEach(k=>localStorage.removeItem('lenza.'+k));}catch(e){}
   location.hash='';location.reload();};
 C.cancelVerify=async()=>{window.CHAT?.stop();clearInterval(C.vtimer);await fa.signOut(auth);};
 C.syncNow=()=>{SYNC_KEYS.forEach(k=>C.dirty.add(k));C.dirty.add('diary');push();};
@@ -102,17 +111,23 @@ async function start(){
   // non li unisco al nuovo account, li tolgo
   // email nel documento dell'utente (lo legge solo l'amministratore, per «Cancella utente»)
   ff.setDoc(uref(),{email:(C.user.email||'').toLowerCase(),t:Date.now()},{merge:true}).catch(()=>{});
-  if(prev&&prev!==uid){try{[...SYNC_KEYS,'diary','cloudts','cloudhash','cloudsent','chatbot','chatseen','chatreported','chatgone','spotclean1'].forEach(k=>localStorage.removeItem('lenza.'+k));}catch(e){}
+  if(prev&&prev!==uid){try{[...SYNC_KEYS,'diary','cloudts','cloudhash','cloudsent','chatbot','chatseen','chatreported','spotsbak','chatgone','spotclean1'].forEach(k=>localStorage.removeItem('lenza.'+k));}catch(e){}
     S.spots=[];S.diary=[];S.live=null;S.active=null;try{ensureHere();}catch(e){}}
   // email attivata da poco: rinnovo il token, altrimenti le regole di Firestore lo vedono ancora «non verificato»
   try{const t=await C.user.getIdTokenResult?.();if(t&&C.user.emailVerified&&t.claims?.email_verified!==true)await C.user.getIdToken(true);}catch(e){}
   setStatus('Sincronizzo…');C.busy=true;
   try{
-    const [ds,es]=await Promise.all([ff.getDocs(dataCol()),ff.getDocs(diaryCol())]);
+    // SOLO dal server: senza rete Firebase può rispondere «vuoto» dalla cache e l'app crederebbe l'account azzerato
+    const fromServer=q=>ff.getDocsFromServer?ff.getDocsFromServer(q):ff.getDocs(q);
+    const [ds,es]=await Promise.all([fromServer(dataCol()),fromServer(diaryCol())]);
+    if(ds.metadata?.fromCache||es.metadata?.fromCache)throw new Error('server non raggiungibile');
+    // copia di sicurezza salvata online (da un altro dispositivo): la unisco a quella del telefono
+    try{const b=ds.docs.find(d=>d.id==='spotsbak');if(b){const v=JSON.parse(b.data().v||'[]'),m=new Map((raw.get('spotsbak')||[]).map(x=>[x.id,x]));v.forEach(x=>{if(x?.id&&!m.has(x.id))m.set(x.id,x);});raw.set('spotsbak',[...m.values()].slice(-60));}}catch(e){}
     // account già sincronizzato in passato ma ora vuoto online: i dati sono stati cancellati (dall'amministratore);
     // tolgo anche la copia sul dispositivo, invece di rimandarla online
     if(!first&&!ds.docs.length&&!es.docs.length&&Object.keys(raw.get('cloudsent')||{}).length){
-      try{[...SYNC_KEYS,'diary','cloudts','cloudhash','cloudsent','chatbot','chatseen','chatreported','chatgone','spotclean1'].forEach(k=>localStorage.removeItem('lenza.'+k));}catch(e){}
+      backupSpots([]);
+      try{[...SYNC_KEYS,'diary','cloudts','cloudhash','cloudsent','chatbot','chatseen','chatreported','spotsbak','chatgone','spotclean1'].forEach(k=>localStorage.removeItem('lenza.'+k));}catch(e){}
       S.spots=[];S.diary=[];S.live=null;S.active=null;try{ensureHere();}catch(e){}
       toast('I dati di questo account sono stati azzerati');}
     C.applying=true;
@@ -126,7 +141,7 @@ async function start(){
         v=[...v,...loc.filter(s=>!v.some(r=>same(r,s)))];const act=raw.get('active'),dup=loc.find(s=>s.id===act);if(dup&&!v.some(r=>r.id===act)){const r=v.find(x=>same(x,dup));if(r)raw.set('active',r.id);}C.dirty.add('spots');}
       else if(first&&k==='myfish'){v=[...v,...(Array.isArray(raw.get('myfish'))?raw.get('myfish'):[])].slice(-200);C.dirty.add('myfish');}
       else if(!first&&(ts[k]||0)>(o.t||0))return;  // il dispositivo ha una modifica più recente ancora da inviare
-      if(k==='spots')v=keepHere(v);
+      if(k==='spots'){v=keepHere(v);backupSpots(v);}
       if(k==='chatseen'){const m=mergeSeen(v);if(JSON.stringify(m)!==JSON.stringify(v))C.dirty.add('chatseen');v=m;}
       raw.set(k,v);ts[k]=o.t||Date.now();});
     if(first)SYNC_KEYS.forEach(k=>{if(!ds.docs.some(d=>d.id===k)&&raw.get(k)!=null)C.dirty.add(k);});
@@ -144,7 +159,8 @@ async function start(){
     if(C.dirty.size)await push();
     listen();
     window.CHAT?.start();
-  }catch(e){C.applying=false;setStatus('Sincronizzazione non riuscita: '+(e.code||e.message));}
+  }catch(e){C.applying=false;setStatus('Sincronizzazione non riuscita: '+(e.code||e.message)+' · riprovo tra poco');
+    clearTimeout(C.retryT);C.retryT=setTimeout(()=>{if(C.user&&!C.busy)start();},30000);}
   C.busy=false;if(S.tab==='settings')render();
 }
 // i dati letti dal cloud entrano nello stato dell'app
@@ -214,10 +230,10 @@ async function shrink(e){
 // modifiche fatte su un altro dispositivo arrivano in tempo reale
 function listen(){
   C.unsub.push(ff.onSnapshot(dataCol(),snap=>{
-    if(snap.metadata.hasPendingWrites)return;let ch=false;const ts=raw.get('cloudts')||{};
+    if(snap.metadata.hasPendingWrites)return;let ch=false;const ts=raw.get('cloudts')||{},sent=raw.get('cloudsent')||{};
     snap.docChanges().forEach(c=>{if(c.type==='removed'||!c.doc.data())return;const k=c.doc.id,o=c.doc.data();if(!SYNC_KEYS.includes(k)||C.dirty.has(k)||(ts[k]||0)>=(o.t||0))return;
-      ts[k]=o.t;if(JSON.stringify(raw.get(k))===o.v)return;let v;try{v=JSON.parse(o.v);}catch(e){return;}if((k==='spots'||k==='myfish')&&!Array.isArray(v))v=[];if(k==='chatseen'){v=mergeSeen(v);if(JSON.stringify(v)===JSON.stringify(raw.get(k)))return;}if(k==='spots'){if(JSON.stringify(noHere(raw.get(k)))===JSON.stringify(noHere(v)))return;v=keepHere(v);}raw.set(k,v);ch=true;});
-    raw.set('cloudts',ts);if(ch)reloadSoon();
+      ts[k]=o.t;sent[k]=hash(o.v);if(JSON.stringify(raw.get(k))===o.v)return;let v;try{v=JSON.parse(o.v);}catch(e){return;}if((k==='spots'||k==='myfish')&&!Array.isArray(v))v=[];if(k==='chatseen'){v=mergeSeen(v);if(JSON.stringify(v)===JSON.stringify(raw.get(k)))return;}if(k==='spots'){if(JSON.stringify(noHere(raw.get(k)))===JSON.stringify(noHere(v)))return;v=keepHere(v);backupSpots(v);}raw.set(k,v);ch=true;});
+    raw.set('cloudts',ts);raw.set('cloudsent',sent);if(ch)reloadSoon();
   }));
   C.unsub.push(ff.onSnapshot(diaryCol(),snap=>{
     if(snap.metadata.hasPendingWrites||C.dirty.has('diary'))return;let ch=false;
