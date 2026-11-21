@@ -507,6 +507,50 @@ function buildGear(){LANTERNS=[];const y=CHAIR.z;MYG.push(cooler(CHAIR.x-1.3,y+.
     const b=new T.Mesh(new T.CylinderGeometry(.15,.12,.28,14),MAT.bucket);b.position.set(a.home.x-.6,a.home.z*.035+.14,a.home.z+.5);b.castShadow=true;scene.add(b);
     const bag=new T.Mesh(new T.BoxGeometry(.4,.3,.25),new T.MeshStandardMaterial({color:pick(['#4a5a32','#3d434b','#5a3a2a']),roughness:.9}));bag.position.set(a.home.x+.4,a.home.z*.035+.15,a.home.z+.9);bag.castShadow=true;scene.add(bag);}}
 // paesaggio: scogli, cabine degli stabilimenti, pontile, Circeo all'orizzonte, navi, case
+/* ---------- luoghi caratteristici della costa: nella guida e, se vicini, anche dalla spiaggia ---------- */
+const LMK=[
+  {t:'tower',n:'Torre di Montalto',lat:42.3305,lon:11.5868},
+  {t:'port',n:'Porto di Civitavecchia',lat:42.0965,lon:11.7838,ferry:1},
+  {t:'fort',n:'Forte Michelangelo',lat:42.0942,lon:11.7928},
+  {t:'castle',n:'Castello Odescalchi',lat:42.0347,lon:11.8527},
+  {t:'castle',n:'Castello di Santa Severa',lat:42.0172,lon:11.9622},
+  {t:'tower',n:'Torre Flavia',lat:41.9586,lon:12.0452,sea:1},
+  {t:'lighthouse',n:'Vecchio Faro di Fiumicino',lat:41.7688,lon:12.2357},
+  {t:'port',n:'Porto di Roma',lat:41.7392,lon:12.2493},
+  {t:'pier',n:'Pontile di Ostia',lat:41.7324,lon:12.2773},
+  {t:'dune',n:'Dune di Castel Porziano',lat:41.6765,lon:12.3832},
+  {t:'tower',n:'Torre San Lorenzo',lat:41.5603,lon:12.5306},
+  {t:'port',n:'Porto di Anzio',lat:41.4468,lon:12.6262},
+  {t:'fort',n:'Forte Sangallo',lat:41.4578,lon:12.6594},
+  {t:'dune',n:'Dune del Circeo',lat:41.33,lon:12.95},
+  {t:'tower',n:'Torre Paola',lat:41.2448,lon:13.0338},
+  {t:'lighthouse',n:'Faro di Capo Circeo',lat:41.2236,lon:13.0627},
+  {t:'port',n:'Porto di San Felice',lat:41.2262,lon:13.0944},
+  {t:'temple',n:'Tempio di Giove Anxur',lat:41.2918,lon:13.2563},
+  {t:'port',n:'Porto di Terracina',lat:41.2838,lon:13.2478}];
+// modello in metri: il mare è verso -z, la terra verso +z
+function lmModel(L){const g=new T.Group(),m=(c,o={})=>new T.MeshStandardMaterial({color:c,roughness:.85,...o}),add=(geo,mat,x,y,z)=>{const o=new T.Mesh(geo,mat);o.position.set(x,y,z);g.add(o);return o;};
+  const stone=m('#c9b391'),white=m('#f4f2ec'),red=m('#c0392b'),t=L.t;
+  if(t==='tower'){if(L.sea)add(new T.CylinderGeometry(9,10,3,10),m('#8d8577'),0,1.5,0);add(new T.CylinderGeometry(4.5,5.4,18,12),stone,0,9+(L.sea?2:0),0);for(let i=0;i<10;i++){const a=i/10*Math.PI*2;add(new T.BoxGeometry(1.6,1.6,1.2),stone,Math.cos(a)*4.6,18.8+(L.sea?2:0),Math.sin(a)*4.6);}}
+  else if(t==='lighthouse'){add(new T.BoxGeometry(9,6,9),white,0,3,0);add(new T.CylinderGeometry(2.2,3,30,14),white,0,21,0);[12,22].forEach(y=>add(new T.CylinderGeometry(2.75,2.95,3,14),red,0,y,0));
+    add(new T.CylinderGeometry(3.6,3.6,.6,14),m('#333'),0,36.3,0);add(new T.CylinderGeometry(1.8,1.8,3.2,10),m('#fff6c0',{emissive:'#ffd24a',emissiveIntensity:1.2}),0,38.2,0);add(new T.ConeGeometry(2.4,2.6,10),red,0,41,0);}
+  else if(t==='castle'||t==='fort'){const c=t==='fort'?m('#b99d78'):stone,S2=t==='fort'?40:46,H=t==='fort'?11:13;
+    [[0,-S2/2,S2,3],[0,S2/2,S2,3],[-S2/2,0,3,S2],[S2/2,0,3,S2]].forEach(([x,z,w,d])=>add(new T.BoxGeometry(w,H,d),c,x,H/2,z));
+    [[-1,-1],[1,-1],[-1,1],[1,1]].forEach(([a,b])=>add(t==='fort'?new T.CylinderGeometry(7,8,H+1,6):new T.CylinderGeometry(5,5.5,H+6,12),c,a*S2/2,(t==='fort'?H+1:H+6)/2,b*S2/2));
+    if(t==='castle'){add(new T.BoxGeometry(14,26,14),c,4,13,4);add(new T.BoxGeometry(14.5,1.2,14.5),m('#9c8a6c'),4,26.6,4);}else add(new T.BoxGeometry(S2-6,.8,S2-6),m('#8a7a5e'),0,H-1,0);}
+  else if(t==='temple'){add(new T.ConeGeometry(260,150,9),m('#6f7d4c'),0,75,90);const top=150;add(new T.BoxGeometry(70,8,26),stone,0,top+2,20);
+    for(let i=0;i<12;i++){add(new T.BoxGeometry(3.2,14,3.2),stone,-30+i*5.45,top+13,10);}add(new T.BoxGeometry(68,3,6),stone,0,top+21.5,10);}
+  else if(t==='pier'){const pm=m('#a39c90');add(new T.BoxGeometry(7,1,320),pm,0,2.2,-160);for(let i=0;i<16;i++)add(new T.CylinderGeometry(.5,.5,6,8),pm,0,-.5,-i*20);add(new T.CylinderGeometry(16,16,1.2,24),pm,0,2.3,-326);
+    for(let i=0;i<8;i++)add(new T.CylinderGeometry(.12,.12,4,5),m('#333'),3.2*(i%2?1:-1),4.5,-i*40);}
+  else if(t==='port'){const bw=m('#9a958c');add(new T.BoxGeometry(14,5,300),bw,-170,1.5,-150);add(new T.BoxGeometry(220,5,14),bw,-60,1.5,-300);add(new T.BoxGeometry(14,5,200),bw,170,1.5,-100);
+    add(new T.CylinderGeometry(2,2,10,10),red,50,6,-300);add(new T.CylinderGeometry(2,2,10,10),m('#2e9b4f'),170,6,-200);
+    const hull=m('#f7f7f2');for(let i=0;i<16;i++){const x=-140+(i%8)*36,z=-40-Math.floor(i/8)*60;add(new T.BoxGeometry(4,2.2,12),i%3?hull:m('#2b62c9'),x,1,z);add(new T.CylinderGeometry(.15,.15,13,4),m('#ddd'),x,8,z);}
+    if(L.ferry)for(let k=0;k<2;k++){const f=new T.Group(),h=new T.Mesh(new T.BoxGeometry(26,14,170),m('#f2f2f2'));h.position.y=6;f.add(h);const st=new T.Mesh(new T.BoxGeometry(26.4,2,170.4),m('#1f4fa0'));st.position.y=3;f.add(st);
+      const sup=new T.Mesh(new T.BoxGeometry(22,10,90),m('#ffffff'));sup.position.set(0,18,10);f.add(sup);const fn=new T.Mesh(new T.CylinderGeometry(3,3.4,10,12),m('#d23a2a'));fn.position.set(0,27,-20);f.add(fn);
+      f.position.set(-60+k*110,0,-140-k*40);f.rotation.y=Math.PI/2*(k?1:.9);g.add(f);}}
+  else if(t==='dune'){const sd=m('#e6d09b'),gr=m('#7b8f4c');for(let i=0;i<26;i++){const d=new T.Mesh(new T.SphereGeometry(1,12,6,0,Math.PI*2,0,Math.PI/2),sd);d.scale.set(rnd(25,55),rnd(5,11),rnd(14,24));d.position.set(rnd(-400,400),0,rnd(-10,40));g.add(d);
+      for(let k=0;k<4;k++)add(new T.SphereGeometry(rnd(1.5,3),6,4),gr,d.position.x+rnd(-15,15),d.scale.y*.8,d.position.z+rnd(-8,8));}}
+  return g;}
 function azPos(lat,lon){const dy=(lat-SPOT.lat)*110570,dx=(lon-SPOT.lon)*111320*Math.cos(SPOT.lat*R),d=Math.hypot(dx,dy),az=(Math.atan2(dx,dy)/R+360)%360,a=(az-FACE)*R;return {x:Math.sin(a)*d,z:-Math.cos(a)*d,d};}
 function buildLandmarks(){const rm=new T.MeshStandardMaterial({color:'#6f6a62',roughness:.95});
   if(SPOT.rocks){for(let i=0;i<Math.round(60*SPOT.rocks);i++){const r=new T.Mesh(new T.DodecahedronGeometry(rnd(.3,1.3),0),rm);const x=rnd(-120,120),z=rnd(-10,3);r.position.set(x,sandY(z)+rnd(-.1,.3),z);r.scale.y=rnd(.4,.8);r.rotation.set(rnd(0,3),rnd(0,3),0);r.castShadow=true;scene.add(r);}
@@ -514,10 +558,12 @@ function buildLandmarks(){const rm=new T.MeshStandardMaterial({color:'#6f6a62',r
   if(SPOT.huts){const cols=['#2f6fb5','#e8e2d0','#c0392b','#2f8a5a','#d9b24a'];for(let i=0;i<22;i++){const x=-110+i*10+rnd(-1,1);if(Math.abs(x)<14)continue;const c=new T.Mesh(new T.BoxGeometry(1.4,2.2,1.4),new T.MeshStandardMaterial({color:cols[i%5],roughness:.8}));c.position.set(x,1.1+22*.035,22);c.castShadow=true;scene.add(c);
     const rf=new T.Mesh(new T.ConeGeometry(1.15,.6,4),new T.MeshStandardMaterial({color:'#8a6a48'}));rf.rotation.y=Math.PI/4;rf.position.set(x,2.5+22*.035,22);scene.add(rf);
     if(i%2){const u=new T.Group(),pole=new T.Mesh(new T.CylinderGeometry(.03,.03,2.3,6),MAT.chairF);pole.position.y=1.15;u.add(pole);const cl=new T.Mesh(new T.ConeGeometry(.2,1.4,8),new T.MeshStandardMaterial({color:cols[(i+2)%5]}));cl.position.y=1.9;u.add(cl);u.position.set(x+3,18*.035,18);scene.add(u);}}}
-  if(SPOT.pier){const pm=new T.MeshStandardMaterial({color:'#9a9488',roughness:.9}),pier=new T.Mesh(new T.BoxGeometry(8,1,260),pm);pier.position.set(380,1.5,-110);scene.add(pier);
+  if(SPOT.pier&&!LMK.some(L=>L.t==='pier'&&azPos(L.lat,L.lon).d<4000)){const pm=new T.MeshStandardMaterial({color:'#9a9488',roughness:.9}),pier=new T.Mesh(new T.BoxGeometry(8,1,260),pm);pier.position.set(380,1.5,-110);scene.add(pier);
     for(let i=0;i<14;i++){const pl=new T.Mesh(new T.CylinderGeometry(.4,.4,5,8),pm);pl.position.set(380,-1,10-i*19);scene.add(pl);}const rot=new T.Mesh(new T.CylinderGeometry(14,14,1.2,24),pm);rot.position.set(380,1.6,-245);scene.add(rot);}
   if(SPOT.city||SPOT.huts){const bm=new T.MeshStandardMaterial({color:'#d8cfc0',roughness:.9});for(let i=0;i<40;i++){const side=i%2?1:-1,x=side*rnd(250,1400),z=rnd(30,500),h=rnd(6,28);if(!SPOT.city&&Math.abs(x)<600)continue;const b=new T.Mesh(new T.BoxGeometry(rnd(10,24),h,rnd(10,20)),bm);b.position.set(x,h/2,z);scene.add(b);}}
   if(SPOT.ship){const sm=new T.MeshStandardMaterial({color:'#3a3f48',roughness:.7});for(let i=0;i<2;i++){const g=new T.Group(),h=new T.Mesh(new T.BoxGeometry(180,18,28),sm);g.add(h);const bd=new T.Mesh(new T.BoxGeometry(40,24,26),new T.MeshStandardMaterial({color:'#e9e9e9'}));bd.position.set(60,20,0);g.add(bd);g.position.set(rnd(-1500,1500),8,-rnd(2500,4500));g.rotation.y=rnd(-.3,.3);scene.add(g);}}
+  // luoghi caratteristici vicini: vecchio faro, pontile, porti e navi, castelli, torri, tempio
+  for(const L of LMK){if(L.t==='dune')continue;const p=azPos(L.lat,L.lon);if(p.d>14000)continue;const g=lmModel(L);g.scale.setScalar(1+Math.max(0,(p.d-500)/700));g.position.set(p.x,0,p.z);scene.add(g);}
   // il Circeo all'orizzonte (da Anzio a Sabaudia)
   const c=azPos(CIRCEO.lat,CIRCEO.lon);if(c.d>2000&&c.d<70000&&c.z<1000){const k=Math.min(1,9000/c.d),m=new T.Mesh(new T.ConeGeometry(2400*k*2.2,CIRCEO.h*1.3*k*2,7,1),new T.MeshStandardMaterial({color:'#4f5a52',roughness:1}));const sc=Math.min(1,6000/c.d);m.position.set(c.x*sc,CIRCEO.h*k*.6,c.z*sc);m.scale.set(1.6,1,.8);scene.add(m);}}
 function setupRods(){st.rods.forEach(r=>{scene.remove(r.hit);scene.remove(r.obj);scene.remove(r.spike);scene.remove(r.line);scene.remove(r.sinker);});
@@ -548,7 +594,13 @@ async function startMap(){st.phase='map';
   const bins=new Map();for(const q of pts){const k=Math.round(u(q)/.4);(bins.get(k)||bins.set(k,[]).get(k)).push(o(q));}
   const ks=[...bins.keys()].sort((a,b)=>a-b),coast=ks.map(k=>{const a=bins.get(k).sort((x,y)=>x-y),m=a[Math.floor(a.length/2)],uu=k*.4;return [A[0]+ax[0]*uu+sn[0]*m,A[1]+ax[1]*uu+sn[1]*m];});
   const sm=(arr,w)=>arr.map((_,i)=>{let x=0,y=0,n=0;for(let j=Math.max(0,i-w);j<=Math.min(arr.length-1,i+w);j++){x+=arr[j][0];y+=arr[j][1];n++;}return [x/n,y/n];});
-  const cs=sm(coast,2),road=sm(cs.map(q=>[q[0]-sn[0]*.3,q[1]-sn[1]*.3]),4),cum=[0];for(let i=1;i<road.length;i++)cum.push(cum[i-1]+Math.hypot(road[i][0]-road[i-1][0],road[i][1]-road[i-1][1]));
+  MP.segs=segs;const cs=sm(coast,2);let road=sm(cs.map(q=>[q[0]-sn[0]*.3,q[1]-sn[1]*.3]),4);
+  // la strada resta sempre a terra, almeno 250 m dentro la linea di costa vera
+  {const rs=[road[0]];for(let i=1;i<road.length;i++){const a=road[i-1],b=road[i],n=Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/.15);for(let k=1;k<=n;k++)rs.push([lerp(a[0],b[0],k/n),lerp(a[1],b[1],k/n)]);}road=rs;}
+  // ogni punto si sposta verso l'interno finché è a terra e ad almeno 300 m da qualsiasi tratto di costa (anche moli e porti)
+  const inland=r=>{let q=r;for(let k=0;k<80;k++){const c=coastNear(q,1);if(!c||(c.side>0&&c.d>=.3))break;q=[q[0]-sn[0]*.05,q[1]-sn[1]*.05];}return q;};
+  road=sm(road.map(inland),3);road=sm(road.map(inland),1).map(inland);
+  const cum=[0];for(let i=1;i<road.length;i++)cum.push(cum[i-1]+Math.hypot(road[i][0]-road[i-1][0],road[i][1]-road[i-1][1]));
   Object.assign(MP,{segs,coast:cs,road,cum,len:cum[cum.length-1],sn,towns:(C.T||[]).filter(t=>t[1]>41.12&&t[1]<42.42&&t[2]>11.45&&t[2]<13.25)});
   MP.spots=SPOTS.map(sp=>{const q=PJ(sp.lat,sp.lon);let bi=0,bd=1e9;road.forEach((r,i)=>{const d=Math.hypot(r[0]-q[0],r[1]-q[1]);if(d<bd){bd=d;bi=i;}});return {sp,q,s:cum[bi]};});
   const last=LSG('spot','castelporziano'),ls=MP.spots.find(x=>x.sp.id===last)||MP.spots.find(x=>x.sp.id==='castelporziano');
@@ -562,6 +614,9 @@ async function startMap(){st.phase='map';
     c.remove();MP.c=null;build3D();}catch(e){console.warn(e);dispose3D();if(!MP.c){c.id='gmapc';root.insertBefore(c,root.firstChild);MP.c=c;MP.g=c.getContext('2d');}}
   mapUI();sizeMap();addEventListener('resize',sizeMap);let lt=performance.now();
   const step=now=>{if(st.phase!=='map'&&st.phase!=='parking')return;const dt=Math.min(.05,(now-lt)/1000);lt=now;if(M3.on){mapPhys3(dt);draw3D(dt);}else{mapPhys(dt);drawMap(now/1000);}MP.raf=requestAnimationFrame(step);};MP.raf=requestAnimationFrame(step);}
+// punto della costa vera più vicino; nei dati OSM qui la terra sta a destra della linea
+function coastNear(q,maxD=3){let bd=maxD*maxD,b=null;for(const sg of MP.segs)for(let j=0;j+1<sg.length;j++){const a=sg[j],e=sg[j+1];if(Math.min(a[0],e[0])-q[0]>maxD||q[0]-Math.max(a[0],e[0])>maxD||Math.min(a[1],e[1])-q[1]>maxD||q[1]-Math.max(a[1],e[1])>maxD)continue;const vx=e[0]-a[0],vy=e[1]-a[1],l2=vx*vx+vy*vy||1e-12;const t=clamp(((q[0]-a[0])*vx+(q[1]-a[1])*vy)/l2,0,1),px=a[0]+vx*t,py=a[1]+vy*t,d=(q[0]-px)**2+(q[1]-py)**2;if(d<bd){bd=d;b=[px,py,vx,vy];}}
+  if(!b)return null;const [px,py,vx,vy]=b,l=Math.hypot(vx,vy)||1,lx=vy/l,ly=-vx/l;return {px,py,lx,ly,d:Math.sqrt(bd),side:(q[0]-px)*lx+(q[1]-py)*ly};}
 function landTex(){const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d');g.fillStyle='#7d9656';g.fillRect(0,0,256,256);
   for(let i=0;i<1800;i++){g.fillStyle=`rgba(${Math.random()<.5?'40,70,30':'160,170,100'},${Math.random()*.25})`;const r=Math.random()*6;g.beginPath();g.arc(Math.random()*256,Math.random()*256,r,0,7);g.fill();}
   for(let i=0;i<30;i++){g.fillStyle=`rgba(${pick(['180,160,90','120,140,70','90,120,60'])},.35)`;g.fillRect(Math.random()*256,Math.random()*256,20+Math.random()*40,14+Math.random()*30);}return c;}
@@ -716,7 +771,7 @@ function build3D(){SAT.cache.clear();SAT.any=false;
     const me=labelSprite('📍 Parti da qui',{bg:'rgba(255,77,94,.9)',fs:46,k:.034});me.position.set(MP.app.pts[0][0],.05,-MP.app.pts[0][1]);S.add(me);}
   // Monte Circeo
   const cq=PJ(CIRCEO.lat,CIRCEO.lon),mg=new T.SphereGeometry(1,40,20,0,Math.PI*2,0,Math.PI/2);const mp=mg.attributes.position;for(let i=0;i<mp.count;i++){const y=mp.getY(i);mp.setY(i,y*(1+.12*Math.sin(mp.getX(i)*9)*Math.cos(mp.getZ(i)*7)));}mg.computeVertexNormals();
-  const mt=new T.Mesh(mg,new T.MeshLambertMaterial({color:0x5b7a3c}));mt.scale.set(2.6,.54,.9);mt.rotation.y=.15;mt.position.set(cq[0],0,-cq[1]);deco.add(mt);
+  const mt=new T.Mesh(mg,new T.MeshLambertMaterial({color:0x5b7a3c}));mt.scale.set(2.6,.54,.9);mt.rotation.y=.15;mt.position.set(cq[0],0,-cq[1]);S.add(mt);
   // paesi: case con tetti in coppo
   const bx=new T.BoxGeometry(1,1,1);bx.translate(0,.5,0);const rf=new T.ConeGeometry(.75,1,4);rf.rotateY(Math.PI/4);rf.translate(0,.5,0);
   const houses=[],exitZ=[];MP.spots.forEach(q=>{const J=roadAt(q.s),n=seaN(J);exitZ.push([J.x+n[0]*.1,J.y+n[1]*.1,.17]);for(const d of [-1,1]){const A=roadAt(clamp(q.s-d*.15,0,MP.len));exitZ.push([A.x+n[0]*.04,A.y+n[1]*.04,.08]);}});const big=/Ostia|Civitavecchia|Terracina|Anzio|Nettuno|Ladispoli|Fiumicino|Sabaudia|Santa Marinella|Torvaianica/;
@@ -730,20 +785,23 @@ function build3D(){SAT.cache.clear();SAT.any=false;
   // uscite: due rampe (una per senso di marcia), parcheggio, sentiero sulla spiaggia, cartelli e segnaposto
   const pkT=canvasTex(128,96,(g,w,h)=>{g.fillStyle='#55595f';g.fillRect(0,0,w,h);g.strokeStyle='#fff';g.lineWidth=2;for(let x=8;x<w;x+=16){g.beginPath();g.moveTo(x,4);g.lineTo(x,30);g.moveTo(x,h-4);g.lineTo(x,h-30);g.stroke();}});
   const pathM=new T.MeshLambertMaterial({color:0xd9c08a,side:T.DoubleSide});
-  MP.spots.forEach((p,i)=>{const J=roadAt(p.s),n=seaN(J),E=[J.x+n[0]*.16,J.y+n[1]*.16];p.E=E;p.n=n;p.ramps={};
-    for(const d of [1,-1]){const rs=clamp(p.s-d*.25,0,MP.len),A=roadAt(rs),hd=roadDir(rs),rt2=[hd[1]*d,-hd[0]*d],P0=[A.x+rt2[0]*.0075,A.y+rt2[1]*.0075],B1=roadAt(clamp(p.s-d*.1,0,MP.len)),P1=[B1.x+n[0]*.012,B1.y+n[1]*.012],P2=[J.x+n[0]*.08,J.y+n[1]*.08];
-      const pts=[];for(let k=0;k<=40;k++){const u=k/40,a=(1-u)**3,b=3*u*(1-u)**2,c=3*u*u*(1-u),e=u**3;pts.push([a*P0[0]+b*P1[0]+c*P2[0]+e*E[0],a*P0[1]+b*P1[1]+c*P2[1]+e*E[1]]);}
+  MP.spots.forEach((p,i)=>{const J=roadAt(p.s),n=seaN(J),cn=coastNear([J.x,J.y])||{px:J.x+n[0]*.3,py:J.y+n[1]*.3,lx:-n[0],ly:-n[1]},B=[cn.px+cn.lx*.025,cn.py+cn.ly*.025];let E=[cn.px+cn.lx*.1,cn.py+cn.ly*.1];
+    if(Math.hypot(E[0]-J.x,E[1]-J.y)<.06)E=[J.x+n[0]*.06,J.y+n[1]*.06];const dn0=E[0]-J.x,dn1=E[1]-J.y,dl=Math.hypot(dn0,dn1)||1,dn=[dn0/dl,dn1/dl],tt=[J.tx,J.ty],SL=k=>[E[0]+tt[0]*(k-1.5)*.024-dn[0]*.004,E[1]+tt[1]*(k-1.5)*.024-dn[1]*.004],MINE=1,ME=SL(MINE);
+    p.E=E;p.B=B;p.n=n;p.ramps={};
+    for(const d of [1,-1]){const rs=clamp(p.s-d*.25,0,MP.len),A=roadAt(rs),hd=roadDir(rs),rt2=[hd[1]*d,-hd[0]*d],P0=[A.x+rt2[0]*.0075,A.y+rt2[1]*.0075],B1=roadAt(clamp(p.s-d*.1,0,MP.len)),P1=[B1.x+dn[0]*.012,B1.y+dn[1]*.012],P2=[J.x+dn0*.5,J.y+dn1*.5];
+      const pts=[];for(let k=0;k<=40;k++){const u=k/40,a=(1-u)**3,b=3*u*(1-u)**2,c=3*u*u*(1-u),e=u**3;pts.push([a*P0[0]+b*P1[0]+c*P2[0]+e*ME[0],a*P0[1]+b*P1[1]+c*P2[1]+e*ME[1]]);}
       const cum=[0];for(let k=1;k<pts.length;k++)cum.push(cum[k-1]+Math.hypot(pts[k][0]-pts[k-1][0],pts[k][1]-pts[k-1][1]));p.ramps[d]={rs,pts,cum,len:cum[cum.length-1]};
       S.add(new T.Mesh(ribbonGeo(pts,.02,.0042,.07),roadM));
       const sg=roadAt(clamp(p.s-d*.8,0,MP.len)),sd=roadDir(clamp(p.s-d*.8,0,MP.len)),side=d===1?1:-1,hx=sd[0]*d,hy=sd[1]*d,rx=hy,ry=-hx,sgn=exitSign(p.sp.name,d!==1);
       sgn.position.set(sg.x+rx*.034,0,-(sg.y+ry*.034));sgn.rotation.y=Math.atan2(-hx,hy);S.add(sgn);}
-    const pk=new T.Mesh(new T.PlaneGeometry(.09,.06),new T.MeshLambertMaterial({map:pkT}));pk.rotation.set(-Math.PI/2,0,Math.atan2(J.ty,J.tx));pk.position.set(E[0],.0046,-E[1]);S.add(pk);
-    for(let k=0;k<3;k++){const c=makeCar3(pick([0xd94a3a,0xf2f2f2,0x2b62c9,0x333840,0xe0b33a]));const a=Math.atan2(J.ty,J.tx),ox=(k-1)*.026;c.position.set(E[0]+Math.cos(a)*ox-n[0]*.017,0,-(E[1]+Math.sin(a)*ox-n[1]*.017));c.rotation.y=Math.atan2(-n[0],n[1])+Math.PI;if(Math.random()<.8)S.add(c);}
-    S.add(new T.Mesh(ribbonGeo([[E[0]+n[0]*.03,E[1]+n[1]*.03],[E[0]+n[0]*.08,E[1]+n[1]*.08],[E[0]+n[0]*.14,E[1]+n[1]*.14]],.008,.0043,.05),pathM));
+    const pk=new T.Mesh(new T.PlaneGeometry(.11,.06),new T.MeshLambertMaterial({map:pkT}));pk.rotation.set(-Math.PI/2,0,Math.atan2(J.ty,J.tx));pk.position.set(E[0],.0046,-E[1]);S.add(pk);
+    // il posto MINE resta sempre libero per la mia auto
+    for(let k=0;k<4;k++){if(k===MINE||Math.random()<.25)continue;const c=makeCar3(pick([0xd94a3a,0xf2f2f2,0x2b62c9,0x333840,0xe0b33a]));const q=SL(k);c.position.set(q[0],0,-q[1]);c.rotation.y=Math.atan2(dn[0],-dn[1]);S.add(c);}
+    S.add(new T.Mesh(ribbonGeo([[E[0]+dn[0]*.03,E[1]+dn[1]*.03],[(E[0]+B[0])/2+dn[0]*.015,(E[1]+B[1])/2+dn[1]*.015],[B[0],B[1]]],.008,.0043,.05),pathM));
     const pin=new T.Group(),pm=new T.MeshLambertMaterial({color:0x2fe0cf,emissive:0x0b5a54});const hd2=new T.Mesh(new T.SphereGeometry(.011,16,10),pm);hd2.position.y=.03;const tip=new T.Mesh(new T.ConeGeometry(.0105,.026,16),pm);tip.rotation.x=Math.PI;tip.position.y=.013;
     const dot=new T.Mesh(new T.SphereGeometry(.0045,10,8),new T.MeshBasicMaterial({color:0xffffff}));dot.position.set(0,.03,0);dot.scale.setScalar(1.05);pin.add(hd2,tip,dot);
     const lb=labelSprite('🎣 '+p.sp.name,{bg:'rgba(4,14,26,.82)',fs:46,k:.034});lb.position.y=.062;pin.add(lb);
-    pin.position.set(E[0]+n[0]*.08,0,-(E[1]+n[1]*.08));S.add(pin);M3.pins.push(pin);});
+    pin.position.set(B[0],0,-B[1]);S.add(pin);M3.pins.push(pin);});
   // pini domestici e macchia
   const trees=[];
   for(let k=0;k<7000;k++){const s=Math.random()*MP.len,t=roadAt(s),n=seaN(t),o=Math.random()<.8?-rnd(.035,1.6):rnd(.035,.16),p=[t.x+n[0]*o,t.y+n[1]*o];
@@ -753,6 +811,12 @@ function build3D(){SAT.cache.clear();SAT.any=false;
   const TC=new T.InstancedMesh(crown,new T.MeshLambertMaterial(),trees.length),TT=new T.InstancedMesh(trunk,new T.MeshLambertMaterial({color:0x6b4a32}),trees.length),GC=['#2f5a2a','#3c6a2f','#29502a','#467536'].map(c=>new T.Color(c));
   trees.forEach((p,i)=>{const s=rnd(.008,.015),h=s*rnd(1.2,1.9);o3.position.set(p[0],0,-p[1]);o3.rotation.set(0,0,0);o3.scale.set(s,h,s);o3.updateMatrix();TT.setMatrixAt(i,o3.matrix);o3.position.y=h;o3.scale.set(s,s,s);o3.updateMatrix();TC.setMatrixAt(i,o3.matrix);TC.setColorAt(i,pick(GC));});
   deco.add(TT,TC);
+  // luoghi caratteristici della costa con il loro nome
+  for(const L of LMK){const q=PJ(L.lat,L.lon),nr=nearRoad(q),g=lmModel(L);
+    if(L.t==='temple')g.scale.set(.001,.0016,.001);else if(L.t==='pier')g.scale.set(.003,.0025,.001);else if(L.t==='port'||L.t==='dune')g.scale.set(.001,.0025,.001);else g.scale.setScalar(.0022);
+    let gp=q,sv=nr.n;if(L.t==='pier'||L.t==='port'){const c=coastNear(q);if(c){gp=[c.px,c.py];sv=[-c.lx,-c.ly];}}
+    g.position.set(gp[0],0,-gp[1]);g.rotation.y=Math.atan2(-sv[0],sv[1]);S.add(g);
+    const lb=labelSprite(L.n,{fs:40,k:.024,col:'#ffe9a8',bg:'rgba(30,20,4,.72)'});lb.userData.n=L.n;lb.position.set(q[0],{tower:.06,lighthouse:.11,castle:.08,fort:.05,temple:.3,pier:.03,port:.04,dune:.04}[L.t],-q[1]);S.add(lb);}
   // auto: la mia (con le canne sul tetto) e il traffico
   M3.car=makeCar3(0x1f9a8e,true);S.add(M3.car);M3.yaw=null;
   for(let k=0;k<22;k++){const c=makeCar3(pick([0xd94a3a,0xf2f2f2,0x2b62c9,0x333840,0xe0b33a,0x8a2be2,0x2e7d32]));S.add(c);M3.cars.push({o:c,s:Math.random()*MP.len,d:Math.random()<.5?1:-1,v:rnd(.5,1.05)});}
@@ -800,6 +864,7 @@ function draw3D(dt){const c=MP.car,P=carPose(),car=M3.car;M3.t+=dt;const t=M3.t;
   M3.wn.offset.x+=dt*.02;M3.wn.offset.y+=dt*.013;
   M3.pins.forEach((p,i)=>{p.position.y=.008+Math.sin(t*2.2+i)*.006;p.children[0].parent.rotation.y=t*.8;});
   for(const k of M3.cars){k.s+=k.d*k.v*dt;if(k.s<0)k.s+=MP.len;if(k.s>MP.len)k.s-=MP.len;const r=roadAt(k.s),h=roadDir(k.s),hx=h[0]*k.d,hy=h[1]*k.d;k.o.position.set(r.x+hy*.0075,0,-(r.y-hx*.0075));k.o.rotation.y=Math.atan2(hx,-hy);}
+  if(!(M3.lmT>0)){M3.lmT=.5;let best=null,bd=1.3;for(const L of LMK){const q=L.q||(L.q=PJ(L.lat,L.lon)),d=Math.hypot(q[0]-P.x,q[1]-P.y);if(d<bd){bd=d;best=L;}}const h=best?`<div>📍 ${best.n} · ${Math.round(bd*20)*50} m</div>`:'';if(hud.innerHTML!==h)hud.innerHTML=h;}else M3.lmT-=dt;
   M3.R.render(M3.S,cam);drawMini(P);}
 function drawMini(P){const c=M3.mini;if(!c)return;const g=c.getContext('2d'),d=MP.d||1,W=c.width,H=c.height;
   if(!M3.mbg||M3.mbg.width!==W){const b=document.createElement('canvas');b.width=W;b.height=H;const bg=b.getContext('2d');const all=MP.app?MP.road.concat(MP.app.pts):MP.road,xs=all.map(q=>q[0]),ys=all.map(q=>q[1]),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys),ks=Math.min((W-16*d)/(x1-x0),(H-16*d)/(y1-y0));
