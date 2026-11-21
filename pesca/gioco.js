@@ -757,8 +757,10 @@ async function approachRoute(pos){const q=PJ(pos.lat,pos.lon),nr=nearRoad(q),dis
     const j=await (await fetch(`https://router.project-osrm.org/route/v1/driving/${pos.lon.toFixed(3)},${pos.lat.toFixed(3)};${tlo.toFixed(4)},${tla.toFixed(4)}?overview=full&geometries=geojson`,{signal:ac.signal})).json();
     const co=j.routes?.[0]?.geometry?.coordinates;if(co&&co.length>1){pts=[];for(const [lo,la] of co){const p=PJ(la,lo),l=pts[pts.length-1];if(!l||Math.hypot(p[0]-l[0],p[1]-l[1])>.025)pts.push(p);}}}catch(e){}
   if(!pts){pts=[];const n=Math.max(2,Math.ceil(dist/.3));for(let i=0;i<n;i++)pts.push([lerp(q[0],nr.t.x,i/n),lerp(q[1],nr.t.y,i/n)]);}
-  pts.push([nr.t.x,nr.t.y]);const cum=[0];for(let i=1;i<pts.length;i++)cum.push(cum[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]));
-  return {s:nr.s,app:{pts,cum,len:cum[cum.length-1]}};}
+  // arrivati vicino alla costa niente giri tra le stradine: si va dritti alla litoranea e lì c'è un incrocio (destra/sinistra)
+  let J=nr;for(let k=0;k<pts.length;k++){const n2=nearRoad(pts[k]);if(Math.hypot(pts[k][0]-n2.t.x,pts[k][1]-n2.t.y)<1.3){const a=pts[k];pts=pts.slice(0,k+1);J=n2;const L=Math.hypot(J.t.x-a[0],J.t.y-a[1]),m=Math.max(1,Math.ceil(L/.1));for(let i=1;i<m;i++)pts.push([lerp(a[0],J.t.x,i/m),lerp(a[1],J.t.y,i/m)]);break;}}
+  pts.push([J.t.x,J.t.y]);const cum=[0];for(let i=1;i<pts.length;i++)cum.push(cum[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]));
+  return {s:J.s,app:{pts,cum,len:cum[cum.length-1]}};}
 // immagini satellitari (le stesse della mappa degli spot) caricate a tessere attorno all'auto
 const SAT={cache:new Map(),any:false};
 function satLoad(z,x,y,k){const o={m:null,ok:false,t:M3.t};SAT.cache.set(k,o);
@@ -806,7 +808,7 @@ function build3D(){SAT.cache.clear();SAT.any=false;
   S.add(new T.Mesh(ribbonGeo(MP.road,.042,.004,.07),new T.MeshLambertMaterial({color:0x8a8f6a,side:T.DoubleSide})).translateY(-.0005));
   S.add(new T.Mesh(ribbonGeo(MP.road,.03,.0045,.07),roadM));
   if(MP.app){S.add(new T.Mesh(ribbonGeo(MP.app.pts,.038,.0039,.07),new T.MeshLambertMaterial({color:0x8a8f6a,side:T.DoubleSide})));S.add(new T.Mesh(ribbonGeo(MP.app.pts,.026,.0044,.07),roadM));
-    const me=labelSprite('📍 Parti da qui',{bg:'rgba(255,77,94,.9)',fs:40,k:.022});me.position.set(MP.app.pts[0][0],.1,-MP.app.pts[0][1]);S.add(me);}
+    const me=labelSprite('📍 Posizione attuale',{bg:'rgba(255,77,94,.9)',fs:40,k:.022});me.position.set(MP.app.pts[0][0],.1,-MP.app.pts[0][1]);S.add(me);}
   // Monte Circeo
   const cq=PJ(CIRCEO.lat,CIRCEO.lon),mg=new T.SphereGeometry(1,40,20,0,Math.PI*2,0,Math.PI/2);const mp=mg.attributes.position;for(let i=0;i<mp.count;i++){const y=mp.getY(i);mp.setY(i,y*(1+.12*Math.sin(mp.getX(i)*9)*Math.cos(mp.getZ(i)*7)));}mg.computeVertexNormals();
   const mt=new T.Mesh(mg,new T.MeshLambertMaterial({color:0x5b7a3c}));mt.scale.set(2.6,.54,.9);mt.rotation.y=.15;mt.position.set(cq[0],0,-cq[1]);deco.add(mt);{const lb=labelSprite('⛰️ Monte Circeo',{fs:44,k:.03,col:'#ffe9a8',bg:'rgba(30,20,4,.72)'});lb.position.set(cq[0],.12,-cq[1]);S.add(lb);}
@@ -873,7 +875,16 @@ function mapPhys3(dt){const c=MP.car;
   // più tieni premuto l'acceleratore, più l'auto va veloce (fino a 800 km/h)
   if(c.acc){c.hold=(c.hold||0)+dt;c.v+=dt*(.45+Math.max(0,c.hold-1.2)*1.1);}else{c.hold=0;c.v-=dt*(.08+c.v*.05);}if(c.brk)c.v-=dt*(1.4+c.v*.8);c.v=clamp(c.v,0,8);
   if(c.app){const A=c.app;A.u=Math.min(A.len,A.u+c.v*dt);carSound(c.v);kmh();
-    if(A.u>=A.len){c.app=null;c.dir=A.dir;MP.key='';}else{const e=document.getElementById('gpark');if(e){const d=A.len-A.u;e.innerHTML=`🧭 Verso la costa: <b>${d<1?Math.round(d*20)*50+' m':d.toFixed(1).replace('.',',')+' km'}</b> · tieni premuto ⬆ per andare più veloce`;}}return;}
+    const d=A.len-A.u;
+    // all'incrocio con la litoranea: a destra o a sinistra? senza scelta l'auto si ferma all'incrocio
+    if(!A.chosen&&d<2.5){const vt=Math.max(0,Math.sqrt(2*3*Math.max(0,d-.02)));if(c.v>vt)c.v=vt;if(d<.03){c.v=0;A.u=A.len-.02;}}
+    if(A.u>=A.len&&A.chosen){c.app=null;c.dir=A.dir;MP.key='';return;}
+    const e=document.getElementById('gpark');if(e){const near=d<2.5&&!A.chosen,key='app'+near+A.chosen;
+      if(MP.key!==key){MP.key=key;if(near){if(A.left==null){const P=A.pts,n=P.length,hx=P[n-1][0]-P[Math.max(0,n-4)][0],hy=P[n-1][1]-P[Math.max(0,n-4)][1],t=roadAt(c.s);A.left=hx*t.ty-hy*t.tx>0?1:-1;}
+          const sx=d2=>d2===1?'Sud · Terracina':'Nord · Civitavecchia';e.innerHTML=`<div style="margin-bottom:6px">🛣️ Incrocio con la litoranea tra <b id="gexd"></b>: dove vai?</div><div class="grow" style="margin:0"><button class="gb" style="flex:1;margin:0" onclick="GAME.appDir(${A.left})">⬅ ${sx(A.left)}</button><button class="gb" style="flex:1;margin:0" onclick="GAME.appDir(${-A.left})">${sx(-A.left)} ➡</button></div>`;}
+        else e.innerHTML=A.chosen?`${A.dir===1?'⬇ Verso sud':'⬆ Verso nord'}: all'incrocio giri tra <b id="gexd"></b>`:`🧭 Verso la costa: <b id="gexd"></b> · tieni premuto ⬆ per andare più veloce`;}
+      const x=document.getElementById('gexd');if(x)x.textContent=d<1?Math.round(d*20)*50+' m':d.toFixed(1).replace('.',',')+' km';}
+    return;}
   // con la freccia inserita l'auto rallenta da sola per prendere l'uscita
   if(MP.arm!=null){const r=MP.spots[MP.arm].ramps[c.dir],d=(r.rs-c.s)*c.dir;if(d>0){const vt=Math.max(.5,Math.sqrt(2*3*d));if(c.v>vt)c.v=vt;}}
   const prev=c.s;c.s=clamp(c.s+c.v*c.dir*dt,0,MP.len);if(c.s<=0||c.s>=MP.len)c.v=0;
@@ -890,7 +901,7 @@ function exitUI(nx,near){const e=document.getElementById('gpark');if(!e)return;
   if(MP.arm!=null)e.innerHTML=`<span style="color:#ffb547">⟹ Freccia inserita</span>: esci per <b>${MP.spots[MP.arm].sp.name}</b> tra <b id="gexd"></b>`;
   else if(near)e.innerHTML=`<button class="gb big" style="margin:0;background:#1450a8" onclick="GAME.takeExit(${nx})">↘ Prendi l'uscita <b>${n}</b> · <span id="gexd"></span></button>`;
   else e.innerHTML=`🛣️ Prossima uscita: <b>${n}</b> tra <b id="gexd"></b>`;}
-G.mapView=()=>{M3.zoom=1;M3.orb=0;M3.tilt=1;};G.takeExit=i=>{MP.arm=i;MP.key='';click();};G._mp=()=>({MP,M3});
+G.appDir=d=>{const c=MP.car;if(!c.app)return;c.app.dir=d;c.app.chosen=true;MP.key='';click();};G.mapView=()=>{M3.zoom=1;M3.orb=0;M3.tilt=1;};G.takeExit=i=>{MP.arm=i;MP.key='';click();};G._mp=()=>({MP,M3});
 function draw3D(dt){const c=MP.car,P=carPose(),car=M3.car;M3.t+=dt;const t=M3.t;
   const yaw=Math.atan2(P.hx,-P.hy);if(M3.yaw==null)M3.yaw=yaw;let dy=yaw-M3.yaw;dy=Math.atan2(Math.sin(dy),Math.cos(dy));M3.yaw+=dy*Math.min(1,dt*6);
   car.position.set(P.x,0,-P.y);car.rotation.y=M3.yaw;car.userData.brake.color.set(c.brk?0xff2a2a:0x661111);
