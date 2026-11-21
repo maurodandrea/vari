@@ -643,7 +643,7 @@ EQ.buildYard=function(){
    mesh(G.box(1.8,.05,.3),mat(0x5a3418,.6),-.6,2.2,-2.8,R);
    mesh(G.box(2,.45,.5),new THREE.MeshStandardMaterial({map:woodT}),1.6,.25,-2.4,R);
    // poster
-   const pt=EQ.labelTex('🐴 In sella!',{bg:'#ffe08a',fg:'#5a2e14',w:512,h:256,font:'bold 60px Fredoka, Trebuchet MS, sans-serif'});W.tex.push(pt);
+   const pt=EQ.labelTex('🐴 SellApp',{bg:'#ffe08a',fg:'#5a2e14',w:512,h:256,font:'bold 60px Fredoka, Trebuchet MS, sans-serif'});W.tex.push(pt);
    mesh(new THREE.PlaneGeometry(1.2,.6),new THREE.MeshStandardMaterial({map:pt}),-3.38,2,-.8,R).rotation.y=Math.PI/2;
   }
   // suoni d'ambiente
