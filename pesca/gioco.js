@@ -87,7 +87,7 @@ function surfCrash(vol){const c=ac();if(!c||vol<=0)return;const t=c.currentTime,
 function windSound(level,t){const c=AU.on&&level>0?ac():null;
   if(!c){if(AU.wind){AU.wind.v.gain.setTargetAtTime(0,AU.ctx.currentTime,.4);}return;}
   if(!AU.wind){const s=c.createBufferSource();s.buffer=AU.nb||(AU.nb=noiseBuf(c));s.loop=true;const f=c.createBiquadFilter();f.type='bandpass';f.Q.value=.8;f.frequency.value=600;const h=c.createBiquadFilter();h.type='highpass';h.frequency.value=180;const v=c.createGain();v.gain.value=0;s.connect(h).connect(f).connect(v).connect(c.destination);s.start();AU.wind={s,f,v};}
-  const gust=.55+.45*Math.sin(t*.37)*Math.sin(t*.11+1)+.15*Math.sin(t*1.3);AU.wind.v.gain.setTargetAtTime(level*clamp(gust,.15,1.2),c.currentTime,.5);AU.wind.f.frequency.setTargetAtTime(420+gust*500+level*900,c.currentTime,.6);}
+  const gust=.75+.2*Math.sin(t*.23)*Math.sin(t*.07+1)+.05*Math.sin(t*.9);AU.wind.v.gain.setTargetAtTime(level*clamp(gust,.5,1),c.currentTime,1.5);AU.wind.f.frequency.setTargetAtTime(380+gust*250,c.currentTime,2);}
 function seaSound(level){const c=AU.on?ac():null;
   if(!c){if(AU.sea){try{AU.sea.s.stop();}catch(e){}AU.sea=null;}return;}
   if(!AU.sea){const s=c.createBufferSource();s.buffer=noiseBuf(c);s.loop=true;const f=c.createBiquadFilter();f.type='lowpass';f.frequency.value=500;const v=c.createGain();v.gain.value=0;s.connect(f).connect(v).connect(c.destination);s.start();AU.sea={s,v,f};}
@@ -594,7 +594,7 @@ function updEnv(w,t,dt){const d=gameDate(),sun=sunPos(d,SPOT.lat,SPOT.lon),mo=mo
   // ammofila mossa dal vento
   grass.rotation.z=Math.sin(t*1.5)*w.ws*.0006;
   // mare: fruscio continuo come prima, ma solo con mare mosso; vento: appena percettibile e solo con vento vero
-  seaSound((w.wave||0)>=.5?clamp(.05+(w.wave-.5)*.12,.05,.3):0);windSound(w.ws>20?clamp((w.ws-20)/60,0,.05):0,t);}
+  seaSound((w.wave||0)>=.5?clamp(.05+(w.wave-.5)*.12,.05,.3):0);windSound(w.ws>20?clamp((w.ws-20)/80,0,.018):0,t);}
 // telecamera: dietro al pescatore quando si muove, larga sulle canne quando è seduto, vicina al mulinello nel combattimento
 const CAM={p:null,l:null};
 function updCam(dt,t){let p,l;const a=AN.pos;
