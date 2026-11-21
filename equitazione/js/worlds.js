@@ -159,7 +159,7 @@ function woodFence(W,pts,opt){
     const [ax,az]=pts[k],[bx,bz]=pts[k+1],L=Math.hypot(bx-ax,bz-az),a=Math.atan2(bz-az,bx-ax),n=Math.max(1,Math.round(L/opt.post));
     for(let i=0;i<=n;i++){const t=i/n;geos.push(EQ.xform(G.box(.14,opt.h+.1,.14),ax+(bx-ax)*t,(opt.h+.1)/2,az+(bz-az)*t,0,-a,0));}
     for(let r=0;r<opt.rails;r++){const y=opt.h*(r+1)/opt.rails-.05;geos.push(EQ.xform(G.box(L,.12,.05),(ax+bx)/2,y,(az+bz)/2,0,-a,0));}
-    if(opt.coll){W.colliders.push({x:(ax+bx)/2,z:(az+bz)/2,hx:L/2,hz:.12,rot:a,fence:true});}
+    if(opt.coll){W.colliders.push({x:(ax+bx)/2,z:(az+bz)/2,hx:L/2,hz:.12,rot:a,fence:true,h:opt.h});}
     if(opt.jump)W.jumps.push({ax,az,bx,bz,h:opt.h});
   }
   const m=mesh(EQ.merge(geos),opt.white?mat(0xf4f4f0,.6):new THREE.MeshStandardMaterial({map:TX.wood('#'+opt.col.toString(16).padStart(6,'0')),roughness:.85}),0,0,0,W.group);
@@ -379,12 +379,12 @@ EQ.buildYard=function(){
   {const geos=[];const ax=A.hx,az=A.hz;
    const seg=(x1,z1,x2,z2)=>{const L=Math.hypot(x2-x1,z2-z1),a=Math.atan2(z2-z1,x2-x1),n=Math.round(L/3);for(let i=0;i<=n;i++){const t=i/n;geos.push(EQ.xform(G.box(.15,1.3,.15),A.cx+x1+(x2-x1)*t,.65,A.cz+z1+(z2-z1)*t));}
      for(const y of [.5,.95])geos.push(EQ.xform(G.box(L,.13,.07),A.cx+(x1+x2)/2,y,A.cz+(z1+z2)/2,0,-a,0));
-     W.colliders.push({x:A.cx+(x1+x2)/2,z:A.cz+(z1+z2)/2,hx:L/2,hz:.15,rot:a,fence:true});};
+     W.colliders.push({x:A.cx+(x1+x2)/2,z:A.cz+(z1+z2)/2,hx:L/2,hz:.15,rot:a,fence:true,h:1.1});};
    seg(-ax,-az,ax,-az);seg(-ax,-az,-ax,az);seg(ax,-az,ax,az);seg(-ax,az,-3.5,az);seg(3.5,az,ax,az);
    mesh(EQ.merge(geos),fw,0,0,0,grp);
    // cancello del campo (chiuso solo in gara)
    const gate=new THREE.Group();grp.add(gate);for(const y of [.5,.95])mesh(G.box(7,.13,.07),mat(0xc0392b,.5),0,y,A.cz+az,gate);
-   W.arenaGate=gate; gate.visible=false; W.gateColl={x:0,z:A.cz+az,hx:3.5,hz:.15,off:true}; W.colliders.push(W.gateColl);
+   W.arenaGate=gate; gate.visible=false; W.gateColl={x:0,z:A.cz+az,hx:3.5,hz:.15,off:true,h:1.1}; W.colliders.push(W.gateColl);
    const words=['GIORGIA','CIRCOLO IPPICO','SCUDERIA','SALTO OSTACOLI','BRAVA!','GRAN PREMIO'];const bc=['#2f6b33','#c0392b','#1d4ed8','#7c3aed','#d97706','#0f766e'];
    let k=0;const board=(x,z,ry)=>{const t=EQ.labelTex(words[k%6],{bg:bc[k%6],w:512,h:96,radius:6,font:'bold 54px Fredoka, Trebuchet MS, sans-serif'});k++;W.tex.push(t);const m=mesh(new THREE.PlaneGeometry(4,.75),new THREE.MeshStandardMaterial({map:t,roughness:.6}),x,.45,z,grp);m.rotation.y=ry;};
    for(let x=-28;x<=28;x+=11)board(x,A.cz-az+.08,0);
@@ -754,7 +754,7 @@ EQ.buildBeach=function(){
   for(let i=0;i<12;i++){const z=-540+i*95+rnd(-15,15);const x=shore(z)+rnd(-7,2.5);W.items.push({x,z,y:Math.max(H(x,z),0)});}
   W.bounds={x0:-298,x1:115,z0:-ZL-5,z1:ZL+5};
   W.spawn={x:shore(-30)-14,z:-30,h:Math.PI/2+.4};
-  W.itemKind='shell';W.deep=-.8;W.shore=shore;
+  W.itemKind='shell';W.deep=-.8;W.shore=shore;W.grazeAt=(x,z)=>x-shore(z)<-30;
   return W;
 };
 
@@ -1022,6 +1022,7 @@ EQ.buildCity=function(){
    W.colliders.push({x:hx,z:hz,hx:4.7,hz:4.2});W.spots.home={x:hx,z:hz-6};}
   W.spots.park={x:P,z:0};
   W.grid={P,R,B,n,ext};W.blocks=blocks;
+  W.grazeAt=(x,z)=>W.surface(x,z)==='grass'||blocks.some(b=>(b.type==='park'||b.type==='park2')&&Math.abs(x-b.x)<B/2&&Math.abs(z-b.z)<B/2);
   // strade verso le altre località
   const road=(pts)=>{const r=ribbon(W,pts,12,TX.asphalt(),.012,6,0xffffff,.9);const dash=[];r.pts.forEach((p,i)=>{if(i%4)return;const q=r.pts[Math.min(r.pts.length-1,i+1)];dash.push(EQ.xform(G.box(.15,.01,2.2),p.x,.03,p.z,0,Math.atan2(q.x-p.x,q.z-p.z),0));});mesh(EQ.merge(dash),mat(0xf2f2f2,.6),0,0,0,W.group).castShadow=false;return r;};
   const rS=road([[28,-ext],[28,-260],[28,-440]]),rE=road([[ext,28],[300,28],[440,28]]),rWw=road([[-ext,-28],[-300,-28],[-440,-28]]);
