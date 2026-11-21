@@ -652,7 +652,7 @@ function roadAt(s){const c=MP.cum,r=MP.road;s=clamp(s,0,MP.len);let lo=0,hi=c.le
   const k=(s-c[lo])/Math.max(1e-6,c[hi]-c[lo]),x=lerp(r[lo][0],r[hi][0],k),y=lerp(r[lo][1],r[hi][1],k),tx=r[hi][0]-r[lo][0],ty=r[hi][1]-r[lo][1],tl=Math.hypot(tx,ty)||1;return {x,y,tx:tx/tl,ty:ty/tl};}
 function mapPhys(dt){const c=MP.car;if(MP.parking){const P=MP.parking;P.t+=dt;c.v=Math.max(0,c.v-dt*1.5);if(P.t>1.6&&!P.done){P.done=1;G.arrive(P.i);}return;}
   if(c.acc)c.v+=dt*.45;else c.v-=dt*.08;if(c.brk)c.v-=dt*1.4;c.v=clamp(c.v,0,1.3);c.s=clamp(c.s+c.v*c.dir*dt,0,MP.len);if(c.s<=0||c.s>=MP.len)c.v=0;
-  motor(c.v>.02,60+c.v*90);
+  carSound(c.v);
   let ni=-1,nd=.7;MP.spots.forEach((p,i)=>{const d=Math.abs(p.s-c.s);if(d<nd){nd=d;ni=i;}});const slow=c.v<.3;const key=ni+'|'+slow;if(key!==MP.key){MP.key=key;MP.near=ni;MP.slow=slow;mapPark();}
   const sp=document.getElementById('gkmh');if(sp)sp.textContent=Math.round(c.v/1.3*130)+' km/h';}
 function mapUI(){ui.innerHTML=`<div class="gpanel slim"><div class="grow" style="justify-content:space-between"><b style="font-size:16px">🚗 Lungo la costa del Lazio</b><b id="gkmh">0 km/h</b></div>
@@ -867,15 +867,15 @@ function carPose(){const c=MP.car;if(c.ramp)return polyPose(c.ramp.r.pts,c.ramp.
 function mapPhys3(dt){const c=MP.car;
   if(c.ramp){const R=c.ramp,left=R.r.len-R.u,vmax=Math.min(.45,left*1.6+.04);if(c.acc)c.v+=dt*.45;else c.v-=dt*.06;if(c.brk)c.v-=dt*1.4;if(c.v>vmax)c.v=Math.max(vmax,c.v-dt*Math.max(1.6,c.v*2));c.v=clamp(c.v,.03,8);R.u=Math.min(R.r.len,R.u+c.v*dt);
     if(R.u>=R.r.len-.002&&!R.done){R.done=1;c.v=0;motor(false);st.phase='parking';ui.innerHTML=`<div class="gpanel"><b>🅿️ Parcheggi a ${MP.spots[R.i].sp.name}</b><div class="gs">Prendi l'attrezzatura e scendi in spiaggia…</div></div>`;setTimeout(()=>{if(st.phase==='parking')G.arrive(R.i);},1500);}
-    if(!R.done)motor(c.v>.02,60+Math.min(c.v,3)*60);kmh();return;}
+    if(!R.done)carSound(c.v);kmh();return;}
   // più tieni premuto l'acceleratore, più l'auto va veloce (fino a 800 km/h)
   if(c.acc){c.hold=(c.hold||0)+dt;c.v+=dt*(.45+Math.max(0,c.hold-1.2)*1.1);}else{c.hold=0;c.v-=dt*(.08+c.v*.05);}if(c.brk)c.v-=dt*(1.4+c.v*.8);c.v=clamp(c.v,0,8);
-  if(c.app){const A=c.app;A.u=Math.min(A.len,A.u+c.v*dt);motor(c.v>.02,60+Math.min(c.v,3)*60);kmh();
+  if(c.app){const A=c.app;A.u=Math.min(A.len,A.u+c.v*dt);carSound(c.v);kmh();
     if(A.u>=A.len){c.app=null;c.dir=A.dir;MP.key='';}else{const e=document.getElementById('gpark');if(e){const d=A.len-A.u;e.innerHTML=`🧭 Verso la costa: <b>${d<1?Math.round(d*20)*50+' m':d.toFixed(1).replace('.',',')+' km'}</b> · tieni premuto ⬆ per andare più veloce`;}}return;}
   // con la freccia inserita l'auto rallenta da sola per prendere l'uscita
   if(MP.arm!=null){const r=MP.spots[MP.arm].ramps[c.dir],d=(r.rs-c.s)*c.dir;if(d>0){const vt=Math.max(.5,Math.sqrt(2*3*d));if(c.v>vt)c.v=vt;}}
   const prev=c.s;c.s=clamp(c.s+c.v*c.dir*dt,0,MP.len);if(c.s<=0||c.s>=MP.len)c.v=0;
-  motor(c.v>.02,60+Math.min(c.v,3)*60);
+  carSound(c.v);
   if(MP.arm!=null){const p=MP.spots[MP.arm],r=p.ramps[c.dir];if(r&&(prev-r.rs)*c.dir<=0&&(c.s-r.rs)*c.dir>=0){c.ramp={i:MP.arm,r,u:0};c.v=Math.min(c.v,.6);MP.arm=null;ui.querySelector('#gpark').innerHTML=`↘ Esci per <b>${p.sp.name}</b>…`;MP.key='ramp';return;}
     if((c.s-r.rs)*c.dir>.05){MP.arm=null;}}
   let nx=-1,nd=1e9;MP.spots.forEach((p,i)=>{const d=(p.ramps[c.dir].rs-c.s)*c.dir;if(d>.01&&d<nd){nd=d;nx=i;}});
@@ -1153,7 +1153,23 @@ function makeDrone(){const g=new T.Group(),w=new T.MeshStandardMaterial({color:'
   const cam=new T.Mesh(new T.SphereGeometry(.035,10,8),d);cam.position.set(0,-.07,-.12);g.add(cam);
   const hook=new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(0,-.05,0),new T.Vector3(0,-2.5,0)]),new T.LineBasicMaterial({color:0xdddddd,transparent:true,opacity:.6}));g.add(hook);
   const pay=new T.Mesh(new T.SphereGeometry(.06,8,6),MAT.lead);pay.position.y=-2.55;g.add(pay);g.userData={props,pay,hook};g.traverse(o=>{if(o.isMesh)o.castShadow=true;});return g;}
-function motor(on,f){const c=AU.on&&on?ac():null;if(!c){if(AU.mot)AU.mot.v.gain.setTargetAtTime(0,AU.ctx.currentTime,.2);return;}
+// motore dell'auto: 4 cilindri con giri e marce, rumore delle gomme sull'asfalto e vento ad alta velocità
+function carSound(v){const c=AU.on&&v>.015?ac():null,S=AU.car;if(!c){if(S&&AU.ctx)S.out.gain.setTargetAtTime(0,AU.ctx.currentTime,.25);return;}
+  if(!S){const out=c.createGain();out.gain.value=0;out.connect(c.destination);
+    const lp=c.createBiquadFilter();lp.type='lowpass';lp.Q.value=.9;lp.frequency.value=300;
+    const o1=c.createOscillator(),o2=c.createOscillator(),o3=c.createOscillator();o1.type='sawtooth';o2.type='triangle';o2.detune.value=9;o3.type='sine';
+    const g1=c.createGain();g1.gain.value=.35;const g2=c.createGain();g2.gain.value=.6;const g3=c.createGain();g3.gain.value=1;o1.connect(g1).connect(lp);o2.connect(g2).connect(lp);o3.connect(g3).connect(lp);
+    const am=c.createGain();am.gain.value=.7;const lfo=c.createOscillator();lfo.type='sine';const lg=c.createGain();lg.gain.value=.22;lfo.connect(lg).connect(am.gain);lp.connect(am).connect(out);
+    const nb=c.createBufferSource();nb.buffer=noiseBuf(c);nb.loop=true;
+    const bp=c.createBiquadFilter();bp.type='bandpass';bp.frequency.value=420;bp.Q.value=.6;const tire=c.createGain();tire.gain.value=0;nb.connect(bp).connect(tire).connect(out);
+    const hp=c.createBiquadFilter();hp.type='highpass';hp.frequency.value=1100;const wind=c.createGain();wind.gain.value=0;nb.connect(hp).connect(wind).connect(out);
+    [o1,o2,o3,lfo,nb].forEach(x=>x.start());AU.car={out,lp,o1,o2,o3,lfo,tire,wind};}
+  const A=AU.car,t=c.currentTime,kmh=Math.min(v*100,320),G=[0,25,50,80,115,160,1e9];let g=1;while(kmh>G[g])g++;
+  const lo=G[g-1],hi=Math.min(G[g],330),rpm=900+(g>1?700:0)+clamp((kmh-lo)/(hi-lo),0,1)*(g===1?2600:2300),fire=rpm/30;// 4 cilindri: 2 scoppi a giro
+  A.o1.frequency.setTargetAtTime(fire,t,.08);A.o2.frequency.setTargetAtTime(fire,t,.08);A.o3.frequency.setTargetAtTime(fire/2,t,.08);A.lfo.frequency.setTargetAtTime(rpm/60,t,.08);
+  A.lp.frequency.setTargetAtTime(160+rpm*.11,t,.1);A.out.gain.setTargetAtTime(.05,t,.2);
+  A.tire.gain.setTargetAtTime(Math.min(.55,kmh/220),t,.2);A.wind.gain.setTargetAtTime(clamp((kmh-90)/260,0,.45),t,.3);}
+function motor(on,f){if(!on)carSound(0);const c=AU.on&&on?ac():null;if(!c){if(AU.mot)AU.mot.v.gain.setTargetAtTime(0,AU.ctx.currentTime,.2);return;}
   if(!AU.mot){const o=c.createOscillator();o.type='sawtooth';const fl=c.createBiquadFilter();fl.type='lowpass';fl.frequency.value=700;const v=c.createGain();v.gain.value=0;o.connect(fl).connect(v).connect(c.destination);o.start();AU.mot={o,v};}
   AU.mot.o.frequency.setTargetAtTime(f,c.currentTime,.1);AU.mot.v.gain.setTargetAtTime(.018,c.currentTime,.2);}
 // guida manuale: il joystick muove il mezzo; da fermo si può sganciare
