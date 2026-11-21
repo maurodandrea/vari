@@ -99,7 +99,7 @@ function seaSound(level){const c=AU.on?ac():null;
 const G={};window.GAME=G;
 let T=null,renderer,scene,camera,sky,water,sunLight,hemi,moonLight,headLamp,clock,raf=0,root,ui,hud,cvs;
 const st={phase:'load',gt:Date.now(),speed:[1,2,4,8,16,32].includes(LSG('speed',8))?LSG('speed',8):8,lamp:LSG('lamp',true),X:null,sim:false,rods:[],sel:0,msg:'',fight:null,cast:null,catchShow:null,
-  bag:LSG('bag',[]),inv:{granchio:0},best:LSG('best',{}),total:LSG('total',{n:0,kg:0,pts:0}),lead:LSG('lead',150),hook:LSG('hook','medio'),nRods:LSG('nrods',3),busy:false,lightning:0};
+  bag:LSG('bag',[]),inv:{granchio:0},best:LSG('best',{}),total:LSG('total',{n:0,kg:0,pts:0}),lead:LSG('lead',150),outfit:LSG('outfit','waders'),castMode:'mano',castDist:LSG('cdist',120),hook:LSG('hook','medio'),nRods:LSG('nrods',3),busy:false,lightning:0};
 const gameDate=()=>new Date(st.gt);
 G._st=st;
 const CHAIR={x:-1.5,z:14};const ROD_Z=1.6;
@@ -143,50 +143,89 @@ function mats(){const S=(c,r=.8,m=0)=>new T.MeshStandardMaterial({color:c,roughn
 function limb(len,r1,r2,mat){// segmento che pende verso il basso dal suo perno, con articolazione arrotondata
   const g=new T.Group(),m=new T.Mesh(new T.CylinderGeometry(r2,r1,len,12),mat);m.position.y=-len/2;m.castShadow=true;g.add(m);
   const j=new T.Mesh(new T.SphereGeometry(r1*1.02,12,10),mat);j.castShadow=true;g.add(j);g.userData.len=len;return g;}
-function makeAngler(col){if(col){const c=(m,v)=>{const n=m.clone();n.color.set(v);return n;};var M0={jacket:MAT.jacket,jacket2:MAT.jacket2,cap:MAT.cap,pants:MAT.pants};MAT.jacket=c(MAT.jacket,col.j);MAT.jacket2=c(MAT.jacket2,col.j2);MAT.cap=c(MAT.cap,col.c);MAT.pants=c(MAT.pants,col.p);}
+// pescatore con abbigliamento e aspetto a scelta:
+// o={j,j2,c,p: colori; hat:'cap'|'beanie'|'bucket'|'none'; beard:'stubble'|'full'|'mustache'|'none'; beardCol; glasses; suit:'jacket'|'waders'|'tracksuit'|'wetsuit'; boots:'boots'|'tall'|'shoes'; skin; hair}
+function makeAngler(o={}){
+  const S=(c,r=.85,m=0)=>new T.MeshStandardMaterial({color:c,roughness:r,metalness:m});
+  const suit=o.suit||'jacket',skin=S(o.skin||'#cf9878',.6),hairM=S(o.hair||'#3a2a1e',.95),beardM=S(o.beardCol||o.hair||'#5a4636',.95);
+  let jacket=S(o.j||'#2f5544'),jacket2=S(o.j2||'#264638',.9),pants=S(o.p||'#2c3445',.9),capM=S(o.c||'#b8352a');
+  if(suit==='wetsuit'){jacket=pants=jacket2=S('#16191d',.55);}
+  const rubber=S(o.rubber||'#2e3a2a',.5),bootM=S(o.boots==='shoes'?'#d8d8d2':'#2b2a28',.7);
+  const legM=suit==='waders'?rubber:pants;
   const A=new T.Group(),J={};A.userData.J=J;
   const hips=new T.Group();hips.position.y=.95;A.add(hips);J.hips=hips;
-  const pelvis=new T.Mesh(new T.SphereGeometry(.17,16,12),MAT.pants);pelvis.scale.set(1.15,.75,.85);pelvis.castShadow=true;hips.add(pelvis);
+  const pelvis=new T.Mesh(new T.SphereGeometry(.17,18,14),legM);pelvis.scale.set(1.12,.72,.82);hips.add(pelvis);
   const spine=new T.Group();spine.position.y=.05;hips.add(spine);J.spine=spine;
-  // busto con giacca (tronco di cono arrotondato) e cappuccio
-  const torso=new T.Mesh(new T.CylinderGeometry(.2,.16,.55,16),MAT.jacket);torso.position.y=.29;torso.scale.z=.75;torso.castShadow=true;spine.add(torso);
-  const chest=new T.Mesh(new T.SphereGeometry(.205,16,12),MAT.jacket);chest.position.y=.52;chest.scale.set(1,.55,.78);chest.castShadow=true;spine.add(chest);
-  const hood=new T.Mesh(new T.TorusGeometry(.11,.045,8,16),MAT.jacket2);hood.position.set(0,.6,.06);hood.rotation.x=1.2;spine.add(hood);
-  const zip=new T.Mesh(new T.BoxGeometry(.012,.5,.01),MAT.jacket2);zip.position.set(0,.3,-.155);spine.add(zip);
+  // busto modellato: vita stretta, petto, spalle
+  const prof=[[.001,0],[.155,0],[.15,.08],[.158,.2],[.18,.34],[.2,.44],[.205,.5],[.17,.57],[.08,.62],[.001,.63]].map(([x,y])=>new T.Vector2(x,y));
+  const torso=new T.Mesh(new T.LatheGeometry(prof,22),jacket);torso.scale.z=.72;spine.add(torso);
+  for(const s of[-1,1]){const dl=new T.Mesh(new T.SphereGeometry(.075,14,10),jacket);dl.position.set(s*.2,.5,0);dl.scale.set(1,.85,.9);spine.add(dl);}
+  if(suit==='jacket'){const hood=new T.Mesh(new T.TorusGeometry(.1,.04,8,16),jacket2);hood.position.set(0,.6,.07);hood.rotation.x=1.2;spine.add(hood);
+    const zip=new T.Mesh(new T.BoxGeometry(.012,.5,.01),jacket2);zip.position.set(0,.3,-.148);spine.add(zip);
+    for(const s of[-1,1]){const pk=new T.Mesh(new T.BoxGeometry(.09,.07,.02),jacket2);pk.position.set(s*.09,.14,-.13);spine.add(pk);}}
+  if(suit==='tracksuit'){for(const s of[-1,1]){const st1=new T.Mesh(new T.BoxGeometry(.012,.5,.01),S('#f2f2f2'));st1.position.set(s*.06,.3,-.148);spine.add(st1);}}
+  if(suit==='waders'){// salopette di gomma fino al petto, con bretelle
+    const bib=new T.Mesh(new T.LatheGeometry(prof.slice(0,6).map(v=>new T.Vector2(v.x*1.05+.004,v.y)),22),rubber);bib.scale.z=.74;spine.add(bib);
+    for(const s of[-1,1]){const br=new T.Mesh(new T.BoxGeometry(.03,.3,.012),S('#1f2620'));br.position.set(s*.09,.48,-.135);br.rotation.z=s*.12;spine.add(br);
+      const br2=br.clone();br2.position.z=.135;spine.add(br2);}}
+  if(suit==='wetsuit'){const st2=new T.Mesh(new T.BoxGeometry(.3,.04,.21),S('#2f6fb5',.5));st2.position.y=.42;spine.add(st2);}
   const neck=new T.Group();neck.position.y=.62;spine.add(neck);J.neck=neck;
-  const nk=new T.Mesh(new T.CylinderGeometry(.05,.055,.1,10),MAT.skin);nk.position.y=.04;neck.add(nk);
+  const nk=new T.Mesh(new T.CylinderGeometry(.048,.055,.09,12),suit==='wetsuit'?jacket:skin);nk.position.y=.035;neck.add(nk);
   const head=new T.Group();head.position.y=.15;neck.add(head);J.head=head;
-  // volto: cranio, mascella, zigomi, occhi con iride, sopracciglia, naso, bocca, orecchie, un filo di barba
-  const skull=new T.Mesh(new T.SphereGeometry(.1,24,18),MAT.skin);skull.scale.set(.9,1.08,1);skull.castShadow=true;head.add(skull);
-  const jaw=new T.Mesh(new T.SphereGeometry(.075,20,14),MAT.skin);jaw.scale.set(.95,.78,.95);jaw.position.set(0,-.055,-.018);head.add(jaw);
-  const chin=new T.Mesh(new T.SphereGeometry(.03,12,10),MAT.skin);chin.scale.set(1.1,.8,.8);chin.position.set(0,-.1,-.058);head.add(chin);
-  const stub=new T.Mesh(new T.SphereGeometry(.078,20,12,0,6.3,1.75,1.1),MAT.stubble);stub.scale.set(.96,.8,.97);stub.position.set(0,-.052,-.02);head.add(stub);
+  // volto
+  const skull=new T.Mesh(new T.SphereGeometry(.1,26,20),skin);skull.scale.set(.9,1.08,1);head.add(skull);
+  const jaw=new T.Mesh(new T.SphereGeometry(.075,22,16),skin);jaw.scale.set(.95,.78,.95);jaw.position.set(0,-.055,-.018);head.add(jaw);
+  const chin=new T.Mesh(new T.SphereGeometry(.03,12,10),skin);chin.scale.set(1.1,.8,.8);chin.position.set(0,-.1,-.058);head.add(chin);
+  const bd=o.beard||'stubble';
+  if(bd==='stubble'){const stub=new T.Mesh(new T.SphereGeometry(.078,20,12,0,6.3,1.75,1.1),S('#a9806a',.9));stub.scale.set(.96,.8,.97);stub.position.set(0,-.052,-.02);head.add(stub);}
+  if(bd==='full'){const fb=new T.Mesh(new T.SphereGeometry(.083,22,14,0,6.3,1.7,1.25),beardM);fb.scale.set(1,.95,1);fb.position.set(0,-.05,-.018);head.add(fb);
+    const ch=new T.Mesh(new T.SphereGeometry(.04,12,10),beardM);ch.scale.set(1.2,1.1,.9);ch.position.set(0,-.112,-.06);head.add(ch);}
+  if(bd==='full'||bd==='mustache'){const mu=new T.Mesh(new T.BoxGeometry(.048,.012,.016),beardM);mu.position.set(0,-.041,-.099);head.add(mu);}
   for(const s of[-1,1]){
     const eye=new T.Mesh(new T.SphereGeometry(.0135,12,10),MAT.eyeW);eye.position.set(s*.034,.012,-.088);eye.scale.z=.6;head.add(eye);
     const iris=new T.Mesh(new T.SphereGeometry(.0078,10,8),MAT.iris);iris.position.set(s*.034,.012,-.0955);head.add(iris);
-    const lid=new T.Mesh(new T.SphereGeometry(.0142,12,8,0,6.3,0,1),MAT.skin);lid.position.set(s*.034,.013,-.087);lid.scale.z=.65;lid.rotation.x=-.35;head.add(lid);
-    const brow=new T.Mesh(new T.BoxGeometry(.032,.006,.01),MAT.brow);brow.position.set(s*.035,.036,-.094);brow.rotation.z=-s*.12;head.add(brow);
-    const ear=new T.Mesh(new T.SphereGeometry(.024,10,8),MAT.skin);ear.scale.set(.45,1,.75);ear.position.set(s*.093,.002,.008);head.add(ear);}
-  const nose=new T.Mesh(new T.ConeGeometry(.012,.034,10),MAT.skin);nose.rotation.x=-1.15;nose.position.set(0,-.01,-.098);head.add(nose);
-  const tipN=new T.Mesh(new T.SphereGeometry(.0095,10,8),MAT.skin);tipN.position.set(0,-.022,-.106);head.add(tipN);
+    const lid=new T.Mesh(new T.SphereGeometry(.0142,12,8,0,6.3,0,1),skin);lid.position.set(s*.034,.013,-.087);lid.scale.z=.65;lid.rotation.x=-.35;head.add(lid);
+    const brow=new T.Mesh(new T.BoxGeometry(.032,.006,.01),hairM);brow.position.set(s*.035,.036,-.094);brow.rotation.z=-s*.12;head.add(brow);
+    const ear=new T.Mesh(new T.SphereGeometry(.024,10,8),skin);ear.scale.set(.45,1,.75);ear.position.set(s*.093,.002,.008);head.add(ear);}
+  const nose=new T.Mesh(new T.ConeGeometry(.012,.034,10),skin);nose.rotation.x=-1.15;nose.position.set(0,-.01,-.098);head.add(nose);
+  const tipN=new T.Mesh(new T.SphereGeometry(.0095,10,8),skin);tipN.position.set(0,-.022,-.106);head.add(tipN);
   const lipU=new T.Mesh(new T.CylinderGeometry(.005,.005,.032,8),MAT.lips);lipU.rotation.z=Math.PI/2;lipU.position.set(0,-.052,-.094);head.add(lipU);
   const lipL=new T.Mesh(new T.CylinderGeometry(.0055,.0055,.026,8),MAT.lips);lipL.rotation.z=Math.PI/2;lipL.position.set(0,-.061,-.092);head.add(lipL);
-  const hair=new T.Mesh(new T.SphereGeometry(.104,18,12,-.25,Math.PI+.5,.5,1.35),MAT.hair);hair.position.set(0,.008,.006);head.add(hair);// capelli solo ai lati e dietro
-  const cap=new T.Mesh(new T.SphereGeometry(.112,18,12,0,6.3,0,1.45),MAT.cap);cap.position.y=.02;head.add(cap);
-  const brim=new T.Mesh(new T.CylinderGeometry(.11,.11,.012,16,1,false,-1.2,2.4),MAT.cap);brim.position.set(0,.03,-.07);brim.scale.z=.9;head.add(brim);
-  const band=new T.Mesh(new T.TorusGeometry(.108,.006,6,28),new T.MeshStandardMaterial({color:'#3d434b',roughness:.8}));band.rotation.x=Math.PI/2;band.position.y=.055;head.add(band);
+  if(o.glasses){const gm=S('#151515',.3,.4),lens=new T.MeshStandardMaterial({color:'#1e2a33',roughness:.1,metalness:.6,transparent:true,opacity:.85});
+    for(const s of[-1,1]){const fr=new T.Mesh(new T.TorusGeometry(.017,.0028,6,16),gm);fr.position.set(s*.034,.012,-.102);head.add(fr);const ln=new T.Mesh(new T.CircleGeometry(.016,14),lens);ln.position.set(s*.034,.012,-.1035);ln.rotation.y=Math.PI;head.add(ln);
+      const arm=new T.Mesh(new T.BoxGeometry(.003,.003,.09),gm);arm.position.set(s*.05,.014,-.06);head.add(arm);}
+    const bri=new T.Mesh(new T.BoxGeometry(.016,.003,.003),gm);bri.position.set(0,.016,-.104);head.add(bri);}
+  // capelli e copricapo
+  const hat=o.hat||'cap',hairTop=hat==='none';
+  const hair=new T.Mesh(new T.SphereGeometry(.104,18,12,hairTop?0:-.25,hairTop?6.3:Math.PI+.5,hairTop?0:.5,hairTop?1.5:1.35),hairM);hair.position.set(0,.008,.006);head.add(hair);
+  if(hat==='cap'){const cap=new T.Mesh(new T.SphereGeometry(.112,18,12,0,6.3,0,1.45),capM);cap.position.y=.02;head.add(cap);
+    const brim=new T.Mesh(new T.CylinderGeometry(.11,.11,.012,16,1,false,-1.2,2.4),capM);brim.position.set(0,.03,-.07);brim.scale.z=.9;head.add(brim);}
+  if(hat==='beanie'){const bn=new T.Mesh(new T.SphereGeometry(.113,18,12,0,6.3,0,1.5),capM);bn.position.y=.02;bn.scale.y=1.08;head.add(bn);
+    const roll=new T.Mesh(new T.TorusGeometry(.105,.018,8,24),capM);roll.rotation.x=Math.PI/2;roll.position.y=.03;head.add(roll);}
+  if(hat==='bucket'){const cr=new T.Mesh(new T.CylinderGeometry(.09,.108,.08,18),capM);cr.position.y=.085;head.add(cr);const tp=new T.Mesh(new T.SphereGeometry(.09,16,8,0,6.3,0,1.2),capM);tp.position.y=.12;tp.scale.y=.4;head.add(tp);
+    const br=new T.Mesh(new T.CylinderGeometry(.16,.17,.01,24),capM);br.position.y=.045;head.add(br);}
+  const band=new T.Mesh(new T.TorusGeometry(.108,.006,6,28),S('#3d434b',.8));band.rotation.x=Math.PI/2;band.position.y=.055;head.add(band);
   const lamp=new T.Mesh(new T.BoxGeometry(.03,.02,.014),new T.MeshStandardMaterial({color:'#6b7480',metalness:.4,roughness:.4,emissive:'#fffbe0',emissiveIntensity:0}));lamp.position.set(0,.058,-.112);head.add(lamp);J.lamp=lamp;
-  // braccia e gambe
+  // braccia (spalla, gomito, mano con pollice) e gambe (anca, ginocchio, stivale)
+  const armM=jacket,stripe=suit==='tracksuit'?S('#f2f2f2'):null;
   for(const s of[-1,1]){const k=s<0?'l':'r';
-    const sh=new T.Group();sh.position.set(s*.23,.53,0);spine.add(sh);J[k+'Sh']=sh;
-    const ua=limb(.3,.058,.05,MAT.jacket);sh.add(ua);const el=new T.Group();el.position.y=-.3;ua.add(el);J[k+'El']=el;
-    const fa=limb(.27,.048,.04,MAT.jacket);el.add(fa);const hand=new T.Group();hand.position.y=-.29;fa.add(hand);J[k+'Hand']=hand;
-    const hm=new T.Mesh(new T.SphereGeometry(.045,10,8),MAT.skin);hm.scale.set(.8,1.2,.6);hm.position.y=-.03;hand.add(hm);
+    const sh=new T.Group();sh.position.set(s*.22,.52,0);spine.add(sh);J[k+'Sh']=sh;
+    const ua=limb(.29,.06,.05,armM);sh.add(ua);const el=new T.Group();el.position.y=-.29;ua.add(el);J[k+'El']=el;
+    const fa=limb(.27,.049,.04,armM);el.add(fa);const hand=new T.Group();hand.position.y=-.29;fa.add(hand);J[k+'Hand']=hand;
+    if(stripe){const a1=new T.Mesh(new T.BoxGeometry(.012,.28,.012),stripe);a1.position.set(s*.055,-.15,0);ua.add(a1);const a2=a1.clone();a2.position.set(s*.045,-.14,0);fa.add(a2);}
+    const cuff=new T.Mesh(new T.CylinderGeometry(.043,.043,.025,12),suit==='wetsuit'?armM:jacket2);cuff.position.y=-.265;fa.add(cuff);
+    const palm=new T.Mesh(new T.SphereGeometry(.04,12,10),suit==='wetsuit'?armM:skin);palm.scale.set(.75,1.15,.5);palm.position.y=-.03;hand.add(palm);
+    const th=new T.Mesh(new T.CylinderGeometry(.011,.009,.04,6),suit==='wetsuit'?armM:skin);th.position.set(-s*.025,-.02,-.018);th.rotation.z=s*.6;hand.add(th);
     const hp=new T.Group();hp.position.set(s*.1,-.02,0);hips.add(hp);J[k+'Hip']=hp;
-    const th=limb(.44,.085,.065,MAT.pants);hp.add(th);const kn=new T.Group();kn.position.y=-.44;th.add(kn);J[k+'Knee']=kn;
-    const sn=limb(.42,.062,.05,MAT.pants);kn.add(sn);
-    const boot=new T.Mesh(new T.BoxGeometry(.1,.09,.26),MAT.boot);boot.position.set(0,-.45,-.05);boot.castShadow=true;sn.add(boot);J[k+'Foot']=boot;}
-  A.traverse(o=>{if(o.isMesh)o.castShadow=true;});if(col)Object.assign(MAT,M0);return A;}
+    const thg=limb(.44,.088,.066,legM);hp.add(thg);const kn=new T.Group();kn.position.y=-.44;thg.add(kn);J[k+'Knee']=kn;
+    const sn=limb(.42,.064,.05,legM);kn.add(sn);
+    if(stripe){const l1=new T.Mesh(new T.BoxGeometry(.012,.42,.012),stripe);l1.position.set(s*.085,-.22,0);thg.add(l1);}
+    const bt=o.boots||(suit==='waders'?'tall':'boots');
+    if(bt==='tall'&&suit!=='waders'){const tb=new T.Mesh(new T.CylinderGeometry(.068,.062,.3,12),bootM);tb.position.y=-.28;sn.add(tb);}
+    const foot=new T.Group();foot.position.set(0,-.43,0);sn.add(foot);
+    const sole=new T.Mesh(new T.BoxGeometry(.1,.035,.27),bt==='shoes'?S('#f0f0ea'):S('#1e1d1b'));sole.position.set(0,-.025,-.05);foot.add(sole);
+    const up=new T.Mesh(new T.SphereGeometry(.07,14,10),bt==='shoes'?bootM:(suit==='waders'?rubber:bootM));up.scale.set(.75,.6,1.7);up.position.set(0,.01,-.055);foot.add(up);J[k+'Foot']=foot;}
+  A.traverse(m=>{if(m.isMesh)m.castShadow=true;});return A;}
 // pose: angoli delle articolazioni (x avanti/indietro, z apertura, y torsione)
 const POSES={
   stand:{hy:.95,sp:[0,0,0],hd:[0,0,0],lSh:[.05,0,.12],rSh:[.05,0,-.12],lEl:[.15,0,0],rEl:[.15,0,0],lHip:[0,0,0],rHip:[0,0,0],lKnee:[0,0,0],rKnee:[0,0,0],rod:null},
@@ -203,16 +242,26 @@ function lerpPose(dt,k=6,a=AN){const tp=POSES[a.target],p=a.pose,f=1-Math.exp(-k
   for(const j of['sp','hd','lSh','rSh','lEl','rEl','lHip','rHip','lKnee','rKnee'])for(let i=0;i<3;i++)p[j][i]=lerp(p[j][i],tp[j][i],f);
   if(tp.rod){if(!p.rod)p.rod={...tp.rod};p.rod.p=lerp(p.rod.p,tp.rod.p,f);p.rod.f=lerp(p.rod.f||0,tp.rod.f||0,f);p.rod.y=lerp(p.rod.y||0,tp.rod.y||0,f);}}
 function applyPose(t,a=AN){const J=a.obj.userData.J,p=a.pose,set=(o,v)=>o.rotation.set(v[0],v[1],v[2]);
-  let wk=a.moving?Math.sin(a.walk):0,wk2=a.moving?Math.sin(a.walk+Math.PI):0,amp=a.moving?Math.min(1,a.speed/1.4)*.55:0;
-  J.hips.position.y=p.hy+(a.moving?Math.abs(Math.cos(a.walk))*.035-.02:Math.sin(t*1.3)*.004);
-  set(J.spine,[p.sp[0]+(a.moving?.06:0),p.sp[1]+wk*.06*amp,p.sp[2]]);set(J.head,p.hd);
-  set(J.lSh,[p.lSh[0]+(a.holding<0?wk2*amp*.7:0),p.lSh[1],p.lSh[2]]);set(J.rSh,[p.rSh[0]+(a.holding<0?wk*amp*.7:0),p.rSh[1],p.rSh[2]]);
-  set(J.lEl,p.lEl);set(J.rEl,p.rEl);
+  const mv=a.moving&&!a.swim,spd=a.speed||1.4,run=mv&&spd>3.2,A1=mv?clamp(spd/1.5,.55,1.5):0,ph=a.walk,s1=Math.sin(ph),c1=Math.cos(ph);
+  // bacino: sale e scende, ruota e oscilla; il busto compensa e la testa resta stabile
+  J.hips.position.y=p.hy+(mv?Math.abs(c1)*.045*A1-.035*A1:Math.sin(t*1.3)*.004);J.hips.rotation.set(0,mv?s1*.11*A1:0,mv?Math.sin(2*ph)*.035*A1:0);
+  set(J.spine,[p.sp[0]+(mv?.04+(run?.2:0):0),p.sp[1]-(mv?s1*.17*A1:0),p.sp[2]]);
+  set(J.head,[p.hd[0]-(run?.15:0),p.hd[1]+(mv?s1*.07*A1:0),p.hd[2]]);
+  const arms=a.holding<0&&mv,aA=.38*A1;
+  set(J.lSh,[p.lSh[0]-(arms?s1*aA:0),p.lSh[1],p.lSh[2]]);set(J.rSh,[p.rSh[0]+(arms?s1*aA:0),p.rSh[1],p.rSh[2]]);
+  set(J.lEl,[p.lEl[0]+(arms?.25+(run?.9:0)+Math.max(0,-s1)*.3*A1:0),0,0]);set(J.rEl,[p.rEl[0]+(arms?.25+(run?.9:0)+Math.max(0,s1)*.3*A1:0),0,0]);
   // recupero: la mano sinistra gira la manovella
   if(a.reelSpin>0&&a.holding>=0){const c=a.crank;J.lSh.rotation.x+=Math.sin(c)*.14;J.lSh.rotation.z+=Math.cos(c)*.09;J.lEl.rotation.x+=Math.sin(c)*.18;}
-  set(J.lHip,[p.lHip[0]+wk*amp,p.lHip[1],p.lHip[2]]);set(J.rHip,[p.rHip[0]+wk2*amp,p.rHip[1],p.rHip[2]]);
-  set(J.lKnee,[p.lKnee[0]-Math.max(0,-Math.cos(a.walk))*amp*1.3,0,0]);set(J.rKnee,[p.rKnee[0]-Math.max(0,Math.cos(a.walk))*amp*1.3,0,0]);
-  a.obj.position.copy(a.pos);a.obj.rotation.y=a.rotY;}
+  // gambe: la gamba che avanza piega il ginocchio, quella d'appoggio resta quasi tesa; il piede rulla
+  const tA=.45*A1;set(J.lHip,[p.lHip[0]+(mv?s1*tA:0),p.lHip[1],p.lHip[2]]);set(J.rHip,[p.rHip[0]-(mv?s1*tA:0),p.rHip[1],p.rHip[2]]);
+  set(J.lKnee,[p.lKnee[0]-(mv?Math.max(0,c1)*1.05*A1+.06*A1:0),0,0]);set(J.rKnee,[p.rKnee[0]-(mv?Math.max(0,-c1)*1.05*A1+.06*A1:0),0,0]);
+  if(J.lFoot){J.lFoot.rotation.x=mv?-s1*.22*A1+Math.max(0,c1)*.25*A1:0;J.rFoot.rotation.x=mv?s1*.22*A1+Math.max(0,-c1)*.25*A1:0;}
+  a.obj.position.copy(a.pos);
+  if(a.swim){// a stile libero: corpo orizzontale, bracciate alternate, gambe a forbice, testa alta
+    a.obj.rotation.set(-1.35,a.rotY,0,'YXZ');J.hips.position.y=.1;J.hips.rotation.set(0,Math.sin(ph)*.25,0);const sw=a.moving?ph:t*1.2;
+    J.lSh.rotation.set(sw%(Math.PI*2),0,.25);J.rSh.rotation.set((sw+Math.PI)%(Math.PI*2),0,-.25);J.lEl.rotation.set(.3,0,0);J.rEl.rotation.set(.3,0,0);
+    J.lHip.rotation.set(Math.sin(sw*3)*.28,0,0);J.rHip.rotation.set(-Math.sin(sw*3)*.28,0,0);J.lKnee.rotation.set(-.15,0,0);J.rKnee.rotation.set(-.15,0,0);J.head.rotation.set(-1.05,Math.sin(sw)*.3,0);J.spine.rotation.set(0,0,0);}
+  else a.obj.rotation.set(0,a.rotY,0,'YXZ');}
 
 /* ---------- canne con fusto che si piega, anelli e mulinello ---------- */
 const ROD_LEN=4.2,SEG=14;
@@ -331,7 +380,11 @@ function buildWorld(){
   clock=new T.Clock();
 }
 // vicini di spiaggia: ognuno con sedia, due canne sui picchetti e le sue abitudini
-function buildNpcs(){const defs=[{x:-22,col:{j:'#b5562a',j2:'#8f4220',c:'#2b3a55',p:'#3a3a3a'}},{x:25,col:{j:'#2e4f7a',j2:'#233d60',c:'#d9b24a',p:'#4a4436'}},{x:-46,col:{j:'#5a5f66',j2:'#464a50',c:'#2f6b3a',p:'#2c3445'}},{x:52,col:{j:'#7a2e3a',j2:'#5c222b',c:'#222',p:'#2c3445'}}];
+function buildNpcs(){const defs=[
+    {x:-22,col:{j:'#b5562a',j2:'#8f4220',c:'#2b3a55',p:'#3a3a3a',suit:'waders',hat:'cap',beard:'full',beardCol:'#9a9a94',hair:'#8a8a84',skin:'#d8a588'}},
+    {x:25,col:{j:'#2e4f7a',j2:'#233d60',c:'#3a3a3a',p:'#2e4f7a',suit:'tracksuit',hat:'beanie',beard:'mustache',hair:'#2a1d14',boots:'tall',skin:'#c98d6a'}},
+    {x:-46,col:{suit:'wetsuit',hat:'none',beard:'stubble',glasses:true,hair:'#4a3020',skin:'#bf8460'}},
+    {x:52,col:{j:'#6b6a4a',j2:'#55543a',c:'#c9b78a',p:'#3a3a32',suit:'jacket',hat:'bucket',beard:'full',beardCol:'#e8e6e0',hair:'#d8d6d0',glasses:true,boots:'shoes',skin:'#e0b098'}}];
   const PERS=[{name:'Franco',age:64,town:'Acilia',yrs:35,bait:'bibi',lead:150,rig:'lungo',app:true,mood:'chiacchierone'},{name:'Peppe',age:51,town:'Ostia',yrs:20,bait:'arenicola',lead:175,rig:'corto',app:false,mood:'brontolone'},
     {name:'Marco',age:33,town:'Torvaianica',yrs:8,bait:'koreano',lead:125,rig:'2ami',app:true,mood:'entusiasta'},{name:'Luigi',age:72,town:'Roma, Garbatella',yrs:50,bait:'cannolicchio',lead:150,rig:'lungo',app:false,mood:'saggio'}];
   defs.forEach((d,k)=>d.per=PERS[k]);
@@ -445,7 +498,7 @@ function mount(v){
     buildWorld();size();addEventListener('resize',size);bindLook();
     st.phase='setup';setUI();raf=requestAnimationFrame(loop);}).catch(e=>{ui.innerHTML=`<div class="gpanel"><b>Il gioco 3D non si è caricato</b><div class="gs">${escH(e.message||e)}</div>${btn('↻ Riprova','mount()','big')}</div>`;});
 }
-function stop(){windSound(0);reelWhir(0);cancelAnimationFrame(raf);raf=0;removeEventListener('resize',size);try{renderer?.dispose();renderer?.forceContextLoss?.();}catch(e){}renderer=null;foams=[];clouds=[];st.rods=[];NPCS=[];document.getElementById('gamebox')?.remove();document.body.classList.remove('gaming');seaSound(0);}
+function stop(){windSound(0);motor(false);reelWhir(0);cancelAnimationFrame(raf);raf=0;removeEventListener('resize',size);try{renderer?.dispose();renderer?.forceContextLoss?.();}catch(e){}renderer=null;foams=[];clouds=[];st.rods=[];NPCS=[];document.getElementById('gamebox')?.remove();document.body.classList.remove('gaming');seaSound(0);}
 addEventListener('hashchange',()=>{if(location.hash!=='#gioco'&&document.getElementById('gamebox'))stop();});
 G.mount=mount;G.exit=()=>{stop();if(window.go)go('altro');};
 function size(){if(!renderer)return;const w=root.clientWidth,h=root.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.fov=w<h?68:50;camera.updateProjectionMatrix();}
@@ -460,6 +513,8 @@ function setUI(){const p=st.phase;let h='';
       <div class="grow"><span>Piombo</span>${[80,100,125,150,175,200].map(g=>`<button class="gc ${st.lead===g?'on':''}" onclick="GAME.setLead(${g})">${g} g</button>`).join('')}</div>
       <div class="gs">Consigliato ${sug} g: più leggero lanci più lontano, ma la corrente lo trascina.</div>
       <div class="grow"><span>Amo</span>${[['piccolo','n. 6'],['medio','n. 2'],['grande','2/0']].map(([k,n])=>`<button class="gc ${st.hook===k?'on':''}" onclick="GAME.setHook('${k}')">${n}</button>`).join('')}</div>
+      <div class="grow"><span>Vestito</span>${[['waders','Salopette waders'],['jacket','Giacca'],['wetsuit','Muta'],['tracksuit','Tuta']].map(([k,n])=>`<button class="gc ${st.outfit===k?'on':''}" onclick="GAME.setOutfit('${k}')">${n}</button>`).join('')}</div>
+      <div class="gs">Con salopette o muta entri in acqua senza bagnarti (e senza congelarti).</div>
       ${btn('Pianta i picchetti e inizia','start()','big')}</div>`;}
   else if(p==='wait'){h=`<div class="gpanel slim"><div class="grods">${st.rods.map((r,i)=>`<button class="gr ${r.state==='bite'||r.state==='hooked'?'alert':''}" onclick="GAME.rod(${i})" ${st.busy?'disabled':''}><b>Canna ${i+1}</b><small>${r.bait?B[r.bait].n:'senza esca'}${r.dist?' · '+Math.round(r.dist)+' m':''}</small><small>${rodStatus(r)}</small></button>`).join('')}</div>
     ${st.busy?'':`<div class="grow" style="justify-content:center">${[1,2,4,8,16,32].map(s=>`<button class="gc ${st.speed===s?'on':''}" onclick="GAME.setSpeed(${s})">${s===1?'▶ 1x':s+'x'}</button>`).join('')}<button class="gc" onclick="GAME.bagView()">🧺 ${st.bag.length}</button>${skipUp()?'<button class="gc" onclick="GAME.skip(1)">🌅 Vai all\'alba</button>':'<button class="gc" onclick="GAME.skip(0)">🌇 Vai al tramonto</button>'}${(()=>{const ni=NPCS.findIndex(a=>a.pos.distanceTo(AN.pos)<3.2);return ni>=0?`<button class="gc" style="background:#2fe0cf;color:#03282a" onclick="GAME.talk(${ni})">💬 Parla con ${NPCS[ni].per.name}</button>`:'';})()}${nearCrab()?'<button class="gc" style="background:#ffb547;color:#3a2400" onclick="GAME.crab()">🦀 Prendi il granchio</button>':''}<button class="gc" onclick="GAME.center()" title="Guarda le canne">🎯</button>${AN.target!=='sit'?'<button class="gc" onclick="GAME.sit()">🪑 Siediti</button>':'<button class="gc" onclick="GAME.rise()">🚶 Alzati</button>'}</div>`}${st.msg?`<div class="gs" style="text-align:center">${st.msg}</div>`:''}</div>`;}
@@ -471,11 +526,15 @@ function setUI(){const p=st.phase;let h='';
     <div class="grow"><span>Amo</span>${[['piccolo','n. 6'],['medio','n. 2'],['grande','2/0']].map(([k,n])=>`<button class="gc ${r.hook===k?'on':''}" onclick="GAME.setRig('hook','${k}')">${n}</button>`).join('')}</div>
     <div class="grow"><span>Terminale</span>${[['lungo','lungo 2 m'],['corto','corto 70 cm'],['2ami','trave a 2 ami']].map(([k,n])=>`<button class="gc ${r.rig===k?'on':''}" onclick="GAME.setRig('rig','${k}')">${n}</button>`).join('')}</div>
     <div class="gs">Lungo: più naturale con mare calmo (orate, mormore). Corto: lancia meglio e regge il mare mosso. Due ami: più abboccate, lancio più corto.</div>${btn(r.broken?'🔧 Rifai il terminale':'✅ Fatto','rigDone()','big')}</div>`;}
-  else if(p==='snag'){const sn=st.snag;h=`<div class="gpanel"><b>⚠️ Incagliato!</b><div class="gs">${sn.msg||'Il piombo si è incastrato sul fondo.'}</div>${btn('💪 Tira forte','snagPull()','big')}${btn('↔️ Spostati e cambia angolo','snagMove()')}</div>`;}
+  else if(p==='snag'){const sn=st.snag;h=`<div class="gpanel"><b>⚠️ Incagliato!</b><div class="gs">${sn.msg||'Il piombo si è incastrato sul fondo.'}</div>${btn('💪 Tira forte','snagPull()','big')}${btn('↔️ Spostati e cambia angolo','snagMove()')}${btn('🏊 Entra in acqua e nuota fino all\'incaglio','snagSwim()')}</div>`;}
   else if(p==='talk'){const tk=st.talk,a=NPCS[tk.i];h=`<div class="gpanel"><b>💬 ${a.per.name} · ${a.per.age} anni, ${a.per.town}</b><div class="gs" style="font-size:15.5px;background:rgba(255,255,255,.08);border-radius:12px;padding:8px 10px">«${escH(tk.txt)}»</div>
     <div class="gtalk">${Q.map(([k,n])=>`<button class="gc" onclick="GAME.ask('${k}')">${n}</button>`).join('')}</div></div>`;}
   else if(p==='bait')h=`<div class="gpanel"><b>🪝 Innesca la canna ${st.sel+1}</b><div class="gbaits">${BAITS.filter(b=>!b.lim||st.inv[b.k]>0).map(b=>`<button class="gbt" onclick="GAME.bait('${b.k}')"><span>${b.e}</span><b>${b.n}${b.lim?' ('+st.inv[b.k]+')':''}</b><small>${b.d}</small></button>`).join('')}</div>${btn('🔧 Cambia montatura prima','rig()')}</div>`;
-  else if(p==='cast')h=`<div class="gpanel"><b>🎯 Lancia · ${B[st.rods[st.sel].bait].n}</b><div class="gs">Tieni premuto per caricare, rilascia nella zona verde. ${(()=>{const w=wxAt(st.gt),hp=windHelp(w.wd);return w.ws>12?(hp>.3?'Vento da terra: ti aiuta.':hp<-.3?'Vento dal mare: lancerai più corto.':'Vento laterale.'):'';})()}</div><div class="gpow"><i id="gpw"></i><s></s></div><button class="gb big" id="gcastb">🎣 Carica e lancia</button></div>`;
+  else if(p==='cast'&&st.castMode!=='mano'){const mx=st.castMode==='drone'?400:300;st.castDist=Math.min(st.castDist,mx);h=`<div class="gpanel"><b>${st.castMode==='drone'?'🛸 Drone':'🚤 Barchino elettrico'} · ${B[st.rods[st.sel].bait].n}</b>
+    <div class="grow">${[['mano','🎣 A mano'],['barchino','🚤 Barchino'],['drone','🛸 Drone']].map(([k,n])=>`<button class="gc ${st.castMode===k?'on':''}" onclick="GAME.mode('${k}')">${n}</button>`).join('')}</div>
+    <div class="grow"><span>Distanza</span><input type="range" min="30" max="${mx}" step="5" value="${st.castDist}" oninput="GAME.cdist(this.value)" style="flex:1"><b id="gcdv" style="min-width:56px;text-align:right">${st.castDist} m</b></div>
+    <div class="gs">${st.castMode==='drone'?'Il drone vola con esca e piombo appesi e li sgancia sul punto: arriva fino a 400 m, anche oltre i frangenti.':'Il barchino porta esca e piombo nella tramoggia e li sgancia sul punto (fino a 300 m). Con mare molto mosso rischia di ribaltarsi.'}</div>${btn('🚀 Parti','deliver()','big')}</div>`;}
+  else if(p==='cast')h=`<div class="gpanel"><b>🎯 Lancia · ${B[st.rods[st.sel].bait].n}</b><div class="grow">${[['mano','🎣 A mano'],['barchino','🚤 Barchino'],['drone','🛸 Drone']].map(([k,n])=>`<button class="gc ${st.castMode===k?'on':''}" onclick="GAME.mode('${k}')">${n}</button>`).join('')}</div><div class="gs">Tieni premuto per caricare, rilascia nella zona verde. ${(()=>{const w=wxAt(st.gt),hp=windHelp(w.wd);return w.ws>12?(hp>.3?'Vento da terra: ti aiuta.':hp<-.3?'Vento dal mare: lancerai più corto.':'Vento laterale.'):'';})()}</div><div class="gpow"><i id="gpw"></i><s></s></div><button class="gb big" id="gcastb">🎣 Carica e lancia</button></div>`;
   else if(p==='fight')h=`<div class="gpanel"><b id="gfti">Combattimento</b><div class="gbar"><i id="gten"></i><span>tensione</span></div><div class="gbar dist"><i id="gdis"></i><span id="gdt">distanza</span></div>
     <div class="grow"><span>Frizione</span><input type="range" min="1" max="10" value="${st.fight?.drag||5}" oninput="GAME.drag(this.value)" style="flex:1"></div><div class="gs" id="galert" style="color:#ffb547;font-weight:700;min-height:0"></div><button class="gb big" id="greel">🌀 Tieni premuto per recuperare</button></div>`;
   else if(p==='catch'){const c=st.catchShow;h=`<div class="gpanel">${c.fish?'<div class="gfish"><canvas id="gfc" width="600" height="260"></canvas></div>':''}
@@ -494,7 +553,11 @@ function setUI(){const p=st.phase;let h='';
 }
 G.setN=n=>{st.nRods=n;LSS('nrods',n);setUI();};G.setLead=g=>{st.lead=g;LSS('lead',g);setUI();};G.setHook=k=>{st.hook=k;LSS('hook',k);setUI();};
 G.setSpeed=s=>{st.speed=s;LSS('speed',s);const b=document.getElementById('gspd');if(b)b.textContent='⏩ '+s+'x';if(st.phase==='wait')setUI();};G.bagView=()=>{st.phase='bag';setUI();};G.toWait=()=>{st.phase='wait';setUI();};G.drag=v=>{if(st.fight)st.fight.drag=+v;};
-G.start=()=>{setupRods();st.rods.forEach(placeRodOnSpike);st.phase='wait';st.msg='Joystick per camminare (anche in acqua), un dito per guardarti attorno, due dita per lo zoom. Tocca una canna per andarci.';setUI();};
+G.setOutfit=k=>{st.outfit=k;LSS('outfit',k);setUI();};
+function setPlayerLook(){const old=AN.obj;const n=makeAngler({suit:st.outfit,hat:'cap',beard:'stubble',j:'#2f5544',j2:'#264638',c:'#b8352a',p:'#2c3445'});
+  n.position.copy(old.position);n.rotation.copy(old.rotation);scene.remove(old);scene.add(n);AN.obj=n;
+  AN.obj.userData.J.head.add(headLamp);const lt=new T.Object3D();lt.position.set(0,-1.2,-6);AN.obj.userData.J.head.add(lt);headLamp.target=lt;}
+G.start=()=>{setPlayerLook();setupRods();st.rods.forEach(placeRodOnSpike);st.phase='wait';st.msg='Joystick per camminare (anche in acqua), un dito per guardarti attorno, due dita per lo zoom. Tocca una canna per andarci.';setUI();};
 
 /* ---------- movimenti del pescatore (sequenze) ---------- */
 const sleep=s=>new Promise(r=>setTimeout(r,s*1000));
@@ -525,6 +588,14 @@ G.snagPull=()=>seq(async()=>{const sn=st.snag;if(!sn)return;st.phase='busy';setU
     if(sn.stage==='fight'){const f=st.fight;st.fight=null;sn.r.state='idle';showCatch({fish:false,txt:'Lenza rotta!',why:'Incagliato con il pesce attaccato: la lenza ha ceduto. Rifai il terminale.'});return;}
     st.msg='💥 La lenza si è rotta: hai perso piombo e amo.';st.phase='rig';setUI();return;}
   st.snag.msg='Niente da fare, è ancora incastrato. Prova a cambiare angolo.';pose('reel');st.phase='snag';setUI();});
+G.snagSwim=()=>seq(async()=>{const sn=st.snag;if(!sn)return;const r=sn.r,w=wxAt(st.gt);st.phase='busy';st.msg='🏊 Posa la canna ed entra in acqua…';setUI();
+  if(r.held)await putRod(r.i);const back={x:AN.pos.x,z:AN.pos.z};const far=Math.min(r.dist*.7,45),tx=lerp(r.x,r.sx,far/Math.max(1,r.dist));
+  await walkTo(r.x+.3,-.5,2.6);st.msg=(w.sst<18&&!['waders','wetsuit'].includes(st.outfit))?`🥶 Brrr, l'acqua è a ${Math.round(w.sst)}°!`:'🏊 Nuota lungo la lenza…';setUI();
+  await walkTo(tx,-far,2.4);st.msg='🤿 Si immerge e libera il piombo…';setUI();AN.dive=1;splash(.3);burst(new T.Vector3(AN.pos.x,0,AN.pos.z),.6);await sleep(2.2);AN.dive=0;burst(new T.Vector3(AN.pos.x,0,AN.pos.z),.6);
+  const ok=Math.random()<.85;st.msg=ok?'Liberato! Torna a riva.':'Non ci arriva: è troppo profondo.';setUI();await walkTo(r.x+.55,ROD_Z+1.3,2.6);AN.faceTo=0;await pickRod(r.i);
+  if(!ok){st.snag.msg='A nuoto non ci sei arrivato. Tira forte o cambia angolo.';st.phase='snag';setUI();return;}
+  st.snag=null;if(sn.stage==='fight'){if(Math.random()<.5&&st.fight){st.fight.snag=false;st.fight.dist=Math.max(5,st.fight.dist*.8);st.phase='fight';pose('reel');st.msg='';setUI();return;}const f=st.fight;st.fight=null;r.state='idle';r.bait=null;r.dist=0;r.sinker.visible=false;showCatch({fish:false,txt:'Liberato, ma il pesce è scappato',why:'Mentre nuotavi il pesce si è slamato.'});return;}
+  pose('reel');for(let t=0;t<1;t+=.08){r.dist*=.9;AN.reelSpin=1;await sleep(.06);}AN.reelSpin=0;afterRecover(r);});
 G.snagMove=()=>seq(async()=>{const sn=st.snag;if(!sn)return;st.phase='busy';setUI();const side=Math.random()<.5?-1:1;await walkTo(AN.pos.x+side*3.5,AN.pos.z,1.6);AN.faceTo=0;pose('reel');AN.reelSpin=1;await sleep(.8);AN.reelSpin=0;
   if(Math.random()<.65){st.snag=null;st.msg='Cambiando angolo il piombo si è liberato.';if(sn.stage==='fight'){st.fight.snag=false;st.phase='fight';setUI();return;}for(let t=0;t<1;t+=.08){sn.r.dist*=.9;AN.reelSpin=1;await sleep(.06);}AN.reelSpin=0;afterRecover(sn.r);return;}
   st.snag.msg='Ancora incastrato. Tira forte o prova dall\'altro lato.';st.phase='snag';setUI();});
@@ -537,9 +608,11 @@ G.setRig=(k,v)=>{const r=st.rods[st.sel];r[k]=v;click();setUI();};
 G.rigDone=()=>seq(async()=>{const r=st.rods[st.sel];st.phase='busy';st.msg=r.broken?'🔧 Rifà il terminale…':'🔧 Cambia la montatura…';setUI();pose('bend');await sleep(r.broken?2.2:1.4);r.broken=false;pose('hold');st.msg='';st.phase='bait';setUI();});
 G.bait=k=>{const r=st.rods[st.sel];if(B[k].lim){if(!(st.inv[k]>0))return;st.inv[k]--;}r.bait=k;r.baitLeft=B[k].life*(k==='cozza'&&st.hook==='piccolo'?1.2:1);click();pose('hold');st.phase='cast';setUI();};
 function doCast(){const c=st.cast;c.on=false;const r=st.rods[st.sel],w=wxAt(st.gt);
-  const p=c.p,q=p>.78&&p<.92?1:p>.92?.8-(p-.92)*3:p/.78*.95;
+  const p=c.p,green=p>=.78&&p<=.92,q=green?1:p<.78?p/.78*.9:.7;
+  // zona verde: fino a 150 m; con poca potenza anche solo 10 m; oltre la zona verde il lancio si sporca
+  const base=green?150*(1-Math.abs(p-.85)*.45):p<.78?lerp(10,138,Math.pow(p/.78,1.15)):lerp(138,60,(p-.92)/.08);
   const leadF=clamp(1.15-((r.lead||st.lead)-100)/400,.85,1.1)*(r.rig==='2ami'?.93:r.rig==='corto'?1.04:1),baitF=r.bait==='cefalotto'?.55:r.bait==='sarda'||r.bait==='seppia'?.85:1,wind=1+windHelp(w.wd)*clamp(w.ws/60,0,.35);
-  const dist=clamp(130*q*leadF*baitF*wind+rnd(-6,6),8,150);st.cast=null;
+  const dist=clamp(base*leadF*baitF*wind+rnd(-3,3),8,150);st.cast=null;
   seq(async()=>{st.phase='busy';st.msg='';setUI();pose('castFwd');whoosh();await sleep(.18);
     // il piombo vola: parabola dalla cima al punto d'arrivo
     const tip=new T.Vector3();r.obj.userData.tip.getWorldPosition(tip);const drift=(Math.sin((w.wd-FACE)*R))*w.ws/40*3;const end=new T.Vector3(r.x+drift+rnd(-2,2),0,-dist);
@@ -547,6 +620,49 @@ function doCast(){const c=st.cast;c.on=false;const r=st.rods[st.sel],w=wxAt(st.g
     await sleep(r.flight.dur);splash();burst(end,1);r.flight=null;r.dist=dist;r.sx=end.x;r.sz=end.z;r.state='fishing';r.landT=st.gt;
     st.msg=q>=1?`Lancio perfetto: ${Math.round(dist)} m!`:q>.8?`Buon lancio: ${Math.round(dist)} m`:`Lancio corto: ${Math.round(dist)} m`;setUI();
     pose('hold');await sleep(.6);await putRod(st.sel);await stepBack(st.sel);st.phase='wait';st.msg='Tocca la sedia per sederti, o un\'altra canna per andarci.';setUI();});}
+
+/* ---------- barchino elettrico e drone ---------- */
+G.mode=k=>{st.castMode=k;setUI();};G.cdist=v=>{st.castDist=+v;LSS('cdist',st.castDist);const e=document.getElementById('gcdv');if(e)e.textContent=v+' m';};
+const VEH={};
+function makeBoat(){const g=new T.Group(),y=new T.MeshStandardMaterial({color:'#f2c21b',roughness:.4}),d=new T.MeshStandardMaterial({color:'#2b2f36',roughness:.5});
+  const hull=new T.Mesh(new T.BoxGeometry(.48,.16,.85),y);hull.position.y=.08;g.add(hull);const bow=new T.Mesh(new T.CylinderGeometry(.24,.24,.16,16,1,false,0,Math.PI),y);bow.rotation.set(0,Math.PI/2,0);bow.position.set(0,.08,-.425);g.add(bow);
+  for(const s of[-1,1]){const hop=new T.Mesh(new T.BoxGeometry(.16,.12,.24),d);hop.position.set(s*.11,.22,-.1);g.add(hop);const pr=new T.Mesh(new T.CylinderGeometry(.04,.04,.08,10),d);pr.rotation.x=Math.PI/2;pr.position.set(s*.15,.04,.46);g.add(pr);}
+  const ant=new T.Mesh(new T.CylinderGeometry(.004,.004,.3,4),d);ant.position.set(.18,.3,.3);g.add(ant);
+  const led=new T.Sprite(new T.SpriteMaterial({map:glowTex('rgba(255,60,60,1)'),transparent:true,depthWrite:false,blending:T.AdditiveBlending}));led.scale.set(.5,.5,.5);led.position.set(0,.35,.3);g.add(led);g.userData.led=led;
+  g.traverse(o=>{if(o.isMesh)o.castShadow=true;});return g;}
+function makeDrone(){const g=new T.Group(),w=new T.MeshStandardMaterial({color:'#e9ecef',roughness:.35}),d=new T.MeshStandardMaterial({color:'#2b2f36',roughness:.4});
+  const b=new T.Mesh(new T.BoxGeometry(.28,.1,.36),w);g.add(b);const props=[];
+  for(const [sx,sz] of [[-1,-1],[1,-1],[-1,1],[1,1]]){const arm=new T.Mesh(new T.CylinderGeometry(.012,.012,.32,6),d);arm.rotation.z=Math.PI/2;arm.rotation.y=Math.atan2(sz,sx);arm.position.set(sx*.13,0,sz*.13);g.add(arm);
+    const m=new T.Mesh(new T.CylinderGeometry(.03,.03,.05,8),d);m.position.set(sx*.25,.03,sz*.25);g.add(m);const pr=new T.Mesh(new T.BoxGeometry(.34,.006,.03),new T.MeshStandardMaterial({color:'#444',transparent:true,opacity:.7}));pr.position.set(sx*.25,.06,sz*.25);g.add(pr);props.push(pr);
+    const led=new T.Sprite(new T.SpriteMaterial({map:glowTex(sz<0?'rgba(80,255,120,1)':'rgba(255,60,60,1)'),transparent:true,depthWrite:false,blending:T.AdditiveBlending}));led.scale.set(.35,.35,.35);led.position.set(sx*.25,-.03,sz*.25);g.add(led);}
+  const cam=new T.Mesh(new T.SphereGeometry(.035,10,8),d);cam.position.set(0,-.07,-.12);g.add(cam);
+  const hook=new T.Line(new T.BufferGeometry().setFromPoints([new T.Vector3(0,-.05,0),new T.Vector3(0,-2.5,0)]),new T.LineBasicMaterial({color:0xdddddd,transparent:true,opacity:.6}));g.add(hook);
+  const pay=new T.Mesh(new T.SphereGeometry(.06,8,6),MAT.lead);pay.position.y=-2.55;g.add(pay);g.userData={props,pay,hook};g.traverse(o=>{if(o.isMesh)o.castShadow=true;});return g;}
+function motor(on,f){const c=AU.on&&on?ac():null;if(!c){if(AU.mot)AU.mot.v.gain.setTargetAtTime(0,AU.ctx.currentTime,.2);return;}
+  if(!AU.mot){const o=c.createOscillator();o.type='sawtooth';const fl=c.createBiquadFilter();fl.type='lowpass';fl.frequency.value=700;const v=c.createGain();v.gain.value=0;o.connect(fl).connect(v).connect(c.destination);o.start();AU.mot={o,v};}
+  AU.mot.o.frequency.setTargetAtTime(f,c.currentTime,.1);AU.mot.v.gain.setTargetAtTime(.018,c.currentTime,.2);}
+function vehTo(x,y,z,speed){return new Promise(res=>{VEH.goal={x,y,z,speed,res};});}
+function updVeh(dt,t,w){const v=VEH.obj;if(!v||!v.visible)return;const g=VEH.goal;
+  if(g){const d=new T.Vector3(g.x-v.position.x,g.y-v.position.y,g.z-v.position.z),L=d.length();if(L<.3){VEH.goal=null;g.res();}else{const st2=Math.min(L,g.speed*dt);v.position.addScaledVector(d.normalize(),st2);if(VEH.type==='boat'){v.rotation.y=lerpAng(v.rotation.y,Math.atan2(-d.x,-d.z),.1);}}}
+  if(VEH.type==='boat'){v.position.y=.02+Math.sin(t*2.2)*(w.wave||.3)*.12;v.rotation.z=Math.sin(t*1.7)*(w.wave||.3)*.12;v.rotation.x=Math.sin(t*1.3)*(w.wave||.3)*.1;VEH.wk=(VEH.wk||0)-dt;if(VEH.goal&&VEH.wk<=0){VEH.wk=.25;burst(new T.Vector3(v.position.x,.03,v.position.z+.5),.3);}v.userData.led.visible=night()>.3;}
+  else{v.userData.props.forEach((p,i)=>p.rotation.y+=dt*60*(i%2?1:-1));v.rotation.z=Math.sin(t*1.1)*.05;v.rotation.x=VEH.goal?-.12:Math.sin(t*.9)*.03;}}
+G.deliver=()=>{const r=st.rods[st.sel],dist=st.castDist,w=wxAt(st.gt),boat=st.castMode==='barchino';
+  seq(async()=>{st.phase='busy';st.msg=boat?'🚤 Carica esca e piombo nella tramoggia…':'🛸 Aggancia esca e piombo al drone…';setUI();pose('bend');await sleep(1);pose('hold');
+    if(VEH.obj)scene.remove(VEH.obj);VEH.type=boat?'boat':'drone';VEH.obj=boat?makeBoat():makeDrone();scene.add(VEH.obj);VEH.obj.visible=true;
+    if(boat){VEH.obj.position.set(r.x,.02,-.6);}else{VEH.obj.position.set(AN.pos.x+.5,.3,AN.pos.z-1);}
+    const ex=r.x+Math.sin((w.wd-FACE)*R)*w.ws/40*4+rnd(-2,2);st.follow=VEH.obj;r.sinker.visible=true;r.state='flying';r.ride=VEH.obj;
+    if(!boat){motor(true,230);await vehTo(VEH.obj.position.x,22,VEH.obj.position.z-4,4);}
+    const sp=boat?Math.max(5,dist/16):Math.max(8,dist/16);motor(true,boat?95:260);AN.reelSpin=-1;st.msg=boat?`🚤 Il barchino va a ${dist} m…`:`🛸 Il drone vola a ${dist} m…`;setUI();
+    if(boat&&w.wave>1.6&&Math.random()<.35){await vehTo(ex,0,-Math.min(dist,25+rnd(0,15)),sp);VEH.obj.rotation.z=Math.PI;splash(.4);burst(VEH.obj.position.clone(),.8);motor(false);AN.reelSpin=0;r.ride=null;
+      st.msg='🌊 Il barchino si è ribaltato nei frangenti! Lo recuperi e lanci a mano.';st.follow=null;await sleep(2);VEH.obj.visible=false;r.sinker.visible=false;r.state='idle';st.castMode='mano';st.phase='cast';setUI();return;}
+    await vehTo(ex,boat?.02:22,-dist,sp);AN.reelSpin=0;
+    // sgancio: esca e piombo cadono in acqua
+    const drop=new T.Vector3(VEH.obj.position.x,0,VEH.obj.position.z);r.ride=null;
+    if(!boat){const pay=VEH.obj.userData.pay;pay.visible=false;VEH.obj.userData.hook.visible=false;const fall=r.sinker;fall.position.set(drop.x,20,drop.z);for(let y=20;y>0;y-=2.5){fall.position.y=y;await sleep(.04);}}
+    splash();burst(drop,1);r.dist=dist;r.sx=drop.x;r.sz=drop.z;r.state='fishing';r.landT=st.gt;st.msg=`✅ Esca sganciata a ${dist} m.`;setUI();await sleep(1.2);st.follow=null;
+    // torna a riva da solo mentre il pescatore rimette la canna sul picchetto
+    vehTo(boat?r.x+1:AN.pos.x+1,boat?.02:6,boat?-.6:AN.pos.z-1,sp*1.2).then(async()=>{if(!boat)await vehTo(VEH.obj.position.x,.3,VEH.obj.position.z,3);motor(false);await sleep(.6);if(VEH.obj){VEH.obj.visible=false;if(!boat){VEH.obj.userData.pay.visible=true;VEH.obj.userData.hook.visible=true;}}});
+    await putRod(st.sel);await stepBack(st.sel);st.phase='wait';setUI();});};
 
 /* ---------- abboccate, ferrata e combattimento ---------- */
 function startBite(r){
@@ -688,12 +804,14 @@ function loop(){raf=requestAnimationFrame(loop);if(!renderer)return;const dt=Mat
     r.obj.userData.glow.visible=night()>.25;r.obj.userData.glow.material.opacity=r.state==='bite'?(.6+.4*Math.sin(t*20)):.9;
     // lenza
     const tip=new T.Vector3();r.obj.userData.tip.getWorldPosition(tip);const a=r.line.geometry.attributes.position;
-    if(r.flight){const f=r.flight;f.t+=dt/f.dur;const k=clamp(f.t,0,1),pnt=new T.Vector3().lerpVectors(f.a,f.b,k);pnt.y+=Math.sin(k*Math.PI)*(12+f.b.distanceTo(f.a)*.12);r.sinker.position.copy(pnt);}
+    if(r.ride){r.sinker.position.copy(r.ride.position);if(VEH.type==='drone')r.sinker.position.y-=2.55;}
+    else if(r.flight){const f=r.flight;f.t+=dt/f.dur;const k=clamp(f.t,0,1),pnt=new T.Vector3().lerpVectors(f.a,f.b,k);pnt.y+=Math.sin(k*Math.PI)*(12+f.b.distanceTo(f.a)*.12);r.sinker.position.copy(pnt);}
     else if(r.dist>0){const fd=st.fight?.r===r?Math.max(0,st.fight.dist):r.dist,kk=fd/Math.max(1,-r.sz);r.sinker.position.set(lerp(r.x,r.sx,kk),.0,-fd);}
     const end=r.sinker.visible?r.sinker.position:tip;const tens=st.fight?.r===r?st.fight.ten:.2+r.bend*.4;
     for(let i=0;i<40;i++){const u=i/39,x=lerp(tip.x,end.x,u),z=lerp(tip.z,end.z,u),y=lerp(tip.y,end.y,u)-Math.sin(u*Math.PI)*(r.flight?0:(1-tens)*Math.min(3,tip.distanceTo(end)*.05));a.setXYZ(i,x,Math.max(y,end===tip?y:-.02),z);}
     a.needsUpdate=true;r.line.visible=r.sinker.visible;}
   reelWhir(AN.reelSpin>0&&AN.holding>=0?.012:0,AN.reelSpin*7);
+  updVeh(dt,t,w);
   updFight(dt);
   // pesce appeso che esce dall'acqua
   if(fishMesh.visible&&st.fight==null){const r=st.rods[st.sel],tip=new T.Vector3();r.obj.userData.tip.getWorldPosition(tip);const k=clamp((performance.now()-fishMesh.userData.show)/900,0,1);
@@ -711,17 +829,17 @@ function loop(){raf=requestAnimationFrame(loop);if(!renderer)return;const dt=Mat
 function moveActor(a,dt){
   if(a.moving&&a.walkTarget){const wt=a.walkTarget,dx=wt.x-a.pos.x,dz=wt.z-a.pos.z,d=Math.hypot(dx,dz);
     if(d<.05){a.moving=false;a.walkTarget=null;wt.res();}else{const s=Math.min(d,a.speed*dt);a.pos.x+=dx/d*s;a.pos.z+=dz/d*s;a.walk+=dt*a.speed*5.2;const ty=Math.atan2(-dx,-dz);a.rotY=lerpAng(a.rotY,ty,1-Math.exp(-10*dt));}
-    a.pos.y=a===AN?sandY(a.pos.z):Math.max(0,a.pos.z*.035);if(a.target==='sit'||a.target==='bend')a.target=a.holding>=0?'hold':'stand';}
+    if(a===AN){const dp=sandY(a.pos.z);a.swim=dp<-1;a.pos.y=a.swim?(a.dive?-1.1:-.2):dp;}else a.pos.y=Math.max(0,a.pos.z*.035);if(a.target==='sit'||a.target==='bend')a.target=a.holding>=0?'hold':'stand';}
   else if(a.faceTo!=null){a.rotY=lerpAng(a.rotY,a.faceTo,1-Math.exp(-8*dt));}}
 function joyMove(dt,t){const m=Math.hypot(JOY.x,JOY.y);const free=st.phase==='wait'&&!st.busy;
   if(!JOY.on||m<.15||!free){if(AN.joying){AN.joying=false;AN.moving=false;}return;}
   if(AN.target==='sit'){pose('stand');AN.pos.z-=.35;}
   const fw=new T.Vector3().subVectors(CAM.l||new T.Vector3(0,0,-10),camera.position);fw.y=0;fw.normalize();const rt=new T.Vector3(-fw.z,0,fw.x);
   const dir=fw.multiplyScalar(-JOY.y).add(rt.multiplyScalar(JOY.x));if(dir.lengthSq()<1e-4)return;dir.normalize();
-  const inWater=AN.pos.z<-.1,sp=(inWater?1.1:3)*Math.min(1,m);AN.joying=true;AN.moving=true;AN.walkTarget=null;AN.speed=sp;AN.faceTo=null;
-  AN.pos.x=clamp(AN.pos.x+dir.x*sp*dt,-110,110);AN.pos.z=clamp(AN.pos.z+dir.z*sp*dt,-5,26);AN.pos.y=sandY(AN.pos.z);AN.walk+=dt*sp*5.2;
+  const inWater=AN.pos.z<-.1,deep=sandY(AN.pos.z)<-1,sp=(deep?1.3:inWater?1.1:3)*Math.min(1,m);AN.joying=true;AN.moving=true;AN.walkTarget=null;AN.speed=sp;AN.faceTo=null;
+  AN.pos.x=clamp(AN.pos.x+dir.x*sp*dt,-110,110);AN.pos.z=clamp(AN.pos.z+dir.z*sp*dt,-150,26);AN.swim=sandY(AN.pos.z)<-1;AN.pos.y=AN.swim?-.2:sandY(AN.pos.z);AN.walk+=dt*sp*5.2;
   AN.rotY=lerpAng(AN.rotY,Math.atan2(-dir.x,-dir.z),1-Math.exp(-10*dt));
-  if(inWater){AN.splT=(AN.splT||0)-dt;if(AN.splT<=0){AN.splT=.35;burst(new T.Vector3(AN.pos.x,.05,AN.pos.z-.2),.25);}}}
+  if(inWater){AN.splT=(AN.splT||0)-dt;if(AN.splT<=0){AN.splT=deep?.5:.35;burst(new T.Vector3(AN.pos.x,.05,AN.pos.z-.2),deep?.4:.25);if(deep&&Math.random()<.3)splash(.05);}}}
 // pulsanti che compaiono quando sei vicino a un granchio o a un altro pescatore
 function nearUI(t){if(!nearUI.t||t-nearUI.t>.3){nearUI.t=t;const c=nearCrab(),ni=NPCS.findIndex(a=>a.pos.distanceTo(AN.pos)<3.2),k=(c?'c':'')+ni+(AN.pos.z<-.1?'w':'')+(AN.target==='sit'?'s':'');
   if(k!==nearUI.k){nearUI.k=k;if(st.phase==='wait'&&!st.busy)setUI();}
@@ -777,7 +895,8 @@ function updEnv(w,t,dt){const d=gameDate(),sun=sunPos(d,SPOT.lat,SPOT.lon),mo=mo
 const CAM={p:null,l:null};
 function updCam(dt,t){let p,l;const a=AN.pos;
   if(G.camOv){camera.position.set(...G.camOv.p);camera.lookAt(...G.camOv.l);return;}
-  if(st.phase==='fight'||(AN.holding>=0&&st.phase!=='wait')){p=new T.Vector3(a.x+1.5,a.y+1.9,a.z+4.6);l=new T.Vector3(a.x-.2,a.y+1.7,a.z-6);}
+  if(st.follow){const v=st.follow.position,boat=VEH.type==='boat';p=new T.Vector3(v.x+2,v.y+(boat?2.2:3),v.z+(boat?6:7));l=new T.Vector3(v.x,v.y-(boat?0:1),v.z-4);}
+  else if(st.phase==='fight'||(AN.holding>=0&&st.phase!=='wait')){p=new T.Vector3(a.x+1.5,a.y+1.9,a.z+4.6);l=new T.Vector3(a.x-.2,a.y+1.7,a.z-6);}
   else if(st.busy||st.phase==='atrod'||st.phase==='bait'||st.phase==='cast'){p=new T.Vector3(a.x+.9,a.y+2.3,a.z+5.4);l=new T.Vector3(a.x,a.y+1.2,a.z-8);}
   else{const por=camera.aspect<1,sitting=AN.target==='sit',H=sitting?new T.Vector3(CHAIR.x,CHAIR.z*.035+1.2,CHAIR.z):AN.pos.clone().add(new T.Vector3(0,1.4,0)),rad=sitting?(por?9:6.5):(por?7:5.5),yb=Math.atan2(CHAIR.x-.6,14+(por?9:6.5))*0+0;
     const fy=LOOK.yaw+.05,fx=Math.sin(fy),fz=-Math.cos(fy),cp=Math.cos(LOOK.pitch),sp=Math.sin(LOOK.pitch);
