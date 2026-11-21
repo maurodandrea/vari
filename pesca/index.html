@@ -277,13 +277,13 @@
   nav .fab:active .fb{transform:scale(.92);}
   nav .fab.live .fb{background:linear-gradient(135deg,#ff6b7a,#ff9a5a);box-shadow:0 12px 26px -8px rgba(255,107,122,.9),0 0 0 5px rgba(3,13,26,.9);animation:pulse 1.6s ease-in-out infinite;}
   @keyframes pulse{50%{box-shadow:0 12px 30px -4px rgba(255,107,122,1),0 0 0 5px rgba(3,13,26,.9)}}
-  nav .fabcol{flex:1.2;display:flex;flex-direction:column;align-items:center;margin-top:-34px;gap:3px;}
+  nav .fabcol{flex:1.3;display:flex;flex-direction:column;align-items:center;margin-top:-22px;gap:4px;}
   nav .fabcol .fab{flex:none;margin:0;padding:0;}
-  nav .fab .fb{display:flex;flex-direction:column;gap:1px;width:62px;height:62px;}
-  nav .fab .fb svg{width:24px;height:24px;}
-  nav .fab em{font-style:normal;font:800 11px 'Outfit',sans-serif;color:#03282a;line-height:1;}
-  nav .fabalt{flex:none;flex-direction:row;gap:5px;padding:4px 10px;border-radius:12px;}
-  nav .fabalt svg{width:16px;height:16px;}
+  nav .fab .fb{display:flex;flex-direction:column;gap:0;width:50px;height:46px;border-radius:15px;box-shadow:0 8px 18px -8px rgba(47,224,207,.9),0 0 0 4px rgba(3,13,26,.9);}
+  nav .fab .fb svg{width:19px;height:19px;}
+  nav .fab em{font-style:normal;font:800 10px 'Outfit',sans-serif;color:#03282a;line-height:1;}
+  nav .fabalt{flex:none;flex-direction:row;gap:7px;padding:7px 14px;border-radius:14px;font-size:14.5px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);color:var(--txt);}
+  nav .fabalt svg{width:21px;height:21px;}
   .rec{display:inline-block;width:9px;height:9px;border-radius:50%;background:#ff4d5e;box-shadow:0 0 0 0 rgba(255,77,94,.7);animation:recp 1.4s infinite;}
   @keyframes recp{70%{box-shadow:0 0 0 9px rgba(255,77,94,0)}100%{box-shadow:0 0 0 0 rgba(255,77,94,0)}}
   .subhead{display:flex;align-items:center;gap:12px;margin:2px 0 16px;}
@@ -520,7 +520,7 @@
     .chatlog{height:calc(100vh - 290px);}
     nav .fabcol{display:contents;}
     nav .fab{order:-1;margin:0 0 8px;padding:0;flex-direction:row;}
-    nav .fabalt{order:99;padding:12px 14px;gap:12px;}nav .fabalt svg{width:22px;height:22px;}
+    nav .fabalt{order:99;padding:12px 14px;gap:12px;background:none;border:0;font-size:16.5px;}nav .fabalt svg{width:22px;height:22px;}
     nav .fab .fb{width:100%;height:50px;border-radius:16px;box-shadow:0 10px 24px -10px rgba(47,224,207,.9);}
     nav .fab em{display:none;}
     nav .fab .fb::after{content:'Inizia a pescare';font:700 16.5px 'Outfit',sans-serif;margin-left:8px;}
@@ -1164,7 +1164,7 @@ function vChat(v){if(window.CHAT){try{CHAT.view(v);}catch(e){console.error(e);v.
   document.body.appendChild(sc);}
 // Gioco di surfcasting (gioco.js, caricato solo quando serve)
 function vGioco(v){
-  if(window.GAME){GAME.mount(v);return;}
+  if(window.GAME){if(document.getElementById('gamebox')){v.innerHTML='<div class="card" style="text-align:center;padding:30px"><p class="mut">Il gioco è aperto a tutto schermo.</p><button class="btn" onclick="GAME.mount()">🎣 Riapri il gioco</button></div>';return;}GAME.mount(v);return;}
   v.innerHTML=subHead('Gioco','Surfcasting sulla costa del Lazio','home')+'<div class="card" style="text-align:center;padding:30px"><span class="aispin" style="width:28px;height:28px;border-width:3px;display:inline-block"></span><p class="mut">Preparo la spiaggia…</p></div>';
   if(vGioco.busy)return;vGioco.busy=true;const sc=document.createElement('script');sc.src='gioco.js?v='+(window.APPV||Date.now());
   sc.onload=()=>{vGioco.busy=false;if(S.tab==='gioco'&&window.GAME)GAME.mount(document.getElementById('view'));};
