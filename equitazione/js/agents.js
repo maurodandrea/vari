@@ -320,7 +320,7 @@ EQ.populate.city=function(W){
   const DIRS=[[1,0],[-1,0],[0,1],[0,-1]];
   const makeCar=(type,col,speed)=>{const g=EQ.buildCar(type,col);W.group.add(g);
     const c={g,i:Math.random()*NL|0,j:Math.random()*NL|0,d:Math.random()*4|0,t:0,v:speed,vmax:speed,ox:0,oz:0,pox:0,poz:0,blocked:0,h:0,x:0,z:0,col:{x:0,z:0,r:1.3},col2:{x:0,z:0,r:1.3},L:g.userData.L};
-    W.colliders.push(c.col,c.col2);
+    const ty=g.userData.type;c.col.h=c.col2.h=(ty==='van'||ty==='bus')?99:ty==='suv'?1.6:1.4;W.colliders.push(c.col,c.col2);
     const valid=(i,j,d)=>{const ni=i+DIRS[d][0],nj=j+DIRS[d][1];return ni>=0&&ni<NL&&nj>=0&&nj<NL;};
     while(!valid(c.i,c.j,c.d))c.d=Math.random()*4|0;
     c.valid=valid;cars.push(c);return c;};

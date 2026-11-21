@@ -12,6 +12,7 @@ if(save&&save.horses&&save.horses.length<EQ.HORSES.length){while(save.horses.len
 if(!save||!save.horses||save.horses.length!==EQ.HORSES.length)save={sel:0,outfit:Object.assign({},DEF_OUTFIT),horses:EQ.HORSES.map((h,i)=>({hunger:45+i*5,clean:30+i*6,happy:70,energy:90})),t:Date.now(),best:{}};
 {const hrs=Math.min(72,Math.max(0,(Date.now()-(save.t||Date.now()))/3.6e6));
  save.horses.forEach(s=>{s.hunger=U.clamp(s.hunger-hrs*5,5,100);s.clean=U.clamp(s.clean-hrs*3,10,100);s.energy=U.clamp(s.energy+hrs*25,0,100);});}
+save.horses.forEach(h=>{if(h.thirst==null)h.thirst=80;});
 function persist(){save.t=Date.now();save.outfit=Object.assign({},P.outfit);LS.set('save',save);}
 
 /* ======================= COSTRUZIONE ======================= */
@@ -88,7 +89,7 @@ function fade(text,cb,hold){
 }
 function panel(html){const p=$('panel');if(html==null){p.classList.remove('on');p.innerHTML='';return;}p.innerHTML=html;p.classList.add('on');}
 function statsHtml(s){const row=(l,v,c)=>`<div>${l} <b>${v|0}</b><div class="b"><i style="width:${v}%;background:${c}"></i></div></div>`;
-  return `<div class="stats">${row('🌾 Sazietà',s.hunger,'#f0a830')}${row('🫧 Pulizia',s.clean,'#3fa9d8')}${row('💛 Felicità',s.happy,'#ff6fa8')}${row('⚡ Energia',s.energy,'#6cc04a')}</div>`;}
+  return `<div class="stats">${row('🌾 Sazietà',s.hunger,'#f0a830')}${row('🫧 Pulizia',s.clean,'#3fa9d8')}${row('💛 Felicità',s.happy,'#ff6fa8')}${row('⚡ Energia',s.energy,'#6cc04a')}${row('💧 Acqua',s.thirst==null?80:s.thirst,'#2a8bd8')}</div>`;}
 function stat(H,k,d){H.stats[k]=U.clamp(H.stats[k]+d,0,100);}
 function hud(on){$('hud').classList.toggle('on',on);$('touch').classList.toggle('on',on);if(on)EQ.joyRest();}
 function setTouchMode(m){const t=$('touch');t.classList.toggle('ride',m==='ride');$('actions').classList.toggle('ride',m==='ride');$('gait').classList.toggle('on',m==='ride');}
@@ -140,7 +141,7 @@ document.querySelectorAll('.gbtn').forEach(b=>b.addEventListener('click',()=>{EQ
 $('gTog').addEventListener('click',()=>{EQ.audio();setGender(EQ.gender()==='m'?'f':'m');renderMenu();});
 setGender(EQ.gender());
 function toMenu(){
-  G.sit=null;G.ia=null;
+  G.sit=null;G.ia=null;G.mission=null;G.swim=false;
   releaseGuest();
   cleanupTrip();endCourse(true);closeAct(true);
   G.state='menu';G.cur=null;G.leading=false;G.didRide=false;
@@ -216,11 +217,16 @@ function footUpdate(dt){
   if(H&&!G.leading&&H.where!=='box'){const fx=Math.sin(H.h),fz=Math.cos(H.h);EQ.collide(p,.3,[{x:H.x,z:H.z,r:.55},{x:H.x+fx*.7,z:H.z+fz*.7,r:.45},{x:H.x-fx*.7,z:H.z-fz*.7,r:.45},{x:H.x+fx*1.5,z:H.z+fz*1.5,r:.25}]);}
   const b=W().bounds;if(b){p.x=U.clamp(p.x,b.x0,b.x1);p.z=U.clamp(p.z,b.z0,b.z1);}
   if(W().boundR){const d=Math.hypot(p.x,p.z);if(d>W().boundR){p.x*=W().boundR/d;p.z*=W().boundR/d;}}
-  if(W().deep!=null&&W().height(p.x,p.z)<-.5){p.x=px;p.z=pz;}
+  if(W().shore&&p.x-W().shore(p.z)>75){p.x=px;p.z=pz;}
   F.x=p.x;F.z=p.z;
   const realSp=Math.hypot(F.x-px,F.z-pz)/Math.max(dt,1e-4);
-  P.root.position.set(F.x,W().height(F.x,F.z),F.z);P.root.rotation.y=F.h;
-  P.pose(dt,G.leading?'lead':'walk',{speed:Math.min(F.sp,realSp+.2)});
+  const gy=W().height(F.x,F.z),wl=W().water(F.x,F.z),dep=wl-gy;const swim=dep>.95;
+  if(swim&&G.leading){waitHere();msg(G.cur.def.name+' ti aspetta sulla riva',2.2);}
+  if(swim){F.sp=Math.min(F.sp,1.4);if(Math.random()<dt*3&&F.sp>.3){for(let k=0;k<4;k++)FX.splash.emit(F.x+rnd(-.3,.3),wl,F.z+rnd(-.3,.3),rnd(-.5,.5),rnd(.5,1.2),rnd(-.5,.5),.5);EQ.sfx.splash(.04);}}
+  else if(dep>.2)F.sp=Math.min(F.sp,2.2);
+  if(swim!==G.swim){G.swim=swim;if(swim)msg('🏊 Stai nuotando!',1.4);}
+  P.root.position.set(F.x,swim?wl-1.2+Math.sin(T*2)*.04:gy,F.z);P.root.rotation.y=F.h;
+  P.pose(dt,swim?'swim':G.leading?'lead':'walk',{speed:Math.min(F.sp,realSp+.2)});
   const s=Math.sin(P.phase);if(F.sp>.4&&((F.lastS>0)!==(s>0)))EQ.sfx.step(W().surface(F.x,F.z));F.lastS=s;
   if(G.leading)leadUpdate(dt);
   if(F.sp>.3)F.camYaw+=U.wrapA(F.h-F.camYaw)*Math.min(1,dt*1.3);
@@ -241,9 +247,10 @@ function leadUpdate(dt){
   const ox=H.x,oz=H.z;
   H.x+=Math.sin(H.h)*H.sp*dt;H.z+=Math.cos(H.h)*H.sp*dt;
   const p={x:H.x,z:H.z};EQ.collide(p,.6,W().colliders);H.x=p.x;H.z=p.z;
+  if(W().deep!=null&&W().height(H.x,H.z)<-.6){H.x=ox;H.z=oz;H.sp=0;}
   const rs=Math.hypot(H.x-ox,H.z-oz)/Math.max(dt,1e-4);
   H.root.position.set(H.x,W().height(H.x,H.z),H.z);H.root.rotation.y=H.h;
-  H.animate(dt,{speed:Math.min(H.sp,rs+.1),turn:0});
+  H.animate(dt,Object.assign({speed:Math.min(H.sp,rs+.1),turn:0},H.st||{}));
   H.rope.visible=true;
 }
 function near(s,r){return Math.hypot(F.x-s.x,F.z-s.z)<r;}
@@ -255,7 +262,7 @@ function mountBlock(){const H=G.cur;
   return null;}
 function yardActions(){
   const A=[], H=G.cur;
-  if(G.world!==yard){if(G.leading)A.push({id:'mount',icon:'🏇',label:'Monta',fn:startMount,dis:mountBlock()});socialActions(A,false);return A;}
+  if(G.world!==yard){if(G.leading)A.push({id:'mount',icon:'🏇',label:'Monta',fn:startMount,dis:mountBlock()});careActions(A);socialActions(A,false);return A;}
   if(near(Y.selleria,2.6))A.push({id:'dress',icon:'👕',label:'Spogliatoio',fn:startDress,dis:G.leading?'Prima lega il cavallo<small>alla posta o rimettilo nel box</small>':null});
   Y.boxes.forEach((b,i)=>{if(!near(b.front,2.3))return;const h=horses[i];
     if(h.where==='box'){
@@ -278,9 +285,44 @@ function yardActions(){
     if(fh){A.push({id:'petf',icon:'💛',label:'Accarezza '+fh.name,fn:()=>startPet({head:fh.h.head,H:fh.h,name:fh.name,agent:fh.agent})});
       A.push({id:'ridef',icon:'🏇',label:'Monta '+fh.name,fn:()=>adopt(fh),dis:H?'Prima rimetti '+H.def.name+' nel box':(!P.ready()?'Per sicurezza servono casco e corpetto!<small>vai allo spogliatoio</small>':null)});}
     else if(!A.some(a=>a.id.startsWith('pet'))){const ph=nearPet(3.4);if(ph)A.push({id:'peth',icon:'💛',label:'Accarezza '+ph.def.name,fn:()=>{startPet({head:ph.head,name:ph.def.name});if(ph.hh){ph.hh.ly=0;ph.hh.lx=.45;ph.hh.bt=3;}}});}}
-  socialActions(A,false);
+  careActions(A);socialActions(A,false);
   return A;
 }
+/* ---- bisogni del cavallo e cure ovunque ---- */
+const NEED_MSG={energy:['😴','è stanco: fallo riposare'],hunger:['🌾','ha fame: dagli da mangiare'],thirst:['💧','ha sete: dagli da bere'],clean:['🫧','è sporco: spazzolalo']};
+G.needCd={};
+function needsCheck(dt){const H=G.cur;if(!H||!H.stats)return;for(const k in NEED_MSG){G.needCd[k]=(G.needCd[k]||0)-dt;const v=H.stats[k]==null?80:H.stats[k];
+  if(v<25&&G.needCd[k]<=0){G.needCd[k]=40;msg(NEED_MSG[k][0]+' '+H.def.name+' '+NEED_MSG[k][1].split(':')[0]+'!<small>'+(NEED_MSG[k][1].split(':')[1]||'')+(G.state==='ride'?' · scendi da cavallo':'')+'</small>',3.2);EQ.sfx.snort();}}}
+function waitHere(){const H=G.cur;if(!H)return;G.leading=false;H.where='wait';H.sp=0;H.rope.visible=false;H.st={};}
+function takeRope(){const H=G.cur;H.where='lead';G.leading=true;if(!H.tack.bridle)H.setTack({halter:true});msg('Andiamo!',1);}
+const bucket=EQ.mesh(EQ.G.cyl(.2,.16,.3,14),EQ.mat(0x2a58c8,.5),0,0,0,scene);bucket.visible=false;
+function care(kind){const H=G.cur;H.head.getWorldPosition(tv);
+  const t=kind==='brush'?3.4:3;G.ia={kind:kind==='feed'?'feed':kind==='drink'?'feed':kind==='brush'?'brush':'stand',t,tx:kind==='brush'?H.x:tv.x,tz:kind==='brush'?H.z:tv.z,care:kind};
+  if(G.leading){waitHere();G.relead=true;}
+  H.st={eat:kind==='brush'?0:1};
+  if(kind==='drink'){const fx=Math.sin(H.h),fz=Math.cos(H.h);bucket.position.set(H.x+fx*1.6,W().height(H.x+fx*1.6,H.z+fz*1.6)+.15,H.z+fz*1.6);bucket.visible=true;}
+  if(kind==='feed'){handItem.visible=true;carrotM.visible=true;appleM.visible=false;}
+  setTimeout(()=>{if(kind==='feed'){stat(H,'hunger',45);EQ.sfx.munch();}if(kind==='drink'){stat(H,'thirst',60);EQ.sfx.splash(.12);}
+    if(kind==='rest'){stat(H,'energy',45);}if(kind==='brush'){stat(H,'clean',45);if(H.stats.clean>85)H.clearDirt();else H.dirt.slice(0,Math.ceil(H.dirt.length/2)).forEach(d=>{d.userData.v=0;d.visible=false;});}
+    stat(H,'happy',4);persist();},1200);
+  setTimeout(()=>{H.st={};bucket.visible=false;handItem.visible=false;if(G.relead&&G.cur===H&&H.where==='wait'){G.relead=false;takeRope();}},t*1000);
+  msg({feed:'🥕 Gnam gnam!',drink:'💧 Che sete aveva!',rest:'😴 '+H.def.name+' si riposa…',brush:'🪮 Una bella spazzolata'}[kind],2);}
+function careActions(A){const H=G.cur;if(!H||G.state!=='foot'||H.where==='box'||H.where==='ride'||G.swim)return;
+  if(Math.hypot(H.x-F.x,H.z-F.z)>4)return;const s=H.stats;
+  if(H.where==='wait'){A.push({id:'rope',icon:'🪢',label:'Prendi '+H.def.name,fn:takeRope});A.push({id:'mountw',icon:'🏇',label:'Monta',fn:startMount,dis:mountBlock()});}
+  if(G.leading&&G.world!==yard)A.push({id:'wait',icon:'🌿',label:'Lascialo qui',fn:()=>{waitHere();msg(H.def.name+' ti aspetta qui',1.6);}});
+  if(s.hunger<90)A.push({id:'cfeed',icon:'🥕',label:'Dai da mangiare',fn:()=>care('feed')});
+  if((s.thirst==null?80:s.thirst)<90)A.push({id:'cdrink',icon:'💧',label:'Dai da bere',fn:()=>care('drink')});
+  if(s.energy<80)A.push({id:'crest',icon:'😴',label:'Fallo riposare',fn:()=>care('rest')});
+  if(s.clean<80&&H.where!=='posta'&&H.where!=='wash')A.push({id:'cbrush',icon:'🪮',label:'Spazzola',fn:()=>care('brush')});}
+/* ---- obiettivi in città ---- */
+const MISSIONS=[['school','Vai a scuola'],['home','Vai a casa'],['piazza','Vai in piazza alla fontana'],['park','Vai al parco'],['yard','Vai al maneggio'],['beach','Vai in spiaggia'],['forest','Vai nel bosco']];
+G.stars=LS.get('stars',0);
+function newMission(){const w=W();if(w.name!=='city'){G.mission=null;return;}const prev=G.mission&&G.mission.k;
+  const L=MISSIONS.filter(m=>m[0]!==prev);const m=L[Math.random()*L.length|0];let pt=w.spots[m[0]];
+  if(!pt){const po=(w.portals||[]).find(p=>p.to===m[0]);pt=po?{x:po.x,z:po.z,portal:true}:null;}
+  G.mission=pt?{k:m[0],t:m[1],x:pt.x,z:pt.z,portal:!!pt.portal}:null;if(G.mission)setTimeout(()=>msg('🎯 '+G.mission.t+'<small>segui la freccia gialla</small>',3),1800);}
+function missionCheck(px,pz){const m=G.mission;if(!m||m.portal||W().name!=='city')return;if(Math.hypot(px-m.x,pz-m.z)<9){G.stars++;LS.set('stars',G.stars);EQ.sfx.ding();msg('⭐ Obiettivo completato!<small>'+m.t+' · stelle: '+G.stars+'</small>',2.6);G.mission=null;setTimeout(newMission,2600);}}
 /* ---- persone, animali, sedie ---- */
 const TALK=['Che bel cavallo!','Oggi è una giornata perfetta per cavalcare.','Hai visto i cervi nel bosco?','Al mare si galoppa sulla riva, è stupendo!','In città le auto si fermano per i cavalli.','Domani faccio la gara di salto!','Ricordati di pulire gli zoccoli!','Il mio cavallo adora le carote.','Ci vediamo al club house per una merenda?','Dalla strada a nord si arriva in città.','Il sentiero a est porta alla spiaggia.','Nel bosco ci sono anche i cinghiali!','Hai già fatto la doccia al tuo cavallo?','Che caldo oggi, ci vorrebbe un gelato!','In campo stanno saltando gli ostacoli.'];
 const TALK_KID=['Giochiamo a rincorrerci!','Mi fai accarezzare il cavallo?','Da grande voglio fare le gare di salto!','Hai visto il gatto? È velocissimo!','Io ho un pony che si chiama Biscotto!'];
@@ -325,7 +367,7 @@ function socialFoot(dt){
     if(!G.busy)setActions([{id:'up',icon:'⬆️',label:'Alzati',fn:()=>{G.sit=null;F.x=st.x-Math.sin(st.h)*.9;F.z=st.z-Math.cos(st.h)*.9;}}]);return;}
   const ia=G.ia;ia.t-=dt;
   const dx=ia.tx-F.x,dz=ia.tz-F.z,d=Math.hypot(dx,dz);const want=Math.atan2(dx,dz);F.h+=U.wrapA(want-F.h)*Math.min(1,dt*8);
-  const stop=ia.kind==='pet'?.85:ia.kind==='petlow'?.55:1.3;
+  const stop=ia.care==='brush'?1.05:ia.care?.95:ia.kind==='pet'?.85:ia.kind==='petlow'?.55:1.3;
   if(d>stop+.05){const k=Math.min(1,dt*3);F.x+=dx/d*(d-stop)*k;F.z+=dz/d*(d-stop)*k;const p={x:F.x,z:F.z};EQ.collide(p,.25,W().colliders.filter(c=>!c.fence));F.x=p.x;F.z=p.z;}
   P.root.position.set(F.x,W().height(F.x,F.z),F.z);P.root.rotation.y=F.h;
   P.pose(dt,ia.kind==='wave'?'wave':ia.kind==='talk'?'talk':ia.kind==='play'?'play':ia.kind,{});
@@ -345,7 +387,7 @@ function nearPet(r){let b=null,bd=r;
 function adopt(fh){
   const H=fh.h;fh.taken=true;if(fh.agent)fh.agent.disabled=true;if(fh.col)fh.col.off=true;H.adopted=true;
   scene.attach(H.root);H.i=-1;H.guest=fh;H.def=Object.assign({},H.def,{name:fh.name});
-  H.stats=H.stats||{hunger:70,clean:80,happy:70,energy:90};H.st={};
+  H.stats=H.stats||{hunger:70,clean:80,happy:70,energy:90,thirst:75};H.st={};
   H.x=H.root.position.x;H.z=H.root.position.z;H.h=H.root.rotation.y;H.sp=0;
   H.setTack({pad:true,saddle:true,girth:true,bridle:true,halter:false});
   if(!H.reins.parent)scene.add(H.reins,H.rope);H.onStep=stepFor(H);
@@ -432,7 +474,7 @@ function rideUpdate(dt){
   let inp=(G.busy||G.mount||G.lock>0||G.state!=='ride')?{x:0,y:0}:EQ.readInput();
   if(G.lock>0)G.lock-=dt;
   if(G.course&&G.course.state==='count')inp={x:0,y:0};
-  const maxSp=MAXSP*(H.stats.energy<15?.6:1);
+  const st0=H.stats;const maxSp=MAXSP*(.38+.62*U.clamp(st0.energy/35,0,1))*(st0.hunger<15?.8:1)*((st0.thirst==null?80:st0.thirst)<15?.8:1);
   let target=Math.max(0,-inp.y)*maxSp;
   if(Math.abs(inp.x)>.25&&target<2.2&&inp.y<.3)target=2.2;
   if(inp.y>.35)target=0;
@@ -453,8 +495,8 @@ function rideUpdate(dt){
   const NOSE=1.15;
   const c={x:R.x,z:R.z};const n={x:R.x+fx*NOSE,z:R.z+fz*NOSE};
   const cols=w.colliders;
-  let hit=EQ.collide(c,.75,cols);R.x=c.x;R.z=c.z;n.x=R.x+fx*NOSE;n.z=R.z+fz*NOSE;
-  if(EQ.collide(n,.4,cols)){R.x+=n.x-(R.x+fx*NOSE);R.z+=n.z-(R.z+fz*NOSE);hit=true;}
+  let hit=EQ.collide(c,.75,cols,R.y);R.x=c.x;R.z=c.z;n.x=R.x+fx*NOSE;n.z=R.z+fz*NOSE;
+  if(EQ.collide(n,.4,cols,R.y)){R.x+=n.x-(R.x+fx*NOSE);R.z+=n.z-(R.z+fz*NOSE);hit=true;}
   if(hit&&R.sp>6&&R.bumpCd<=0){R.sp*=.55;R.bumpCd=1;EQ.sfx.bump();}
   else if(hit)R.sp*=Math.pow(.2,dt);
   const n0x=R.px+fx*NOSE,n0z=R.pz+fz*NOSE,n1x=R.x+fx*NOSE,n1z=R.z+fz*NOSE;
@@ -483,7 +525,8 @@ function rideUpdate(dt){
   const gi=R.sp<2.6?0:R.sp<7.4?1:2;
   P.pose(dt,'ride',{lean:[.08,.2,.4][gi]+(R.grounded?0:.35),jump:R.grounded?0:1,bob:gi===1&&R.grounded?Math.max(0,Math.sin(H.anim.phase*2+.5))*.06:0,speed:R.sp,snap:false});
   // statistiche
-  stat(H,'energy',-dt*R.sp*.012);stat(H,'hunger',-dt*.03);stat(H,'happy',dt*.04);
+  stat(H,'energy',R.sp<2.6?dt*.2:-dt*R.sp*.016);stat(H,'hunger',-dt*.05);if(H.stats.thirst!=null)stat(H,'thirst',-dt*(.06+R.sp*.008));stat(H,'happy',dt*.04);
+  needsCheck(dt);
   if(G.world!==yard||surfType(R.x,R.z)==='sand')G.rideDirt=(G.rideDirt||0)+dt*R.sp*.004;
   // logica
   if(G.course&&G.course.state==='run'){G.course.time+=dt;courseLogic(G.course.obs,true);}
@@ -603,6 +646,8 @@ function travel(to,from,noFade){
       $('timer').classList.add('on');
       setTimeout(()=>msg(PLACE[to][0]+' '+PLACE[to][1]+'!<small>trova '+w.items.length+' '+ITEM_INFO[w.itemKind][1].toLowerCase()+'</small>',3),400);}
     else{applyRideDirt(H);persist();setTimeout(()=>msg('Bentornat'+EQ.A()+' al maneggio!<small>scendi e dai da mangiare a '+H.def.name+'</small>',3),400);}
+    if(G.mission&&from==='city'&&G.mission.k===to){G.stars++;LS.set('stars',G.stars);setTimeout(()=>msg('⭐ Obiettivo completato!<small>'+G.mission.t+' · stelle: '+G.stars+'</small>',2.6),3600);}
+    G.mission=null;if(to==='city')newMission();
     G.state='ride';setTouchMode('ride');hud(true);snapCam();
   },250);
 }
@@ -733,7 +778,7 @@ function onPanel(a,v){
     if(f==='hay'||f==='oats'){Y.boxes[A.i].hay.visible=true;h.st={eat:1,lookY:-.55};G.feedBusy=4;G.feedHorse=h;EQ.sfx.click();
       setTimeout(()=>{EQ.sfx.munch();},600);setTimeout(()=>EQ.sfx.munch(),1800);setTimeout(()=>EQ.sfx.munch(),3000);
       stat(h,'hunger',f==='hay'?35:20);if(f==='oats')stat(h,'energy',15);stat(h,'happy',4);msg(f==='hay'?'🌾 Gnam gnam!':'🥣 Che buona l\'avena!',1.5);}
-    else if(f==='water'){stat(h,'happy',5);msg('💧 Secchio pieno di acqua fresca',1.5);EQ.sfx.splash(.15);}
+    else if(f==='water'){stat(h,'happy',5);stat(h,'thirst',60);msg('💧 Secchio pieno di acqua fresca',1.5);EQ.sfx.splash(.15);}
     else giveTreat(h,f);
     persist();setTimeout(renderAct,300);
   }
@@ -879,12 +924,15 @@ function updateHud(dt){
   hudT-=dt;if(hudT>0)return;hudT=.25;
   if(G.course){const C=G.course;$('infoT').textContent='🏆 Livello '+(C.l+1)+' · '+LEVELS[C.l].name;$('infoS').textContent=C.next<C.obs.length?`Ostacolo ${C.next+1} di ${C.obs.length}`:'Arrivo!';$('tasks').innerHTML='';
     $('timer').textContent='⏱ '+fmt(C.time)+(C.faults?'  ❌ '+C.faults:'');}
-  else if(G.trip){const t=G.trip,inf=ITEM_INFO[W().itemKind];$('infoT').textContent=PLACE[t.kind][0]+' '+PLACE[t.kind][1]+' · '+G.cur.def.name;$('infoS').textContent=`${inf[0]} ${inf[1]}: ${t.count} di ${t.items.length}`;$('tasks').innerHTML='';$('timer').textContent='⏱ '+fmt(t.time);}
+  else if(G.trip){const t=G.trip,inf=ITEM_INFO[W().itemKind];$('infoT').textContent=PLACE[t.kind][0]+' '+PLACE[t.kind][1]+' · '+G.cur.def.name;$('infoS').innerHTML=`${inf[0]} ${inf[1]}: ${t.count} di ${t.items.length}`+(G.mission?`<br>🎯 ${G.mission.t} · ⭐${G.stars}`:'')+needsLine();$('tasks').innerHTML='';$('timer').textContent='⏱ '+fmt(t.time);}
   else{const L=tasksList();const nx=L.find(t=>!t[2]);$('infoT').textContent='🏇 '+EQ.pname()+' · Maneggio';
-    $('infoS').textContent=nx?('Prossimo: '+nx[0]+' '+nx[1]):'Tutto fatto! Divertiti 🎉';
+    $('infoS').innerHTML=(nx?('Prossimo: '+nx[0]+' '+nx[1]):'Tutto fatto! Divertiti 🎉')+needsLine();
     $('tasks').innerHTML=L.map(t=>`<div class="${t[2]?'ok':''}">${t[2]?'✅':'⬜'} ${t[0]} ${t[1]}</div>`).join('')+(G.cur?`<div style="margin-top:4px;color:#ffe08a">${G.cur.def.name}: 🌾${G.cur.stats.hunger|0} 🫧${G.cur.stats.clean|0} ⚡${G.cur.stats.energy|0}</div>`:'');}
 }
+function needsLine(){const H=G.cur;if(!H||!H.stats||H.where==='box')return'';const s=H.stats,c=v=>v<25?'#ff8a8a':'#e8f5d0';const th=s.thirst==null?80:s.thirst;
+  return `<br><span style="font-size:12.5px">${H.def.name}: <b style="color:${c(s.energy)}">⚡${s.energy|0}</b> <b style="color:${c(s.hunger)}">🌾${s.hunger|0}</b> <b style="color:${c(th)}">💧${th|0}</b> <b style="color:${c(s.clean)}">🫧${s.clean|0}</b></span>`;}
 function dirTarget(){
+  if(G.mission&&W().name==='city')return G.mission;
   if(G.course&&G.course.next<G.course.obs.length){const o=G.course.obs[G.course.next];const lz=(R.x-o.pos.x)*o.fwd.x+(R.z-o.pos.z)*o.fwd.z,lx=(R.x-o.pos.x)*o.right.x+(R.z-o.pos.z)*o.right.z;
     return (lz>-1||Math.abs(lx)>Math.max(4,-lz*.8))?{x:o.pos.x-o.fwd.x*10,z:o.pos.z-o.fwd.z*10}:o.pos;}
   if(G.trip){let b=1e9,r=null;G.trip.items.forEach(it=>{if(it.got)return;const d=(it.x-R.x)**2+(it.z-R.z)**2;if(d<b){b=d;r=it;}});return r;}
@@ -914,7 +962,7 @@ function idleHorses(dt){
     if(H===G.cur&&(H.where==='ride'||H.where==='lead'))return;
     if(H.where==='box'&&G.world===yard){H.bt-=dt;if(H.bt<0&&!(G.act&&G.act.kind==='feed'&&G.act.i===H.i&&G.feedBusy>0)&&!(G.treatT>0&&G.feedHorse===H)){H.bt=rnd(3,8);const r=Math.random();
       H.st=r<.3?{lookY:rnd(-.5,.5)}:r<.5&&Y.boxes[H.i].hay.visible?{eat:1,lookY:-.55}:r<.6?{eat:.7,graze:1}:{};}}
-    if(H.where==='posta'||H.where==='wash'||H.where==='menu'){H.root.position.set(H.x,0,H.z);H.root.rotation.y=H.h;}
+    if(H.where==='posta'||H.where==='wash'||H.where==='menu'||H.where==='wait'){H.root.position.set(H.x,H.where==='wait'?W().height(H.x,H.z):0,H.z);H.root.rotation.y=H.h;}
     H.animate(dt,Object.assign({speed:0},H.st||{}));
   });
   // porte dei box
@@ -951,8 +999,8 @@ function frame(now){
       const cx=Y.posta.horse.x+.6,cz=Y.posta.horse.z;
       camGo(cx+Math.cos(a)*r,por?2.6:2.0,cz+Math.sin(a)*r,cx,por?-.6:1.2,cz,dt,3,por?0:r*.34);
       ppos=P.root.position;
-    } else if(G.state==='foot'){footUpdate(dt);ppos=P.root.position;}
-    else if(G.state==='ride'){rideUpdate(dt);ppos=G.cur.root.position;}
+    } else if(G.state==='foot'){footUpdate(dt);ppos=P.root.position;missionCheck(F.x,F.z);}
+    else if(G.state==='ride'){rideUpdate(dt);ppos=G.cur.root.position;missionCheck(R.x,R.z);}
     else if(G.state==='act'){actUpdate(dt);ppos=P.root.position;}
     else if(G.state==='results'||G.state==='modal'){if(G.cur&&G.cur.where==='ride'){const inpSave=G.lock;G.lock=1;rideUpdate(dt);G.lock=inpSave;}ppos=G.cur?G.cur.root.position:P.root.position;}
     else ppos=G.cur&&G.cur.where==='ride'?G.cur.root.position:P.root.position;

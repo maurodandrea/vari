@@ -480,6 +480,8 @@ EQ.buildGiorgia=function(){
       tg.pelY=.62;tg.th[0]=[-1.2,0,.15];tg.th[1]=[-.6,0,-.15];tg.kn[0]=1.9;tg.kn[1]=1.3;tg.torsoX=.6;tg.sh[1]=[-1.1+Math.sin(time*10)*.2,0,-.1];tg.el[1]=[-.6,0];tg.sh[0]=[-1.0,0,.1];tg.el[0]=[-.4,0];
     } else if(name==='mirror'){
       tg.sh[0]=[0,0,.35+Math.sin(time*1.5)*.05];tg.sh[1]=[0,0,-.35];tg.el[0]=[-.2,0];tg.el[1]=[-.2,0];tg.headY=Math.sin(time*.8)*.25;
+    } else if(name==='swim'){
+      const k=Math.sin(time*4);tg.sh=[[-1.5+k*1.3,0,.35],[-1.5-k*1.3,0,-.35]];tg.el=[[-.3,0],[-.3,0]];tg.th=[[k*.35,0,.05],[-k*.35,0,-.05]];tg.torsoX=.3;tg.headX=-.3;
     } else if(name==='sit'){
       tg.pelY=.5;tg.th=[[-1.5,0,.08],[-1.5,0,-.08]];tg.kn=[1.5,1.5];tg.torsoX=.08;tg.sh=[[-.75,0,.18],[-.75,0,-.18]];tg.el=[[-.5,0],[-.5,0]];
       if(p.talk){tg.sh[1]=[-.9+Math.sin(time*5)*.2,0,-.3];}
