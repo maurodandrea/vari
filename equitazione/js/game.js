@@ -141,6 +141,7 @@ document.querySelectorAll('.gbtn').forEach(b=>b.addEventListener('click',()=>{EQ
 $('gTog').addEventListener('click',()=>{EQ.audio();setGender(EQ.gender()==='m'?'f':'m');renderMenu();});
 setGender(EQ.gender());
 function toMenu(){
+  if(G.veh)leaveVeh(true);
   if(G.fall){G.fall=null;P.root.rotation.set(0,0,0);}
   G.sit=null;G.ia=null;G.mission=null;G.swim=false;G.em=[];G.slowT=0;G.dmg={shop:0,car:0,ppl:0};
   releaseGuest();
@@ -165,6 +166,7 @@ document.querySelectorAll('.qB').forEach(b=>b.onclick=()=>{EQ.hiQ=!EQ.hiQ;EQ.LS.
 function startYard(){
   $('menu').classList.remove('on');
   fade('Si va al maneggio!',()=>{
+    if(G.veh)leaveVeh(true);
     releaseGuest();
     horses.forEach(placeInBox);G.cur=null;G.leading=false;detachRider();
     P.setOutfit({helmet:null,protector:null,gloves:null,whip:false});persist();
@@ -263,6 +265,7 @@ function mountBlock(){const H=G.cur;
   return null;}
 function yardActions(){
   const A=[], H=G.cur;
+  vehActions(A);
   if(G.world!==yard){if(G.leading)A.push({id:'mount',icon:'🏇',label:'Monta',fn:startMount,dis:mountBlock()});if(!G.leading)otherHorseActions(A);careActions(A);socialActions(A,false);return A;}
   if(near(Y.selleria,2.6))A.push({id:'dress',icon:'👕',label:'Spogliatoio',fn:startDress,dis:G.leading?'Prima lega il cavallo<small>alla posta o rimettilo nel box</small>':null});
   Y.boxes.forEach((b,i)=>{if(!near(b.front,2.3))return;const h=horses[i];
@@ -335,13 +338,14 @@ function fallUpdate(dt){
   followCam(px,py,pz,f.h,EQ.portrait?6:5,EQ.portrait?3:2.5,.5,.6,dt,4);
   if(f.t>=3.4){P.root.rotation.set(0,f.h+Math.PI,0);F.x=px;F.z=pz;F.h=f.h+Math.PI;F.camYaw=f.h;F.sp=0;G.fall=null;G.state='foot';hud(true);setTouchMode('foot');
     if(f.course!=null){endCourse(true);G.lastL=f.course;showResults('❌','Caduta!','Sei cadut'+EQ.A()+': percorso eliminato. Rimonta e riprova!',[['💥','Caduta'],['E','Eliminat'+EQ.A()],['💪','Coraggio!']],[['org','again','↻ Riprova'],['alt','stay','Resta al maneggio'],['alt','menu','Menu principale']]);}
+    else if(f.veh)msg('Tutto ok! 💪<small>rialza '+VEH[f.veh.kind].name+' per ripartire</small>',3);
     else msg('Tutto ok! 💪<small>tocca "Monta" per risalire su '+H.def.name+'</small>',3);}
 }
 /* ---- bisogni del cavallo e cure ovunque ---- */
 const NEED_MSG={energy:['😴','è stanco: fallo riposare'],hunger:['🌾','ha fame: dagli da mangiare'],thirst:['💧','ha sete: dagli da bere'],clean:['🫧','è sporco: spazzolalo']};
 G.needCd={};
 function needsCheck(dt){const H=G.cur;if(!H||!H.stats)return;for(const k in NEED_MSG){G.needCd[k]=(G.needCd[k]||0)-dt;const v=H.stats[k]==null?80:H.stats[k];
-  if(v<25&&G.needCd[k]<=0){G.needCd[k]=40;msg(NEED_MSG[k][0]+' '+H.def.name+' '+NEED_MSG[k][1].split(':')[0]+'!<small>'+(NEED_MSG[k][1].split(':')[1]||'')+(G.state==='ride'?' · scendi da cavallo':'')+'</small>',3.2);EQ.sfx.snort();}}}
+  if(v<25&&G.needCd[k]<=0){G.needCd[k]=40;msg(NEED_MSG[k][0]+' '+H.def.name+' '+NEED_MSG[k][1].split(':')[0]+'!<small>'+(NEED_MSG[k][1].split(':')[1]||'')+((G.state==='ride'||G.state==='drive')?' · scendi da cavallo':'')+'</small>',3.2);EQ.sfx.snort();}}}
 function waitHere(){const H=G.cur;if(!H)return;G.leading=false;H.where='wait';H.sp=0;H.rope.visible=false;H.st={};}
 function takeRope(){const H=G.cur;H.where='lead';G.leading=true;if(!H.tack.bridle)H.setTack({halter:true});msg('Andiamo!',1);}
 const bucket=EQ.mesh(EQ.G.cyl(.2,.16,.3,14),EQ.mat(0x2a58c8,.5),0,0,0,scene);bucket.visible=false;
@@ -377,7 +381,7 @@ function missionCheck(px,pz){const m=G.mission;if(!m||m.portal||W().name!=='city
 /* ---- persone, animali, sedie ---- */
 const TALK=['Che bel cavallo!','Oggi è una giornata perfetta per cavalcare.','Hai visto i cervi nel bosco?','Al mare si galoppa sulla riva, è stupendo!','In città le auto si fermano per i cavalli.','Domani faccio la gara di salto!','Ricordati di pulire gli zoccoli!','Il mio cavallo adora le carote.','Ci vediamo al club house per una merenda?','Dalla strada a nord si arriva in città.','Il sentiero a est porta alla spiaggia.','Nel bosco ci sono anche i cinghiali!','Hai già fatto la doccia al tuo cavallo?','Che caldo oggi, ci vorrebbe un gelato!','In campo stanno saltando gli ostacoli.'];
 const TALK_KID=['Giochiamo a rincorrerci!','Mi fai accarezzare il cavallo?','Da grande voglio fare le gare di salto!','Hai visto il gatto? È velocissimo!','Io ho un pony che si chiama Biscotto!'];
-function socialTargets(){const pp=G.state==='ride'?{x:R.x,z:R.z}:{x:F.x,z:F.z};let per=null,pd=G.state==='ride'?4.5:2.8,pet=null,ptd=2.2;
+function socialTargets(){const pp=(G.state==='ride'||G.state==='drive')?{x:R.x,z:R.z}:{x:F.x,z:F.z};let per=null,pd=(G.state==='ride'||G.state==='drive')?4.5:2.8,pet=null,ptd=2.2;
   for(const a of (W().agents||[])){if(a.disabled||!a.ent.root.visible)continue;const e=a.ent;
     if(e.npc&&!e.horse){const d=Math.hypot(a.x-pp.x,a.z-pp.z);if(d<pd){pd=d;per=a;}}
     const cands=[];if(e.root.userData.pet)cands.push(e.root);if(a.extra)a.extra.forEach(o=>{if(o.userData&&o.userData.pet)cands.push(o);});
@@ -394,7 +398,7 @@ function socialActions(A,riding){
 }
 function interact(a,kind){
   const e=a.ent,n=e.npc,nm=e.name;a.talkT=kind==='play'?4:3.2;
-  const pp=G.state==='ride'?{x:R.x,z:R.z}:{x:F.x,z:F.z};
+  const pp=(G.state==='ride'||G.state==='drive')?{x:R.x,z:R.z}:{x:F.x,z:F.z};
   if(G.state==='foot')G.ia={kind,t:a.talkT,tx:a.x,tz:a.z};
   if(kind==='wave'){a.talkPose='wave';msg('👋 '+nm+': <small>Ciao '+EQ.pname()+'!</small>',2.4);EQ.sfx.ok();}
   else if(kind==='talk'){a.talkPose='talk';const L=n.o.kid?TALK_KID:TALK;msg('💬 '+nm+'<small>“'+EQ.pick(L)+'”</small>',3.4);EQ.sfx.click();}
@@ -763,7 +767,7 @@ function lightBar(g,y,cols){const L=[];cols.forEach((c,i)=>{const m=new THREE.Me
 function sideLabel(g,text,bg,y,W2,L){const t=EQ.labelTex(text,{bg,w:512,h:96,radius:6,font:'bold 64px Fredoka, Trebuchet MS, sans-serif'});for(const sd of [1,-1]){const m=new THREE.Mesh(new THREE.PlaneGeometry(L,L*96/512),new THREE.MeshBasicMaterial({map:t}));m.position.set(sd*(W2/2+.03),y,0);m.rotation.y=sd*Math.PI/2;g.add(m);}}
 function callEmergency(kind,victim){
   const w=W();if(w.name!=='city'||G.em.some(v=>v.kind===kind))return;
-  const pp=victim?{x:victim.kn.x,z:victim.kn.z}:{x:G.state==='ride'?R.x:F.x,z:G.state==='ride'?R.z:F.z};
+  const pp=victim?{x:victim.kn.x,z:victim.kn.z}:{x:(G.state==='ride'||G.state==='drive')?R.x:F.x,z:(G.state==='ride'||G.state==='drive')?R.z:F.z};
   const rt=roadRoute(pp.x,pp.z);if(!rt)return;
   const g=new THREE.Group();let lights,crew=[];
   if(kind==='pol'){g.add(new THREE.Mesh(EQ.carGeo('sedan',0x1f3b7a),EQ.CARMAT));lights=lightBar(g,1.58,[0x2a6bff,0x2a6bff]);sideLabel(g,'POLIZIA','#1f3b7a',.75,1.82,1.8);
@@ -782,7 +786,7 @@ function emUpdate(dt){
   G.em=G.em.filter(v=>{
     v.t+=dt;const blink=Math.floor(v.t*6)%2;v.lights.forEach((m,i)=>m.material.emissiveIntensity=(i%2===blink)?3:0);
     v.sirT-=dt;if(v.sirT<=0&&v.state!=='done'){v.sirT=3.6;EQ.sfx.siren();}
-    const pp=G.state==='ride'?{x:R.x,z:R.z}:{x:F.x,z:F.z};
+    const pp=(G.state==='ride'||G.state==='drive')?{x:R.x,z:R.z}:{x:F.x,z:F.z};
     if(v.state==='drive'||v.state==='leave'){const tgt=v.state==='drive'?v.rt.to:v.rt.out;const g=v.g;const dx=tgt.x-g.position.x,dz=tgt.z-g.position.z,d=Math.hypot(dx,dz);
       let sp=Math.min(14,d*1.2+2);const fx=Math.sin(g.rotation.y),fz=Math.cos(g.rotation.y),qx=pp.x-g.position.x,qz=pp.z-g.position.z,ah=qx*fx+qz*fz;if(ah>0&&ah<7&&Math.abs(qx*fz-qz*fx)<2.6)sp=0;
       g.position.x+=dx/d*sp*dt;g.position.z+=dz/d*sp*dt;v.cols[0].x=g.position.x+fx*1.2;v.cols[0].z=g.position.z+fz*1.2;v.cols[1].x=g.position.x-fx*1.2;v.cols[1].z=g.position.z-fz*1.2;
@@ -805,11 +809,102 @@ function onArrive(v){
     if(G.state==='ride'){R.sp=0;}}
   else EQ.sfx.whistle();
 }
+/* ======================= VEICOLI: auto, bici, monopattini, moto ======================= */
+const VEH={car:{name:'l\'auto',verb:'🚗 Guida l\'auto',max:22,acc:6,r:1.0,pose:'drive',seat:[.38,.05,-.25]},
+  bike:{name:'la bici',verb:'🚲 Prendi la bici',max:8.5,acc:3.2,r:.5,pose:'pedal',seat:[0,-.02,-.2]},
+  scooter:{name:'il monopattino',verb:'🛴 Prendi il monopattino',max:7,acc:2.8,r:.45,pose:'scooter',seat:[0,.14,-.05]},
+  moto:{name:'la moto',verb:'🏍️ Guida la moto',max:20,acc:7,r:.6,pose:'moto',seat:[0,-.05,-.28]}};
+function makeVeh(w,kind,x,z,h,col){
+  const g=new THREE.Group(),inner=new THREE.Group();g.add(inner);
+  const m=kind==='car'?EQ.buildCar(EQ.pick(['hatch','sedan','suv','hatch']),col):kind==='bike'?EQ.buildBike(col):kind==='scooter'?EQ.buildScooter(col):EQ.buildMoto(col);
+  inner.add(m);g.position.set(x,w.height(x,z),z);g.rotation.y=h;w.group.add(g);
+  const V={kind,g,inner,x,z,h,sp:0,tip:0,lean:0,cols:kind==='car'?[{x:0,z:0,r:1.05,h:1.4,car:true},{x:0,z:0,r:1.05,h:1.4,car:true}]:[{x:0,z:0,r:.45,h:.9}]};
+  w.colliders.push(...V.cols);parkCols(V);(w.vehicles=w.vehicles||[]).push(V);return V;}
+function parkCols(V){const fx=Math.sin(V.h),fz=Math.cos(V.h);V.cols.forEach((c,i)=>{const k=V.cols.length>1?(i?-1.2:1.2):0;c.x=V.x+fx*k;c.z=V.z+fz*k;c.off=false;});}
+function spawnVehicles(w){if(w.vehSpawned)return;w.vehSpawned=true;const n=w.name,mk=(k,x,z,h,c)=>makeVeh(w,k,x,z,h,c);
+  if(n==='yard'){mk('car',20.2,49,0);mk('car',26.6,41,Math.PI);mk('car',13.8,41,Math.PI);mk('car',5.6,66,0);mk('bike',5,40,0);mk('bike',5,41.6,0);mk('scooter',5,43.2,0);mk('moto',5.2,45.6,0);}
+  else if(n==='city'){mk('car',14,-23.3,Math.PI/2);mk('car',-14,-32.7,-Math.PI/2);mk('car',32.7,-62,0);mk('car',-32.7,-90,Math.PI);
+    mk('bike',-8,-24.2,Math.PI/2);mk('bike',-6.5,-24.2,Math.PI/2);mk('scooter',-5,-24.2,Math.PI/2);mk('scooter',-3.8,-24.2,Math.PI/2);mk('moto',4,-24.2,Math.PI/2);mk('moto',6,-24.2,Math.PI/2);}
+  else if(n==='beach'){const sh=w.shore;mk('bike',-40,5,Math.PI/2);mk('scooter',-40,7,Math.PI/2);mk('moto',-44,5.5,Math.PI/2);mk('car',sh(260)-49.6,260,0);mk('bike',sh(-30)-18,-26,Math.PI/2);}
+  else if(n==='forest'){const s=w.spawn,rx=-Math.cos(s.h),rz=Math.sin(s.h);mk('bike',s.x+rx*3,s.z+rz*3,s.h);mk('bike',s.x+rx*3.4-Math.sin(s.h)*2,s.z+rz*3.4-Math.cos(s.h)*2,s.h);mk('moto',s.x-rx*3.4,s.z-rz*3.4,s.h);}
+}
+spawnVehicles(yard);
+function nearVeh(){let b=null,bd=9;for(const V of (W().vehicles||[])){if(V===G.veh)continue;const d=Math.hypot(V.x-F.x,V.z-F.z)-(V.kind==='car'?1.4:0);if(d<2.2&&d<bd){bd=d;b=V;}}return b;}
+function vehActions(A){if(G.state!=='foot'||G.swim||G.sit)return;const V=nearVeh();if(!V)return;
+  A.push({id:'veh',icon:V.tip?'🔧':VEH[V.kind].verb.split(' ')[0],label:V.tip?'Rialza '+VEH[V.kind].name:VEH[V.kind].verb.slice(VEH[V.kind].verb.indexOf(' ')+1),fn:()=>enterVeh(V)});}
+function enterVeh(V){
+  if(G.leading){waitHere();msg((G.cur?G.cur.def.name:'Il cavallo')+' ti aspetta qui',1.6);}
+  const w=W();w.colliders=w.colliders.filter(c=>!V.cols.includes(c));w.vehicles=w.vehicles.filter(x=>x!==V);
+  scene.attach(V.g);V.tip=0;V.inner.rotation.z=0;V.sp=0;V.lean=0;
+  const D=VEH[V.kind];V.g.add(P.root);P.root.position.set(D.seat[0],D.seat[1],D.seat[2]);P.root.rotation.set(0,0,0);P.pose(1,D.pose,{snap:true});
+  G.veh=V;G.state='drive';setTouchMode('foot');$('gait').classList.add('on');snapCam();
+  if(V.kind==='car'){EQ.sfx.buckle();setTimeout(()=>EQ.sfx.engine(.5),300);}else EQ.sfx.click();
+  msg({car:'🚗 Si parte!',bike:'🚲 Pedala!',scooter:'🛴 Via!',moto:'🏍️ Brum brum!'}[V.kind]+'<small>trascina in su per andare, in giù per frenare</small>',2.2);
+}
+function leaveVeh(quiet){const V=G.veh;if(!V)return;G.veh=null;EQ.loop('myengine',0);
+  scene.attach(P.root);P.root.rotation.set(0,0,0);
+  const w=W();w.group.attach(V.g);V.sp=0;parkCols(V);w.colliders.push(...V.cols);(w.vehicles=w.vehicles||[]).push(V);
+  const lx=Math.cos(V.h),lz=-Math.sin(V.h),off=V.kind==='car'?1.6:.9;F.x=V.x+lx*off;F.z=V.z+lz*off;F.h=V.h;F.camYaw=V.h;F.sp=0;
+  const q={x:F.x,z:F.z};EQ.collide(q,.3,w.colliders);F.x=q.x;F.z=q.z;
+  if(!quiet){G.state='foot';setTouchMode('foot');snapCam();}}
+function vehFall(V,sp0){
+  const w=W();scene.updateMatrixWorld();P.root.getWorldPosition(tv);scene.attach(P.root);P.root.rotation.order='YXZ';
+  const fx=Math.sin(V.h),fz=Math.cos(V.h);let tx=V.x+fx*Math.min(3,sp0*.25)+Math.cos(V.h)*.8,tz=V.z+fz*Math.min(3,sp0*.25)-Math.sin(V.h)*.8;const q={x:tx,z:tz};EQ.collide(q,.4,w.colliders);
+  G.veh=null;EQ.loop('myengine',0);w.group.attach(V.g);V.tip=1;V.sp=0;V.inner.rotation.z=1.35;parkCols(V);w.colliders.push(...V.cols);(w.vehicles=w.vehicles||[]).push(V);
+  G.fall={t:0,sx:tv.x,sy:tv.y+.9,sz:tv.z,tx:q.x,tz:q.z,h:V.h,course:null,veh:V};
+  G.state='fall';setActions([]);setTouchMode('foot');impactShake(.5);EQ.sfx.crash();EQ.sfx.thud();
+  msg('💥 Sei cadut'+EQ.A()+' da '+VEH[V.kind].name.replace(/^(la |il |l')/,m=>({"la ":'lla ',"il ":'l ',"l'":"ll'"}[m]))+'!',2.4);
+}
+function driveUpdate(dt){
+  const V=G.veh,D=VEH[V.kind],w=W();
+  const inp=G.busy?{x:0,y:0}:EQ.readInput();
+  const thr=-inp.y;let tgt=thr>.1?thr*D.max:thr<-.35?-D.max*.25:0;
+  if(G.slowT>0)tgt=Math.min(tgt,4);
+  const acc=(tgt>V.sp?D.acc:(thr<-.35&&V.sp>0?D.acc*2.2:D.acc*.6));V.sp+=U.clamp(tgt-V.sp,-acc*dt,acc*dt);
+  const steer=U.clamp(inp.x,-1,1);const tr=(V.kind==='car'?.11:.16)*U.clamp(Math.abs(V.sp)/3,0,1)*(1-Math.min(.6,Math.abs(V.sp)/40));
+  V.h-=steer*tr*V.sp*dt*(V.kind==='car'?1:1.2)*(V.sp<0?1:1);
+  const px=V.x,pz=V.z,fx=Math.sin(V.h),fz=Math.cos(V.h);
+  V.x+=fx*V.sp*dt;V.z+=fz*V.sp*dt;
+  // urti con persone, auto, vetrine (stessa logica del cavallo)
+  const sg=V.sp<0?-1:1;R.x=V.x;R.z=V.z;R.h=V.h;R.y=0;R.sp=Math.abs(V.sp);R.px=px;R.pz=pz;const sp0=R.sp;
+  if(sp0>3.2){impacts(fx*sg,fz*sg,w.colliders);if(R.sp<sp0-.2){V.sp=sg*R.sp;V.x=R.x;V.z=R.z;
+    if(V.kind!=='car'&&sp0>4.5){vehFall(V,sp0);return;}}}
+  // collisioni
+  const pos={x:V.x,z:V.z};let hit=EQ.collide(pos,D.r,w.colliders);
+  if(V.kind==='car'){const a={x:V.x+fx*1.2,z:V.z+fz*1.2},b={x:V.x-fx*1.2,z:V.z-fz*1.2};
+    if(EQ.collide(a,1.0,w.colliders)){pos.x+=a.x-(V.x+fx*1.2);pos.z+=a.z-(V.z+fz*1.2);hit=true;}
+    if(EQ.collide(b,1.0,w.colliders)){pos.x+=b.x-(V.x-fx*1.2);pos.z+=b.z-(V.z-fz*1.2);hit=true;}}
+  for(const j of (w.jumps||[])){if(EQ.segX(px+fx*D.r*2,pz+fz*D.r*2,pos.x+fx*D.r*2,pos.z+fz*D.r*2,j.ax,j.az,j.bx,j.bz)){pos.x=px;pos.z=pz;hit=true;break;}}
+  if(w.water(pos.x,pos.z)-w.height(pos.x,pos.z)>.45){pos.x=px;pos.z=pz;hit=true;if(!G.wetMsg){G.wetMsg=1;msg('🌊 Non si può guidare in acqua!',1.6);setTimeout(()=>G.wetMsg=0,3000);}}
+  const b=w.bounds;if(b){pos.x=U.clamp(pos.x,b.x0,b.x1);pos.z=U.clamp(pos.z,b.z0,b.z1);}
+  if(w.boundR){const d=Math.hypot(pos.x,pos.z);if(d>w.boundR){pos.x*=w.boundR/d;pos.z*=w.boundR/d;}}
+  V.x=pos.x;V.z=pos.z;
+  if(hit){const sp=Math.abs(V.sp);
+    if(sp>6){impactShake(Math.min(.8,sp*.04));if(V.kind==='car'){EQ.sfx.crash();if(sp>12)msg('💥 Che botta!',1.4);}else if(sp>5){vehFall(V,sp);return;}else EQ.sfx.bump();}
+    V.sp*=V.kind==='car'?-.15:0;}
+  // portali
+  if(G.portalCd>0)G.portalCd-=dt;
+  else if(w.portals&&!G.busy){for(const pt of w.portals){if(Math.hypot(V.x-pt.x,V.z-pt.z)<7){G.portalCd=5;travel(pt.to,G.loc);break;}}}
+  const gy=w.height(V.x,V.z);
+  V.lean=U.lerp(V.lean,V.kind==='car'?0:U.clamp(steer*Math.abs(V.sp)*.05,-.45,.45),Math.min(1,dt*5));
+  V.g.position.set(V.x,gy,V.z);V.g.rotation.y=V.h;V.inner.rotation.z=V.lean;
+  if(V.kind==='car'){V.inner.rotation.x=U.lerp(V.inner.rotation.x,-U.clamp((tgt-V.sp)*.004,-.03,.03),Math.min(1,dt*4));}
+  P.pose(dt,D.pose,{speed:Math.abs(V.sp),steer});
+  if(V.kind==='car'||V.kind==='moto')EQ.loop('myengine',.12+Math.abs(V.sp)*.008,70+Math.abs(V.sp)*(V.kind==='moto'?14:8),1.4,'lowpass');
+  R.x=V.x;R.z=V.z;R.h=V.h;R.sp=Math.abs(V.sp);
+  const kmh=Math.round(Math.abs(V.sp)*3.6);$('gaitTx').textContent={car:'🚗',bike:'🚲',scooter:'🛴',moto:'🏍️'}[V.kind]+' '+kmh+' km/h'+(V.sp<-.3?' (retro)':'');$('spd').style.width=Math.min(100,Math.abs(V.sp)/D.max*100)+'%';
+  const por=EQ.portrait,cd=V.kind==='car'?(por?9:7.5):(por?6.5:5.2);
+  followCam(V.x,gy,V.z,V.h,cd+Math.abs(V.sp)*.06,V.kind==='car'?(por?3.8:3.1):(por?3:2.5),3,1.2,dt,6);
+  if(!G.busy){const A=[];if(Math.abs(V.sp)<1.5)A.push({id:'vout',icon:'⬇️',label:'Scendi',fn:()=>leaveVeh()});
+    A.push({id:'horn',icon:V.kind==='car'||V.kind==='moto'?'📯':'🔔',label:V.kind==='car'||V.kind==='moto'?'Clacson':'Campanello',fn:()=>{(V.kind==='car'||V.kind==='moto'?EQ.sfx.honk2:EQ.sfx.bikebell)();}});
+    setActions(A);}
+}
 function travel(to,from,noFade){
   $('trip').classList.remove('on');['pause','results'].forEach(k=>$(k).classList.remove('on'));
   const txt=to==='yard'?'Si torna al maneggio…':PLACE[to][2];
   (noFade?(t,cb)=>cb():fade)(txt,()=>{
     endCourse(true);
+    if(G.veh&&G.cur){if(G.cur.guest)releaseGuest();else{placeInBox(G.cur);G.cur=null;}}
     const H=G.cur;
     horses.forEach(h=>{if(h!==H&&h.where==='wait')placeInBox(h);});
     G.em=[];G.dmg={shop:0,car:0,ppl:0};
@@ -821,16 +916,18 @@ function travel(to,from,noFade){
     G.world=w;G.loc=to;EQ.setSky(w.sky);
     const pt=from&&w.portals?w.portals.find(p=>p.to===from):null;
     let s=pt?{x:pt.x+Math.sin(pt.inH)*16,z:pt.z+Math.cos(pt.inH)*16,h:pt.inH}:(to==='yard'?w.spawnRide:w.spawn);
-    R.x=s.x;R.z=s.z;R.h=s.h;R.sp=pt?6:0;R.y=0;R.vy=0;R.grounded=true;H.x=R.x;H.z=R.z;H.h=R.h;
+    R.x=s.x;R.z=s.z;R.h=s.h;R.sp=pt?6:0;R.y=0;R.vy=0;R.grounded=true;if(H){H.x=R.x;H.z=R.z;H.h=R.h;}
+    if(G.veh){const V=G.veh;V.x=s.x;V.z=s.z;V.h=s.h;V.sp=pt?5:0;}
+    spawnVehicles(w);
     G.portalCd=3;
     if(to!=='yard'){const ig=new THREE.Group();w.group.add(ig);
       G.trip={kind:to,items:w.items.map(it=>{const m=itemMesh(w.itemKind);m.position.set(it.x,it.y,it.z);ig.add(m);return{m,got:false,x:it.x,z:it.z};}),count:0,time:0,done:false};
       $('timer').classList.add('on');
       setTimeout(()=>msg(PLACE[to][0]+' '+PLACE[to][1]+'!<small>trova '+w.items.length+' '+ITEM_INFO[w.itemKind][1].toLowerCase()+'</small>',3),400);}
-    else{applyRideDirt(H);persist();setTimeout(()=>msg('Bentornat'+EQ.A()+' al maneggio!<small>scendi e dai da mangiare a '+H.def.name+'</small>',3),400);}
+    else if(H){applyRideDirt(H);persist();setTimeout(()=>msg('Bentornat'+EQ.A()+' al maneggio!<small>scendi e dai da mangiare a '+H.def.name+'</small>',3),400);}
     if(G.mission&&from==='city'&&G.mission.k===to){G.stars++;LS.set('stars',G.stars);setTimeout(()=>msg('⭐ Obiettivo completato!<small>'+G.mission.t+' · stelle: '+G.stars+'</small>',2.6),3600);}
     G.mission=null;if(to==='city')newMission();
-    G.state='ride';setTouchMode('ride');hud(true);snapCam();
+    if(G.veh){G.state='drive';setTouchMode('foot');$('gait').classList.add('on');}else{G.state='ride';setTouchMode('ride');}hud(true);snapCam();
   },250);
 }
 function goTrip(kind,noFade){travel(kind,null,noFade);}
@@ -1080,7 +1177,7 @@ $('rBtns').addEventListener('click',e=>{const b=e.target.closest('[data-r]');if(
   if(r==='stay'){fade('',()=>{endCourse(true);G.state=G.cur&&G.cur.where==='ride'?'ride':'foot';R.sp=0;});}
 });
 let prevState=null;
-function pause(){if(G.busy||!['foot','ride','act'].includes(G.state))return;prevState=G.state;G.state='paused';
+function pause(){if(G.busy||!['foot','ride','act','drive'].includes(G.state))return;prevState=G.state;G.state='paused';
   $('homeBtn').style.display=G.world!==yard?'':'none';$('restartBtn').style.display=G.course?'':'none';renderMenu();$('pause').classList.add('on');
   if(G.course&&G.course.state==='count'){clearInterval(G.cdI);$('count').classList.remove('on');G.course.state='run';}}
 function resume(){$('pause').classList.remove('on');G.state=prevState||'foot';last=performance.now();}
@@ -1106,7 +1203,7 @@ function updateHud(dt){
   hudT-=dt;if(hudT>0)return;hudT=.25;
   if(G.course){const C=G.course;$('infoT').textContent='🏆 Livello '+(C.l+1)+' · '+LEVELS[C.l].name;$('infoS').textContent=C.next<C.obs.length?`Ostacolo ${C.next+1} di ${C.obs.length}`:'Arrivo!';$('tasks').innerHTML='';
     $('timer').textContent='⏱ '+fmt(C.time)+(C.faults?'  ❌ '+C.faults:'');}
-  else if(G.trip){const t=G.trip,inf=ITEM_INFO[W().itemKind];$('infoT').textContent=PLACE[t.kind][0]+' '+PLACE[t.kind][1]+' · '+G.cur.def.name;$('infoS').innerHTML=`${inf[0]} ${inf[1]}: ${t.count} di ${t.items.length}`+(G.mission?`<br>🎯 ${G.mission.t} · ⭐${G.stars}`:'')+needsLine();$('tasks').innerHTML='';$('timer').textContent='⏱ '+fmt(t.time);}
+  else if(G.trip){const t=G.trip,inf=ITEM_INFO[W().itemKind];$('infoT').textContent=PLACE[t.kind][0]+' '+PLACE[t.kind][1]+(G.cur?' · '+G.cur.def.name:'');$('infoS').innerHTML=`${inf[0]} ${inf[1]}: ${t.count} di ${t.items.length}`+(G.mission?`<br>🎯 ${G.mission.t} · ⭐${G.stars}`:'')+needsLine();$('tasks').innerHTML='';$('timer').textContent='⏱ '+fmt(t.time);}
   else{const L=tasksList();const nx=L.find(t=>!t[2]);$('infoT').textContent='🏇 '+EQ.pname()+' · Maneggio';
     $('infoS').innerHTML=(nx?('Prossimo: '+nx[0]+' '+nx[1]):'Tutto fatto! Divertiti 🎉')+needsLine();
     $('tasks').innerHTML=L.map(t=>`<div class="${t[2]?'ok':''}">${t[2]?'✅':'⬜'} ${t[0]} ${t[1]}</div>`).join('')+(G.cur?`<div style="margin-top:4px;color:#ffe08a">${G.cur.def.name}: 🌾${G.cur.stats.hunger|0} 🫧${G.cur.stats.clean|0} ⚡${G.cur.stats.energy|0}</div>`:'');}
@@ -1130,7 +1227,7 @@ function dirTarget(){
 function updateDir(){
   const el=$('dir');const t=(G.state==='foot'||G.state==='ride')?dirTarget():null;
   if(!t){el.classList.remove('on');return;}
-  const px=G.state==='ride'?R.x:F.x,pz=G.state==='ride'?R.z:F.z;
+  const px=(G.state==='ride'||G.state==='drive')?R.x:F.x,pz=(G.state==='ride'||G.state==='drive')?R.z:F.z;
   if(Math.hypot(t.x-px,t.z-pz)<3.5){el.classList.remove('on');return;}
   el.classList.add('on');
   camera.getWorldDirection(tv);const yaw=Math.atan2(tv.x,tv.z);
@@ -1185,11 +1282,12 @@ function frame(now){
     else if(G.state==='ride'){rideUpdate(dt);ppos=G.cur.root.position;missionCheck(R.x,R.z);}
     else if(G.state==='act'){actUpdate(dt);ppos=P.root.position;}
     else if(G.state==='fall'){fallUpdate(dt);ppos=P.root.position;}
+    else if(G.state==='drive'){driveUpdate(dt);ppos=G.veh?G.veh.g.position:P.root.position;missionCheck(R.x,R.z);}
     else if(G.state==='results'||G.state==='modal'){if(G.cur&&G.cur.where==='ride'){const inpSave=G.lock;G.lock=1;rideUpdate(dt);G.lock=inpSave;}ppos=G.cur?G.cur.root.position:P.root.position;}
     else ppos=G.cur&&G.cur.where==='ride'?G.cur.root.position:P.root.position;
     if(G.state!=='paused'){
       idleHorses(dt);updateFallen(dt);emUpdate(dt);glassFX.update(dt,-9);if(G.slowT>0){G.slowT-=dt;if(G.slowT<=0)msg('Ora puoi tornare a galoppare 🐎',1.8);}if(G.state!=='menu')ambient(dt);
-      G.standers.forEach(n=>{if(n.root.parent){const p=G.state==='ride'?{x:R.x,z:R.z}:{x:F.x,z:F.z};const q=n.root.position;n.root.rotation.y+=U.wrapA(Math.atan2(p.x-q.x,p.z-q.z)-n.root.rotation.y)*Math.min(1,dt*2);n.pose(dt,Math.sin(T*.6)>.8?'wave':'stand',{});}});
+      G.standers.forEach(n=>{if(n.root.parent){const p=(G.state==='ride'||G.state==='drive')?{x:R.x,z:R.z}:{x:F.x,z:F.z};const q=n.root.position;n.root.rotation.y+=U.wrapA(Math.atan2(p.x-q.x,p.z-q.z)-n.root.rotation.y)*Math.min(1,dt*2);n.pose(dt,Math.sin(T*.6)>.8?'wave':'stand',{});}});
       W().update(dt,T,ppos?{x:ppos.x,z:ppos.z}:null);
       for(const k in FX)FX[k].update(dt,k==='dust'?.4:k==='heart'?1:-9);
       if(G.course&&G.course.next<G.course.obs.length){const o=G.course.obs[G.course.next];marker.visible=chev.visible=true;
