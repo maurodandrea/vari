@@ -506,6 +506,20 @@
   .kv:last-child{border-bottom:0;}
   /* ===== Versione PC (schermi larghi): menu laterale, contenuti su due colonne, finestre al centro ===== */
   .hnav{display:none;}
+  /* barra in basso del telefono: 1,5 volte più grande */
+  @media (max-width:999px){
+    main{padding-bottom:170px;}
+    nav{width:calc(100% - 10px);bottom:calc(6px + env(safe-area-inset-bottom));padding:9px 4px;gap:0;border-radius:30px;}
+    nav button{padding:13px 0 11px;gap:5px;font-size:14px;letter-spacing:-.2px;border-radius:24px;}
+    nav button svg{width:33px;height:33px;}
+    nav button .lk{right:calc(50% - 30px);font-size:15px;}
+    nav .fabcol{flex:1.2;margin-top:-40px;gap:6px;}
+    nav .fab .fb{width:72px;height:66px;border-radius:22px;}
+    nav .fab .fb svg{width:28px;height:28px;}
+    nav .fab em{font-size:14px;}
+    nav .fabalt{flex-direction:column;gap:4px;padding:6px 10px;font-size:14px;border-radius:18px;}
+    nav .fabalt svg{width:30px;height:30px;}
+  }
   @media (min-width:1000px){
     #app{max-width:1320px;padding-left:250px;}
     header{padding:18px 28px 12px;}
