@@ -480,6 +480,17 @@ EQ.buildGiorgia=function(){
       tg.pelY=.62;tg.th[0]=[-1.2,0,.15];tg.th[1]=[-.6,0,-.15];tg.kn[0]=1.9;tg.kn[1]=1.3;tg.torsoX=.6;tg.sh[1]=[-1.1+Math.sin(time*10)*.2,0,-.1];tg.el[1]=[-.6,0];tg.sh[0]=[-1.0,0,.1];tg.el[0]=[-.4,0];
     } else if(name==='mirror'){
       tg.sh[0]=[0,0,.35+Math.sin(time*1.5)*.05];tg.sh[1]=[0,0,-.35];tg.el[0]=[-.2,0];tg.el[1]=[-.2,0];tg.headY=Math.sin(time*.8)*.25;
+    } else if(name==='sit'){
+      tg.pelY=.5;tg.th=[[-1.5,0,.08],[-1.5,0,-.08]];tg.kn=[1.5,1.5];tg.torsoX=.08;tg.sh=[[-.75,0,.18],[-.75,0,-.18]];tg.el=[[-.5,0],[-.5,0]];
+      if(p.talk){tg.sh[1]=[-.9+Math.sin(time*5)*.2,0,-.3];}
+    } else if(name==='pet'){
+      tg.sh[1]=[-1.85+Math.sin(time*5)*.18,0,-.2+Math.cos(time*5)*.08];tg.el[1]=[-.25,0];tg.torsoX=.06;tg.headX=-.2;
+    } else if(name==='petlow'){
+      tg.pelY=.55;tg.th=[[-1.6,0,.2],[-1.0,0,-.2]];tg.kn=[2.0,1.6];tg.torsoX=.55;tg.sh[1]=[-1.0+Math.sin(time*5)*.2,0,-.15];tg.el[1]=[-.4,0];
+    } else if(name==='talk'){
+      tg.sh[1]=[-.6+Math.sin(time*4)*.25,0,-.25];tg.el[1]=[-.8,0];tg.sh[0]=[-.3+Math.cos(time*3)*.15,0,.2];tg.headY=Math.sin(time*2)*.1;
+    } else if(name==='play'){
+      const k=Math.abs(Math.sin(time*6));tg.pelY=.9+k*.12;tg.sh=[[-2.6+k*.4,0,.5],[-2.6+k*.4,0,-.5]];tg.el=[[-.2,0],[-.2,0]];
     } else if(name==='wave'){
       tg.sh[1]=[0,0,-2.6];tg.el[1]=[-.3+Math.sin(time*10)*.4,0];
     }
