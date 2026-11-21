@@ -404,7 +404,12 @@ function buildNpcs(){const defs=[
     {x:52,col:{j:'#6b6a4a',j2:'#55543a',c:'#c9b78a',p:'#3a3a32',suit:'jacket',hat:'bucket',beard:'full',beardCol:'#e8e6e0',hair:'#d8d6d0',glasses:true,boots:'shoes',skin:'#e0b098'}}];
   const PERS=[{name:'Franco',age:64,town:'Acilia',yrs:35,bait:'bibi',lead:150,rig:'lungo',app:true,mood:'chiacchierone'},{name:'Peppe',age:51,town:'Ostia',yrs:20,bait:'arenicola',lead:175,rig:'corto',app:false,mood:'brontolone'},
     {name:'Marco',age:33,town:'Torvaianica',yrs:8,bait:'koreano',lead:125,rig:'2ami',app:true,mood:'entusiasta'},{name:'Luigi',age:72,town:'Roma, Garbatella',yrs:50,bait:'cannolicchio',lead:150,rig:'lungo',app:false,mood:'saggio'}];
-  defs.forEach((d,k)=>d.per=PERS[k]);defs.length=Math.min(defs.length,SPOT.npcs||4);
+  // i pescatori vengono dai paesi vicini allo spot
+  const TOWNS={tarquinia:['Tarquinia','Montalto di Castro','Viterbo','Civitavecchia'],civitavecchia:['Civitavecchia','Santa Marinella','Tolfa','Allumiere'],fregene:['Fregene','Maccarese','Fiumicino','Roma, Aurelio'],
+    focene:['Focene','Fiumicino','Maccarese','Roma, Magliana'],fiumicino:['Fiumicino','Isola Sacra','Ostia','Roma, Portuense'],ostia:['Ostia','Acilia','Infernetto','Roma, EUR'],castelporziano:['Acilia','Ostia','Torvaianica','Roma, Garbatella'],
+    torvaianica:['Torvaianica','Pomezia','Ardea','Roma, Laurentino'],anzio:['Anzio','Nettuno','Lavinio','Aprilia'],latina:['Latina','Borgo Sabotino','Cisterna di Latina','Sermoneta'],sabaudia:['Sabaudia','San Felice Circeo','Terracina','Pontinia']};
+  const tw=TOWNS[(SPOT.id||'').replace(/^g_/,'')]||TOWNS.castelporziano;
+  defs.forEach((d,k)=>d.per={...PERS[k],town:tw[k%tw.length]});defs.length=Math.min(defs.length,SPOT.npcs||4);
   for(const d of defs){const a={per:d.per,bag:Array.from({length:Math.floor(rnd(0,3))},()=>npcFish(d.per.bait)),obj:makeAngler(d.col),pose:JSON.parse(JSON.stringify(POSES.sit)),target:'sit',walk:0,moving:false,speed:1.2,pos:new T.Vector3(d.x,12*.035,12),rotY:rnd(-.2,.2),holding:-1,reelSpin:0,crank:0,faceTo:null,
       home:{x:d.x,z:12},rods:[],t:rnd(5,30),st:'sit'};scene.add(a.obj);
     const ch=new T.Mesh(new T.BoxGeometry(.42,.03,.36),new T.MeshStandardMaterial({color:'#4b5a36'}));ch.position.set(d.x,12*.035+.56,12.05);scene.add(ch);
@@ -923,7 +928,7 @@ function answer(a,q){const P=a.per,w=wxAt(st.gt),per=period(gameDate()),bag=a.ba
   const tot=bag.length,best=bag.slice().sort((x,y)=>y.w-x.w)[0];
   switch(q){
     case 'come':return P.mood==='brontolone'?pick(['Male, troppa corrente.','Si mangia poco oggi, colpa della luna.','Granchi ovunque, che strazio.']):tot?`Bene dai! Ho già preso ${tot} ${tot>1?'pesci':'pesce'}.`:pick(['Ancora niente, ma è presto.','Tranquillo, si aspetta.','Tocche sì, pesci no!']);
-    case 'nome':return `Mi chiamo ${P.name}, ho ${P.age} anni e vengo da ${P.town}. Pesco qui a Castelporziano da ${P.yrs} anni.`;
+    case 'nome':return `Mi chiamo ${P.name}, ho ${P.age} anni e vengo da ${P.town}. Pesco qui a ${SPOT.name.split(' · ')[0]} da ${P.yrs} anni.`;
     case 'preso':return tot?`Finora: ${bag.map(f=>f.n.toLowerCase()+' '+Math.round(f.l)+' cm').join(', ')}.${best&&best.w>1?' Quella grossa l\'ho portata a riva a fatica!':''}`:pick(['Niente di niente, solo alghe.','Zero. Un granchio, se vale.','Per ora il cappotto.']);
     case 'esca':return `Io vado di ${B1}${P.bait==='bibi'?': le orate ci impazziscono':P.bait==='arenicola'?': profuma e porta saraghi e spigole':P.bait==='koreano'?': resiste e piace alle mormore':': per orate e ombrine non c\'è di meglio'}. Sulla battigia trovi anche i granchietti: li prendi e li inneschi.`;
     case 'mont':return `Piombo da ${P.lead} grammi, terminale ${P.rig==='2ami'?'a due ami':P.rig==='corto'?'corto da 70 cm':'lungo due metri'}, amo ${P.rig==='2ami'?'n. 4':'n. 2'}. ${w.wave>1?'Con questo mare non scendere sotto i '+suggestLead(w.wave)+' grammi.':'Col mare calmo allunga il terminale.'}`;
