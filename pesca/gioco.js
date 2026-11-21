@@ -902,8 +902,8 @@ function draw3D(dt){const c=MP.car,P=carPose(),car=M3.car;M3.t+=dt;const t=M3.t;
   M3.pins.forEach((p,i)=>{p.position.y=.008+Math.sin(t*2.2+i)*.006;p.children[0].parent.rotation.y=t*.8;});
   for(const k of M3.cars){k.s+=k.d*k.v*dt;if(k.s<0)k.s+=MP.len;if(k.s>MP.len)k.s-=MP.len;const r=roadAt(k.s),h=roadDir(k.s),hx=h[0]*k.d,hy=h[1]*k.d;k.o.position.set(r.x+hy*.0075,0,-(r.y-hx*.0075));k.o.rotation.y=Math.atan2(hx,-hy);}
   if(!(M3.lmT>0)){M3.lmT=.5;let best=null,bd=1.3;for(const L of LMK){const q=L.q||(L.q=PJ(L.lat,L.lon)),d=Math.hypot(q[0]-P.x,q[1]-P.y);if(d<bd){bd=d;best=L;}}const h=best?`<div>📍 ${best.n} · ${Math.round(bd*20)*50} m</div>`:'';if(hud.innerHTML!==h)hud.innerHTML=h;}else M3.lmT-=dt;
-  // giorno e notte: sole vero dove si trova l'auto (con la stessa mezz'ora di luce in più della spiaggia)
-  if(!(M3.nT>0)){M3.nT=1;const d=new Date(),la=P.y/KY+LAT0,lo=P.x/KX+LON0,s0=sunPos(d,la,lo),sun=sunPos(new Date(d.getTime()+30*60e3*clamp((180-s0.az)/30,-1,1)),la,lo);M3.N=clamp((-sun.alt+2)/10,0,1);}else M3.nT-=dt;
+  // giorno e notte: sole vero dove si trova l'auto, con il buio che arriva mezz'ora prima (e la luce mezz'ora dopo)
+  if(!(M3.nT>0)){M3.nT=1;const d=new Date(),la=P.y/KY+LAT0,lo=P.x/KX+LON0,s0=sunPos(d,la,lo),sun=sunPos(new Date(d.getTime()+30*60e3*clamp((s0.az-180)/30,-1,1)),la,lo);M3.N=clamp((-sun.alt+4)/11,0,1);}else M3.nT-=dt;
   if(Math.abs(M3.N-M3.Nap)>.01){const N=M3.N;M3.Nap=N;M3.tint=new T.Color().setRGB(1-N*.84,1-N*.82,1-N*.7);for(const o of SAT.cache.values())if(o.m)o.m.material.color.copy(M3.tint);
     const sky=new T.Color('#9fd3f0').lerp(new T.Color('#08111f'),N),fogc=new T.Color('#b4dcf2').lerp(new T.Color('#08111f'),N);M3.S.background.copy(sky);M3.S.fog.color.copy(fogc);
     M3.sun.intensity=1.15*(1-N*.92);M3.hemi.intensity=.75*(1-N*.78);M3.beamMat.opacity=clamp((N-.25)*1.4,0,.85);M3.glowMat.opacity=clamp((N-.2)*1.2,0,.9);}
