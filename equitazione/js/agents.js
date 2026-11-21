@@ -20,6 +20,36 @@ const rect=(x,z,hx,hz)=>[[x-hx,z-hz],[x+hx,z-hz],[x+hx,z+hz],[x-hx,z+hz]];
 const ellipse=(x,z,rx,rz,n)=>{const p=[];for(let i=0;i<(n||48);i++){const a=i/(n||48)*TAU;p.push([x+Math.cos(a)*rx,z+Math.sin(a)*rz]);}return p;};
 
 /* ---------- gestione agenti ---------- */
+/* ---------- urti: persone, bici, quad e cavalieri cadono ---------- */
+EQ.knockAgent=function(W,a,dx,dz,sp){
+  if(a.kn||a.disabled)return null;const e=a.ent;let mode=null,obj=e.root;
+  if(e.horse&&e.npc){mode='rider';obj=e.npc.root;W.group.attach(obj);}
+  else if(e.vehicle)mode='vehicle';else if(e.npc)mode='person';else return null;
+  const l=Math.hypot(dx,dz)||1;dx/=l;dz/=l;
+  const k=a.kn={t:0,mode,obj,vx:dx*Math.min(sp,12)*.35,vz:dz*Math.min(sp,12)*.35,lie:2.6+Math.random(),side:Math.random()<.5?1:-1,
+    h:mode==='vehicle'?a.h:Math.atan2(-dx,-dz),x:obj.position.x,z:obj.position.z,y0:obj.position.y};
+  if(mode==='rider'){obj.getWorldPosition(tv);k.x=tv.x+dx*.8;k.z=tv.z+dz*.8;}
+  else{k.x=a.x;k.z=a.z;}
+  obj.rotation.order='YXZ';a.v=0;
+  return mode;
+};
+function knockUpdate(W,a,dt,t){
+  const k=a.kn,e=a.ent,o=k.obj;k.t+=dt;
+  if(k.t<.45){k.x+=k.vx*dt;k.z+=k.vz*dt;}
+  const up=k.lie+(k.hold?99:0);let f=k.t<.35?k.t/.35:k.t<up?1:Math.max(0,1-(k.t-up)/.6);
+  f=f*f*(3-2*f);
+  const gy=W.height?W.height(k.x,k.z):0;
+  if(k.mode==='vehicle'){o.position.set(k.x,gy+(k.t<.35?Math.sin(f*Math.PI)*.3:0),k.z);o.rotation.set(0,k.h,k.side*1.35*f);if(e.vnpc)e.vnpc.pose(dt,f>.5?'stand':'pedal',{speed:0});}
+  else{o.position.set(k.x,gy+.1*f+(k.t<.35?Math.sin(f*Math.PI)*.35:0),k.z);o.rotation.set(-1.45*f,k.h,0);const n=e.npc;if(n)n.pose(dt,f>.9?'stand':'wave',{});}
+  if(k.mode==='rider'){e.horse.animate(dt,{speed:0,headX:-.2});}
+  if(k.t>=up+.6){
+    o.rotation.set(0,k.mode==='vehicle'?k.h:k.h,0);
+    if(k.mode==='rider'){const n=e.npc;e.horse.seat.add(n.root);n.root.position.set(0,-.92*n.s,0);n.root.rotation.set(0,0,0);}
+    else{a.x=k.x;a.z=k.z;a.h=k.h;if(a.tx!=null){a.tx=a.x;a.tz=a.z;}}
+    a.kn=null;
+  }
+}
+const tv=new V3(),tv2=new V3();
 function agents(W){
   if(W.agents)return W.agents;
   const list=W.agents=[];
@@ -27,6 +57,7 @@ function agents(W){
     for(const a of list){
       const d=p?Math.hypot(a.x-p.x,a.z-p.z):0;
       if(a.disabled)continue;
+      if(a.kn){knockUpdate(W,a,dt,t);continue;}
       if(a.talkT>0){a.talkT-=dt;a.near=p?Math.hypot(a.x-p.x,a.z-p.z):0;const e=a.ent;
         if(p&&!e.horse){const ang=Math.atan2(p.x-a.x,p.z-a.z);a.h+=U.wrapA(ang-a.h)*Math.min(1,dt*6);if(e.place)e.place(a.x,e.root.position.y,a.z,a.h);else e.root.rotation.y=a.h;}
         if(e.npc&&!e.horse)e.npc.pose(dt,a.talkPose||'stand',{speed:0});else if(e.anim&&!e.npc)e.anim(dt,0,a,t);
@@ -126,7 +157,6 @@ const swimOpts=(i)=>({swim:true,fem:i%2===0,top:pick(SWIM_COLS),pants:pick(SWIM_
 /* ---------- utilità di scena ---------- */
 function rope(W){const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(6),3));const l=new THREE.Line(g,new THREE.LineBasicMaterial({color:C(0x3355cc)}));l.frustumCulled=false;W.group.add(l);
   return {l,set(a,b){const p=g.attributes.position;p.setXYZ(0,a.x,a.y,a.z);p.setXYZ(1,b.x,b.y,b.z);p.needsUpdate=true;}};}
-const tv=new V3(),tv2=new V3();
 
 EQ.populate={};
 /* ======================= MANEGGIO ======================= */
@@ -299,11 +329,11 @@ EQ.populate.forest=function(W){
         e.root.updateMatrixWorld();e.npc.handR.getWorldPosition(tv);tv2.set(tx,H(tx,tz)+.25,tz);rp.set(tv,tv2);if(p&&dd<10&&Math.random()<dt*.3)EQ.sfx.bark();};}}
   // ciclisti
   for(let i=0;i<4;i++){const b=EQ.buildBike();const e=person({fem:i%2===0,helmet:pick([0xf1c40f,0xc0392b,0x2a58c8,0xffffff]),top:pick(EQ.PCOL.TOPS),shorts:true,sleeves:'short'});b.add(e.root);e.root.position.set(0,.18,-.18);
-    W.group.add(b);const ent={root:b,anim:(dt,sp,a)=>{e.npc.pose(dt,'pedal',{speed:sp});}};
+    W.group.add(b);const ent={root:b,vnpc:e.npc,vehicle:'bike',anim:(dt,sp,a)=>{e.npc.pose(dt,'pedal',{speed:sp});}};
     const P2=i<2?loop:Path(W.roads[i-2],false);const a=pathAgent(W,ent,P2,{speed:rnd(4.5,6.5),dir:i%2?1:-1,lat:-1.3,stopR:8,pause:3,far:170,check:(a,tg,p)=>{if(p&&a.near<14&&Math.random()<.004)EQ.sfx.bikebell();return tg;}});addCol(W,a,.5);}
   // quad sugli sterrati
   for(let i=0;i<3;i++){const q=EQ.buildQuadBike();const e=person({fem:i===1,helmet:pick([0x111111,0xc0392b,0x2a58c8]),top:pick(EQ.PCOL.TOPS),pants:0x2a2a2e,sleeves:'long'});q.add(e.root);e.root.position.set(0,.05,-.2);
-    W.group.add(q);const ent={root:q,anim:(dt,sp,a,t)=>{e.npc.pose(dt,'quad',{bob:Math.sin(t*14)*.01*Math.min(1,sp)});if(a.near<45&&sp>1&&Math.random()<dt*10)EQ.sfx.engine(sp/8);}};
+    W.group.add(q);const ent={root:q,vnpc:e.npc,vehicle:'quad',anim:(dt,sp,a,t)=>{e.npc.pose(dt,'quad',{bob:Math.sin(t*14)*.01*Math.min(1,sp)});if(a.near<45&&sp>1&&Math.random()<dt*10)EQ.sfx.engine(sp/8);}};
     const P2=Path(W.roads[i],false);const a=pathAgent(W,ent,P2,{speed:rnd(6,9),lat:-1.3,stopR:12,stopW:3,pause:8,far:200});addCol(W,a,.9);}
   // famiglia al picnic
   if(W.spots.picnic){const pc=W.spots.picnic;W.seats=W.seats||[];W.seats.push({x:pc.x-.5,z:pc.z+1.6,h:Math.PI,y:H(pc.x,pc.z+1.6)});const vars=bakedVariants(4,'sit',()=>({}));placeBaked(W,vars,[{x:pc.x,y:H(pc.x,pc.z-1.6),z:pc.z-1.6,ry:0},{x:pc.x+.7,y:H(pc.x,pc.z-1.6),z:pc.z-1.6,ry:0},{x:pc.x,y:H(pc.x,pc.z+.6),z:pc.z+.6,ry:Math.PI}]);
@@ -320,7 +350,7 @@ EQ.populate.city=function(W){
   const DIRS=[[1,0],[-1,0],[0,1],[0,-1]];
   const makeCar=(type,col,speed)=>{const g=EQ.buildCar(type,col);W.group.add(g);
     const c={g,i:Math.random()*NL|0,j:Math.random()*NL|0,d:Math.random()*4|0,t:0,v:speed,vmax:speed,ox:0,oz:0,pox:0,poz:0,blocked:0,h:0,x:0,z:0,col:{x:0,z:0,r:1.3},col2:{x:0,z:0,r:1.3},L:g.userData.L};
-    const ty=g.userData.type;c.col.h=c.col2.h=(ty==='van'||ty==='bus')?99:ty==='suv'?1.6:1.4;W.colliders.push(c.col,c.col2);
+    const ty=g.userData.type;c.col.car=c.col2.car=true;c.col.h=c.col2.h=(ty==='van'||ty==='bus')?99:ty==='suv'?1.6:1.4;W.colliders.push(c.col,c.col2);
     const valid=(i,j,d)=>{const ni=i+DIRS[d][0],nj=j+DIRS[d][1];return ni>=0&&ni<NL&&nj>=0&&nj<NL;};
     while(!valid(c.i,c.j,c.d))c.d=Math.random()*4|0;
     c.valid=valid;cars.push(c);return c;};
@@ -381,7 +411,7 @@ EQ.populate.city=function(W){
   // ciclisti lungo le strade
   for(let i=0;i<5;i++){const b=EQ.buildBike();const e=person({fem:i%2===0,helmet:pick([0xf1c40f,0xc0392b,0x2a58c8,0xffffff])});b.add(e.root);e.root.position.set(0,.18,-.18);W.group.add(b);
     const c=pick(lines),vert=i%2===0;const pth=Path(vert?[[c,-ext],[c,ext]]:[[-ext,c],[ext,c]],false);
-    const a=pathAgent(W,{root:b,anim:(dt,sp)=>e.npc.pose(dt,'pedal',{speed:sp})},pth,{speed:rnd(4,6),lat:4.3,stopR:7,pause:2,far:160});addCol(W,a,.5);}
+    const a=pathAgent(W,{root:b,vnpc:e.npc,vehicle:'bike',anim:(dt,sp)=>e.npc.pose(dt,'pedal',{speed:sp})},pth,{speed:rnd(4,6),lat:4.3,stopR:7,pause:2,far:160});addCol(W,a,.5);}
   // persone nei parchi coi cani
   W.blocks.filter(b=>b.type==='park'||b.type==='park2').forEach(b=>{for(let i=0;i<2;i++){const d=EQ.buildDog({});W.group.add(d.root);wanderAgent(W,{root:d.root,anim:(dt,sp)=>d.animate(dt,sp)},{x:b.x,z:b.z,hx:18,hz:18},{speed:2.4,run:5,idle:[1,4],step:8,yOff:.15,far:120});}
     const e=addTo(W,person({old:true}));const a=wanderAgent(W,e,{x:b.x,z:b.z,hx:16,hz:16},{speed:.9,idle:[4,10],step:8,yOff:.15});addCol(W,a,.35);});

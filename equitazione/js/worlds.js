@@ -582,7 +582,7 @@ EQ.buildYard=function(){
    const lines=[];for(let x=PK.x-PK.hx+1;x<=PK.x+PK.hx-1;x+=3.2){lines.push(EQ.xform(G.box(.12,.01,5),x,.045,PK.z-PK.hz+3));lines.push(EQ.xform(G.box(.12,.01,5),x,.045,PK.z+PK.hz-3));}
    mesh(EQ.merge(lines),mat(0xf2f2f2,.6),0,0,0,grp).castShadow=false;
    const cg=[];[0,1,2,4,6,7,8].forEach((k,i)=>{const x=PK.x-PK.hx+2.6+k*3.2,top=i%2===0,z=top?PK.z+PK.hz-3:PK.z-PK.hz+3;
-     const g=EQ.carGeo(EQ.pick(['hatch','sedan','suv','van','hatch']),EQ.pick(EQ.CAR_COLS)).clone();g.rotateY(top?0:Math.PI);g.translate(x,0,z);cg.push(g);W.colliders.push({x,z,hx:1,hz:2.3});});
+     const g=EQ.carGeo(EQ.pick(['hatch','sedan','suv','van','hatch']),EQ.pick(EQ.CAR_COLS)).clone();g.rotateY(top?0:Math.PI);g.translate(x,0,z);cg.push(g);W.colliders.push({x,z,hx:1,hz:2.3,h:1.4,car:true});});
    mesh(EQ.merge(cg),EQ.CARMAT,0,0,0,grp);
    // van con rimorchio per cavalli
    const vx=PK.x+PK.hx-4,vz=PK.z;const tr=new THREE.Group();tr.position.set(vx,0,vz);tr.rotation.y=Math.PI/2;grp.add(tr);
@@ -878,7 +878,7 @@ EQ.buildCity=function(){
     const sg=uvScale(G.box(w,gh,d),w*.75,gh,d*.75,1);EQ.xform(sg,0,gh/2,0);sg.rotateY(ry);sg.translate(x,0,z);shopGeos[sk].geos.push(sg);
     const cg=G.box(w+.5,.35,d+.5);EQ.xform(cg,0,gh+uh+.17,0);cg.rotateY(ry);cg.translate(x,0,z);cornGeos.push(cg);
     const rg=roofGeo(w+.3,d+.3,2.2);rg.translate(0,gh+uh+.34,0);rg.rotateY(ry);rg.translate(x,0,z);roofGeos.push(rg);
-    if(shop){const a={x,z,w,ry,gh,c:shop[1]};awn.push(a);}
+    if(shop){const a={x,z,w,ry,gh,c:shop[1],name:shop[0],d};awn.push(a);}
   };
   blocks.filter(b=>b.type==='build').forEach(b=>{
     const dep=10,half=B/2;
@@ -900,12 +900,13 @@ EQ.buildCity=function(){
         pos+=w;
       }
     }
-    W.colliders.push({x:b.x,z:b.z,hx:B/2,hz:B/2});
+    W.colliders.push({x:b.x,z:b.z,hx:B/2,hz:B/2,block:true});
   });
   for(const k in facGeos){const [wc,sc]=[k.slice(0,7),k.slice(7)];mesh(EQ.merge(facGeos[k]),new THREE.MeshStandardMaterial({map:TX.window(wc,sc),roughness:.85}),0,0,0,W.group);}
   for(const k in shopGeos){const s=shopGeos[k];const t=s.shop?TX.shop(s.wc,s.shop[0],s.shop[1]):TX.plaster(s.wc);mesh(EQ.merge(s.geos),new THREE.MeshStandardMaterial({map:t,roughness:.8}),0,0,0,W.group);}
   mesh(EQ.merge(cornGeos),mat(0xf2ead8,.8),0,0,0,W.group);
   mesh(EQ.merge(roofGeos),new THREE.MeshStandardMaterial({map:TX.tiles(),roughness:.85}),0,0,0,W.group);
+  W.shops=awn;
   // tende dei negozi
   {const byC={};awn.forEach(a=>{(byC[a.c]=byC[a.c]||[]).push(a);});
    for(const c in byC){const geos=byC[c].map(a=>{const g=G.box(a.w*.8,.06,1.6);g.rotateX(.35);g.translate(0,a.gh-.35,5+.8);g.rotateY(a.ry);g.translate(a.x,0,a.z);return g;});
@@ -986,7 +987,7 @@ EQ.buildCity=function(){
      const vertical=Math.random()<.5;const tp=EQ.pick(['hatch','hatch','sedan','suv','van']);
      const x=vertical?c+R/2-1.3:s2, z=vertical?s2:c-R/2+1.3, ry=(vertical?0:Math.PI/2)+(Math.random()<.5?Math.PI:0);
      const gg=EQ.carGeo(tp,EQ.pick(EQ.CAR_COLS)).clone();gg.rotateY(ry);gg.translate(x,0,z);geos.push(gg);
-     W.colliders.push({x,z,hx:vertical?1:2.3,hz:vertical?2.3:1,h:tp==='van'?99:tp==='suv'?1.6:1.4});}}
+     W.colliders.push({x,z,hx:vertical?1:2.3,hz:vertical?2.3:1,car:true,h:tp==='van'?99:tp==='suv'?1.6:1.4});}}
    mesh(EQ.merge(geos),EQ.CARMAT,0,0,0,W.group);}
   // scuola con cortile e giochi
   blocks.filter(b=>b.type==='school').forEach(b=>{
