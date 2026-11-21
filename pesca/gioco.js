@@ -27,7 +27,11 @@ const SPOTS=[
   {id:'latina',name:'Latina · Capo Portiere',lat:41.395,lon:12.841,face:215,sand:'#d0b27d',dune:1.1,veg:.8,huts:1,npcs:2},
   {id:'sabaudia',name:'Sabaudia',lat:41.281,lon:13.005,face:215,sand:'#dcc08a',dune:1.7,veg:.9,npcs:2,fishK:{'Orata':1.2,'Mormora':1.2,'Leccia stella':1.3}},
   {id:'sanfelice',name:'San Felice Circeo',lat:41.229,lon:13.11,face:170,sand:'#d8bf90',dune:.3,veg:.9,pines:.4,rocks:.7,huts:1,npcs:3,fishK:{'Sarago maggiore':1.4,'Orata':1.2,'Dentice':1.3}},
-  {id:'terracina',name:'Terracina',lat:41.285,lon:13.22,face:190,sand:'#cdb489',dune:.3,veg:.4,huts:1,city:1,pier:1,npcs:4,fishK:{'Orata':1.2,'Spigola':1.2,'Mormora':1.1}}];
+  {id:'terracina',name:'Terracina',lat:41.285,lon:13.22,face:190,sand:'#cdb489',dune:.3,veg:.4,huts:1,city:1,pier:1,npcs:4,fishK:{'Orata':1.2,'Spigola':1.2,'Mormora':1.1}},
+  {id:'sperlonga',name:'Sperlonga',lat:41.2555,lon:13.4405,face:190,sand:'#e2cf9f',dune:.4,veg:.6,rocks:.6,huts:1,npcs:3,fishK:{'Sarago maggiore':1.4,'Orata':1.2,'Mormora':1.2}},
+  {id:'gaeta',name:'Gaeta · Serapo',lat:41.2138,lon:13.5598,face:215,sand:'#d9c294',dune:.2,veg:.5,rocks:.5,huts:1,city:1,npcs:4,fishK:{'Sarago maggiore':1.5,'Dentice':1.4,'Orata':1.1}},
+  {id:'formia',name:'Formia · Vindicio',lat:41.2552,lon:13.6235,face:185,sand:'#a8987c',dune:.1,veg:.4,huts:1,city:1,pier:1,npcs:3,fishK:{'Spigola':1.2,'Orata':1.2}},
+  {id:'scauri',name:'Scauri · Minturno',lat:41.2505,lon:13.7165,face:200,sand:'#b9a57f',dune:.3,veg:.5,huts:1,npcs:3,fishK:{'Mormora':1.3,'Spigola':1.2,'Ombrina':1.2}}];
 const CIRCEO={lat:41.235,lon:13.06,h:541};
 let SPOT={...SPOTS.find(x=>x.id==='castelporziano'),mode:'coast'};
 let FACE=SPOT.face;         // direzione in cui guarda la spiaggia (verso il mare)
@@ -417,7 +421,7 @@ function buildNpcs(){const defs=[
   const PERS=[{name:'Franco',age:64,town:'Acilia',yrs:35,bait:'bibi',lead:150,rig:'lungo',app:true,mood:'chiacchierone'},{name:'Peppe',age:51,town:'Ostia',yrs:20,bait:'arenicola',lead:175,rig:'corto',app:false,mood:'brontolone'},
     {name:'Marco',age:33,town:'Torvaianica',yrs:8,bait:'koreano',lead:125,rig:'2ami',app:true,mood:'entusiasta'},{name:'Luigi',age:72,town:'Roma, Garbatella',yrs:50,bait:'cannolicchio',lead:150,rig:'lungo',app:false,mood:'saggio'}];
   // i pescatori vengono dai paesi vicini allo spot
-  const TOWNS={montalto:['Montalto di Castro','Pescia Romana','Canino','Tarquinia'],santamarinella:['Santa Marinella','Civitavecchia','Cerveteri','Tolfa'],santasevera:['Santa Severa','Santa Marinella','Cerveteri','Roma, Boccea'],cerveteri:['Cerveteri','Ladispoli','Valcanneto','Bracciano'],ladispoli:['Ladispoli','Cerveteri','Palo Laziale','Roma, Aurelio'],passoscuro:['Passoscuro','Maccarese','Fiumicino','Torrimpietra'],castelfusano:['Ostia','Acilia','Infernetto','Roma, Eur'],torsanlorenzo:['Ardea','Tor San Lorenzo','Pomezia','Aprilia'],lavinio:['Lavinio','Anzio','Ardea','Aprilia'],nettuno:['Nettuno','Anzio','Velletri','Aprilia'],sanfelice:['San Felice Circeo','Sabaudia','Terracina','Latina'],terracina:['Terracina','Fondi','Sonnino','San Felice Circeo'],tarquinia:['Tarquinia','Montalto di Castro','Viterbo','Civitavecchia'],civitavecchia:['Civitavecchia','Santa Marinella','Tolfa','Allumiere'],fregene:['Fregene','Maccarese','Fiumicino','Roma, Aurelio'],
+  const TOWNS={sperlonga:['Sperlonga','Fondi','Itri','Terracina'],gaeta:['Gaeta','Formia','Itri','Sperlonga'],formia:['Formia','Gaeta','Maranola','Itri'],scauri:['Minturno','Scauri','Formia','Santi Cosma e Damiano'],montalto:['Montalto di Castro','Pescia Romana','Canino','Tarquinia'],santamarinella:['Santa Marinella','Civitavecchia','Cerveteri','Tolfa'],santasevera:['Santa Severa','Santa Marinella','Cerveteri','Roma, Boccea'],cerveteri:['Cerveteri','Ladispoli','Valcanneto','Bracciano'],ladispoli:['Ladispoli','Cerveteri','Palo Laziale','Roma, Aurelio'],passoscuro:['Passoscuro','Maccarese','Fiumicino','Torrimpietra'],castelfusano:['Ostia','Acilia','Infernetto','Roma, Eur'],torsanlorenzo:['Ardea','Tor San Lorenzo','Pomezia','Aprilia'],lavinio:['Lavinio','Anzio','Ardea','Aprilia'],nettuno:['Nettuno','Anzio','Velletri','Aprilia'],sanfelice:['San Felice Circeo','Sabaudia','Terracina','Latina'],terracina:['Terracina','Fondi','Sonnino','San Felice Circeo'],tarquinia:['Tarquinia','Montalto di Castro','Viterbo','Civitavecchia'],civitavecchia:['Civitavecchia','Santa Marinella','Tolfa','Allumiere'],fregene:['Fregene','Maccarese','Fiumicino','Roma, Aurelio'],
     focene:['Focene','Fiumicino','Maccarese','Roma, Magliana'],fiumicino:['Fiumicino','Isola Sacra','Ostia','Roma, Portuense'],ostia:['Ostia','Acilia','Infernetto','Roma, EUR'],castelporziano:['Acilia','Ostia','Torvaianica','Roma, Garbatella'],
     torvaianica:['Torvaianica','Pomezia','Ardea','Roma, Laurentino'],anzio:['Anzio','Nettuno','Lavinio','Aprilia'],latina:['Latina','Borgo Sabotino','Cisterna di Latina','Sermoneta'],sabaudia:['Sabaudia','San Felice Circeo','Terracina','Pontinia']};
   const tw=TOWNS[(SPOT.id||'').replace(/^g_/,'')]||TOWNS.castelporziano;
@@ -527,7 +531,11 @@ const LMK=[
   {t:'lighthouse',n:'Faro di Capo Circeo',lat:41.2236,lon:13.0627},
   {t:'port',n:'Porto di San Felice',lat:41.2262,lon:13.0944},
   {t:'temple',n:'Tempio di Giove Anxur',lat:41.2918,lon:13.2563},
-  {t:'port',n:'Porto di Terracina',lat:41.2838,lon:13.2478}];
+  {t:'port',n:'Porto di Terracina',lat:41.2838,lon:13.2478},
+  {t:'tower',n:'Torre Truglia',lat:41.2586,lon:13.4322},
+  {t:'castle',n:'Castello di Gaeta',lat:41.2113,lon:13.5742},
+  {t:'port',n:'Porto di Gaeta',lat:41.2165,lon:13.5795},
+  {t:'tower',n:'Torre di Mola',lat:41.2573,lon:13.6113}];
 // modello in metri: il mare è verso -z, la terra verso +z
 function lmModel(L){const g=new T.Group(),m=(c,o={})=>new T.MeshStandardMaterial({color:c,roughness:.85,...o}),add=(geo,mat,x,y,z)=>{const o=new T.Mesh(geo,mat);o.position.set(x,y,z);g.add(o);return o;};
   const stone=m('#c9b391'),white=m('#f4f2ec'),red=m('#c0392b'),t=L.t;
@@ -584,36 +592,45 @@ async function startMap(){st.phase='map';
   ['#gspd','#glamp','#gjoy'].forEach(q=>{const e=root.querySelector(q);if(e)e.style.display='none';});hud.innerHTML='';
   const c=document.createElement('canvas');c.id='gmapc';root.insertBefore(c,root.firstChild);MP.c=c;MP.g=c.getContext('2d');
   ui.innerHTML='<div class="gpanel"><b>🚗 Lazio</b><div class="gs">Carico la costa…</div></div>';
-  const r0=root,posP=gamePos();let C=null;try{C=await window.costa();}catch(e){}if(root!==r0)return;
+  const r0=root,from=MP.from;MP.from=null;const posP=from?Promise.resolve(null):gamePos();let C=null;try{C=await window.costa();}catch(e){}if(root!==r0)return;
   if(!C){ui.innerHTML=`<div class="gpanel"><b>Mappa non disponibile</b><div class="gs">Scegli direttamente lo spot.</div><div class="gtalk">${SPOTS.map((sp,i)=>`<button class="gc" onclick="GAME.arrive(${i})">${sp.name}</button>`).join('')}</div></div>`;return;}
   const pts=[],segs=[];
-  for(const l of C.L){const p=l.p;let seg=[];for(let i=0;i+1<p.length;i+=2){const lon=p[i],lat=p[i+1];if(lat>41.12&&lat<42.42&&lon>11.45&&lon<13.25){const q=PJ(lat,lon);pts.push(q);seg.push(q);}else if(seg.length){segs.push(seg);seg=[];}}if(seg.length>1)segs.push(seg);}
-  const A=PJ(42.32,11.6),Bq=PJ(41.2,13.1),L0=Math.hypot(Bq[0]-A[0],Bq[1]-A[1]),ax=[(Bq[0]-A[0])/L0,(Bq[1]-A[1])/L0],sn=[ax[1],-ax[0]];// sn: verso il mare (sud-ovest)
-  const u=q=>(q[0]-A[0])*ax[0]+(q[1]-A[1])*ax[1],o=q=>(q[0]-A[0])*sn[0]+(q[1]-A[1])*sn[1];
-  // costa semplificata: per ogni tratto di 400 m la mediana della distanza dal mare
-  const bins=new Map();for(const q of pts){const k=Math.round(u(q)/.4);(bins.get(k)||bins.set(k,[]).get(k)).push(o(q));}
-  const ks=[...bins.keys()].sort((a,b)=>a-b),coast=ks.map(k=>{const a=bins.get(k).sort((x,y)=>x-y),m=a[Math.floor(a.length/2)],uu=k*.4;return [A[0]+ax[0]*uu+sn[0]*m,A[1]+ax[1]*uu+sn[1]*m];});
+  for(const l of C.L){const p=l.p;let seg=[];for(let i=0;i+1<p.length;i+=2){const lon=p[i],lat=p[i+1];if(lat>40.95&&lat<42.42&&lon>11.45&&lon<13.95){const q=PJ(lat,lon);pts.push(q);seg.push(q);}else if(seg.length){segs.push(seg);seg=[];}}if(seg.length>1)segs.push(seg);}
+  const A=PJ(42.32,11.6),Bq=PJ(41.2,13.1),L0=Math.hypot(Bq[0]-A[0],Bq[1]-A[1]),ax=[(Bq[0]-A[0])/L0,(Bq[1]-A[1])/L0],sn=[ax[1],-ax[0]];// sn: direzione media verso il mare
   const sm=(arr,w)=>arr.map((_,i)=>{let x=0,y=0,n=0;for(let j=Math.max(0,i-w);j<=Math.min(arr.length-1,i+w);j++){x+=arr[j][0];y+=arr[j][1];n++;}return [x/n,y/n];});
-  MP.segs=segs;const cs=sm(coast,2);let road=sm(cs.map(q=>[q[0]-sn[0]*.3,q[1]-sn[1]*.3]),4);
-  // la strada resta sempre a terra, almeno 250 m dentro la linea di costa vera
-  {const rs=[road[0]];for(let i=1;i<road.length;i++){const a=road[i-1],b=road[i],n=Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/.15);for(let k=1;k<=n;k++)rs.push([lerp(a[0],b[0],k/n),lerp(a[1],b[1],k/n)]);}road=rs;}
-  // ogni punto si sposta verso l'interno finché è a terra e ad almeno 300 m da qualsiasi tratto di costa (anche moli e porti)
-  const inland=r=>{let q=r;for(let k=0;k<80;k++){const c=coastNear(q,1);if(!c||(c.side>0&&c.d>=.3))break;q=[q[0]-sn[0]*.05,q[1]-sn[1]*.05];}return q;};
-  road=sm(road.map(inland),3);road=sm(road.map(inland),1).map(inland);
+  MP.segs=segs;
+  // costa continua: unisco i tratti della terraferma in ordine da Montalto fino a Minturno (Garigliano)
+  const key=q=>q[0].toFixed(3)+','+q[1].toFixed(3),byStart=new Map();segs.forEach(sg=>{if(sg.length>1)byStart.set(key(sg[0]),sg);});
+  let chain=[];for(const sg of segs){if(sg.length<2)continue;let c=[...sg],cur=sg,guard=0;while(guard++<200){const nx=byStart.get(key(cur[cur.length-1]));if(!nx||nx===sg)break;c=c.concat(nx.slice(1));cur=nx;}if(c.length>chain.length)chain=c;}
+  chain.reverse();const ML=PJ(41.25,13.79)[0];chain=chain.filter(q=>q[0]<ML);
+  {const rs=[chain[0]];for(let i=1;i<chain.length;i++){const a=chain[i-1],b=chain[i],n=Math.max(1,Math.ceil(Math.hypot(b[0]-a[0],b[1]-a[1])/.1));for(let k=1;k<=n;k++)rs.push([lerp(a[0],b[0],k/n),lerp(a[1],b[1],k/n)]);}chain=rs;}
+  const cs=sm(sm(chain,6),6),bend=sm(sm(chain,15),15);
+  // la strada: costa molto smussata spostata verso terra (la terra è a sinistra andando verso sud-est)
+  const lnorm=(P,i)=>{const a=P[Math.max(0,i-3)],b=P[Math.min(P.length-1,i+3)],x=b[0]-a[0],y=b[1]-a[1],l=Math.hypot(x,y)||1;return [-y/l,x/l];};
+  let road=bend.map((q,i)=>{const n=lnorm(bend,i);return [q[0]+n[0]*.45,q[1]+n[1]*.45];});
+  // ogni punto va verso l'interno finché è sulla terraferma e ad almeno 300 m da qualsiasi tratto di costa (anche moli e porti)
+  // terraferma = dentro il poligono chiuso dalla costa e da una linea 60 km all'interno
+  const PG=chain.filter((_,i)=>i%4===0);{const a=PG[0],b=PG[PG.length-1],na=lnorm(chain,0),nb=lnorm(chain,chain.length-1);PG.push([b[0]+nb[0]*60,b[1]+nb[1]*60],[a[0]+na[0]*60,a[1]+na[1]*60]);}
+  const onLand=q=>{let c=false;for(let i=0,j=PG.length-1;i<PG.length;j=i++){const a=PG[i],b=PG[j];if((a[1]>q[1])!==(b[1]>q[1])&&q[0]<(b[0]-a[0])*(q[1]-a[1])/(b[1]-a[1])+a[0])c=!c;}return c;};
+  const inland=(r,n)=>{let q=r;for(let k=0;k<120;k++){if(onLand(q)){const c=coastNear(q,.3);if(!c||c.d>=.3)break;}q=[q[0]+n[0]*.05,q[1]+n[1]*.05];}return q;};
+  // toglie gli anelli: se la strada si incrocia, salta il tratto in mezzo
+  const unloop=P=>{const X=(a,b,c,d)=>{const r=(b[0]-a[0])*(d[1]-c[1])-(b[1]-a[1])*(d[0]-c[0]);if(Math.abs(r)<1e-12)return false;const t=((c[0]-a[0])*(d[1]-c[1])-(c[1]-a[1])*(d[0]-c[0]))/r,u=((c[0]-a[0])*(b[1]-a[1])-(c[1]-a[1])*(b[0]-a[0]))/r;return t>0&&t<1&&u>0&&u<1;};
+    const out=[];for(let i=0;i<P.length;i++){out.push(P[i]);for(let j=Math.min(P.length-2,i+400);j>i+1;j--){if(X(P[i],P[i+1],P[j],P[j+1])){i=j;break;}}}return out;};
+  for(let it=0;it<3;it++){const P=road;road=sm(unloop(P.map((q,i)=>inland(q,lnorm(P,i)))),it<2?4:1);}road=unloop(road.map((q,i)=>inland(q,lnorm(road,i))));
   const cum=[0];for(let i=1;i<road.length;i++)cum.push(cum[i-1]+Math.hypot(road[i][0]-road[i-1][0],road[i][1]-road[i-1][1]));
-  Object.assign(MP,{segs,coast:cs,road,cum,len:cum[cum.length-1],sn,towns:(C.T||[]).filter(t=>t[1]>41.12&&t[1]<42.42&&t[2]>11.45&&t[2]<13.25)});
+  Object.assign(MP,{segs,coast:cs,road,cum,len:cum[cum.length-1],sn,towns:(C.T||[]).filter(t=>t[1]>41.12&&t[1]<42.42&&t[2]>11.45&&t[2]<13.78&&!/Diocese|bishopric|Archidiocese/i.test(t[0]))});
   MP.spots=SPOTS.map(sp=>{const q=PJ(sp.lat,sp.lon);let bi=0,bd=1e9;road.forEach((r,i)=>{const d=Math.hypot(r[0]-q[0],r[1]-q[1]);if(d<bd){bd=d;bi=i;}});return {sp,q,s:cum[bi]};});
   const last=LSG('spot','castelporziano'),ls=MP.spots.find(x=>x.sp.id===last)||MP.spots.find(x=>x.sp.id==='castelporziano');
   MP.car={s:Math.max(0,ls.s-4),v:0,dir:1,acc:0,brk:0,ramp:null};MP.near=-1;MP.parking=null;MP.arm=null;MP.key='';MP.land=landTex();
   // grafica 3D se possibile, altrimenti la mappa disegnata
   const myRoot=root;try{T=await (MP.three||loadThree());if(root!==myRoot||!root.isConnected||st.phase!=='map')return;
-    ui.innerHTML='<div class="gpanel"><b>🧭 Cerco la tua posizione…</b><div class="gs">Parti da dove sei e la strada ti porta verso la costa.</div></div>';
-    const pos=await posP;let ap=null;if(pos){ui.querySelector('b').textContent='🧭 Calcolo la strada verso il mare…';ap=await approachRoute(pos);}
+    if(!from)ui.innerHTML='<div class="gpanel"><b>🧭 Cerco la tua posizione…</b><div class="gs">Parti da dove sei e la strada ti porta verso la costa.</div></div>';
+    const pos=await posP;let ap=null;if(from){const fs=MP.spots.find(x=>x.sp.id===from);if(fs)ap={s:fs.s};}else if(pos){ui.querySelector('b').textContent='🧭 Calcolo la strada verso il mare…';ap=await approachRoute(pos);}
     if(root!==myRoot||!root.isConnected||st.phase!=='map')return;MP.app=null;
     if(ap){MP.car.s=ap.s;MP.car.dir=ls.s>=ap.s?1:-1;if(ap.app){MP.app={...ap.app,s:ap.s};MP.car.app={...ap.app,u:0,dir:MP.car.dir};}}
     c.remove();MP.c=null;build3D();}catch(e){console.warn(e);dispose3D();if(!MP.c){c.id='gmapc';root.insertBefore(c,root.firstChild);MP.c=c;MP.g=c.getContext('2d');}}
   mapUI();sizeMap();addEventListener('resize',sizeMap);let lt=performance.now();
-  const step=now=>{if(st.phase!=='map'&&st.phase!=='parking')return;const dt=Math.min(.05,(now-lt)/1000);lt=now;if(M3.on){mapPhys3(dt);draw3D(dt);}else{mapPhys(dt);drawMap(now/1000);}MP.raf=requestAnimationFrame(step);};MP.raf=requestAnimationFrame(step);}
+  const step=now=>{if(st.phase!=='map'&&st.phase!=='parking')return;const dt=clamp((now-lt)/1000,0,.05);lt=now;if(M3.on){mapPhys3(dt);draw3D(dt);}else{mapPhys(dt);drawMap(now/1000);}MP.raf=requestAnimationFrame(step);};MP.raf=requestAnimationFrame(step);}
 // punto della costa vera più vicino; nei dati OSM qui la terra sta a destra della linea
 function coastNear(q,maxD=3){let bd=maxD*maxD,b=null;for(const sg of MP.segs)for(let j=0;j+1<sg.length;j++){const a=sg[j],e=sg[j+1];if(Math.min(a[0],e[0])-q[0]>maxD||q[0]-Math.max(a[0],e[0])>maxD||Math.min(a[1],e[1])-q[1]>maxD||q[1]-Math.max(a[1],e[1])>maxD)continue;const vx=e[0]-a[0],vy=e[1]-a[1],l2=vx*vx+vy*vy||1e-12;const t=clamp(((q[0]-a[0])*vx+(q[1]-a[1])*vy)/l2,0,1),px=a[0]+vx*t,py=a[1]+vy*t,d=(q[0]-px)**2+(q[1]-py)**2;if(d<bd){bd=d;b=[px,py,vx,vy];}}
   if(!b)return null;const [px,py,vx,vy]=b,l=Math.hypot(vx,vy)||1,lx=vy/l,ly=-vx/l;return {px,py,lx,ly,d:Math.sqrt(bd),side:(q[0]-px)*lx+(q[1]-py)*ly};}
@@ -672,7 +689,7 @@ function drawMap(t){const g=MP.g,d=MP.d,W=MP.c.width,H=MP.c.height,c=MP.car,ra=r
 
 /* ---------- guida in 3D vista dall'alto: strada costiera, paesi, pinete e uscite verso gli spot (unità: km) ---------- */
 const M3={on:false};
-function seaN(t){let nx=t.ty,ny=-t.tx;if(nx*MP.sn[0]+ny*MP.sn[1]<0){nx=-nx;ny=-ny;}return [nx,ny];}
+function seaN(t){return [t.ty,-t.tx];}// la strada va da nord-ovest a sud-est: il mare è sempre a destra
 function roadDir(s){const a=roadAt(s-.08),b=roadAt(s+.08);const x=b.x-a.x,y=b.y-a.y,l=Math.hypot(x,y)||1;return [x/l,y/l];}
 function flatGeo(pos,uv,idx){const g=new T.BufferGeometry(),n=[];for(let i=0;i<pos.length/3;i++)n.push(0,1,0);g.setAttribute('position',new T.Float32BufferAttribute(pos,3));g.setAttribute('normal',new T.Float32BufferAttribute(n,3));g.setAttribute('uv',new T.Float32BufferAttribute(uv,2));g.setIndex(idx);return g;}
 // nastro largo w lungo una polilinea (strade); v lungo il percorso ogni vlen km
@@ -768,10 +785,10 @@ function build3D(){SAT.cache.clear();SAT.any=false;
   S.add(new T.Mesh(ribbonGeo(MP.road,.042,.004,.07),new T.MeshLambertMaterial({color:0x8a8f6a,side:T.DoubleSide})).translateY(-.0005));
   S.add(new T.Mesh(ribbonGeo(MP.road,.03,.0045,.07),roadM));
   if(MP.app){S.add(new T.Mesh(ribbonGeo(MP.app.pts,.038,.0039,.07),new T.MeshLambertMaterial({color:0x8a8f6a,side:T.DoubleSide})));S.add(new T.Mesh(ribbonGeo(MP.app.pts,.026,.0044,.07),roadM));
-    const me=labelSprite('📍 Parti da qui',{bg:'rgba(255,77,94,.9)',fs:46,k:.034});me.position.set(MP.app.pts[0][0],.05,-MP.app.pts[0][1]);S.add(me);}
+    const me=labelSprite('📍 Parti da qui',{bg:'rgba(255,77,94,.9)',fs:40,k:.022});me.position.set(MP.app.pts[0][0],.1,-MP.app.pts[0][1]);S.add(me);}
   // Monte Circeo
   const cq=PJ(CIRCEO.lat,CIRCEO.lon),mg=new T.SphereGeometry(1,40,20,0,Math.PI*2,0,Math.PI/2);const mp=mg.attributes.position;for(let i=0;i<mp.count;i++){const y=mp.getY(i);mp.setY(i,y*(1+.12*Math.sin(mp.getX(i)*9)*Math.cos(mp.getZ(i)*7)));}mg.computeVertexNormals();
-  const mt=new T.Mesh(mg,new T.MeshLambertMaterial({color:0x5b7a3c}));mt.scale.set(2.6,.54,.9);mt.rotation.y=.15;mt.position.set(cq[0],0,-cq[1]);S.add(mt);
+  const mt=new T.Mesh(mg,new T.MeshLambertMaterial({color:0x5b7a3c}));mt.scale.set(2.6,.54,.9);mt.rotation.y=.15;mt.position.set(cq[0],0,-cq[1]);deco.add(mt);{const lb=labelSprite('⛰️ Monte Circeo',{fs:44,k:.03,col:'#ffe9a8',bg:'rgba(30,20,4,.72)'});lb.position.set(cq[0],.12,-cq[1]);S.add(lb);}
   // paesi: case con tetti in coppo
   const bx=new T.BoxGeometry(1,1,1);bx.translate(0,.5,0);const rf=new T.ConeGeometry(.75,1,4);rf.rotateY(Math.PI/4);rf.translate(0,.5,0);
   const houses=[],exitZ=[];MP.spots.forEach(q=>{const J=roadAt(q.s),n=seaN(J);exitZ.push([J.x+n[0]*.1,J.y+n[1]*.1,.17]);for(const d of [-1,1]){const A=roadAt(clamp(q.s-d*.15,0,MP.len));exitZ.push([A.x+n[0]*.04,A.y+n[1]*.04,.08]);}});const big=/Ostia|Civitavecchia|Terracina|Anzio|Nettuno|Ladispoli|Fiumicino|Sabaudia|Santa Marinella|Torvaianica/;
@@ -845,7 +862,7 @@ function mapPhys3(dt){const c=MP.car;
   const nearK=nd<Math.max(2,c.v*3),key=nx+'|'+nearK+'|'+MP.arm;if(key!==MP.key){MP.key=key;MP.nx=nx;exitUI(nx,nearK);}
   const e=document.getElementById('gexd');if(e&&nx>=0){const d=MP.arm!=null?(MP.spots[MP.arm].ramps[c.dir].rs-c.s)*c.dir:nd;e.textContent=d<1?Math.max(0,Math.round(d*20)*50)+' m':d.toFixed(1).replace('.',',')+' km';}
   kmh();}
-function kmh(){const sp=document.getElementById('gkmh');if(sp){const k=Math.round(MP.car.v*100);sp.textContent=k+' km/h';sp.style.color=k>150?'#ffb547':'';}}
+function kmh(){const sp=document.getElementById('gkmh');if(sp){const k=Math.min(300,Math.round(MP.car.v*100));sp.textContent=k+' km/h';sp.style.color=k>150?'#ffb547':'';}}
 function exitUI(nx,near){const e=document.getElementById('gpark');if(!e)return;
   if(nx<0){e.innerHTML='Fine della strada: fermati e inverti il senso.';return;}const n=MP.spots[nx].sp.name;
   if(MP.arm!=null)e.innerHTML=`<span style="color:#ffb547">⟹ Freccia inserita</span>: esci per <b>${MP.spots[MP.arm].sp.name}</b> tra <b id="gexd"></b>`;
@@ -858,8 +875,8 @@ function draw3D(dt){const c=MP.car,P=carPose(),car=M3.car;M3.t+=dt;const t=M3.t;
   const bl=(MP.arm!=null||c.ramp&&!c.ramp.done)&&(t*2.2%1)<.5,side=(c.app?1:c.ramp?c.ramp.r===MP.spots[c.ramp.i].ramps[1]:c.dir===1)?1:0;car.userData.blink.forEach((pr,k)=>pr.forEach(b=>b.visible=bl&&k===(side?0:1)));
   // telecamera dall'alto, un po' dietro
   const fx=Math.sin(M3.yaw),fz=Math.cos(M3.yaw),back=.22+Math.min(c.v,8)*.1,hgt=.52+Math.min(c.v,8)*.16,cam=M3.cam,sn2=c.ramp?MP.spots[c.ramp.i].n:seaN(roadAt(c.app?MP.app.s??c.s:c.s));if(!M3.sn)M3.sn=[...sn2];M3.sn[0]=lerp(M3.sn[0],sn2[0],Math.min(1,dt*2));M3.sn[1]=lerp(M3.sn[1],sn2[1],Math.min(1,dt*2));const nx=M3.sn[0],nz=-M3.sn[1],tp=new T.Vector3(P.x-fx*back+nx*.08,hgt,-P.y-fz*back+nz*.08);
-  if(!M3.cp)M3.cp=tp.clone();M3.cp.lerp(tp,Math.min(1,dt*3));cam.position.copy(M3.cp);cam.lookAt(P.x+fx*.24+nx*.12,0,-P.y+fz*.24+nz*.12);
-  const lx=P.x+fx*.24+nx*.12,ly=P.y-(fz*.24+nz*.12);satUpdate(lx,ly,c.v>2.2);M3.S.fog.near=2.2+c.v*.5;M3.S.fog.far=6.5+c.v*.9;
+  if(!M3.cp)M3.cp=tp.clone();M3.cp.lerp(tp,Math.min(1,dt*3));cam.position.copy(M3.cp);cam.lookAt(P.x+fx*.05+nx*.06,0,-P.y+fz*.05+nz*.06);car.scale.setScalar(1+Math.min(c.v,8)*.28);
+  const lx=P.x+fx*.4+nx*.1,ly=P.y-(fz*.4+nz*.1);satUpdate(lx,ly,c.v>2.2);M3.S.fog.near=2.2+c.v*.5;M3.S.fog.far=6.5+c.v*.9;
   M3.sun.position.set(P.x+M3.sunDir.x*3,M3.sunDir.y*3,-P.y+M3.sunDir.z*3);M3.sun.target.position.set(P.x,0,-P.y);
   M3.wn.offset.x+=dt*.02;M3.wn.offset.y+=dt*.013;
   M3.pins.forEach((p,i)=>{p.position.y=.008+Math.sin(t*2.2+i)*.006;p.children[0].parent.rotation.y=t*.8;});
@@ -900,7 +917,7 @@ G.arrive=async i=>{cancelAnimationFrame(MP.raf);motor(false);dispose3D();removeE
 G.toMap=()=>{stop();mount(null);};
 function stop(){cancelAnimationFrame(MP.raf);dispose3D();removeEventListener('resize',sizeMap);windSound(0);motor(false);reelWhir(0);cancelAnimationFrame(raf);raf=0;removeEventListener('resize',size);try{renderer?.dispose();renderer?.forceContextLoss?.();}catch(e){}renderer=null;foams=[];clouds=[];st.rods=[];NPCS=[];MYG=[];CRABS=[];LANTERNS=[];CAM.p=null;document.getElementById('gamebox')?.remove();document.body.classList.remove('gaming');seaSound(0);}
 addEventListener('hashchange',()=>{if(location.hash!=='#gioco'&&document.getElementById('gamebox'))stop();});
-G.mount=mount;G.exit=()=>{stop();if(window.go)go('home');};
+G.mount=mount;G.exit=()=>{if(st.phase!=='map'&&st.phase!=='parking'&&renderer&&SPOT){MP.from=String(SPOT.id||'').replace(/^g_/,'');stop();mount(null);return;}MP.from=null;stop();if(window.go)go('home');};
 function size(){if(!renderer)return;const w=root.clientWidth,h=root.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.fov=w<h?68:50;camera.updateProjectionMatrix();}
 const btn=(t,f,cls='')=>`<button class="gb ${cls}" onclick="GAME.${f}">${t}</button>`;
 const suggestLead=w=>w<.3?100:w<.6?125:w<1?150:w<1.6?175:200;
@@ -1305,7 +1322,8 @@ function nearUI(t){if(!nearUI.t||t-nearUI.t>.3){nearUI.t=t;const c=nearCrab(),ni
 const sandY=z=>z<-6?-1.2+(z+6)*.05:z<0?z*.06-.15:z*.035;
 const lerpAng=(a,b,f)=>{let d=((b-a+Math.PI*3)%(Math.PI*2))-Math.PI;return a+d*f;};
 let NIGHT=0;const night=()=>NIGHT;
-function updEnv(w,t,dt){const d=gameDate(),sun=sunPos(d,SPOT.lat,SPOT.lon),mo=moonPosG(d,SPOT.lat,SPOT.lon);
+function updEnv(w,t,dt){const d=gameDate(),s0=sunPos(d,SPOT.lat,SPOT.lon),sun=sunPos(new Date(d.getTime()+30*60e3*clamp((180-s0.az)/30,-1,1)),SPOT.lat,SPOT.lon),// luce: mezz'ora in più di chiaro all'alba e al tramonto
+  mo=moonPosG(d,SPOT.lat,SPOT.lon);
   const dir=(alt,az)=>{const a=(az-FACE)*R,e=alt*R;return new T.Vector3(Math.sin(a)*Math.cos(e),Math.sin(e),-Math.cos(a)*Math.cos(e));};
   const sd=dir(sun.alt,sun.az),md=dir(mo.alt,mo.az),cc=clamp(w.cc/100,0,1);NIGHT=clamp((-sun.alt+2)/10,0,1);
   const u=sky.material.uniforms;u.sunPosition.value.copy(sd);u.turbidity.value=2+cc*9;u.rayleigh.value=lerp(1.2,3,clamp(1-sun.alt/25,0,1))*(1-cc*.6);u.mieCoefficient.value=.004+cc*.01;u.mieDirectionalG.value=.8;
