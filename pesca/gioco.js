@@ -256,7 +256,12 @@ function makeAngler(o={}){
     const foot=new T.Group();foot.position.set(0,-.43,0);sn.add(foot);
     const sole=new T.Mesh(new T.BoxGeometry(.1,.035,.27),bt==='shoes'?S('#f0f0ea'):S('#1e1d1b'));sole.position.set(0,-.025,-.05);foot.add(sole);
     const up=new T.Mesh(new T.SphereGeometry(.07,14,10),bt==='shoes'?bootM:(suit==='waders'?rubber:bootM));up.scale.set(.75,.6,1.7);up.position.set(0,.01,-.055);foot.add(up);J[k+'Foot']=foot;}
+  // foto profilo come viso: copre la parte davanti della testa al posto di occhi, naso e bocca disegnati
+  if(o.photo){const hd=J.head;hd.children.forEach(m=>{if(m.position.z<-.075)m.visible=false;});
+    const mk=new T.Mesh(new T.SphereGeometry(.1015,26,20,Math.PI*1.5-1.2,2.4,Math.PI*.2,Math.PI*.62),new T.MeshStandardMaterial({map:photoTex(o.photo),roughness:.75}));mk.scale.set(.9,1.08,1);hd.add(mk);}
   A.traverse(m=>{if(m.isMesh)m.castShadow=true;});return A;}
+const PHOTOT={};function photoTex(u){if(PHOTOT[u])return PHOTOT[u];const t=new T.TextureLoader().load(u);t.encoding=T.sRGBEncoding;return PHOTOT[u]=t;}
+function myPhoto(){try{return JSON.parse(localStorage.getItem('lenza.photo'))||null;}catch(e){return null;}}
 // pose: angoli delle articolazioni (x avanti/indietro, z apertura, y torsione)
 const POSES={
   stand:{hy:.95,sp:[0,0,0],hd:[0,0,0],lSh:[.05,0,.12],rSh:[.05,0,-.12],lEl:[.15,0,0],rEl:[.15,0,0],lHip:[0,0,0],rHip:[0,0,0],lKnee:[0,0,0],rKnee:[0,0,0],rod:null},
@@ -405,7 +410,7 @@ function buildWorld(){
   const buck=new T.Mesh(new T.CylinderGeometry(.16,.13,.3,16),MAT.bucket);buck.position.set(CHAIR.x-.75,CHAIR.z*.035+.15,CHAIR.z-.2);buck.castShadow=true;scene.add(buck);MYG.push(buck);
   const fodero=new T.Mesh(new T.CylinderGeometry(.08,.08,1.4,10),MAT.bag);fodero.rotation.z=Math.PI/2;fodero.position.set(CHAIR.x+1.6,CHAIR.z*.035+.08,CHAIR.z+.9);scene.add(fodero);MYG.push(fodero);
   // il pescatore e la sua frontale
-  AN.obj=makeAngler();scene.add(AN.obj);buildNpcs();buildCrabs();buildGear();AN.pos=new T.Vector3(CHAIR.x,CHAIR.z*.035,CHAIR.z-.05);AN.rotY=0;
+  AN.obj=makeAngler({photo:myPhoto(),beard:myPhoto()?'none':undefined});scene.add(AN.obj);buildNpcs();buildCrabs();buildGear();AN.pos=new T.Vector3(CHAIR.x,CHAIR.z*.035,CHAIR.z-.05);AN.rotY=0;
   headLamp=new T.SpotLight(0xfff6d8,0,40,.45,.5,1.2);AN.obj.userData.J.head.add(headLamp);headLamp.position.set(0,.06,-.12);const lt=new T.Object3D();lt.position.set(0,-1.2,-6);AN.obj.userData.J.head.add(lt);headLamp.target=lt;
   // pesce che esce dall'acqua alla fine
   fishMesh=new T.Group();const fb=new T.Mesh(new T.SphereGeometry(1,18,12),new T.MeshStandardMaterial({color:'#b8c2c8',roughness:.3,metalness:.6}));fb.scale.set(.5,.2,.08);fishMesh.add(fb);
@@ -976,7 +981,7 @@ function setUI(){const p=st.phase;let h='';
 G.setN=n=>{st.nRods=n;LSS('nrods',n);setUI();};G.setLead=g=>{st.lead=g;LSS('lead',g);setUI();};G.setHook=k=>{st.hook=k;LSS('hook',k);setUI();};
 G.setSpeed=s=>{st.speed=s;LSS('speed',s);const b=document.getElementById('gspd');if(b)b.textContent='⏩ '+s+'x';if(st.phase==='wait')setUI();};G.bagView=()=>{st.phase='bag';setUI();};G.toWait=()=>{st.phase='wait';setUI();};G.drag=v=>{if(st.fight)st.fight.drag=+v;};
 G.setOutfit=k=>{st.outfit=k;LSS('outfit',k);setUI();};
-function setPlayerLook(){const old=AN.obj;const n=makeAngler({suit:st.outfit,hat:'cap',beard:'stubble',j:'#2f5544',j2:'#264638',c:'#b8352a',p:'#2c3445'});
+function setPlayerLook(){const old=AN.obj,ph=myPhoto();const n=makeAngler({suit:st.outfit,hat:'cap',beard:ph?'none':'stubble',photo:ph,j:'#2f5544',j2:'#264638',c:'#b8352a',p:'#2c3445'});
   n.position.copy(old.position);n.rotation.copy(old.rotation);scene.remove(old);scene.add(n);AN.obj=n;
   AN.obj.userData.J.head.add(headLamp);const lt=new T.Object3D();lt.position.set(0,-1.2,-6);AN.obj.userData.J.head.add(lt);headLamp.target=lt;}
 function buildSteps(){const S2=[],q=st.auto?.55:1,sp=st.auto?3.4:2.4;
