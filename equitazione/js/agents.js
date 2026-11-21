@@ -187,6 +187,10 @@ EQ.populate.yard=function(W){
   // mucche e pecore nei campi
   if(S.cows){for(let i=0;i<9;i++){const an=EQ.buildAnimal('cow');W.group.add(an.root);wanderAgent(W,{root:an.root,anim:(dt,sp)=>an.animate(dt,sp)},{x:S.cows.x,z:S.cows.z,hx:S.cows.hx-3,hz:S.cows.hz-3},{speed:.6,idle:[5,15],step:10,far:260});}
    for(let i=0;i<14;i++){const an=EQ.buildAnimal('sheep');W.group.add(an.root);wanderAgent(W,{root:an.root,anim:(dt,sp)=>an.animate(dt,sp)},{x:S.sheep.x,z:S.sheep.z,hx:S.sheep.hx-3,hz:S.sheep.hz-3},{speed:.7,idle:[3,10],step:8,far:260});}}
+  // cavalli liberi nei recinti in terra
+  (S.dirtPads||[]).forEach(pd=>{for(let i=0;i<2;i++){const h=horseOnly(W,{});const e={root:h.root,anim:(dt,sp,a,t)=>h.animate(dt,{speed:sp,eat:sp<.2&&Math.sin(t*.2+a.tx)>-.3?1:0,graze:1})};
+    const a=wanderAgent(W,e,{x:pd.x,z:pd.z,hx:pd.hx-2.5,hz:pd.hz-2.5},{speed:1.2,run:4,idle:[4,14],step:8,far:170});
+    const c={x:0,z:0,r:.9};W.colliders.push(c);const u=a.update;a.update=(dt,t,p,d)=>{u(dt,t,p,d);c.x=a.x;c.z=a.z;};}});
   // persone che passeggiano nel maneggio
   for(let i=0;i<3;i++){const fem=Math.random()<.5;const e=addTo(W,person({fem}));const a=wanderAgent(W,e,{x:-10,z:6,hx:30,hz:6},{speed:1.2,idle:[3,9],step:12,cols:.3});a.label=label(e,EQ.randName(fem),2.15);addCol(W,a,.35);}
 };

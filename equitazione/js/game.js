@@ -147,10 +147,11 @@ function startYard(){
   $('menu').classList.remove('on');
   fade('Si va al maneggio!',()=>{
     horses.forEach(placeInBox);G.cur=null;G.leading=false;detachRider();
-    F.x=yard.spawn.x;F.z=yard.spawn.z;F.h=0;F.camYaw=0;F.sp=0;
+    P.setOutfit({helmet:null,protector:null,gloves:null,whip:false});persist();
+    F.x=yard.spawn.x;F.z=yard.spawn.z;F.h=yard.spawn.h;F.camYaw=yard.spawn.h;F.sp=0;
     G.state='foot';hud(true);setTouchMode('foot');
     snapCam();
-    setTimeout(()=>msg('Benvenuta al maneggio!<small>tocca l\'elenco in alto per vedere cosa fare</small>',3),500);
+    setTimeout(()=>msg('Benvenuta al maneggio!<small>prima vai allo spogliatoio a metterti casco e corpetto</small>',3.5),500);
   });
 }
 function quickRide(next,text){

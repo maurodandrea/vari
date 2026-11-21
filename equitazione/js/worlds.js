@@ -368,6 +368,8 @@ EQ.buildYard=function(){
   W.surface=(x,z)=>{
     if(Math.abs(x-A.cx)<A.hx&&Math.abs(z-A.cz)<A.hz)return'sand';
     if(x>-52&&x<24&&z>-3&&z<31)return'hard';
+    if(Math.abs(x-24)<16&&Math.abs(z-45)<7)return'hard';
+    if((x>45&&x<75&&z>37&&z<53)||(x>53&&x<75&&z>5&&z<31)||(x>53&&x<75&&z>-39&&z<-9))return'dirt';
     if(W.roadD){if(idxNr(x,z)<4)return'hard';if(idxEWr(x,z)<3)return'dirt';}
     return'grass';
   };
@@ -574,8 +576,32 @@ EQ.buildYard=function(){
    mesh(G.box(2.3,2.4,4.8),mat(0xf2f2f2,.3,.2),0,1.5,0,g);mesh(G.box(2.32,.4,4.82),mat(0x2f6b33,.4),0,.9,0,g);
    for(const s of [-1,1])for(const z of [-.8,.8]){const w=mesh(G.cyl(.38,.38,.25,16),mat(0x1a1a1a,.7),s*1.15,.38,z,g);w.rotation.z=Math.PI/2;}
    W.colliders.push({x:36,z:-8,hx:1.4,hz:2.6,rot:-.3});}
+  /* ---- parcheggio e recinti in terra con cavalli liberi ---- */
+  {const PK={x:24,z:45,hx:16,hz:7};W.spots.parking=PK;
+   patch(W,PK.x,PK.z,PK.hx*2,PK.hz*2,TX.asphalt(),5,.03,.9);
+   const lines=[];for(let x=PK.x-PK.hx+1;x<=PK.x+PK.hx-1;x+=3.2){lines.push(EQ.xform(G.box(.12,.01,5),x,.045,PK.z-PK.hz+3));lines.push(EQ.xform(G.box(.12,.01,5),x,.045,PK.z+PK.hz-3));}
+   mesh(EQ.merge(lines),mat(0xf2f2f2,.6),0,0,0,grp).castShadow=false;
+   const cg=[];[0,1,2,4,6,7,8].forEach((k,i)=>{const x=PK.x-PK.hx+2.6+k*3.2,top=i%2===0,z=top?PK.z+PK.hz-3:PK.z-PK.hz+3;
+     const g=EQ.carGeo(EQ.pick(['hatch','sedan','suv','van','hatch']),EQ.pick(EQ.CAR_COLS)).clone();g.rotateY(top?0:Math.PI);g.translate(x,0,z);cg.push(g);W.colliders.push({x,z,hx:1,hz:2.3});});
+   mesh(EQ.merge(cg),EQ.CARMAT,0,0,0,grp);
+   // van con rimorchio per cavalli
+   const vx=PK.x+PK.hx-4,vz=PK.z;const tr=new THREE.Group();tr.position.set(vx,0,vz);tr.rotation.y=Math.PI/2;grp.add(tr);
+   mesh(G.box(2.2,2.4,4.2),mat(0xf2f2f2,.3,.2),0,1.55,-1.5,tr);mesh(G.box(2.22,.35,4.22),mat(0x2f6b33,.4),0,.95,-1.5,tr);mesh(G.box(1.9,1,.06),mat(0x2a3a48,.2),0,2.1,.61,tr);
+   for(const sd of [-1,1]){const w=mesh(G.cyl(.36,.36,.25,14),mat(0x1a1a1a,.7),sd*1.1,.36,-1.5,tr);w.rotation.z=Math.PI/2;}
+   const cm=new THREE.Mesh(EQ.carGeo('suv',0x1f3b5a),EQ.CARMAT);cm.position.z=2.9;cm.castShadow=true;tr.add(cm);
+   W.colliders.push({x:vx,z:vz,hx:5.4,hz:1.3});
+   W.colliders.push({x:PK.x-PK.hx+.5,z:PK.z,r:.15});
+   sign(W,'🅿️ PARCHEGGIO',PK.x-PK.hx+.3,2.2,PK.z-PK.hz-.4,0,2.6,.55,'#1d4ed8');
+   const dirtP=TX.sand('#8a6a48');W.spots.dirtPads=[];
+   [[60,45,15,8],[64,18,11,13],[64,-24,11,15]].forEach(([x,z,hx,hz])=>{patch(W,x,z,hx*2,hz*2,dirtP,4,.03,1);
+     woodFence(W,[[x-hx,z-hz],[x+hx,z-hz],[x+hx,z+hz],[x-hx,z+hz],[x-hx,z-hz]],{h:1.4,rails:3,post:2.6});
+     const tr2=mesh(G.box(2.2,.5,.7),mat(0x6b6b6b,.4,.5),x-hx+1.6,.25,z+hz-1,grp);mesh(G.box(2,.05,.5),new THREE.MeshStandardMaterial({color:C(0x4a7a8a),roughness:.1}),x-hx+1.6,.48,z+hz-1,grp);
+     const hy=mesh(G.cyl(.7,.7,1.1,14),new THREE.MeshStandardMaterial({map:TX.straw(),roughness:1}),x+hx-1.6,.55,z-hz+1.6,grp);
+     W.colliders.push({x:x-hx+1.6,z:z+hz-1,hx:1.1,hz:.4},{x:x+hx-1.6,z:z-hz+1.6,r:.8});
+     W.spots.dirtPads.push({x,z,hx,hz});});
+  }
   // alberi e siepi
-  const busy=[[-54,35,-10,47],[-32,-80,12,-66],[6,17,22,31],[22,4,50,34],[-62,16,-8,26],[210,50,310,130],[-250,-120,-150,-60]];
+  const busy=[[6,36,42,54],[44,36,78,54],[52,4,78,32],[52,-40,78,-8],[-54,35,-10,47],[-32,-80,12,-66],[6,17,22,31],[22,4,50,34],[-62,16,-8,26],[210,50,310,130],[-250,-120,-150,-60]];
   const freeT=(x,z)=>!busy.some(b=>x>b[0]-2&&x<b[2]+2&&z>b[1]-2&&z<b[3]+2)&&W.roadD(x,z)>7&&!(Math.abs(x-A.cx)<A.hx+4&&Math.abs(z-A.cz)<A.hz+4)&&!FIELDS.some(f=>Math.abs(x-f[0])<f[2]/2+2&&Math.abs(z-f[1])<f[3]/2+2);
   const trees=[];
   for(let x=-78;x<=74;x+=8){for(const z of [52,-82]){const t={x:x+rnd(-1,1),z:z+rnd(-1.5,1.5),s:rnd(.8,1.1),ry:rnd(0,TAU)};if(freeT(t.x,t.z))trees.push(t);}}
@@ -597,7 +623,7 @@ EQ.buildYard=function(){
   // recinzione esterna
   woodFence(W,[[-5,56],[-84,56],[-84,-10]],{h:1.3,rails:2,post:3});woodFence(W,[[-84,-22],[-84,-86],[80,-86],[80,-5]],{h:1.3,rails:2,post:3});woodFence(W,[[80,5],[80,56],[5,56]],{h:1.3,rails:2,post:3});
   W.bounds={x0:-470,x1:470,z0:-200,z1:470};
-  W.spawn={x:-6,z:4,h:0};W.spawnRide={x:30,z:0,h:Math.PI/2};
+  W.spawn={x:12,z:45,h:-2.4};W.spawnRide={x:30,z:0,h:Math.PI/2};
   /* stanza spogliatoio (interno), lontana dal resto */
   {const R=new THREE.Group();R.position.set(300,0,300);grp.add(R);W.room=R;
    const fl=EQ.canvasTex(256,256,(g,w,h)=>{g.fillStyle='#9c7048';g.fillRect(0,0,w,h);for(let y=0;y<h;y+=32){g.fillStyle='rgba(0,0,0,.25)';g.fillRect(0,y,w,2);for(let x=(y/32%2)*64;x<w;x+=128)g.fillRect(x,y,2,32);}for(let i=0;i<300;i++){g.fillStyle='rgba(0,0,0,.06)';g.fillRect(Math.random()*w,Math.random()*h,30,1);}},3,3);W.tex.push(fl);
