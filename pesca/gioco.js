@@ -81,8 +81,8 @@ function click(){const c=ac();if(!c)return;const o=c.createOscillator(),v=c.crea
 function whoosh(){const c=ac();if(!c)return;const s=c.createBufferSource();s.buffer=noiseBuf(c);const f=c.createBiquadFilter();f.type='highpass';f.frequency.setValueAtTime(400,c.currentTime);f.frequency.linearRampToValueAtTime(2500,c.currentTime+.5);const v=c.createGain();v.gain.setValueAtTime(.0001,c.currentTime);v.gain.linearRampToValueAtTime(.25,c.currentTime+.12);v.gain.exponentialRampToValueAtTime(.001,c.currentTime+.8);s.connect(f).connect(v).connect(c.destination);s.start();s.stop(c.currentTime+.9);}
 // onda che si rompe a riva: rumore filtrato con attacco morbido e coda lunga
 function surfCrash(vol){const c=ac();if(!c||vol<=0)return;const t=c.currentTime,s=c.createBufferSource();s.buffer=AU.nb||(AU.nb=noiseBuf(c));
-  const f=c.createBiquadFilter();f.type='lowpass';f.frequency.setValueAtTime(300,t);f.frequency.linearRampToValueAtTime(1400+vol*2500,t+.35);f.frequency.exponentialRampToValueAtTime(350,t+2.6);
-  const v=c.createGain();v.gain.setValueAtTime(.0001,t);v.gain.linearRampToValueAtTime(vol,t+.35);v.gain.exponentialRampToValueAtTime(.0001,t+3);s.connect(f).connect(v).connect(c.destination);s.start(t,Math.random());s.stop(t+3.1);}
+  const f=c.createBiquadFilter();f.type='lowpass';f.frequency.setValueAtTime(220,t);f.frequency.linearRampToValueAtTime(650+vol*1200,t+.6);f.frequency.exponentialRampToValueAtTime(260,t+3.2);
+  const v=c.createGain();v.gain.setValueAtTime(.0001,t);v.gain.linearRampToValueAtTime(vol,t+.6);v.gain.exponentialRampToValueAtTime(.0001,t+3.6);s.connect(f).connect(v).connect(c.destination);s.start(t,Math.random());s.stop(t+3.7);}
 // vento: rumore passa-banda con raffiche
 function windSound(level,t){const c=AU.on&&level>0?ac():null;
   if(!c){if(AU.wind){AU.wind.v.gain.setTargetAtTime(0,AU.ctx.currentTime,.4);}return;}
@@ -591,7 +591,7 @@ function updEnv(w,t,dt){const d=gameDate(),sun=sunPos(d,SPOT.lat,SPOT.lon),mo=mo
   const nf=Math.min(foams.length,2+Math.round(wh*4));
   foams.forEach((f,i)=>{const u=f.userData,on=i<nf;f.visible=on;if(!on)return;u.cyc+=dt/(per*u.rate*(1.4+u.d0/30));if(u.cyc>=1){u.cyc=0;newWave(f);}
     const cyc=u.cyc,a=f.geometry.attributes.position,b=u.base,d=lerp(u.d0*(1+wh*.4),-.4,cyc);
-    if(!u.crashed&&cyc>.8){u.crashed=true;if(wh>=.4)surfCrash(clamp((wh-.25)*.16,.02,.32)*u.str*(.7+Math.random()*.5));}if(cyc<.1)u.crashed=false;
+    if(!u.crashed&&cyc>.8){u.crashed=true;const now=performance.now();if(wh>=.4&&now-(AU.lastCrash||0)>Math.max(7,per*1.2)*1000){AU.lastCrash=now;surfCrash(clamp((wh-.3)*.09,.015,.18)*(.8+Math.random()*.4));}}if(cyc<.1)u.crashed=false;
     for(let j=0;j<a.count;j++){const x=b[j*3],bend=u.a[0]*Math.sin(x*u.k[0]+u.ph[0]+t*u.w[0])+u.a[1]*Math.sin(x*u.k[1]+u.ph[1]+t*u.w[1])+u.a[2]*Math.sin(x*u.k[2]+u.ph[2]+t*u.w[2]*2)+x*u.tilt;
       a.setZ(j,b[j*3+2]*(1+wh*1.2*(1-cyc))+bend*(1-cyc*.6));}a.needsUpdate=true;
     f.position.z=-d;f.position.y=.05+Math.sin(cyc*Math.PI)*wh*.18;
