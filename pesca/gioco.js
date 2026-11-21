@@ -732,7 +732,7 @@ function makeCar3(col,rods){const g=new T.Group(),m=c=>new T.MeshLambertMaterial
   const bl=new T.MeshBasicMaterial({color:0x661111});g.userData.brake=bl;[-.007,.007].forEach(x=>{const l=new T.Mesh(new T.BoxGeometry(.004,.002,.001),bl);l.position.set(x,.0075,-.0211);g.add(l);});
   if(rods){const rm=m(0x222222);for(const x of [-.004,0,.004]){const r=new T.Mesh(new T.CylinderGeometry(.0004,.0004,.03,4),rm);r.rotation.x=Math.PI/2;r.position.set(x,.0178,-.004);g.add(r);}
     const bm=new T.MeshBasicMaterial({color:0xffa31a});g.userData.blink=[];[[-1],[1]].forEach(([sx])=>{const b=new T.Mesh(new T.BoxGeometry(.002,.003,.004),bm);b.position.set(sx*.0102,.0075,.017);b.visible=false;g.add(b);const b2=b.clone();b2.position.z=-.017;g.add(b2);g.userData.blink.push([b,b2]);});}
-  if(M3.beamMat){const bm=new T.Mesh(new T.PlaneGeometry(.05,.13),M3.beamMat);bm.rotation.x=-Math.PI/2;bm.position.set(0,.0012,.086);g.add(bm);}
+  if(M3.beamMat){const bg=new T.BufferGeometry(),z0=.021,z1=.07,y=.0056;bg.setAttribute('position',new T.Float32BufferAttribute([-.008,y,z0,.008,y,z0,-.026,y,z1,.026,y,z1],3));bg.setAttribute('color',new T.Float32BufferAttribute([1,.93,.7,1,.93,.7,0,0,0,0,0,0],3));bg.setIndex([0,2,1,1,2,3]);g.add(new T.Mesh(bg,M3.beamMat));}
   const sh=new T.Mesh(new T.PlaneGeometry(.03,.052),new T.MeshBasicMaterial({map:M3.blob,transparent:true,depthWrite:false}));sh.rotation.x=-Math.PI/2;sh.position.y=.0008;g.add(sh);
   return g;}
 function blobTex(){return canvasTex(64,64,(g)=>{const r=g.createRadialGradient(32,32,4,32,32,32);r.addColorStop(0,'rgba(0,0,0,.45)');r.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=r;g.fillRect(0,0,64,64);});}
@@ -784,7 +784,7 @@ function build3D(){SAT.cache.clear();SAT.any=false;
   const cam=new T.PerspectiveCamera(52,1,.02,80);Object.assign(M3,{R,S,cam,on:true,blob:blobTex(),cars:[],pins:[],t:0});
   const sun=new T.DirectionalLight(0xfff1dc,1.15);S.add(sun);S.add(sun.target);M3.sun=sun;M3.sunDir=new T.Vector3(-.45,.8,.4).normalize();
   M3.hemi=new T.HemisphereLight(0xcfe6ff,0x6d7a4a,.75);S.add(M3.hemi);M3.N=0;M3.Nap=-1;M3.nT=0;
-  M3.beamMat=new T.MeshBasicMaterial({map:canvasTex(64,128,(g,w,h)=>{const gr=g.createLinearGradient(0,h,0,0);gr.addColorStop(0,'rgba(255,240,190,.95)');gr.addColorStop(1,'rgba(255,240,190,0)');g.fillStyle=gr;g.beginPath();g.moveTo(w*.38,h);g.lineTo(w*.62,h);g.lineTo(w,0);g.lineTo(0,0);g.closePath();g.fill();}),transparent:true,opacity:0,depthWrite:false,blending:T.AdditiveBlending});
+  M3.beamMat=new T.MeshBasicMaterial({vertexColors:true,transparent:true,opacity:0,depthWrite:false,blending:T.AdditiveBlending,side:T.DoubleSide});
   M3.glowMat=new T.SpriteMaterial({map:glowTex('rgba(255,200,120,1)'),transparent:true,opacity:0,depthWrite:false,depthTest:false,blending:T.AdditiveBlending,fog:false});
   // mare
   const wn=normalTex();wn.encoding=T.LinearEncoding;wn.wrapS=wn.wrapT=T.RepeatWrapping;const mid=MP.road[MP.road.length>>1];
