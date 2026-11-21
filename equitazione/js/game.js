@@ -141,6 +141,7 @@ document.querySelectorAll('.gbtn').forEach(b=>b.addEventListener('click',()=>{EQ
 $('gTog').addEventListener('click',()=>{EQ.audio();setGender(EQ.gender()==='m'?'f':'m');renderMenu();});
 setGender(EQ.gender());
 function toMenu(){
+  G.climb=null;
   if(G.veh)leaveVeh(true);
   if(G.fall){G.fall=null;P.root.rotation.set(0,0,0);}
   G.sit=null;G.ia=null;G.mission=null;G.swim=false;G.em=[];G.slowT=0;G.dmg={shop:0,car:0,ppl:0};
@@ -207,7 +208,25 @@ function followCam(x,y,z,yaw,dist,h,lookAhead,lookY,dt,k){
 }
 
 /* ======================= A PIEDI ======================= */
+function nearFence(){let best=null,bd=1.3;
+  for(const c of W().colliders){if(!c.fence||c.off)continue;if(Math.abs(c.x-F.x)>c.hx+3&&Math.abs(c.z-F.z)>c.hx+3)continue;
+    const cs=Math.cos(c.rot||0),sn=Math.sin(c.rot||0),dx=F.x-c.x,dz=F.z-c.z,lx=dx*cs-dz*sn,lz=dx*sn+dz*cs;
+    if(Math.abs(lx)>c.hx-.15)continue;const d=Math.abs(lz)-c.hz;if(d<bd){bd=d;best={c,lx,lz,cs,sn};}}
+  return best;}
+function climbActions(A){if(G.state!=='foot'||G.swim||G.sit||G.ia||G.climb)return;const f=nearFence();if(!f)return;
+  A.push({id:'climb',icon:'🧗',label:'Scavalca',fn:()=>{if(G.leading){msg('Prima lascia il cavallo<small>"Lascialo qui" o legalo</small>',2);return;}
+    const c=f.c,s=Math.sign(f.lz)||1,to=-s*(c.hz+.75),fr=s*(c.hz+.35);
+    const W2=(lx,lz)=>({x:c.x+lx*f.cs+lz*f.sn,z:c.z-lx*f.sn+lz*f.cs});
+    const a=W2(f.lx,fr),b=W2(f.lx,to);G.climb={t:0,a,b,h:Math.atan2(b.x-a.x,b.z-a.z),top:(c.h||1.2)+.05};EQ.sfx.step('soft');}});}
+function climbUpdate(dt){const c=G.climb;c.t+=dt/1.3;const t=Math.min(1,c.t),e=t*t*(3-2*t);
+  F.x=U.lerp(c.a.x,c.b.x,e);F.z=U.lerp(c.a.z,c.b.z,e);F.h+=U.wrapA(c.h-F.h)*Math.min(1,dt*10);
+  const gy=W().height(F.x,F.z);const lift=Math.sin(Math.min(1,t*1.15)*Math.PI)*c.top*.85;
+  P.root.position.set(F.x,gy+lift,F.z);P.root.rotation.y=F.h;P.pose(dt,t<.5?'pick':'stand',{});
+  if(Math.random()<dt*4)EQ.sfx.step('soft');
+  followCam(F.x,gy,F.z,F.camYaw,EQ.portrait?5.6:4.6,EQ.portrait?2.6:2.1,1.2,1.15,dt,5);setActions([]);
+  if(t>=1){G.climb=null;F.camYaw=F.h;}}
 function footUpdate(dt){
+  if(G.climb){climbUpdate(dt);return;}
   if(G.sit||G.ia){socialFoot(dt);return;}
   const inp=G.busy?{x:0,y:0}:EQ.readInput();const m=Math.min(1,Math.hypot(inp.x,inp.y));
   let tsp=0;
@@ -265,7 +284,7 @@ function mountBlock(){const H=G.cur;
   return null;}
 function yardActions(){
   const A=[], H=G.cur;
-  vehActions(A);
+  vehActions(A);climbActions(A);
   if(G.world!==yard){if(G.leading)A.push({id:'mount',icon:'🏇',label:'Monta',fn:startMount,dis:mountBlock()});if(!G.leading)otherHorseActions(A);careActions(A);socialActions(A,false);return A;}
   if(near(Y.selleria,2.6))A.push({id:'dress',icon:'👕',label:'Spogliatoio',fn:startDress,dis:G.leading?'Prima lega il cavallo<small>alla posta o rimettilo nel box</small>':null});
   Y.boxes.forEach((b,i)=>{if(!near(b.front,2.3))return;const h=horses[i];
