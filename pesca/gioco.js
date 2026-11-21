@@ -23,6 +23,7 @@ const BAITS=[
   {k:'seppia',n:'Seppia',e:'🦑',d:'Strisce resistenti: spigole, serra, dentici',life:70},
   {k:'gambero',n:'Gambero',e:'🦐',d:'Spigole, orate, lecce stella, saraghi',life:35},
   {k:'cefalotto',n:'Cefalotto vivo',e:'🐠',d:'Esca viva: leccia amia, ricciola, spigole grosse',life:90},
+  {k:'granchio',n:'Granchio',e:'🦀',d:'Raccolto sulla battigia: orate, spigole, saraghi',life:60,lim:true},
 ];
 const B=Object.fromEntries(BAITS.map(b=>[b.k,b]));
 
@@ -30,13 +31,13 @@ const B=Object.fromEntries(BAITS.map(b=>[b.k,b]));
 // mo: mesi 1-12 con peso; bait: gradimento; wave:[min,ideale,max] m; time: alba/giorno/tramonto/notte; d:[min,max] m dalla riva
 // w:[min,tipico,max] kg; pow: forza in combattimento; lw:[a,b] (g, cm); legal: misura minima cm; ab: abbondanza
 const SP=[
-  {n:'Orata',ab:.8,mo:{1:.3,2:.2,3:.3,4:.8,5:1,6:.9,7:.6,8:.6,9:1,10:1,11:.9,12:.5},bait:{bibi:1,cannolicchio:1,cozza:.8,gambero:.7,americano:.5,koreano:.5,arenicola:.4},wave:[0,.4,1.1],time:{alba:1,giorno:.8,tramonto:1,notte:.5},d:[35,120],w:[.3,.8,3.2],pow:.85,lw:[.0115,3.05],legal:20,bite:'decisa',col:{b:'#9aa7b0',t:'#c9d2d8',belly:'#eef2f4',band:'#d9b24a',spot:'#1d2328'},shape:{h:.42,fork:.55}},
-  {n:'Spigola',ab:.5,mo:{1:1,2:1,3:.8,4:.5,5:.3,6:.2,7:.2,8:.2,9:.4,10:.8,11:1,12:1},bait:{cefalotto:1,seppia:.8,sarda:.7,arenicola:.7,gambero:.7,americano:.5,koreano:.5},wave:[.3,.9,2.2],time:{alba:1,giorno:.35,tramonto:.9,notte:1},d:[10,70],w:[.4,1.2,7],pow:1,lw:[.0087,3.08],legal:25,bite:'violenta',col:{b:'#5d6b78',t:'#aeb8c0',belly:'#edf0f2',spot:'#2a3036'},shape:{h:.3,fork:.25}},
-  {n:'Sarago maggiore',ab:.55,mo:{1:.9,2:.9,3:.8,4:.6,5:.5,6:.4,7:.4,8:.4,9:.6,10:.9,11:1,12:1},bait:{cozza:1,arenicola:.8,koreano:.7,bibi:.6,cannolicchio:.6,gambero:.6},wave:[.3,.8,1.6],time:{alba:.9,giorno:.5,tramonto:1,notte:.9},d:[25,90],w:[.2,.5,1.8],pow:.9,lw:[.0151,3.03],legal:23,bite:'nervosa',col:{b:'#8c969e',t:'#c3cbd1',belly:'#e9edef',bars:'#3a4248',spot:'#15191c'},shape:{h:.46,fork:.5}},
+  {n:'Orata',ab:.8,mo:{1:.3,2:.2,3:.3,4:.8,5:1,6:.9,7:.6,8:.6,9:1,10:1,11:.9,12:.5},bait:{bibi:1,cannolicchio:1,cozza:.8,granchio:.9,gambero:.7,americano:.5,koreano:.5,arenicola:.4},wave:[0,.4,1.1],time:{alba:1,giorno:.8,tramonto:1,notte:.5},d:[35,120],w:[.3,.8,3.2],pow:.85,lw:[.0115,3.05],legal:20,bite:'decisa',col:{b:'#9aa7b0',t:'#c9d2d8',belly:'#eef2f4',band:'#d9b24a',spot:'#1d2328'},shape:{h:.42,fork:.55}},
+  {n:'Spigola',ab:.5,mo:{1:1,2:1,3:.8,4:.5,5:.3,6:.2,7:.2,8:.2,9:.4,10:.8,11:1,12:1},bait:{cefalotto:1,seppia:.8,sarda:.7,arenicola:.7,gambero:.7,granchio:.7,americano:.5,koreano:.5},wave:[.3,.9,2.2],time:{alba:1,giorno:.35,tramonto:.9,notte:1},d:[10,70],w:[.4,1.2,7],pow:1,lw:[.0087,3.08],legal:25,bite:'violenta',col:{b:'#5d6b78',t:'#aeb8c0',belly:'#edf0f2',spot:'#2a3036'},shape:{h:.3,fork:.25}},
+  {n:'Sarago maggiore',ab:.55,mo:{1:.9,2:.9,3:.8,4:.6,5:.5,6:.4,7:.4,8:.4,9:.6,10:.9,11:1,12:1},bait:{cozza:1,granchio:.8,arenicola:.8,koreano:.7,bibi:.6,cannolicchio:.6,gambero:.6},wave:[.3,.8,1.6],time:{alba:.9,giorno:.5,tramonto:1,notte:.9},d:[25,90],w:[.2,.5,1.8],pow:.9,lw:[.0151,3.03],legal:23,bite:'nervosa',col:{b:'#8c969e',t:'#c3cbd1',belly:'#e9edef',bars:'#3a4248',spot:'#15191c'},shape:{h:.46,fork:.5}},
   {n:'Serra',ab:.4,mo:{6:.4,7:.8,8:.9,9:1,10:1,11:.8,12:.3},bait:{sarda:1,cefalotto:.8,seppia:.5},wave:[0,.6,1.8],time:{alba:.9,giorno:.4,tramonto:1,notte:.6},d:[30,120],w:[.5,1.5,7],pow:1.15,lw:[.0098,3.06],legal:0,bite:'violenta',teeth:true,col:{b:'#4f7f8f',t:'#9cc0c8',belly:'#eaf1f2',spot:'#22383f'},shape:{h:.28,fork:.6}},
   {n:'Mormora',ab:1,mo:{3:.3,4:.7,5:1,6:1,7:1,8:1,9:.9,10:.7,11:.4},bait:{koreano:1,americano:.9,arenicola:.8,bibi:.7,cannolicchio:.4},wave:[0,.3,.9],time:{alba:.9,giorno:.9,tramonto:1,notte:.7},d:[30,100],w:[.1,.25,.7],pow:.5,lw:[.0106,3.07],legal:20,bite:'picchiettata',col:{b:'#b4b9ba',t:'#d9dcdc',belly:'#f2f3f3',vbars:'#4d5355',spot:'#2a2d2e'},shape:{h:.33,fork:.55}},
   {n:'Leccia stella',ab:.5,mo:{6:.6,7:.9,8:1,9:1,10:.8,11:.4},bait:{americano:.7,gambero:.7,sarda:.6,cefalotto:.6,koreano:.4},wave:[0,.4,1],time:{alba:1,giorno:.9,tramonto:.9,notte:.3},d:[15,80],w:[.2,.6,1.6],pow:1,lw:[.013,3.0],legal:0,bite:'decisa',col:{b:'#8ea0ae',t:'#cfd8de',belly:'#f4f6f7',dots:'#2c3a44',spot:'#2c3a44'},shape:{h:.44,fork:.75}},
-  {n:'Ombrina',ab:.35,mo:{4:.5,5:.8,6:1,7:1,8:1,9:.8,10:.6,11:.3},bait:{arenicola:1,cannolicchio:.9,bibi:.8,koreano:.7,gambero:.5},wave:[.2,.6,1.4],time:{alba:.6,giorno:.3,tramonto:.8,notte:1},d:[20,80],w:[.5,1.5,6],pow:.85,lw:[.0102,3.07],legal:0,bite:'decisa',col:{b:'#8f8a6d',t:'#c7c1a0',belly:'#efece0',lines:'#c9a24a',spot:'#3a3626'},shape:{h:.32,fork:.05}},
+  {n:'Ombrina',ab:.35,mo:{4:.5,5:.8,6:1,7:1,8:1,9:.8,10:.6,11:.3},bait:{arenicola:1,cannolicchio:.9,bibi:.8,koreano:.7,granchio:.5,gambero:.5},wave:[.2,.6,1.4],time:{alba:.6,giorno:.3,tramonto:.8,notte:1},d:[20,80],w:[.5,1.5,6],pow:.85,lw:[.0102,3.07],legal:0,bite:'decisa',col:{b:'#8f8a6d',t:'#c7c1a0',belly:'#efece0',lines:'#c9a24a',spot:'#3a3626'},shape:{h:.32,fork:.05}},
   {n:'Granchio blu',ab:.7,crab:true,mo:{6:.6,7:1,8:1,9:1,10:.9,11:.6,12:.2},bait:{sarda:1,cozza:.9,seppia:.8,cannolicchio:.7,gambero:.7,bibi:.4,arenicola:.4,koreano:.3,americano:.3},wave:[0,.2,.8],time:{alba:.6,giorno:.5,tramonto:.8,notte:1},d:[5,70],w:[.15,.3,.55],pow:.35,lw:[.25,2.6],legal:0,bite:'picchiettata',col:{b:'#2f6fb5',t:'#79a9d8'}},
   {n:'Leccia amia',ab:.09,mo:{4:.3,5:.6,6:.5,9:.8,10:1,11:.9,12:.3},bait:{cefalotto:1,sarda:.15},wave:[0,.5,1.4],time:{alba:1,giorno:.5,tramonto:1,notte:.3},d:[25,110],w:[3,7,22],pow:2.1,lw:[.0128,2.97],legal:0,bite:'partenza',col:{b:'#6e7568',t:'#b9bcb0',belly:'#efefe9',spot:'#2c2f28',lat:'#3a3d36'},shape:{h:.3,fork:.7}},
   {n:'Ricciola',ab:.05,mo:{8:.4,9:.9,10:1,11:.8},bait:{cefalotto:1,seppia:.25},wave:[0,.5,1.4],time:{alba:1,giorno:.6,tramonto:.9,notte:.2},d:[40,130],w:[2,5,15],pow:1.9,lw:[.0158,2.92],legal:0,bite:'partenza',col:{b:'#5f7a86',t:'#b8c2b4',belly:'#f1efe4',stripe:'#d9b24a',spot:'#2d3a40'},shape:{h:.3,fork:.7}},
@@ -98,7 +99,7 @@ function seaSound(level){const c=AU.on?ac():null;
 const G={};window.GAME=G;
 let T=null,renderer,scene,camera,sky,water,sunLight,hemi,moonLight,headLamp,clock,raf=0,root,ui,hud,cvs;
 const st={phase:'load',gt:Date.now(),speed:[1,2,4,8,16,32].includes(LSG('speed',8))?LSG('speed',8):8,lamp:LSG('lamp',true),X:null,sim:false,rods:[],sel:0,msg:'',fight:null,cast:null,catchShow:null,
-  bag:LSG('bag',[]),best:LSG('best',{}),total:LSG('total',{n:0,kg:0,pts:0}),lead:LSG('lead',150),hook:LSG('hook','medio'),nRods:LSG('nrods',3),busy:false,lightning:0};
+  bag:LSG('bag',[]),inv:{granchio:0},best:LSG('best',{}),total:LSG('total',{n:0,kg:0,pts:0}),lead:LSG('lead',150),hook:LSG('hook','medio'),nRods:LSG('nrods',3),busy:false,lightning:0};
 const gameDate=()=>new Date(st.gt);
 G._st=st;
 const CHAIR={x:-1.5,z:14};const ROD_Z=1.6;
@@ -322,7 +323,7 @@ function buildWorld(){
   const buck=new T.Mesh(new T.CylinderGeometry(.16,.13,.3,16),MAT.bucket);buck.position.set(CHAIR.x-.75,CHAIR.z*.035+.15,CHAIR.z-.2);buck.castShadow=true;scene.add(buck);
   const fodero=new T.Mesh(new T.CylinderGeometry(.08,.08,1.4,10),MAT.bag);fodero.rotation.z=Math.PI/2;fodero.position.set(CHAIR.x+1.6,CHAIR.z*.035+.08,CHAIR.z+.9);scene.add(fodero);
   // il pescatore e la sua frontale
-  AN.obj=makeAngler();scene.add(AN.obj);buildNpcs();AN.pos=new T.Vector3(CHAIR.x,CHAIR.z*.035,CHAIR.z-.05);AN.rotY=0;
+  AN.obj=makeAngler();scene.add(AN.obj);buildNpcs();buildCrabs();buildGear();AN.pos=new T.Vector3(CHAIR.x,CHAIR.z*.035,CHAIR.z-.05);AN.rotY=0;
   headLamp=new T.SpotLight(0xfff6d8,0,40,.45,.5,1.2);AN.obj.userData.J.head.add(headLamp);headLamp.position.set(0,.06,-.12);const lt=new T.Object3D();lt.position.set(0,-1.2,-6);AN.obj.userData.J.head.add(lt);headLamp.target=lt;
   // pesce che esce dall'acqua alla fine
   fishMesh=new T.Group();const fb=new T.Mesh(new T.SphereGeometry(1,18,12),new T.MeshStandardMaterial({color:'#b8c2c8',roughness:.3,metalness:.6}));fb.scale.set(.5,.2,.08);fishMesh.add(fb);
@@ -331,7 +332,10 @@ function buildWorld(){
 }
 // vicini di spiaggia: ognuno con sedia, due canne sui picchetti e le sue abitudini
 function buildNpcs(){const defs=[{x:-22,col:{j:'#b5562a',j2:'#8f4220',c:'#2b3a55',p:'#3a3a3a'}},{x:25,col:{j:'#2e4f7a',j2:'#233d60',c:'#d9b24a',p:'#4a4436'}},{x:-46,col:{j:'#5a5f66',j2:'#464a50',c:'#2f6b3a',p:'#2c3445'}},{x:52,col:{j:'#7a2e3a',j2:'#5c222b',c:'#222',p:'#2c3445'}}];
-  for(const d of defs){const a={obj:makeAngler(d.col),pose:JSON.parse(JSON.stringify(POSES.sit)),target:'sit',walk:0,moving:false,speed:1.2,pos:new T.Vector3(d.x,12*.035,12),rotY:rnd(-.2,.2),holding:-1,reelSpin:0,crank:0,faceTo:null,
+  const PERS=[{name:'Franco',age:64,town:'Acilia',yrs:35,bait:'bibi',lead:150,rig:'lungo',app:true,mood:'chiacchierone'},{name:'Peppe',age:51,town:'Ostia',yrs:20,bait:'arenicola',lead:175,rig:'corto',app:false,mood:'brontolone'},
+    {name:'Marco',age:33,town:'Torvaianica',yrs:8,bait:'koreano',lead:125,rig:'2ami',app:true,mood:'entusiasta'},{name:'Luigi',age:72,town:'Roma, Garbatella',yrs:50,bait:'cannolicchio',lead:150,rig:'lungo',app:false,mood:'saggio'}];
+  defs.forEach((d,k)=>d.per=PERS[k]);
+  for(const d of defs){const a={per:d.per,bag:Array.from({length:Math.floor(rnd(0,3))},()=>npcFish(d.per.bait)),obj:makeAngler(d.col),pose:JSON.parse(JSON.stringify(POSES.sit)),target:'sit',walk:0,moving:false,speed:1.2,pos:new T.Vector3(d.x,12*.035,12),rotY:rnd(-.2,.2),holding:-1,reelSpin:0,crank:0,faceTo:null,
       home:{x:d.x,z:12},rods:[],t:rnd(5,30),st:'sit'};scene.add(a.obj);
     const ch=new T.Mesh(new T.BoxGeometry(.42,.03,.36),new T.MeshStandardMaterial({color:'#4b5a36'}));ch.position.set(d.x,12*.035+.56,12.05);scene.add(ch);
     for(const sx of[-1,1])for(const sz of[-1,1]){const l=new T.Mesh(new T.CylinderGeometry(.014,.014,.58,6),MAT.chairF);l.position.set(d.x+sx*.2,12*.035+.28,12.05+sz*.16);scene.add(l);}
@@ -339,17 +343,42 @@ function buildNpcs(){const defs=[{x:-22,col:{j:'#b5562a',j2:'#8f4220',c:'#2b3a55
     for(let k=0;k<2;k++){const x=d.x+(k?2.5:-2.5),sp=makeSpike();sp.position.set(x,ROD_Z*.035,ROD_Z);scene.add(sp);const rod=makeRod();scene.add(rod);
       const r={x,obj:rod,dist:rnd(70,115),bend:0,held:false,line:null,sx:x+rnd(-4,4)};const lg=new T.BufferGeometry();lg.setAttribute('position',new T.Float32BufferAttribute(new Float32Array(20*3),3));r.line=new T.Line(lg,MAT.line);r.line.frustumCulled=false;scene.add(r.line);placeRodOnSpike(r);a.rods.push(r);}
     NPCS.push(a);}}
-const npcGo=(a,x,z,cb)=>{a.walkTarget={x,z,res:cb};a.moving=true;};
+const npcGo=(a,x,z,cb)=>{a.walkTarget={x,z,res:cb};a.moving=true;a.target='stand';};
+function npcFish(bait){const m=gameDate().getMonth()+1,c=SP.filter(sp=>!sp.crab&&(sp.bait[bait]||0)>0).map(sp=>[sp,(sp.mo[m]||.05)*sp.ab*(sp.bait[bait]||0)]);let u=Math.random()*c.reduce((a,x)=>a+x[1],0)||0;
+  for(const [sp,f] of c){u-=f;if(u<=0){const w=sizeOf(sp);return {n:sp.n,w,l:lenOf(sp,w)};}}const sp=SP[4],w=sizeOf(sp);return {n:sp.n,w,l:lenOf(sp,w)};}
+// fumetti sopra la testa
+function say(a,text,secs=4){if(a.bub){a.obj.remove(a.bub);a.bub.material.map.dispose();}const lines=[];let cur='';for(const w of String(text).split(' ')){if((cur+' '+w).length>26){lines.push(cur);cur=w;}else cur=(cur?cur+' ':'')+w;}lines.push(cur);
+  const H=40+lines.length*34,tx=canvasTex(512,H,(g)=>{g.fillStyle='rgba(255,255,255,.93)';g.strokeStyle='rgba(0,0,0,.25)';g.lineWidth=3;const r=22;g.beginPath();g.moveTo(r,2);g.arcTo(510,2,510,H-2,r);g.arcTo(510,H-2,2,H-2,r);g.arcTo(2,H-2,2,2,r);g.arcTo(2,2,510,2,r);g.fill();g.stroke();
+    g.fillStyle='#1c2430';g.font='600 28px Outfit,sans-serif';g.textAlign='center';lines.forEach((l,i)=>g.fillText(l,256,44+i*34));});
+  const sp=new T.Sprite(new T.SpriteMaterial({map:tx,depthTest:false,transparent:true}));sp.scale.set(1.6,1.6*H/512,1);sp.position.y=2.35;sp.renderOrder=10;a.obj.add(sp);a.bub=sp;a.bubT=secs;}
+const NPC_LINES={
+  greet:a=>pick([`Ciao! Io sono ${a.per.name}.`,'Buongiorno! Come va da te?','Allora, abboccano?','Ciao collega!']),
+  catch:(a,f)=>pick([`Presa! ${f.n} da ${Math.round(f.l)} cm!`,`Eccola! ${f.n}!`,`${f.n}! Finalmente…`]),
+  miss:()=>pick(['Niente, mi ha pulito l\'amo.','Granchi maledetti!','Era solo l\'onda…','Mancato!']),
+  chat:()=>pick(['Hai visto che mare?','Da te abboccano?','Stanotte ho preso una spigola!','Hai un piombo da 150?','Domani gira il vento…','Passami un bibi, va.','Il caffè è finito?']),
+  eat:()=>pick(['Panino con la porchetta…','Un caffè ci vuole.','Mo\' mangio, poi rilancio.'])};
 function updNpcs(dt,t){const w=wxAt(st.gt);
-  for(const a of NPCS){a.t-=dt;
-    // abitudini: seduto, poi va a controllare una canna, a volte recupera e rilancia, poi torna o resta in piedi a guardare
-    if(a.t<=0&&!a.moving){const r=a.rods[Math.floor(Math.random()*2)];
-      if(a.st==='sit'||a.st==='stand'){a.st='going';a.target='stand';npcGo(a,r.x+.6,ROD_Z+1.3,()=>{a.faceTo=0;a.st='atrod';a.cur=r;a.t=rnd(2,6);});}
+  for(const [ai,a] of NPCS.entries()){a.t-=dt;if(a.bub){a.bubT-=dt;if(a.bubT<=0){a.obj.remove(a.bub);a.bub=null;}}
+    if(a.t<=0&&!a.moving){const r=a.rods[Math.floor(Math.random()*2)],u=Math.random(),dP=a.pos.distanceTo(AN.pos);
+      if(a.st==='sit'){a.eating=0;
+        if(u<.35){a.st='going';npcGo(a,r.x+.6,ROD_Z+1.3,()=>{a.faceTo=0;a.st='atrod';a.cur=r;a.t=rnd(2,6);});}
+        else if(u<.5){a.st='sitEat';a.eating=rnd(25,50);a.t=a.eating;say(a,NPC_LINES.eat(),3);}
+        else if(u<.62&&dP<60){a.st='visit';const ox=AN.pos.x+(a.pos.x>AN.pos.x?2.2:-2.2);npcGo(a,ox,clamp(AN.pos.z+.5,.5,24),()=>{a.st='visiting';a.t=rnd(15,28);say(a,NPC_LINES.greet(a));});}
+        else if(u<.75){const o=NPCS[(ai+1+Math.floor(Math.random()*(NPCS.length-1)))%NPCS.length];if(o.st==='sit'||o.st==='sitEat'){a.st='visitNpc';a.other=o;npcGo(a,o.pos.x+1.6,o.pos.z-.6,()=>{a.st='chatting';a.t=rnd(14,26);a.chatT=0;});}else a.t=rnd(10,30);}
+        else if(u<.85){a.st='stroll';npcGo(a,a.home.x+rnd(-14,14),rnd(1.5,4),()=>{a.faceTo=0;a.st='watch';a.t=rnd(6,15);});}
+        else a.t=rnd(20,60);}
+      else if(a.st==='sitEat'){a.st='sit';a.eating=0;a.t=rnd(15,40);}
       else if(a.st==='atrod'){if(Math.random()<.45){a.target='bend';a.st='reel';a.t=1.2;}else{a.st='watch';a.t=rnd(4,12);}}
-      else if(a.st==='reel'){const r2=a.cur;if(!r2.held){r2.held=true;a.holding=0;a.target='reel';a.reelSpin=1;a.t=rnd(5,9);}else{r2.held=false;a.holding=-1;a.reelSpin=0;placeRodOnSpike(r2);a.target='stand';a.st='watch';a.t=rnd(3,8);r2.dist=rnd(70,115);}}
-      else if(a.st==='watch'){if(Math.random()<.6){a.st='back';npcGo(a,a.home.x,a.home.z-.05,()=>{a.faceTo=0;a.target='sit';a.st='sit';a.t=rnd(25,90);});}else{a.st='stand';a.t=rnd(15,40);}}}
-    if(!a.moving&&a.st!=='reel'&&AN.pos.distanceTo(a.pos)<5)a.faceTo=Math.atan2(-(AN.pos.x-a.pos.x),-(AN.pos.z-a.pos.z));else if(!a.moving&&a.faceTo!==0&&a.st!=='reel'&&AN.pos.distanceTo(a.pos)>=5)a.faceTo=0;
+      else if(a.st==='reel'){const r2=a.cur;if(!r2.held){r2.held=true;a.holding=0;a.target='reel';a.reelSpin=1;a.t=rnd(5,9);}else{r2.held=false;a.holding=-1;a.reelSpin=0;placeRodOnSpike(r2);a.target='stand';a.st='watch';a.t=rnd(3,8);r2.dist=rnd(70,115);
+        if(Math.random()<.35){const f=npcFish(a.per.bait);a.bag.push(f);say(a,NPC_LINES.catch(a,f),4.5);}else if(Math.random()<.4)say(a,NPC_LINES.miss(),3);}}
+      else if(a.st==='visiting'||a.st==='chatting'||a.st==='watch'||a.st==='stand'){a.other=null;a.st='back';npcGo(a,a.home.x,a.home.z-.05,()=>{a.faceTo=0;a.target='sit';a.st='sit';a.t=rnd(25,80);});}}
+    // chiacchiere tra vicini; chi è vicino a te si gira verso di te
+    if(a.st==='chatting'&&a.other){a.faceTo=Math.atan2(-(a.other.pos.x-a.pos.x),-(a.other.pos.z-a.pos.z));a.chatT-=dt;if(a.chatT<=0){a.chatT=rnd(3.5,6);const who=Math.random()<.5?a:a.other;if(!who.bub)say(who,NPC_LINES.chat(),3.2);}}
+    else if(!a.moving&&a.st!=='reel'&&AN.pos.distanceTo(a.pos)<5)a.faceTo=Math.atan2(-(AN.pos.x-a.pos.x),-(AN.pos.z-a.pos.z));else if(!a.moving&&a.faceTo!==0&&a.st!=='reel'&&AN.pos.distanceTo(a.pos)>=5)a.faceTo=0;
     moveActor(a,dt);lerpPose(dt,6,a);applyPose(t,a);
+    // mangia: la mano porta il panino alla bocca
+    if(!a.sand){a.sand=new T.Mesh(new T.BoxGeometry(.09,.04,.06),new T.MeshStandardMaterial({color:'#d9b27a'}));a.sand.position.set(0,-.05,-.03);a.obj.userData.J.rHand.add(a.sand);}a.sand.visible=a.eating>0;
+    if(a.eating>0&&a.target==='sit'){const J=a.obj.userData.J,k=Math.max(0,Math.sin(t*1.3+ai));J.rSh.rotation.x=.35+k*1.25;J.rSh.rotation.z=-.35*k;J.rEl.rotation.x=.9+k*1.2;J.head.rotation.x=-.1+k*.1;}
     if(a.reelSpin){a.crank+=dt*7;}
     for(const r of a.rods){const swell=Math.sin(t*2*Math.PI/Math.max(3,w.wper||5)+r.x)*(w.wave||.3)*.12;r.bend=lerp(r.bend,(r.held?.5+Math.sin(t*3)*.15:.12)+swell,.2);bendRod(r.obj,r.bend);
       if(r.held){rodInHand(r,a);r.obj.userData.rotor.rotation.y+=dt*22;r.obj.userData.lineOn.rotation.y+=dt*22;r.dist=Math.max(5,r.dist-dt*6);}
@@ -360,12 +389,42 @@ function updNpcs(dt,t){const w=wxAt(st.gt);
 function respawnCloud(sp,first){const a=rnd(-Math.PI,Math.PI),d=rnd(700,3000);sp.position.set(Math.sin(a)*d,rnd(160,520),-Math.cos(a)*d);
   sp.userData.w=rnd(700,1400);sp.userData.h=rnd(240,440);sp.userData.life=first?Math.random():0;sp.userData.dur=rnd(900,2400);sp.userData.ph=Math.random()*6.3;sp.userData.vis=0;
   if(!first){sp.material.map.dispose();sp.material.map=cloudTex(Math.floor(Math.random()*1e6));sp.material.needsUpdate=true;}}
+let CRABS=[];
+function makeCrab(){const g=new T.Group(),m=new T.MeshStandardMaterial({color:'#b07a48',roughness:.7}),b=new T.Mesh(new T.SphereGeometry(.045,10,8),m);b.scale.set(1.2,.45,.85);b.position.y=.025;g.add(b);
+  for(const sx of[-1,1]){for(let k=0;k<3;k++){const l=new T.Mesh(new T.CylinderGeometry(.004,.003,.06,4),m);l.position.set(sx*.05,.015,(k-1)*.022);l.rotation.z=sx*1.1;g.add(l);}
+    const c=new T.Mesh(new T.SphereGeometry(.016,8,6),new T.MeshStandardMaterial({color:'#c8643c',roughness:.6}));c.scale.set(1.4,.7,1);c.position.set(sx*.035,.025,-.055);g.add(c);}
+  g.userData={vx:0,t:0,hid:0};return g;}
+function buildCrabs(){CRABS=[];for(let i=0;i<7;i++){const c=makeCrab();c.position.set(rnd(-25,25),0,rnd(-.2,1.2));c.rotation.y=rnd(0,6);scene.add(c);CRABS.push(c);}}
+function updCrabs(dt,t){const nightK=night();for(const c of CRABS){const u=c.userData;u.t-=dt;
+    if(u.hid>0){u.hid-=dt;c.visible=false;if(u.hid<=0){c.position.set(AN.pos.x+rnd(-14,14),0,rnd(-.2,1.2));}continue;}c.visible=true;
+    if(u.t<=0){u.vx=Math.random()<.35?0:rnd(-.6,.6)*(1+nightK);u.t=rnd(.6,2.5);if(Math.random()<.08)u.hid=rnd(8,30);}
+    // camminano di lato, seguono la risacca e si fermano ogni tanto
+    c.position.x+=u.vx*dt;c.position.z=clamp(c.position.z+Math.sin(t*.8+c.id)*dt*.15,-.3,1.3);c.position.y=Math.max(sandY(c.position.z),-.02)+.005;c.rotation.y=Math.PI/2+Math.sin(t*3+c.id)*.15;
+    if(Math.abs(c.position.x-AN.pos.x)>40)u.hid=1;}}
+function nearCrab(){let best=null,bd=1.6;for(const c of CRABS){if(!c.visible)continue;const d=Math.hypot(c.position.x-AN.pos.x,c.position.z-AN.pos.z);if(d<bd){bd=d;best=c;}}return best;}
+G.crab=()=>seq(async()=>{const c=nearCrab();if(!c)return;st.phase='busy';setUI();const fc=Math.atan2(-(c.position.x-AN.pos.x),-(c.position.z-AN.pos.z));AN.faceTo=fc;pose('bend');await sleep(.7);
+  c.userData.hid=rnd(15,40);c.visible=false;st.inv.granchio++;click();pose('stand');AN.faceTo=null;st.msg=`🦀 Preso un granchio! Ne hai ${st.inv.granchio} da innescare.`;st.phase='wait';setUI();});
+function cooler(x,z,ry,c1='#2f6fb5'){const g=new T.Group(),b=new T.Mesh(new T.BoxGeometry(.5,.32,.32),new T.MeshStandardMaterial({color:c1,roughness:.5}));b.position.y=.16;g.add(b);
+  const lid=new T.Mesh(new T.BoxGeometry(.52,.06,.34),new T.MeshStandardMaterial({color:'#f2f2f2',roughness:.5}));lid.position.y=.34;g.add(lid);const h=new T.Mesh(new T.TorusGeometry(.12,.012,6,12,Math.PI),MAT.chairF);h.position.y=.37;g.add(h);
+  g.position.set(x,Math.max(0,z*.035),z);g.rotation.y=ry;g.traverse(o=>{if(o.isMesh)o.castShadow=true;});scene.add(g);return g;}
+function lantern(x,z,light){const g=new T.Group(),base=new T.Mesh(new T.CylinderGeometry(.06,.07,.04,12),MAT.reel);base.position.y=.02;g.add(base);
+  const glass=new T.Mesh(new T.CylinderGeometry(.05,.05,.14,12),new T.MeshStandardMaterial({color:'#fff7d6',emissive:'#ffd27a',emissiveIntensity:0,transparent:true,opacity:.85}));glass.position.y=.11;g.add(glass);
+  const top=new T.Mesh(new T.ConeGeometry(.07,.05,12),MAT.reel);top.position.y=.205;g.add(top);g.position.set(x,Math.max(0,z*.035),z);scene.add(g);g.userData.glass=glass;
+  if(light){const pl=new T.PointLight(0xffc870,0,9,2);pl.position.y=.25;g.add(pl);g.userData.pl=pl;}LANTERNS.push(g);return g;}
+let LANTERNS=[];
+function buildGear(){LANTERNS=[];const y=CHAIR.z;cooler(CHAIR.x-1.3,y+.4,.3);lantern(CHAIR.x+.95,y-.6,true);
+  const th=new T.Mesh(new T.CylinderGeometry(.04,.04,.3,12),new T.MeshStandardMaterial({color:'#9aa3ad',metalness:.7,roughness:.3}));th.position.set(CHAIR.x-.55,y*.035+.15,y+.35);th.castShadow=true;scene.add(th);
+  // porta-esche e telo per l'attrezzatura
+  const telo=new T.Mesh(new T.PlaneGeometry(1.6,1.1),new T.MeshStandardMaterial({color:'#6b5a3a',roughness:1}));telo.rotation.x=-Math.PI/2;telo.position.set(CHAIR.x+.4,y*.035+.01,y+.2);telo.receiveShadow=true;scene.add(telo);
+  for(const a of NPCS){cooler(a.home.x+1.1,a.home.z+.35,rnd(-.5,.5),pick(['#c0392b','#2f6fb5','#3a8a5a','#d9b24a']));lantern(a.home.x-.8,a.home.z-.4,false);
+    const b=new T.Mesh(new T.CylinderGeometry(.15,.12,.28,14),MAT.bucket);b.position.set(a.home.x-.6,a.home.z*.035+.14,a.home.z+.5);b.castShadow=true;scene.add(b);
+    const bag=new T.Mesh(new T.BoxGeometry(.4,.3,.25),new T.MeshStandardMaterial({color:pick(['#4a5a32','#3d434b','#5a3a2a']),roughness:.9}));bag.position.set(a.home.x+.4,a.home.z*.035+.15,a.home.z+.9);bag.castShadow=true;scene.add(bag);}}
 function setupRods(){st.rods.forEach(r=>{scene.remove(r.hit);scene.remove(r.obj);scene.remove(r.spike);scene.remove(r.line);scene.remove(r.sinker);});
   st.rods=Array.from({length:st.nRods},(_,i)=>{const x=rodX(i,st.nRods),spike=makeSpike();spike.position.set(x,ROD_Z*.035,ROD_Z);scene.add(spike);
     const obj=makeRod();scene.add(obj);const lg=new T.BufferGeometry();lg.setAttribute('position',new T.Float32BufferAttribute(new Float32Array(40*3),3));const line=new T.Line(lg,MAT.line);line.frustumCulled=false;scene.add(line);
     const sinker=new T.Mesh(new T.SphereGeometry(.05,8,6),MAT.lead);sinker.visible=false;scene.add(sinker);
     const hit=new T.Mesh(new T.CylinderGeometry(.6,.6,4.6,8),new T.MeshBasicMaterial({visible:false}));hit.position.set(x,2,ROD_Z-1.1);hit.rotation.x=-40*R;scene.add(hit);
-    return {i,x,spike,obj,line,sinker,hit,bait:null,dist:0,state:'idle',baitLeft:0,bend:0,bitePlan:null,held:false,sx:x,sz:-1};});}
+    return {lead:st.lead,hook:st.hook,rig:'lungo',broken:false,dismantled:false,i,x,spike,obj,line,sinker,hit,bait:null,dist:0,state:'idle',baitLeft:0,bend:0,bitePlan:null,held:false,sx:x,sz:-1};});}
 function placeRodOnSpike(r){const by=ROD_Z*.035;r.obj.position.set(r.x,by+.12,ROD_Z);r.obj.rotation.set(-40*R,0,0,'YXZ');}
 function rodInHand(r,a=AN){const J=a.obj.userData.J,hp=new T.Vector3();J.rHand.getWorldPosition(hp);const p=a.pose.rod||{p:45,f:0,y:0};
   r.obj.rotation.set((p.p-90)*R,a.rotY+(p.y||0),0,'YXZ');const dir=new T.Vector3(0,1,0).applyEuler(r.obj.rotation);r.obj.position.copy(hp).addScaledVector(dir,-.5);}
@@ -373,7 +432,7 @@ function rodInHand(r,a=AN){const J=a.obj.userData.J,hp=new T.Vector3();J.rHand.g
 /* ---------- interfaccia ---------- */
 function mount(v){
   stop();root=document.createElement('div');root.id='gamebox';
-  root.innerHTML=`<div id="g3"></div><div id="ghud"></div><div id="gui"></div><button id="gx" aria-label="Esci">✕</button><button id="gau" aria-label="Audio">${AU.on?'🔊':'🔇'}</button><button id="glamp" aria-label="Torcia" class="${st.lamp?'':'off'}">🔦</button><button id="gspd" aria-label="Velocità del tempo">⏩ ${st.speed}x</button>`;
+  root.innerHTML=`<div id="g3"></div><div id="ghud"></div><div id="gui"></div><button id="gx" aria-label="Esci">✕</button><button id="gau" aria-label="Audio">${AU.on?'🔊':'🔇'}</button><button id="glamp" aria-label="Torcia" class="${st.lamp?'':'off'}">🔦</button><button id="gspd" aria-label="Velocità del tempo">⏩ ${st.speed}x</button><div id="gjoy"><i></i></div>`;
   document.body.appendChild(root);document.body.classList.add('gaming');ui=root.querySelector('#gui');hud=root.querySelector('#ghud');
   root.querySelector('#gx').onclick=()=>G.exit();
   root.querySelector('#gspd').onclick=()=>{const L=[1,2,4,8,16,32];G.setSpeed(L[(L.indexOf(st.speed)+1)%L.length]);};
@@ -392,7 +451,7 @@ G.mount=mount;G.exit=()=>{stop();if(window.go)go('altro');};
 function size(){if(!renderer)return;const w=root.clientWidth,h=root.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.fov=w<h?68:50;camera.updateProjectionMatrix();}
 const btn=(t,f,cls='')=>`<button class="gb ${cls}" onclick="GAME.${f}">${t}</button>`;
 const suggestLead=w=>w<.3?100:w<.6?125:w<1?150:w<1.6?175:200;
-function rodStatus(r){if(r.held)return 'in mano';if(r.state==='hooked')return '🐟 PESCE ALLAMATO!';if(!r.bait)return 'da innescare';if(r.state==='bite')return '🔔 ABBOCCATA!';if(r.baitLeft<=0)return 'esca finita?';return r.baitLeft>20?'in pesca':'esca consumata';}
+function rodStatus(r){if(r.dismantled)return 'smontata';if(r.broken)return 'terminale rotto';if(r.held)return 'in mano';if(r.state==='hooked')return '🐟 PESCE ALLAMATO!';if(!r.bait)return 'da innescare';if(r.state==='bite')return '🔔 ABBOCCATA!';if(r.baitLeft<=0)return 'esca finita?';return r.baitLeft>20?'in pesca':'esca consumata';}
 function setUI(){const p=st.phase;let h='';
   if(p==='setup'){const w=wxAt(st.gt),sug=suggestLead(w.wave);
     h=`<div class="gpanel"><b>🎣 Castelporziano · ${gameDate().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</b>
@@ -403,10 +462,19 @@ function setUI(){const p=st.phase;let h='';
       <div class="grow"><span>Amo</span>${[['piccolo','n. 6'],['medio','n. 2'],['grande','2/0']].map(([k,n])=>`<button class="gc ${st.hook===k?'on':''}" onclick="GAME.setHook('${k}')">${n}</button>`).join('')}</div>
       ${btn('Pianta i picchetti e inizia','start()','big')}</div>`;}
   else if(p==='wait'){h=`<div class="gpanel slim"><div class="grods">${st.rods.map((r,i)=>`<button class="gr ${r.state==='bite'||r.state==='hooked'?'alert':''}" onclick="GAME.rod(${i})" ${st.busy?'disabled':''}><b>Canna ${i+1}</b><small>${r.bait?B[r.bait].n:'senza esca'}${r.dist?' · '+Math.round(r.dist)+' m':''}</small><small>${rodStatus(r)}</small></button>`).join('')}</div>
-    ${st.busy?'':`<div class="grow" style="justify-content:center">${[1,2,4,8,16,32].map(s=>`<button class="gc ${st.speed===s?'on':''}" onclick="GAME.setSpeed(${s})">${s===1?'▶ 1x':s+'x'}</button>`).join('')}<button class="gc" onclick="GAME.bagView()">🧺 ${st.bag.length}</button>${skipUp()?'<button class="gc" onclick="GAME.skip(1)">🌅 Vai all\'alba</button>':'<button class="gc" onclick="GAME.skip(0)">🌇 Vai al tramonto</button>'}<button class="gc" onclick="GAME.center()" title="Guarda le canne">🎯</button>${AN.target!=='sit'?'<button class="gc" onclick="GAME.sit()">🪑 Siediti</button>':'<button class="gc" onclick="GAME.rise()">🚶 Alzati</button>'}</div>`}${st.msg?`<div class="gs" style="text-align:center">${st.msg}</div>`:''}</div>`;}
+    ${st.busy?'':`<div class="grow" style="justify-content:center">${[1,2,4,8,16,32].map(s=>`<button class="gc ${st.speed===s?'on':''}" onclick="GAME.setSpeed(${s})">${s===1?'▶ 1x':s+'x'}</button>`).join('')}<button class="gc" onclick="GAME.bagView()">🧺 ${st.bag.length}</button>${skipUp()?'<button class="gc" onclick="GAME.skip(1)">🌅 Vai all\'alba</button>':'<button class="gc" onclick="GAME.skip(0)">🌇 Vai al tramonto</button>'}${(()=>{const ni=NPCS.findIndex(a=>a.pos.distanceTo(AN.pos)<3.2);return ni>=0?`<button class="gc" style="background:#2fe0cf;color:#03282a" onclick="GAME.talk(${ni})">💬 Parla con ${NPCS[ni].per.name}</button>`:'';})()}${nearCrab()?'<button class="gc" style="background:#ffb547;color:#3a2400" onclick="GAME.crab()">🦀 Prendi il granchio</button>':''}<button class="gc" onclick="GAME.center()" title="Guarda le canne">🎯</button>${AN.target!=='sit'?'<button class="gc" onclick="GAME.sit()">🪑 Siediti</button>':'<button class="gc" onclick="GAME.rise()">🚶 Alzati</button>'}</div>`}${st.msg?`<div class="gs" style="text-align:center">${st.msg}</div>`:''}</div>`;}
   else if(p==='atrod'){const r=st.rods[st.sel];h=`<div class="gpanel"><b>Canna ${st.sel+1}</b><div class="gs">${r.bait?B[r.bait].n+' a '+Math.round(r.dist)+' m · '+rodStatus(r):'Senza esca'}</div>
-    ${r.state==='bite'?btn('⚡ FERRA!','strike()','big hot'):''}${r.state==='hooked'?btn('🌀 Prendi la canna e recupera','fightHooked()','big hot'):''}${r.bait?btn('🌀 Recupera e cambia esca','rebait()'):btn('🪝 Innesca','rebait()','big')}${btn('🪑 Torna a sedere','back()')}</div>`;}
-  else if(p==='bait')h=`<div class="gpanel"><b>🪝 Innesca la canna ${st.sel+1}</b><div class="gbaits">${BAITS.map(b=>`<button class="gbt" onclick="GAME.bait('${b.k}')"><span>${b.e}</span><b>${b.n}</b><small>${b.d}</small></button>`).join('')}</div></div>`;
+    ${r.state==='bite'?btn('⚡ FERRA!','strike()','big hot'):''}${r.state==='hooked'?btn('🌀 Prendi la canna e recupera','fightHooked()','big hot'):''}${r.dismantled?btn('🔧 Rimonta la canna','remount()','big'):(r.bait?btn('🌀 Recupera e cambia esca','rebait()'):btn('🪝 Innesca','rebait()','big'))+btn('🔧 Montatura · '+r.lead+' g, amo '+({piccolo:'n.6',medio:'n.2',grande:'2/0'})[r.hook]+', '+({lungo:'lungo',corto:'corto','2ami':'2 ami'})[r.rig],'rigAt()')+(r.bait?'':btn('🧰 Smonta la canna','dismantle()'))}${btn('🪑 Torna a sedere','back()')}</div>`;}
+  else if(p==='rig'){const r=st.rods[st.sel],w=wxAt(st.gt);h=`<div class="gpanel"><b>🔧 Montatura della canna ${st.sel+1}</b>${r.broken?'<div class="gs warn">La lenza si è rotta: rifai il terminale (perdi piombo e amo).</div>':''}
+    <div class="grow"><span>Piombo</span>${[80,100,125,150,175,200].map(g=>`<button class="gc ${r.lead===g?'on':''}" onclick="GAME.setRig('lead',${g})">${g} g</button>`).join('')}</div>
+    <div class="gs">Con mare ${seaName(w.wave)} servono almeno ${suggestLead(w.wave)} g, sennò la corrente trascina il piombo verso riva.</div>
+    <div class="grow"><span>Amo</span>${[['piccolo','n. 6'],['medio','n. 2'],['grande','2/0']].map(([k,n])=>`<button class="gc ${r.hook===k?'on':''}" onclick="GAME.setRig('hook','${k}')">${n}</button>`).join('')}</div>
+    <div class="grow"><span>Terminale</span>${[['lungo','lungo 2 m'],['corto','corto 70 cm'],['2ami','trave a 2 ami']].map(([k,n])=>`<button class="gc ${r.rig===k?'on':''}" onclick="GAME.setRig('rig','${k}')">${n}</button>`).join('')}</div>
+    <div class="gs">Lungo: più naturale con mare calmo (orate, mormore). Corto: lancia meglio e regge il mare mosso. Due ami: più abboccate, lancio più corto.</div>${btn(r.broken?'🔧 Rifai il terminale':'✅ Fatto','rigDone()','big')}</div>`;}
+  else if(p==='snag'){const sn=st.snag;h=`<div class="gpanel"><b>⚠️ Incagliato!</b><div class="gs">${sn.msg||'Il piombo si è incastrato sul fondo.'}</div>${btn('💪 Tira forte','snagPull()','big')}${btn('↔️ Spostati e cambia angolo','snagMove()')}</div>`;}
+  else if(p==='talk'){const tk=st.talk,a=NPCS[tk.i];h=`<div class="gpanel"><b>💬 ${a.per.name} · ${a.per.age} anni, ${a.per.town}</b><div class="gs" style="font-size:15.5px;background:rgba(255,255,255,.08);border-radius:12px;padding:8px 10px">«${escH(tk.txt)}»</div>
+    <div class="gtalk">${Q.map(([k,n])=>`<button class="gc" onclick="GAME.ask('${k}')">${n}</button>`).join('')}</div></div>`;}
+  else if(p==='bait')h=`<div class="gpanel"><b>🪝 Innesca la canna ${st.sel+1}</b><div class="gbaits">${BAITS.filter(b=>!b.lim||st.inv[b.k]>0).map(b=>`<button class="gbt" onclick="GAME.bait('${b.k}')"><span>${b.e}</span><b>${b.n}${b.lim?' ('+st.inv[b.k]+')':''}</b><small>${b.d}</small></button>`).join('')}</div>${btn('🔧 Cambia montatura prima','rig()')}</div>`;
   else if(p==='cast')h=`<div class="gpanel"><b>🎯 Lancia · ${B[st.rods[st.sel].bait].n}</b><div class="gs">Tieni premuto per caricare, rilascia nella zona verde. ${(()=>{const w=wxAt(st.gt),hp=windHelp(w.wd);return w.ws>12?(hp>.3?'Vento da terra: ti aiuta.':hp<-.3?'Vento dal mare: lancerai più corto.':'Vento laterale.'):'';})()}</div><div class="gpow"><i id="gpw"></i><s></s></div><button class="gb big" id="gcastb">🎣 Carica e lancia</button></div>`;
   else if(p==='fight')h=`<div class="gpanel"><b id="gfti">Combattimento</b><div class="gbar"><i id="gten"></i><span>tensione</span></div><div class="gbar dist"><i id="gdis"></i><span id="gdt">distanza</span></div>
     <div class="grow"><span>Frizione</span><input type="range" min="1" max="10" value="${st.fight?.drag||5}" oninput="GAME.drag(this.value)" style="flex:1"></div><div class="gs" id="galert" style="color:#ffb547;font-weight:700;min-height:0"></div><button class="gb big" id="greel">🌀 Tieni premuto per recuperare</button></div>`;
@@ -422,10 +490,11 @@ function setUI(){const p=st.phase;let h='';
   const cb=document.getElementById('gcastb');if(cb){cb.onpointerdown=e=>{e.preventDefault();ac();st.cast={p:0,dir:1,on:true};AN.target='castBack';};const rel=()=>{if(st.cast?.on)doCast();};cb.onpointerup=rel;cb.onpointerleave=rel;}
   const rb=document.getElementById('greel');if(rb){const on=e=>{e.preventDefault();if(st.fight)st.fight.reel=true;},off=()=>{if(st.fight)st.fight.reel=false;};rb.onpointerdown=on;rb.onpointerup=off;rb.onpointerleave=off;rb.onpointercancel=off;}
   if(p==='catch')setTimeout(drawFishCard,0);
+  const jb=root?.querySelector('#gjoy');if(jb&&!(p==='wait'&&!st.busy))jb.style.display='none';
 }
 G.setN=n=>{st.nRods=n;LSS('nrods',n);setUI();};G.setLead=g=>{st.lead=g;LSS('lead',g);setUI();};G.setHook=k=>{st.hook=k;LSS('hook',k);setUI();};
 G.setSpeed=s=>{st.speed=s;LSS('speed',s);const b=document.getElementById('gspd');if(b)b.textContent='⏩ '+s+'x';if(st.phase==='wait')setUI();};G.bagView=()=>{st.phase='bag';setUI();};G.toWait=()=>{st.phase='wait';setUI();};G.drag=v=>{if(st.fight)st.fight.drag=+v;};
-G.start=()=>{setupRods();st.rods.forEach(placeRodOnSpike);st.phase='wait';st.msg='Tocca una canna per andarci. Trascina il dito per guardarti attorno.';setUI();};
+G.start=()=>{setupRods();st.rods.forEach(placeRodOnSpike);st.phase='wait';st.msg='Joystick per camminare (anche in acqua), un dito per guardarti attorno, due dita per lo zoom. Tocca una canna per andarci.';setUI();};
 
 /* ---------- movimenti del pescatore (sequenze) ---------- */
 const sleep=s=>new Promise(r=>setTimeout(r,s*1000));
@@ -447,13 +516,29 @@ G.rod=i=>seq(async()=>{st.sel=i;const r=st.rods[i];st.phase='busy';st.msg=r.stat
 G.back=()=>seq(async()=>{st.phase='busy';st.msg='';setUI();if(AN.holding>=0)await putRod(AN.holding);await backToChair();st.phase='wait';setUI();});
 G.rebait=()=>seq(async()=>{const r=st.rods[st.sel];st.phase='busy';st.msg=r.dist?'🌀 Recupera la lenza…':'';setUI();
   if(!r.held)await pickRod(st.sel);
-  if(r.dist>0){pose('reel');const d0=r.dist;for(let t=0;t<1;t+=.05){r.dist=d0*(1-t);AN.reelSpin=1;await sleep(.07);}r.dist=0;AN.reelSpin=0;}
-  r.bait=null;r.state='idle';r.bitePlan=null;r.sinker.visible=false;pose('bend');st.phase='bait';setUI();});
+  if(r.dist>0){pose('reel');const d0=r.dist,snagAt=r.dist>20&&Math.random()<.12?rnd(.2,.8):2;for(let t=0;t<1;t+=.05){if(t>=snagAt){AN.reelSpin=0;st.snag={r,stage:'rebait',at:t};st.phase='snag';vib([120,60,120]);setUI();return;}r.dist=d0*(1-t);AN.reelSpin=1;await sleep(.07);}r.dist=0;AN.reelSpin=0;}
+  afterRecover(r);});
+function afterRecover(r){r.bait=null;r.state='idle';r.bitePlan=null;r.sinker.visible=false;r.dist=0;r.driftMsg=0;pose('bend');st.phase=r.broken?'rig':'bait';setUI();}
+G.snagPull=()=>seq(async()=>{const sn=st.snag;if(!sn)return;st.phase='busy';setUI();pose('strike');AN.reelSpin=1;vib([200]);await sleep(1);AN.reelSpin=0;
+  const u=Math.random();if(u<.45){st.snag=null;st.msg='Liberato! Il piombo si è sbloccato.';if(sn.stage==='fight'){st.fight.snag=false;st.phase='fight';pose('reel');setUI();return;}pose('reel');for(let t=0;t<1;t+=.08){sn.r.dist*=.9;AN.reelSpin=1;await sleep(.06);}AN.reelSpin=0;afterRecover(sn.r);return;}
+  if(u<.8){splash(.2);st.snag=null;sn.r.broken=true;sn.r.bait=null;sn.r.dist=0;sn.r.sinker.visible=false;AN.reelSpin=0;pose('hold');
+    if(sn.stage==='fight'){const f=st.fight;st.fight=null;sn.r.state='idle';showCatch({fish:false,txt:'Lenza rotta!',why:'Incagliato con il pesce attaccato: la lenza ha ceduto. Rifai il terminale.'});return;}
+    st.msg='💥 La lenza si è rotta: hai perso piombo e amo.';st.phase='rig';setUI();return;}
+  st.snag.msg='Niente da fare, è ancora incastrato. Prova a cambiare angolo.';pose('reel');st.phase='snag';setUI();});
+G.snagMove=()=>seq(async()=>{const sn=st.snag;if(!sn)return;st.phase='busy';setUI();const side=Math.random()<.5?-1:1;await walkTo(AN.pos.x+side*3.5,AN.pos.z,1.6);AN.faceTo=0;pose('reel');AN.reelSpin=1;await sleep(.8);AN.reelSpin=0;
+  if(Math.random()<.65){st.snag=null;st.msg='Cambiando angolo il piombo si è liberato.';if(sn.stage==='fight'){st.fight.snag=false;st.phase='fight';setUI();return;}for(let t=0;t<1;t+=.08){sn.r.dist*=.9;AN.reelSpin=1;await sleep(.06);}AN.reelSpin=0;afterRecover(sn.r);return;}
+  st.snag.msg='Ancora incastrato. Tira forte o prova dall\'altro lato.';st.phase='snag';setUI();});
 G.putBack=()=>seq(async()=>{st.phase='busy';setUI();await putRod(st.sel);await stepBack(st.sel);st.phase='wait';setUI();});
-G.bait=k=>{const r=st.rods[st.sel];r.bait=k;r.baitLeft=B[k].life*(k==='cozza'&&st.hook==='piccolo'?1.2:1);click();pose('hold');st.phase='cast';setUI();};
+G.rigAt=()=>seq(async()=>{const r=st.rods[st.sel];st.phase='busy';setUI();if(r.dist>0){await pickRod(st.sel);pose('reel');const d0=r.dist;for(let t=0;t<1;t+=.06){r.dist=d0*(1-t);AN.reelSpin=1;await sleep(.06);}AN.reelSpin=0;r.dist=0;r.bait=null;r.state='idle';r.sinker.visible=false;}else if(!r.held)await pickRod(st.sel);st.phase='rig';setUI();});
+G.dismantle=()=>seq(async()=>{const r=st.rods[st.sel];st.phase='busy';st.msg='🧰 Smonta la canna e la mette nel fodero…';setUI();if(!r.held)await pickRod(st.sel);pose('bend');await sleep(1.6);r.held=false;AN.holding=-1;r.dismantled=true;r.obj.visible=false;r.line.visible=false;pose('stand');st.msg='Canna '+(r.i+1)+' smontata.';st.phase='wait';setUI();});
+G.remount=()=>seq(async()=>{const r=st.rods[st.sel];st.phase='busy';st.msg='🔧 Monta la canna…';setUI();pose('bend');await sleep(1.8);r.dismantled=false;r.obj.visible=true;placeRodOnSpike(r);pose('stand');st.msg='';st.phase='atrod';setUI();});
+G.rig=()=>{st.phase='rig';setUI();};
+G.setRig=(k,v)=>{const r=st.rods[st.sel];r[k]=v;click();setUI();};
+G.rigDone=()=>seq(async()=>{const r=st.rods[st.sel];st.phase='busy';st.msg=r.broken?'🔧 Rifà il terminale…':'🔧 Cambia la montatura…';setUI();pose('bend');await sleep(r.broken?2.2:1.4);r.broken=false;pose('hold');st.msg='';st.phase='bait';setUI();});
+G.bait=k=>{const r=st.rods[st.sel];if(B[k].lim){if(!(st.inv[k]>0))return;st.inv[k]--;}r.bait=k;r.baitLeft=B[k].life*(k==='cozza'&&st.hook==='piccolo'?1.2:1);click();pose('hold');st.phase='cast';setUI();};
 function doCast(){const c=st.cast;c.on=false;const r=st.rods[st.sel],w=wxAt(st.gt);
   const p=c.p,q=p>.78&&p<.92?1:p>.92?.8-(p-.92)*3:p/.78*.95;
-  const leadF=clamp(1.15-(st.lead-100)/400,.85,1.1),baitF=r.bait==='cefalotto'?.55:r.bait==='sarda'||r.bait==='seppia'?.85:1,wind=1+windHelp(w.wd)*clamp(w.ws/60,0,.35);
+  const leadF=clamp(1.15-((r.lead||st.lead)-100)/400,.85,1.1)*(r.rig==='2ami'?.93:r.rig==='corto'?1.04:1),baitF=r.bait==='cefalotto'?.55:r.bait==='sarda'||r.bait==='seppia'?.85:1,wind=1+windHelp(w.wd)*clamp(w.ws/60,0,.35);
   const dist=clamp(130*q*leadF*baitF*wind+rnd(-6,6),8,150);st.cast=null;
   seq(async()=>{st.phase='busy';st.msg='';setUI();pose('castFwd');whoosh();await sleep(.18);
     // il piombo vola: parabola dalla cima al punto d'arrivo
@@ -482,6 +567,7 @@ G.strike=()=>seq(async()=>{const r=st.rods[st.sel];if(r.state!=='bite')return;co
   const sp=p.sp,w=sizeOf(sp);st.fight={r,sp,w,len:lenOf(sp,w),dist:r.dist,ten:.3,reel:false,drag:5,run:0,slack:0,t:0,pow:sp.pow*(0.6+Math.min(1.6,w/sp.w[1])*.45)};
   r.state='fight';pose('reel');st.phase='fight';vib([160,60,90]);setUI();});
 function updFight(dt){const f=st.fight;if(!f||st.phase!=='fight')return;f.t+=dt;const r=f.r,w=wxAt(st.gt);
+  if(!f.snag&&f.dist>15&&Math.random()<dt*.005){f.snag=true;f.reel=false;AN.reelSpin=0;st.snag={r,stage:'fight',msg:'Il pesce si è infilato tra i detriti sul fondo e la lenza si è incagliata.'};st.phase='snag';vib([150,60,150]);setUI();return;}
   if(f.run<=0&&Math.random()<dt*.5*f.pow){f.run=rnd(.6,2)*f.pow;vib([90+Math.round(f.pow*60),50,140+Math.round(f.pow*80)]);}f.run=Math.max(0,f.run-dt);
   // durante la fuga e con la tensione alta: piccoli strattoni
   f.vt=(f.vt||0)-dt;if(f.vt<=0&&(f.run>0||f.ten>.75)){vib(f.run>0?Math.round(35+f.pow*30):25);f.vt=f.run>0?rnd(.25,.5):rnd(.6,1.1);}
@@ -511,12 +597,24 @@ G.release=()=>{record(true);st.msg='💚 Rilasciato. Bravo!';G.rebait();};
 G.keep=()=>{record(false);st.msg='🧺 Nel carniere';G.rebait();};
 function burst(p,k){const s=splashP.userData;s.t=1;s.o=p.clone();s.v.forEach(v=>v.set(rnd(-1,1)*k,rnd(1.5,3.5)*k,rnd(-1,1)*k));const a=splashP.geometry.attributes.position;for(let i=0;i<60;i++)a.setXYZ(i,p.x,p.y,p.z);a.needsUpdate=true;}
 // seduto: trascinando ti giri e guardi attorno; solo toccando una canna il pescatore si alza e ci va
-const LOOK={yaw:0,pitch:0};
-function bindLook(){let d=null;
-  cvs.addEventListener('pointerdown',e=>{ac();d={x:e.clientX,y:e.clientY,t:performance.now(),y0:LOOK.yaw,p0:LOOK.pitch,moved:false};cvs.setPointerCapture?.(e.pointerId);});
-  cvs.addEventListener('pointermove',e=>{if(!d)return;const dx=e.clientX-d.x,dy=e.clientY-d.y;if(Math.hypot(dx,dy)>8)d.moved=true;if(!d.moved||!sittingView())return;
-    LOOK.yaw=d.y0-dx*.006;LOOK.pitch=clamp(d.p0+dy*.005,-.35,1.25);});
-  const up=e=>{if(!d)return;const tap=!d.moved&&performance.now()-d.t<450;d=null;if(tap)onTap(e);};cvs.addEventListener('pointerup',up);cvs.addEventListener('pointercancel',()=>{d=null;});}
+const LOOK={yaw:0,pitch:0,zoom:1};const JOY={x:0,y:0,on:false};
+function bindLook(){let d=null;const P=new Map();let pinch=null;
+  cvs.addEventListener('pointerdown',e=>{ac();P.set(e.pointerId,{x:e.clientX,y:e.clientY});cvs.setPointerCapture?.(e.pointerId);
+    if(P.size===2){const [a,b]=[...P.values()];pinch={d0:Math.hypot(a.x-b.x,a.y-b.y),z0:LOOK.zoom};d=null;return;}
+    d={x:e.clientX,y:e.clientY,t:performance.now(),y0:LOOK.yaw,p0:LOOK.pitch,moved:false};});
+  cvs.addEventListener('pointermove',e=>{if(P.has(e.pointerId))P.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(pinch&&P.size>=2){const [a,b]=[...P.values()];LOOK.zoom=clamp(pinch.z0*Math.hypot(a.x-b.x,a.y-b.y)/Math.max(20,pinch.d0),1,5);return;}
+    if(!d)return;const dx=e.clientX-d.x,dy=e.clientY-d.y;if(Math.hypot(dx,dy)>8)d.moved=true;if(!d.moved)return;
+    LOOK.yaw=d.y0-dx*.006/LOOK.zoom;LOOK.pitch=clamp(d.p0+dy*.005/LOOK.zoom,-.35,1.25);});
+  const up=e=>{P.delete(e.pointerId);if(P.size<2)pinch=null;if(!d)return;const tap=!d.moved&&performance.now()-d.t<450;d=null;if(tap)onTap(e);};
+  cvs.addEventListener('pointerup',up);cvs.addEventListener('pointercancel',e=>{P.delete(e.pointerId);pinch=null;d=null;});
+  cvs.addEventListener('wheel',e=>{e.preventDefault();LOOK.zoom=clamp(LOOK.zoom*(1-e.deltaY*.0015),1,5);},{passive:false});
+  // joystick: il pollice muove il pescatore nella direzione in cui guardi
+  const jb=root.querySelector('#gjoy'),kn=jb.querySelector('i');let jid=null;
+  const setK=(e)=>{const r=jb.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,R0=r.width/2;let x=(e.clientX-cx)/R0,y=(e.clientY-cy)/R0;const m=Math.hypot(x,y);if(m>1){x/=m;y/=m;}JOY.x=x;JOY.y=y;kn.style.transform=`translate(${x*R0*.6}px,${y*R0*.6}px)`;};
+  jb.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();ac();jid=e.pointerId;jb.setPointerCapture?.(e.pointerId);JOY.on=true;setK(e);});
+  jb.addEventListener('pointermove',e=>{if(e.pointerId!==jid)return;setK(e);});
+  const jend=e=>{if(e.pointerId!==jid)return;jid=null;JOY.on=false;JOY.x=JOY.y=0;kn.style.transform='';};jb.addEventListener('pointerup',jend);jb.addEventListener('pointercancel',jend);}
 const sittingView=()=>st.phase==='wait'&&!st.busy;
 const RAY={r:null};
 function onTap(e){if(!sittingView())return;
@@ -524,12 +622,28 @@ function onTap(e){if(!sittingView())return;
   RAY.r=RAY.r||new T.Raycaster();RAY.r.setFromCamera(m,camera);const hits=RAY.r.intersectObjects(st.rods.map(r=>r.hit),false);
   if(hits.length){const i=st.rods.findIndex(r=>r.hit===hits[0].object);if(i>=0)return G.rod(i);}
   if(AN.target!=='sit'&&RAY.r.intersectObject(CHAIRHIT,false).length)return G.sit();
-  // in piedi: tocco sulla sabbia = cammina fin lì (anche fino agli altri pescatori)
-  if(AN.target!=='sit'){const h=RAY.r.intersectObject(SAND,false)[0];if(h&&h.point.z>-.3&&h.point.z<26)G.walk(clamp(h.point.x,-110,110),Math.max(.4,h.point.z));}}
+  const ci=CRABS.findIndex(c=>c.visible&&RAY.r.ray.distanceToPoint(c.position)<.6);if(ci>=0&&nearCrab()===CRABS[ci])return G.crab();
+  const ni=NPCS.findIndex(a=>RAY.r.ray.distanceToPoint(a.pos.clone().add(new T.Vector3(0,1,0)))<.8);if(ni>=0&&NPCS[ni].pos.distanceTo(AN.pos)<4)return G.talk(ni);}
 G.walk=(x,z)=>seq(async()=>{st.phase='busy';st.msg='';setUI();await walkTo(x,z,2.8);AN.faceTo=null;pose('stand');st.phase='wait';talkNear();setUI();});
-G.rise=()=>seq(async()=>{st.phase='busy';setUI();await standUp();await walkTo(AN.pos.x+.4,AN.pos.z-1.2,1.6);AN.faceTo=0;st.phase='wait';st.msg='Tocca la sabbia per camminare, una canna per andarci o la sedia per sederti.';setUI();});
+G.rise=()=>seq(async()=>{st.phase='busy';setUI();await standUp();await walkTo(AN.pos.x+.4,AN.pos.z-1.2,1.6);AN.faceTo=0;st.phase='wait';st.msg='Usa il joystick per camminare (anche in acqua), tocca una canna per andarci o la sedia per sederti.';setUI();});
 // due chiacchiere con i vicini
 const NPC_NAMES=['Franco','Peppe','Marco','Luigi'];
+const Q=[['come','👋 Come va?'],['nome','🙂 Come ti chiami?'],['preso','🐟 Cosa hai preso?'],['esca','🪱 Con che esca peschi?'],['mont','⚓ Che montatura usi?'],['app','📱 Usi LenzApp?'],['cons','💡 Mi dai un consiglio?'],['caffe','☕ Ti offro un caffè'],['ciao','👋 Ciao, buona pesca!']];
+function answer(a,q){const P=a.per,w=wxAt(st.gt),per=period(gameDate()),bag=a.bag,B1=B[P.bait]?.n.toLowerCase()||P.bait,idx=w.idx;
+  const tot=bag.length,best=bag.slice().sort((x,y)=>y.w-x.w)[0];
+  switch(q){
+    case 'come':return P.mood==='brontolone'?pick(['Male, troppa corrente.','Si mangia poco oggi, colpa della luna.','Granchi ovunque, che strazio.']):tot?`Bene dai! Ho già preso ${tot} ${tot>1?'pesci':'pesce'}.`:pick(['Ancora niente, ma è presto.','Tranquillo, si aspetta.','Tocche sì, pesci no!']);
+    case 'nome':return `Mi chiamo ${P.name}, ho ${P.age} anni e vengo da ${P.town}. Pesco qui a Castelporziano da ${P.yrs} anni.`;
+    case 'preso':return tot?`Finora: ${bag.map(f=>f.n.toLowerCase()+' '+Math.round(f.l)+' cm').join(', ')}.${best&&best.w>1?' Quella grossa l\'ho portata a riva a fatica!':''}`:pick(['Niente di niente, solo alghe.','Zero. Un granchio, se vale.','Per ora il cappotto.']);
+    case 'esca':return `Io vado di ${B1}${P.bait==='bibi'?': le orate ci impazziscono':P.bait==='arenicola'?': profuma e porta saraghi e spigole':P.bait==='koreano'?': resiste e piace alle mormore':': per orate e ombrine non c\'è di meglio'}. Sulla battigia trovi anche i granchietti: li prendi e li inneschi.`;
+    case 'mont':return `Piombo da ${P.lead} grammi, terminale ${P.rig==='2ami'?'a due ami':P.rig==='corto'?'corto da 70 cm':'lungo due metri'}, amo ${P.rig==='2ami'?'n. 4':'n. 2'}. ${w.wave>1?'Con questo mare non scendere sotto i '+suggestLead(w.wave)+' grammi.':'Col mare calmo allunga il terminale.'}`;
+    case 'app':return P.app?pick([`Certo! LenzApp oggi dà indice ${idx}: ${idx>=70?'ottimo, infatti sono qui':idx>=50?'discreto':'bassino, ma ci provo'}.`,'Sì, guardo sempre la Settimana e le finestre migliori. E segno le catture nel diario.','Sì! Con la mappa vedo dove prendono gli amici.']):pick(['LenzApp? Mai sentita… è gratis? Me la scarico.','No, io guardo il mare e basta. Ma mio nipote ce l\'ha.','Ah, quella dell\'indice di pesca? Prima o poi la provo.']);
+    case 'cons':return per==='notte'?'Di notte le spigole vengono sotto riva: lancia corto, a 30-40 metri, con arenicola o sarda.':per==='alba'||per==='tramonto'?'Adesso è il momento buono: tieni le cime d\'occhio e ferra solo quando piega decisa.':w.wave<.3?'Col mare piatto peschi lontano, oltre gli 80 metri, terminale lungo e amo piccolo.':w.wave>1.2?'Mare grosso: piombo pesante e pesca nella buca dopo il primo frangente.':'Prova il cannolicchio a 70-90 metri, le orate girano.';
+    case 'caffe':if(a.gift){return 'Grazie, ne ho già bevuti due! Il cuore…';}a.gift=1;st.inv.granchio+=3;return `Grazie, sei un amico! Tieni, tre granchietti che ho raccolto: sono ottimi per le orate.`;
+    case 'ciao':return pick(['Ciao, in bocca al lupo!','Buona pesca, e occhio alle cime!','A dopo!']);}}
+G.talk=i=>{const a=NPCS[i];if(!a)return;st.talk={i,txt:NPC_LINES.greet(a)};a.faceTo=Math.atan2(-(AN.pos.x-a.pos.x),-(AN.pos.z-a.pos.z));AN.faceTo=Math.atan2(-(a.pos.x-AN.pos.x),-(a.pos.z-AN.pos.z));say(a,st.talk.txt,3);st.phase='talk';setUI();};
+G.ask=q=>{const tk=st.talk,a=NPCS[tk.i];if(q==='ciao'){say(a,answer(a,q),3);st.talk=null;st.phase='wait';st.msg='';setUI();return;}tk.txt=answer(a,q);tk.q=q;say(a,tk.txt,6);setUI();};
+
 function talkNear(){let best=null,bd=4.5;NPCS.forEach((a,i)=>{const d=a.pos.distanceTo(AN.pos);if(d<bd){bd=d;best=i;}});if(best==null)return;
   const a=NPCS[best],w=wxAt(st.gt),per=period(gameDate()),hrs=gameDate().getHours();AN.faceTo=Math.atan2(-(a.pos.x-AN.pos.x),-(a.pos.z-AN.pos.z));
   const sp=SP.filter(x=>(x.mo[gameDate().getMonth()+1]||0)>.6&&!x.crab).map(x=>x.n.toLowerCase());
@@ -553,11 +667,12 @@ G.center=()=>{LOOK.yaw=0;LOOK.pitch=0;};
 function loop(){raf=requestAnimationFrame(loop);if(!renderer)return;const dt=Math.min(.05,clock.getDelta()),t=clock.elapsedTime;
   const gmul=(st.phase==='wait'&&!st.busy)?st.speed:1;st.gmul=gmul;st.gt+=dt*1000*gmul;const gmin=dt*gmul/60;const w=wxAt(st.gt);
   // pescatore e vicini di spiaggia
-  moveActor(AN,dt);lerpPose(dt,AN.target==='castFwd'||AN.target==='strike'?14:6);applyPose(t);
+  joyMove(dt,t);moveActor(AN,dt);lerpPose(dt,AN.target==='castFwd'||AN.target==='strike'?14:6);applyPose(t);updCrabs(dt,t);nearUI(t);
   updNpcs(dt,t);
   if(st.cast?.on){st.cast.p+=st.cast.dir*dt*1.15;if(st.cast.p>1){st.cast.p=1;st.cast.dir=-1;}if(st.cast.p<0){st.cast.p=0;st.cast.dir=1;}const el=document.getElementById('gpw');if(el)el.style.width=(st.cast.p*100)+'%';}
   // canne
   for(const r of st.rods){
+    if(r.state==='fishing'&&r.dist>8){const need=suggestLead(w.wave||0);if((r.lead||st.lead)<need-20){const k=(need-(r.lead||st.lead))/100;r.dist-=gmin*k*6;r.sx+=gmin*k*Math.sin((w.wd-FACE)*R)*3;if(!r.driftMsg){r.driftMsg=1;st.msg=`Canna ${r.i+1}: il piombo da ${r.lead} g «ara», la corrente lo trascina verso riva. Metti un piombo più pesante.`;if(st.phase==='wait')setUI();}}}
     if(r.state==='fishing'){r.baitLeft-=gmin*(1+(w.wave||0)*.6);if(Math.random()<biteRate(r)*gmin)startBite(r);}
     if(r.state==='bite'){r.biteT+=dt;if(r.biteT>r.bitePlan.len){const pl=r.bitePlan,auto={partenza:.6,violenta:.45,decisa:.3,nervosa:.15,picchiettata:.05}[pl.kind]||0;
         if(pl.sp&&!pl.steal&&Math.random()<auto){r.state='hooked';r.hookT=0;bell(4,.3);try{navigator.vibrate?.([200,80,200]);}catch(e){}st.msg=`🐟 Canna ${r.i+1}: il pesce si è allamato da solo! Vai a recuperarlo.`;if(st.phase==='wait'||st.phase==='atrod')setUI();continue;}
@@ -596,8 +711,22 @@ function loop(){raf=requestAnimationFrame(loop);if(!renderer)return;const dt=Mat
 function moveActor(a,dt){
   if(a.moving&&a.walkTarget){const wt=a.walkTarget,dx=wt.x-a.pos.x,dz=wt.z-a.pos.z,d=Math.hypot(dx,dz);
     if(d<.05){a.moving=false;a.walkTarget=null;wt.res();}else{const s=Math.min(d,a.speed*dt);a.pos.x+=dx/d*s;a.pos.z+=dz/d*s;a.walk+=dt*a.speed*5.2;const ty=Math.atan2(-dx,-dz);a.rotY=lerpAng(a.rotY,ty,1-Math.exp(-10*dt));}
-    a.pos.y=Math.max(0,a.pos.z*.035);if(a.target==='sit'||a.target==='bend')a.target=a.holding>=0?'hold':'stand';}
+    a.pos.y=a===AN?sandY(a.pos.z):Math.max(0,a.pos.z*.035);if(a.target==='sit'||a.target==='bend')a.target=a.holding>=0?'hold':'stand';}
   else if(a.faceTo!=null){a.rotY=lerpAng(a.rotY,a.faceTo,1-Math.exp(-8*dt));}}
+function joyMove(dt,t){const m=Math.hypot(JOY.x,JOY.y);const free=st.phase==='wait'&&!st.busy;
+  if(!JOY.on||m<.15||!free){if(AN.joying){AN.joying=false;AN.moving=false;}return;}
+  if(AN.target==='sit'){pose('stand');AN.pos.z-=.35;}
+  const fw=new T.Vector3().subVectors(CAM.l||new T.Vector3(0,0,-10),camera.position);fw.y=0;fw.normalize();const rt=new T.Vector3(-fw.z,0,fw.x);
+  const dir=fw.multiplyScalar(-JOY.y).add(rt.multiplyScalar(JOY.x));if(dir.lengthSq()<1e-4)return;dir.normalize();
+  const inWater=AN.pos.z<-.1,sp=(inWater?1.1:3)*Math.min(1,m);AN.joying=true;AN.moving=true;AN.walkTarget=null;AN.speed=sp;AN.faceTo=null;
+  AN.pos.x=clamp(AN.pos.x+dir.x*sp*dt,-110,110);AN.pos.z=clamp(AN.pos.z+dir.z*sp*dt,-5,26);AN.pos.y=sandY(AN.pos.z);AN.walk+=dt*sp*5.2;
+  AN.rotY=lerpAng(AN.rotY,Math.atan2(-dir.x,-dir.z),1-Math.exp(-10*dt));
+  if(inWater){AN.splT=(AN.splT||0)-dt;if(AN.splT<=0){AN.splT=.35;burst(new T.Vector3(AN.pos.x,.05,AN.pos.z-.2),.25);}}}
+// pulsanti che compaiono quando sei vicino a un granchio o a un altro pescatore
+function nearUI(t){if(!nearUI.t||t-nearUI.t>.3){nearUI.t=t;const c=nearCrab(),ni=NPCS.findIndex(a=>a.pos.distanceTo(AN.pos)<3.2),k=(c?'c':'')+ni+(AN.pos.z<-.1?'w':'')+(AN.target==='sit'?'s':'');
+  if(k!==nearUI.k){nearUI.k=k;if(st.phase==='wait'&&!st.busy)setUI();}
+  const jb=root?.querySelector('#gjoy');if(jb){jb.style.display=st.phase==='wait'&&!st.busy?'block':'none';const pn=ui.firstElementChild;jb.style.bottom=((pn?.offsetHeight||0)+24)+'px';}}}
+const sandY=z=>z<-6?-1.2+(z+6)*.05:z<0?z*.06-.15:z*.035;
 const lerpAng=(a,b,f)=>{let d=((b-a+Math.PI*3)%(Math.PI*2))-Math.PI;return a+d*f;};
 let NIGHT=0;const night=()=>NIGHT;
 function updEnv(w,t,dt){const d=gameDate(),sun=sunPos(d,SPOT.lat,SPOT.lon),mo=moonPosG(d,SPOT.lat,SPOT.lon);
@@ -624,6 +753,7 @@ function updEnv(w,t,dt){const d=gameDate(),sun=sunPos(d,SPOT.lat,SPOT.lon),mo=mo
     const env=Math.sin(Math.min(1,u.life)*Math.PI),want=i<n?1:0;u.vis=lerp(u.vis,want,1-Math.exp(-dt*gm/40));
     const grow=.75+.35*u.life+.06*Math.sin(u.ph+st.gt/9e5);c.scale.set(u.w*grow,u.h*(.85+.3*env),1);
     c.material.color.copy(tint);c.material.opacity=clamp(.55+cc*.4,0,1)*Math.pow(env,.6)*u.vis;c.visible=c.material.opacity>.01;});
+  for(const L of LANTERNS){L.userData.glass.material.emissiveIntensity=NIGHT>.4?1.6:0;if(L.userData.pl)L.userData.pl.intensity=NIGHT>.4?1.1:0;}
   const lampOn=NIGHT>.5&&st.lamp;headLamp.intensity=lampOn?1.6:0;AN.obj.userData.J.lamp.material.emissiveIntensity=lampOn?2:0;
   // frangenti e risacca: più numerosi e alti con mare grosso
   const per=Math.max(3,w.wper||5),wh=w.wave||.3,nb=wh<.2?1:wh<.6?2:wh<1.2?3:4;
@@ -654,11 +784,12 @@ function updCam(dt,t){let p,l;const a=AN.pos;
     p=new T.Vector3(H.x-fx*rad+(por?.6:1)*Math.cos(fy),H.y+(por?2.2:1.5)-sp*1.5,H.z-fz*rad);
     l=new T.Vector3(H.x+fx*28*cp,H.y-.3+sp*28,H.z+fz*28*cp);
     if(AN.target==='sit'){AN.obj.userData.J.head.rotation.y=clamp(-LOOK.yaw,-1.1,1.1);AN.obj.userData.J.head.rotation.x=clamp(-LOOK.pitch*.5,-.4,.2);}}
+  const fov0=camera.aspect<1?68:50,fz=fov0/LOOK.zoom;if(Math.abs(camera.fov-fz)>.05){camera.fov=lerp(camera.fov,fz,.3);camera.updateProjectionMatrix();}
   if(!CAM.p){CAM.p=p.clone();CAM.l=l.clone();}const f=1-Math.exp(-(sittingView()?7:2.5)*dt);CAM.p.lerp(p,f);CAM.l.lerp(l,f);camera.position.copy(CAM.p);camera.position.y+=Math.sin(t*.4)*.02;camera.lookAt(CAM.l);}
 function drawHud(w){const d=gameDate(),mp=moonPosG(d,SPOT.lat,SPOT.lon);
   const wi=w.code>=95?'⛈️':w.code>=80?'🌦️':w.code>=51?'🌧️':w.code>=45?'🌫️':w.cc>75?'☁️':w.cc>35?'⛅':sunPos(d,SPOT.lat,SPOT.lon).alt>0?'☀️':'🌙';
   hud.innerHTML=`<div><b>${d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</b>${st.speed>1&&st.phase==='wait'&&!st.busy?' ⏩':''}</div><div>${wi} ${Math.round(w.temp)}°</div><div>🌬️ ${Math.round(w.ws)} ${windName(w.wd)}</div><div>🌊 ${(w.wave||0).toFixed(1).replace('.',',')} m · ${Math.round(w.sst)}°</div><div>${['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'][Math.round(mp.ph/45)%8]}</div><div>🎣 ${w.idx}</div>${st.sim?'<div title="dati simulati">⚠️</div>':''}`;}
-G._bite=i=>startBite(st.rods[i]);G._sp=n=>SP.find(x=>x.n===n);G._ui=()=>setUI();G._an=AN;G._cam=()=>camera;G._npcs=()=>NPCS;G._look=(y,p)=>{LOOK.yaw=y;LOOK.pitch=p;};
+G._bite=i=>startBite(st.rods[i]);G._sp=n=>SP.find(x=>x.n===n);G._ui=()=>setUI();G._an=AN;G._cam=()=>camera;G._npcs=()=>NPCS;G._crabs=()=>CRABS;G._look=(y,p)=>{LOOK.yaw=y;LOOK.pitch=p;};
 /* ---------- meteo reale per l'ora di gioco ---------- */
 async function loadWx(){
   try{const r=await window.fetchRaw(SPOT);st.sim=!!r.sim;st.X=window.build(r.w,r.m,SPOT,'coast');}catch(e){st.X=null;st.sim=true;}
@@ -683,11 +814,12 @@ function speciesWeights(r){const d=gameDate(),w=wxAt(st.gt),m=d.getMonth()+1,per
   return SP.map(sp=>{const b=sp.bait[r.bait]||0;if(!b)return [sp,0];
     let f=sp.ab*(sp.mo[m]||.05)*b*waveF(sp,w.wave||0)*(sp.time[per]||.5)*distF(sp,r.dist);
     if(sp.n==='Spigola'&&temp<15)f*=1.2;if(sp.n==='Orata'&&temp<13)f*=.4;if((sp.n==='Serra'||sp.n==='Leccia stella')&&temp<18)f*=.3;
-    if(st.hook==='piccolo'&&sp.w[1]>1)f*=.7;if(st.hook==='grande'&&sp.w[1]<.4)f*=.35;
+    const hk=r.hook||st.hook;if(hk==='piccolo'&&sp.w[1]>1)f*=.7;if(hk==='grande'&&sp.w[1]<.4)f*=.35;
+    if(r.rig==='lungo'&&['Orata','Mormora','Sarago maggiore'].includes(sp.n))f*=(w.wave||0)<.7?1.2:.85;if(r.rig==='corto')f*=(w.wave||0)>=.8?1.15:.95;
     return [sp,f];});}
 function biteRate(r){// abboccate per minuto di gioco
   if(!r.bait||r.state!=='fishing'||r.baitLeft<=0)return 0;const w=wxAt(st.gt),idx=clamp(w.idx??50,0,100);
-  const s=speciesWeights(r).reduce((a,[,f])=>a+f,0);return s*(.35+idx/100*1.3)*.045+.004; // + piccoli pesci e granchietti che rubano l'esca
+  const s=speciesWeights(r).reduce((a,[,f])=>a+f,0);return (s*(.35+idx/100*1.3)*.045+.004)*(r.rig==='2ami'?1.25:1); // + piccoli pesci e granchietti che rubano l'esca
 }
 
 function sizeOf(sp){const [a,t,b]=sp.w;let x=Math.exp(Math.log(t)+(Math.random()+Math.random()+Math.random()-1.5)*.55);if(Math.random()<.04)x*=1.6;return clamp(x,a,b);}
@@ -763,7 +895,8 @@ body.gaming{overflow:hidden}
 #ghud{position:absolute;left:8px;right:146px;top:calc(env(safe-area-inset-top) + 8px);display:flex;flex-wrap:wrap;gap:6px;pointer-events:none}
 #ghud div{background:rgba(4,14,26,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#fff;border-radius:12px;padding:5px 9px;font:600 13.5px Outfit,sans-serif}
 #gx,#gau{position:absolute;top:calc(env(safe-area-inset-top) + 8px);width:40px;height:40px;border-radius:12px;border:0;background:rgba(4,14,26,.65);color:#fff;font-size:18px;cursor:pointer}
-#gx{right:8px}#gau{right:54px}#glamp{position:absolute;top:calc(env(safe-area-inset-top) + 8px);right:100px;width:40px;height:40px;border-radius:12px;border:0;background:rgba(4,14,26,.65);color:#fff;font-size:18px;cursor:pointer}#glamp.off{opacity:.45;filter:grayscale(1)}#gspd{position:absolute;top:calc(env(safe-area-inset-top) + 56px);right:8px;height:36px;padding:0 12px;border-radius:12px;border:0;background:rgba(4,14,26,.7);color:#fff;font:700 14px Outfit,sans-serif;cursor:pointer}
+#gx{right:8px}#gau{right:54px}#glamp{position:absolute;top:calc(env(safe-area-inset-top) + 8px);right:100px;width:40px;height:40px;border-radius:12px;border:0;background:rgba(4,14,26,.65);color:#fff;font-size:18px;cursor:pointer}#gjoy{position:absolute;left:16px;bottom:200px;width:116px;height:116px;border-radius:50%;background:rgba(4,14,26,.45);border:2px solid rgba(255,255,255,.35);touch-action:none;display:none}#gjoy i{position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;background:rgba(255,255,255,.8);box-shadow:0 2px 8px rgba(0,0,0,.4)}
+#glamp.off{opacity:.45;filter:grayscale(1)}#gspd{position:absolute;top:calc(env(safe-area-inset-top) + 56px);right:8px;height:36px;padding:0 12px;border-radius:12px;border:0;background:rgba(4,14,26,.7);color:#fff;font:700 14px Outfit,sans-serif;cursor:pointer}
 #gui{position:absolute;left:0;right:0;bottom:0;padding:10px 10px calc(env(safe-area-inset-bottom) + 10px);pointer-events:none}
 .gpanel{pointer-events:auto;max-width:620px;margin:0 auto;background:rgba(4,14,26,.72);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:12px 14px;color:#fff;font:500 15px Outfit,sans-serif;max-height:62vh;overflow:auto}
 .gpanel.slim{padding:8px 10px}
@@ -788,7 +921,7 @@ body.gaming{overflow:hidden}
 .gpow{position:relative;height:16px;border-radius:9px;background:rgba(255,255,255,.12);overflow:hidden;margin:10px 0 2px}
 .gpow i{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#3b8cff,#ffb547,#ff4d5e)}
 .gpow s{position:absolute;left:78%;width:14%;top:0;bottom:0;border:2px solid #5ee08a;border-radius:6px;background:rgba(94,224,138,.2)}
-.grods{display:flex;gap:6px}
+.grods{display:flex;gap:6px}.gtalk{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.gtalk .gc{flex:1 1 45%;text-align:left}
 .gr{flex:1;padding:8px 6px;border-radius:14px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fff;cursor:pointer;font:600 13px Outfit,sans-serif;text-align:center}
 .gr small{display:block;font-weight:500;font-size:12px;opacity:.85}
 .gr.alert{background:linear-gradient(135deg,#ffb547,#ff4d5e);animation:gpulse .4s infinite alternate}.gr.alert small:nth-of-type(1){display:none}.gr b,.gr small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
