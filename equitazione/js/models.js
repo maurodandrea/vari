@@ -464,6 +464,12 @@ EQ.buildGiorgia=function(){
       tg.torsoX=.03+(sp>2.5?.12:0);
       if(name==='lead'){tg.sh[1]=[-.35,0,-.25];tg.el[1]=[-.5,0];}
       if(name==='carry'){tg.sh[0]=[-.9,0,.2];tg.sh[1]=[-.9,0,-.2];tg.el[0]=[-.9,0];tg.el[1]=[-.9,0];}
+    } else if(name==='pedal'||name==='moto'||name==='scooter'||name==='drive'){
+      if(name==='pedal'){P.phase+=dt*(p.speed||0)*1.3;const ph=P.phase;tg.pelY=.93;tg.torsoX=.45;tg.th[0]=[-1.0+Math.sin(ph)*.45,0,.06];tg.th[1]=[-1.0-Math.sin(ph)*.45,0,-.06];tg.kn[0]=1.2+Math.cos(ph)*.4;tg.kn[1]=1.2-Math.cos(ph)*.4;tg.sh=[[-1.15,0,.12],[-1.15,0,-.12]];tg.el=[[-.2,0],[-.2,0]];}
+      else if(name==='moto'){tg.pelY=.86;tg.torsoX=.5;tg.th=[[-1.35,0,.32],[-1.35,0,-.32]];tg.kn=[1.9,1.9];tg.sh=[[-1.2,0,.18],[-1.2,0,-.18]];tg.el=[[-.25,0],[-.25,0]];}
+      else if(name==='scooter'){tg.pelY=.9;tg.torsoX=.12;tg.th=[[-.05,0,.04],[.15,0,-.04]];tg.kn=[.1,.15];tg.sh=[[-1.0,0,.15],[-1.0,0,-.15]];tg.el=[[-.35,0],[-.35,0]];}
+      else {tg.pelY=.5;tg.torsoX=-.05;tg.th=[[-1.4,0,.08],[-1.4,0,-.08]];tg.kn=[1.25,1.25];tg.sh=[[-1.05,0,.2],[-1.05,0,-.2]];tg.el=[[-.55,0],[-.55,0]];}
+      tg.sh[0][0]+=(p.steer||0)*.15;tg.sh[1][0]-=(p.steer||0)*.15;
     } else if(name==='ride'){
       const lean=p.lean||.1;
       tg.pelY=.9; tg.torsoX=lean; tg.headX=-lean*.7;

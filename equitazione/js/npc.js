@@ -298,6 +298,16 @@ EQ.buildBike=function(col){
   P.push(T(X(G.box(.12,.04,.22),0,.86,-.22),0x111111));P.push(T(X(G.box(.5,.025,.025),0,.98,.42),0x222222));tube(v(0,.82,.42),v(0,.98,.42),.018,0x888888);
   const m=new THREE.Mesh(EQ.merge(P),CARMAT);m.castShadow=true;g.add(m);return g;
 };
+EQ.buildScooter=function(col){col=col!=null?col:pick([0x111111,0x2a58c8,0xc0392b,0xf2f2f2,0x2ecc71]);const P=[];
+  for(const z of [-.42,.42]){P.push(T(X(G.cyl(.1,.1,.05,12),0,.1,z,0,0,Math.PI/2),0x151515));}
+  P.push(T(X(G.box(.16,.05,.82),0,.12,0),col));P.push(T(X(G.cyl(.02,.02,.95,6),0,.6,.42,-.12,0,0),0x777777));P.push(T(X(G.box(.45,.03,.03),0,1.06,.48),0x222222));
+  const g=new THREE.Group();const m=new THREE.Mesh(EQ.merge(P),CARMAT);m.castShadow=true;g.add(m);return g;};
+EQ.buildMoto=function(col){col=col!=null?col:pick([0xc0392b,0x111111,0x2a58c8,0xf1c40f,0x2f6b33]);const P=[];
+  for(const z of [-.72,.72]){P.push(T(X(G.cyl(.32,.32,.13,16),0,.32,z,0,0,Math.PI/2),0x141414));P.push(T(X(G.cyl(.2,.2,.14,12),0,.32,z,0,0,Math.PI/2),0xb8bcc0));}
+  P.push(T(X(G.box(.28,.3,.9),0,.55,0),0x333333));P.push(T(X(G.box(.34,.24,.5),0,.86,.18),col));P.push(T(X(G.box(.28,.1,.6),0,.8,-.3),0x151515));
+  P.push(T(X(G.box(.08,.5,.08),0,.78,.66,-.35,0,0),0x999999));P.push(T(X(G.box(.62,.04,.04),0,1.05,.56),0x222222));P.push(T(X(G.cyl(.09,.09,.08,10),0,.9,.74,Math.PI/2,0,0),0xfff8e0));
+  P.push(T(X(G.box(.26,.12,.5),0,.62,-.72,.2,0,0),col));P.push(T(X(G.cyl(.05,.05,.6,8),.16,.38,-.35,Math.PI/2,0,0),0xb8bcc0));
+  const g=new THREE.Group();const m=new THREE.Mesh(EQ.merge(P),CARMAT);m.castShadow=true;g.add(m);return g;};
 EQ.buildQuadBike=function(col){
   col=col!=null?col:pick([0xc0392b,0x2f6b33,0xf1c40f,0x2a58c8]);const P=[];
   for(const sd of [1,-1])for(const z of [-.55,.55]){P.push(T(X(G.cyl(.3,.3,.26,12),sd*.5,.3,z,0,0,Math.PI/2),0x151515));P.push(T(X(G.cyl(.15,.15,.27,8),sd*.5,.3,z,0,0,Math.PI/2),0x777777));}
