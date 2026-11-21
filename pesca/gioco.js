@@ -1015,7 +1015,7 @@ function setUI(){const p=st.phase;let h='';
     <div class="gs">${st.busy?'⏳ '+cur.e+' '+cur.t+'…':st.stepI<S2.length?'Prossimo: '+cur.e+' '+cur.t:''}${st.stepI+1<S2.length?`<br><small style="opacity:.7">poi: ${S2[st.stepI+1].t}</small>`:''}</div>
 </div>`;}
   else if(p==='wait'){h=`<div class="gpanel slim"><div class="grods">${st.rods.map((r,i)=>`<button class="gr ${r.state==='bite'||r.state==='hooked'||r.state==='tangled'?'alert':''}" onclick="GAME.rod(${i})" ${st.busy?'disabled':''}><b>Canna ${i+1}</b><small>${r.bait?B[r.bait].n:'senza esca'}${r.dist?' · '+Math.round(r.dist)+' m':''}</small><small>${rodStatus(r)}</small></button>`).join('')}</div>
-    ${st.busy?'':`<div class="grow" style="justify-content:center">${[1,2,4,8,16,32].map(s=>`<button class="gc ${st.speed===s?'on':''}" onclick="GAME.setSpeed(${s})">${s===1?'▶ 1x':s+'x'}</button>`).join('')}<button class="gc" onclick="GAME.bagView()">🧺 ${st.bag.length}</button>${skipUp()?'<button class="gc" onclick="GAME.skip(1)">🌅 Vai all\'alba</button>':'<button class="gc" onclick="GAME.skip(0)">🌇 Vai al tramonto</button>'}${(()=>{const ni=NPCS.findIndex(a=>a.pos.distanceTo(AN.pos)<3.2);return ni>=0?`<button class="gc" style="background:#2fe0cf;color:#03282a" onclick="GAME.talk(${ni})">💬 Parla con ${NPCS[ni].per.name}</button>`:'';})()}${nearCrab()?'<button class="gc" style="background:#ffb547;color:#3a2400" onclick="GAME.crab()">🦀 Prendi il granchio</button>':''}<button class="gc" onclick="GAME.toMap()">🚗 Cambia spot</button><button class="gc" onclick="GAME.center()" title="Guarda le canne">🎯</button>${AN.target!=='sit'?'<button class="gc" onclick="GAME.sit()">🪑 Siediti</button>':'<button class="gc" onclick="GAME.rise()">🚶 Alzati</button>'}</div>`}${st.msg?`<div class="gs" style="text-align:center">${st.msg}</div>`:''}</div>`;}
+    ${st.busy?'':`<div class="grow" style="justify-content:center"><button class="gc" onclick="GAME.bagView()">🧺 ${st.bag.length}</button>${skipUp()?'<button class="gc" onclick="GAME.skip(1)">🌅 Vai all\'alba</button>':'<button class="gc" onclick="GAME.skip(0)">🌇 Vai al tramonto</button>'}${(()=>{const ni=NPCS.findIndex(a=>a.pos.distanceTo(AN.pos)<3.2);return ni>=0?`<button class="gc" style="background:#2fe0cf;color:#03282a" onclick="GAME.talk(${ni})">💬 Parla con ${NPCS[ni].per.name}</button>`:'';})()}${nearCrab()?'<button class="gc" style="background:#ffb547;color:#3a2400" onclick="GAME.crab()">🦀 Prendi il granchio</button>':''}<button class="gc" onclick="GAME.toMap()">🚗 Cambia spot</button><button class="gc" onclick="GAME.center()" title="Guarda le canne">🎯</button>${AN.target!=='sit'?'<button class="gc" onclick="GAME.sit()">🪑 Siediti</button>':'<button class="gc" onclick="GAME.rise()">🚶 Alzati</button>'}</div>`}${st.msg?`<div class="gs" style="text-align:center">${st.msg}</div>`:''}</div>`;}
   else if(p==='atrod'){const r=st.rods[st.sel];h=`<div class="gpanel"><b>Canna ${st.sel+1}</b><div class="gs">${r.bait?B[r.bait].n+' a '+Math.round(r.dist)+' m · '+rodStatus(r):'Senza esca'}</div>
     ${r.state==='bite'?btn('⚡ FERRA!','strike()','big hot'):''}${r.state==='hooked'?btn('🌀 Prendi la canna e recupera','fightHooked()','big hot'):''}${r.state==='tangled'?btn('🧶 Recupera e districa','untangle()','big hot'):''}${r.dismantled?btn('🔧 Rimonta la canna','remount()','big'):(r.state==='tangled'?'':r.bait?btn('🌀 Recupera e cambia esca','rebait()'):btn('🪝 Innesca','rebait()','big'))+(r.state==='tangled'?'':btn('🔧 Montatura · '+r.lead+' g, amo '+({piccolo:'n.6',medio:'n.2',grande:'2/0'})[r.hook]+', '+({lungo:'lungo',corto:'corto','2ami':'2 ami'})[r.rig],'rigAt()'))+(r.bait?'':btn('🧰 Smonta la canna','dismantle()'))}${btn('🪑 Torna a sedere','back()')}</div>`;}
   else if(p==='rig'){const r=st.rods[st.sel],w=wxAt(st.gt);h=`<div class="gpanel"><b>🔧 Montatura della canna ${st.sel+1}</b>${r.broken?'<div class="gs warn">La lenza si è rotta: rifai il terminale (perdi piombo e amo).</div>':''}
@@ -1069,10 +1069,10 @@ function buildSteps(){const S2=[],q=st.auto?.55:1,sp=st.auto?3.4:2.4;
   return S2;}
 G.doStep=()=>seq(async()=>{const S2=st.steps;if(st.stepI>=S2.length)return;setUI();await S2[st.stepI].f();st.stepI++;if(st.stepI>=S2.length)return mountDone();setUI();});
 G.autoSteps=()=>seq(async()=>{st.auto=true;const S2=st.steps;while(st.stepI<S2.length){setUI();await S2[st.stepI].f();st.stepI++;}mountDone();});
-function mountDone(){st.phase='wait';st.msg=`Postazione pronta a ${SPOT.name}! Tocca una canna per innescare e lanciare. Joystick per camminare, due dita per lo zoom.`;setUI();}
+function mountDone(){st.phase='wait';st.msg='';setUI();}
 G.start=auto=>{setPlayerLook();setupRods();st.rods.forEach(r=>{placeRodOnSpike(r);r.spike.visible=false;r.obj.visible=false;});st.auto=!!auto;st.steps=buildSteps();st.stepI=0;st.phase='mount';setUI();if(auto)G.autoSteps();};
 G.ready=()=>{MYG.forEach(o=>o.visible=true);if(CHAIRG)CHAIRG.visible=true;AN.pos.set(CHAIR.x,CHAIR.z*.035,CHAIR.z-.05);AN.target='sit';AN.pose=JSON.parse(JSON.stringify(POSES.sit));AN.rotY=0;AN.faceTo=0;G.startOld();};
-G.startOld=()=>{setPlayerLook();setupRods();st.rods.forEach(placeRodOnSpike);st.phase='wait';st.msg='Joystick per camminare (anche in acqua), un dito per guardarti attorno, due dita per lo zoom. Tocca una canna per andarci.';setUI();};
+G.startOld=()=>{setPlayerLook();setupRods();st.rods.forEach(placeRodOnSpike);st.phase='wait';st.msg='';setUI();};
 
 /* ---------- movimenti del pescatore (sequenze) ---------- */
 const sleep=s=>new Promise(r=>setTimeout(r,s*1000));
@@ -1295,7 +1295,7 @@ function onTap(e){if(!sittingView())return;
   for(const a of RP.list.values())if(RAY.r.ray.distanceToPoint(a.pos.clone().add(new T.Vector3(0,1,0)))<.8&&a.pos.distanceTo(AN.pos)<8)return G.rtalk(a.id);
   const ni=NPCS.findIndex(a=>RAY.r.ray.distanceToPoint(a.pos.clone().add(new T.Vector3(0,1,0)))<.8);if(ni>=0&&NPCS[ni].pos.distanceTo(AN.pos)<4)return G.talk(ni);}
 G.walk=(x,z)=>seq(async()=>{st.phase='busy';st.msg='';setUI();await walkTo(x,z,2.8);AN.faceTo=null;pose('stand');st.phase='wait';talkNear();setUI();});
-G.rise=()=>seq(async()=>{st.phase='busy';setUI();await standUp();await walkTo(AN.pos.x+.4,AN.pos.z-1.2,1.6);AN.faceTo=0;st.phase='wait';st.msg='Usa il joystick per camminare (anche in acqua), tocca una canna per andarci o la sedia per sederti.';setUI();});
+G.rise=()=>seq(async()=>{st.phase='busy';setUI();await standUp();await walkTo(AN.pos.x+.4,AN.pos.z-1.2,1.6);AN.faceTo=0;st.phase='wait';st.msg='';setUI();});
 // due chiacchiere con i vicini
 const NPC_NAMES=['Franco','Peppe','Marco','Luigi'];
 const Q=[['come','👋 Come va?'],['nome','🙂 Come ti chiami?'],['preso','🐟 Cosa hai preso?'],['esca','🪱 Con che esca peschi?'],['mont','⚓ Che montatura usi?'],['app','📱 Usi LenzApp?'],['cons','💡 Mi dai un consiglio?'],['caffe','☕ Ti offro un caffè'],['ciao','👋 Ciao, buona pesca!']];
@@ -1462,7 +1462,7 @@ function updCam(dt,t){let p,l;const a=AN.pos;
   if(!CAM.p){CAM.p=p.clone();CAM.l=l.clone();}const f=1-Math.exp(-(sittingView()?7:2.5)*dt);CAM.p.lerp(p,f);CAM.l.lerp(l,f);camera.position.copy(CAM.p);camera.position.y+=Math.sin(t*.4)*.02;camera.lookAt(CAM.l);}
 function drawHud(w){const d=gameDate(),mp=moonPosG(d,SPOT.lat,SPOT.lon);
   const wi=w.code>=95?'⛈️':w.code>=80?'🌦️':w.code>=51?'🌧️':w.code>=45?'🌫️':w.cc>75?'☁️':w.cc>35?'⛅':sunPos(d,SPOT.lat,SPOT.lon).alt>0?'☀️':'🌙';
-  hud.innerHTML=`<div>📍 ${escH(SPOT.name.split(' · ')[0])}</div><div><b>${d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</b>${st.speed>1&&st.phase==='wait'&&!st.busy?' ⏩':''}</div><div>${wi} ${Math.round(w.temp)}°</div><div>🌬️ ${Math.round(w.ws)} ${windName(w.wd)}</div><div>🌊 ${(w.wave||0).toFixed(1).replace('.',',')} m · ${Math.round(w.sst)}°</div><div>${['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'][Math.round(mp.ph/45)%8]}</div><div>🎣 ${w.idx}</div>${st.sim?'<div title="dati simulati">⚠️</div>':''}`;}
+  const h=`<div>📍 ${escH(SPOT.name.split(' · ')[0])} · <b>${d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</b>${st.speed>1&&st.phase==='wait'&&!st.busy?' ⏩':''}</div><div>${wi} ${Math.round(w.temp)}° ${['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'][Math.round(mp.ph/45)%8]} 🎣${w.idx}${st.sim?' ⚠️':''}</div><br><div>🌬️ ${Math.round(w.ws)} ${windName(w.wd)}</div><div>🌊 ${(w.wave||0).toFixed(1).replace('.',',')} m · ${Math.round(w.sst)}°</div>`;if(hud.innerHTML!==h)hud.innerHTML=h;}
 G._bite=i=>startBite(st.rods[i]);G._sp=n=>SP.find(x=>x.n===n);G._ui=()=>setUI();G._an=AN;G._cam=()=>camera;G._npcs=()=>NPCS;G._crabs=()=>CRABS;G._tangle=r=>checkTangle(r);G._look=(y,p)=>{LOOK.yaw=y;LOOK.pitch=p;};
 /* ---------- meteo reale per l'ora di gioco ---------- */
 async function loadWx(){
@@ -1566,8 +1566,8 @@ const css=document.createElement('style');css.textContent=`
 body.gaming{overflow:hidden}
 #gamebox{position:fixed;inset:0;z-index:5000;background:#02060c;touch-action:none;user-select:none;-webkit-user-select:none}
 #g3{position:absolute;inset:0}#g3 canvas{display:block;width:100%;height:100%}.gr[disabled]{opacity:.55}
-#ghud{position:absolute;left:8px;right:146px;top:calc(env(safe-area-inset-top) + 8px);display:flex;flex-wrap:wrap;gap:6px;pointer-events:none}
-#ghud div{background:rgba(4,14,26,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#fff;border-radius:12px;padding:5px 9px;font:600 13.5px Outfit,sans-serif}
+#ghud{position:absolute;left:6px;right:140px;top:calc(env(safe-area-inset-top) + 6px);display:flex;flex-wrap:wrap;gap:4px;pointer-events:none}#ghud br{flex-basis:100%;height:0;content:''}
+#ghud div{background:rgba(4,14,26,.6);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);color:#fff;border-radius:10px;padding:3px 8px;font:600 12.5px Outfit,sans-serif;white-space:nowrap}
 #gx,#gau{position:absolute;top:calc(env(safe-area-inset-top) + 8px);width:40px;height:40px;border-radius:12px;border:0;background:rgba(4,14,26,.65);color:#fff;font-size:18px;cursor:pointer}
 #gmapc{position:absolute;inset:0;display:block;touch-action:none}#gmini{position:absolute;top:calc(env(safe-area-inset-top) + 56px);right:8px;border-radius:12px;pointer-events:none}#gx{right:8px}#gau{right:54px}#glamp{position:absolute;top:calc(env(safe-area-inset-top) + 8px);right:100px;width:40px;height:40px;border-radius:12px;border:0;background:rgba(4,14,26,.65);color:#fff;font-size:18px;cursor:pointer}#gjoy{position:absolute;left:16px;bottom:200px;width:116px;height:116px;border-radius:50%;background:rgba(4,14,26,.45);border:2px solid rgba(255,255,255,.35);touch-action:none;display:none}#gjoy i{position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;background:rgba(255,255,255,.8);box-shadow:0 2px 8px rgba(0,0,0,.4)}
 #glamp.off{opacity:.45;filter:grayscale(1)}#gspd{position:absolute;top:calc(env(safe-area-inset-top) + 56px);right:8px;height:36px;padding:0 12px;border-radius:12px;border:0;background:rgba(4,14,26,.7);color:#fff;font:700 14px Outfit,sans-serif;cursor:pointer}
@@ -1582,7 +1582,7 @@ body.gaming{overflow:hidden}
 @keyframes gpulse{to{transform:scale(1.04)}}
 .grow{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0}.grow>span{font-size:13.5px;opacity:.85;min-width:58px}
 .grow .gb{width:auto;flex:1}
-.gc{padding:7px 11px;border-radius:999px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.06);color:#fff;font:600 13.5px Outfit,sans-serif;cursor:pointer}
+.gc{padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.22);background:rgba(255,255,255,.06);color:#fff;font:600 13.5px Outfit,sans-serif;cursor:pointer}
 .gc.on{background:#2fe0cf;color:#03282a;border-color:transparent}
 .gitems{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0}
 .gi{padding:10px 4px;border-radius:14px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:#fff;font:600 13px Outfit,sans-serif;cursor:pointer}
@@ -1596,7 +1596,7 @@ body.gaming{overflow:hidden}
 .gpow i{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#3b8cff,#ffb547,#ff4d5e)}
 .gpow s{position:absolute;left:78%;width:14%;top:0;bottom:0;border:2px solid #5ee08a;border-radius:6px;background:rgba(94,224,138,.2)}
 .grods{display:flex;gap:6px}.gtalk{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.gtalk .gc{flex:1 1 45%;text-align:left}
-.gr{flex:1;padding:8px 6px;border-radius:14px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fff;cursor:pointer;font:600 13px Outfit,sans-serif;text-align:center}
+.gr{flex:1;padding:6px 5px;border-radius:14px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fff;cursor:pointer;font:600 13px Outfit,sans-serif;text-align:center}
 .gr small{display:block;font-weight:500;font-size:12px;opacity:.85}
 .gr.alert{background:linear-gradient(135deg,#ffb547,#ff4d5e);animation:gpulse .4s infinite alternate}.gr.alert small:nth-of-type(1){display:none}.gr b,.gr small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .gbar{position:relative;height:20px;border-radius:10px;background:rgba(255,255,255,.12);overflow:hidden;margin:6px 0}
