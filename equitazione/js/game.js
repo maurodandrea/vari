@@ -19,6 +19,7 @@ const yard=EQ.buildYard();
 try{EQ.populate.yard(yard);}catch(e){console.error(e);}
 EQ.setSky(yard.sky);
 const Y=yard.spots;
+EQ.pname=()=>(LS.get('pname','')||'').trim()||'Amica';
 const P=EQ.buildGiorgia(); P.setOutfit(save.outfit); scene.add(P.root);
 const horses=EQ.HORSES.map((d,i)=>{const H=EQ.buildHorse(d);H.i=i;H.stats=save.horses[i];scene.add(H.root,H.reins,H.rope);H.x=0;H.z=0;H.h=0;H.sp=0;H.st={};H.bt=rnd(1,4);
   H.addDirt(Math.round((100-H.stats.clean)/4));H.dirt0=H.dirtLeft();return H;});
@@ -125,12 +126,18 @@ function menuPose(){
   detachRider();F.x=Y.posta.horse.x+1.4;F.z=Y.posta.horse.z-1.3;F.h=-.4;
   P.root.position.set(F.x,0,F.z);P.root.rotation.y=F.h;
 }
+function setName(v){v=String(v||'').replace(/[<>]/g,'').trim().slice(0,14);if(v)v=v.charAt(0).toUpperCase()+v.slice(1);LS.set('pname',v);$('nameIn').value=v;return v;}
+$('nameIn').addEventListener('change',e=>setName(e.target.value));$('nameIn').addEventListener('blur',e=>setName(e.target.value));
+$('nameIn').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')e.target.blur();});
+$('nameIn2').addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter')$('nameOk').click();});
+$('nameOk').addEventListener('click',()=>{const v=setName($('nameIn2').value);if(!v){$('nameIn2').focus();$('nameIn2').style.borderColor='#d62828';return;}EQ.audio();$('nameBox').classList.remove('on');$('menu').classList.add('on');});
 function toMenu(){
   cleanupTrip();endCourse(true);closeAct(true);
   G.state='menu';G.cur=null;G.leading=false;G.didRide=false;
   hud(false);setActions([]);panel(null);hint(null);
   ['pause','results','trip','course'].forEach(k=>$(k).classList.remove('on'));
-  $('menu').classList.add('on');
+  $('nameIn').value=LS.get('pname','')||'';
+  if(!(LS.get('pname','')||'').trim()){$('nameBox').classList.add('on');}else $('menu').classList.add('on');
   menuPose();renderMenu();
 }
 $('horses').addEventListener('click',e=>{const b=e.target.closest('.hz');if(!b)return;EQ.audio();G.sel=+b.dataset.i;save.sel=G.sel;persist();menuPose();renderMenu();EQ.sfx.neigh();});
@@ -156,7 +163,7 @@ function startYard(){
 }
 function quickRide(next,text){
   $('menu').classList.remove('on');
-  fade(text||'Giorgia si prepara…',()=>{
+  fade(text||(EQ.pname()+' si prepara…'),()=>{
     horses.forEach(placeInBox);ensureSafe();
     const H=horses[G.sel];G.cur=H;fullTack(H);
     placeAt(H,yard.spawnRide,'ride');
@@ -410,7 +417,7 @@ function courseLogic(list,scoring){
       if(isNext){
         if(!clear&&!o.faulted){o.faulted=true;C.faults+=4;}
         if(pi===o.planes.length-1){o.done=true;C.next++;
-          if(o.faulted)msg('Barriera giù! +4',1.4);else{msg(['Bravissima!','Perfetto!','Che salto!','Brava Giorgia!','Netto!'][Math.random()*5|0],1.1);EQ.sfx.clear();}
+          if(o.faulted)msg('Barriera giù! +4',1.4);else{msg(['Bravissima!','Perfetto!','Che salto!','Brava '+EQ.pname()+'!','Netto!'][Math.random()*5|0],1.1);EQ.sfx.clear();}
           if(C.next>=C.obs.length){setTimeout(()=>msg('🏁 Arrivo!',2),250);finishCourse();}}
       } else if(F_&&!o.done&&pi===o.planes.length-1){msg(`Ostacolo sbagliato!<small>salta prima il numero ${C.next+1}</small>`,1.6);EQ.sfx.wrong();}
       else if(B_&&!o.done&&C.obs[C.next]===o&&pi===0){msg('Dall\'altra parte!<small>segui le frecce gialle</small>',1.6);EQ.sfx.wrong();}
@@ -769,7 +776,7 @@ function updateHud(dt){
   if(G.course){const C=G.course;$('infoT').textContent='🏆 Livello '+(C.l+1)+' · '+LEVELS[C.l].name;$('infoS').textContent=C.next<C.obs.length?`Ostacolo ${C.next+1} di ${C.obs.length}`:'Arrivo!';$('tasks').innerHTML='';
     $('timer').textContent='⏱ '+fmt(C.time)+(C.faults?'  ❌ '+C.faults:'');}
   else if(G.trip){const t=G.trip,inf=ITEM_INFO[W().itemKind];$('infoT').textContent=PLACE[t.kind][0]+' '+PLACE[t.kind][1]+' · '+G.cur.def.name;$('infoS').textContent=`${inf[0]} ${inf[1]}: ${t.count} di ${t.items.length}`;$('tasks').innerHTML='';$('timer').textContent='⏱ '+fmt(t.time);}
-  else{const L=tasksList();const nx=L.find(t=>!t[2]);$('infoT').textContent='🏇 Giorgia · Maneggio';
+  else{const L=tasksList();const nx=L.find(t=>!t[2]);$('infoT').textContent='🏇 '+EQ.pname()+' · Maneggio';
     $('infoS').textContent=nx?('Prossimo: '+nx[0]+' '+nx[1]):'Tutto fatto! Divertiti 🎉';
     $('tasks').innerHTML=L.map(t=>`<div class="${t[2]?'ok':''}">${t[2]?'✅':'⬜'} ${t[0]} ${t[1]}</div>`).join('')+(G.cur?`<div style="margin-top:4px;color:#ffe08a">${G.cur.def.name}: 🌾${G.cur.stats.hunger|0} 🫧${G.cur.stats.clean|0} ⚡${G.cur.stats.energy|0}</div>`:'');}
 }

@@ -7,8 +7,8 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Giorgia a Cavallo · Equitazione 3D</title>
-<meta name="description" content="Gioco 3D di equitazione: Giorgia si prepara al maneggio, cura e sella il suo cavallo e cavalca in spiaggia, nel bosco, in città o nel campo ostacoli. Tutto con il touch.">
+<title>In Sella! · Equitazione 3D</title>
+<meta name="description" content="Gioco 3D di equitazione: ti prepari al maneggio, curi e selli il tuo cavallo e cavalchi in spiaggia, nel bosco, in città o nel campo ostacoli. Tutto con il touch.">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><circle cx='32' cy='32' r='30' fill='%232f6b33'/><text x='32' y='44' font-size='34' text-anchor='middle'>🐴</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -133,6 +133,10 @@
   .btn.alt{background:#e9e2cc;color:#2b3a24;box-shadow:0 4px 0 #c9bf9f}
   .btn.org{background:linear-gradient(180deg,#ffb347,#f08a12);box-shadow:0 4px 0 #b25f00}
 
+  input{font:inherit;-webkit-user-select:text;user-select:text;touch-action:manipulation}
+  .pname{display:flex;align-items:center;gap:8px;font-size:18px;font-weight:600;margin-bottom:10px;color:#2b3a24}
+  .pname input{flex:1;min-width:0;padding:8px 12px;border-radius:12px;border:2px solid #e3d9bd;background:#fff;font-size:18px;font-weight:600;color:#2b3a24}
+  .nameIn2{display:block;width:100%;padding:12px 14px;border-radius:14px;border:3px solid #ffb347;font-size:22px;font-weight:600;text-align:center;color:#2b3a24;background:#fff}
   #count{position:fixed;inset:0;z-index:6;display:none;align-items:center;justify-content:center;pointer-events:none;font-size:min(30vw,150px);font-weight:700;text-shadow:0 6px 0 #2f6b33,0 12px 30px rgba(0,0,0,.4)}
   #count.on{display:flex}
   #fade{position:fixed;inset:0;z-index:30;background:#16281a;opacity:0;pointer-events:none;transition:opacity .35s;display:flex;align-items:center;justify-content:center;font-size:22px;text-align:center;padding:20px}
@@ -154,10 +158,10 @@
 </head>
 <body>
 <canvas id="c"></canvas>
-<div id="loading"><div style="font-size:60px">🐴</div><div id="loadTx">Giorgia sta preparando il maneggio…</div></div>
+<div id="loading"><div style="font-size:60px">🐴</div><div id="loadTx">Stiamo preparando il maneggio…</div></div>
 
 <div id="hud">
-  <div id="info" class="pill"><b id="infoT">🏇 Giorgia</b><br><span id="infoS"></span><div class="tasks" id="tasks"></div></div>
+  <div id="info" class="pill"><b id="infoT">🏇</b><br><span id="infoS"></span><div class="tasks" id="tasks"></div></div>
   <div id="timer" class="pill"></div>
   <button id="pauseBtn" aria-label="Pausa">❚❚</button>
   <div id="dir"><svg viewBox="0 0 40 40"><path d="M20 3 L34 27 L24 24 L24 37 L16 37 L16 24 L6 27 Z" fill="#ffe08a" stroke="#5a3b00" stroke-width="2" stroke-linejoin="round"/></svg></div>
@@ -178,9 +182,10 @@
 <div id="count"></div>
 
 <div id="menu" class="screen">
-  <div class="title"><h1>Giorgia a Cavallo</h1><p>Il maneggio, le passeggiate e le gare</p></div>
+  <div class="title"><h1>In Sella!</h1><p>Il maneggio, le passeggiate e le gare</p></div>
   <div class="spacer"></div>
   <div class="card">
+    <div class="pname"><span>👋 Ciao</span><input id="nameIn" maxlength="14" placeholder="il tuo nome" autocomplete="off" autocapitalize="words"><span>!</span></div>
     <h3>Il tuo cavallo</h3>
     <div class="horses" id="horses"></div>
     <div class="hdesc" id="hdesc"></div>
@@ -230,6 +235,14 @@
   <div id="rSub" style="color:#56664a"></div>
   <div class="rstats" id="rStats"></div>
   <div id="rBtns"></div>
+</div></div>
+
+<div id="nameBox" class="screen modal"><div class="card">
+  <div style="font-size:54px">🐴</div>
+  <div class="bigt">Benvenuta in sella!</div>
+  <p style="color:#56664a;margin:4px 0 12px">Come ti chiami?</p>
+  <input id="nameIn2" class="nameIn2" maxlength="14" placeholder="Scrivi il tuo nome" autocomplete="off" autocapitalize="words">
+  <button class="btn org" id="nameOk">Iniziamo! ➜</button>
 </div></div>
 
 <div id="fade"><span id="fadeTx"></span></div>
