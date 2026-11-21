@@ -538,7 +538,7 @@ async function startMap(){st.phase='map';
   ['#gspd','#glamp','#gjoy'].forEach(q=>{const e=root.querySelector(q);if(e)e.style.display='none';});hud.innerHTML='';
   const c=document.createElement('canvas');c.id='gmapc';root.insertBefore(c,root.firstChild);MP.c=c;MP.g=c.getContext('2d');
   ui.innerHTML='<div class="gpanel"><b>🚗 Lazio</b><div class="gs">Carico la costa…</div></div>';
-  const r0=root;let C=null;try{C=await window.costa();}catch(e){}if(root!==r0)return;
+  const r0=root,posP=gamePos();let C=null;try{C=await window.costa();}catch(e){}if(root!==r0)return;
   if(!C){ui.innerHTML=`<div class="gpanel"><b>Mappa non disponibile</b><div class="gs">Scegli direttamente lo spot.</div><div class="gtalk">${SPOTS.map((sp,i)=>`<button class="gc" onclick="GAME.arrive(${i})">${sp.name}</button>`).join('')}</div></div>`;return;}
   const pts=[],segs=[];
   for(const l of C.L){const p=l.p;let seg=[];for(let i=0;i+1<p.length;i+=2){const lon=p[i],lat=p[i+1];if(lat>41.12&&lat<42.42&&lon>11.45&&lon<13.25){const q=PJ(lat,lon);pts.push(q);seg.push(q);}else if(seg.length){segs.push(seg);seg=[];}}if(seg.length>1)segs.push(seg);}
@@ -554,7 +554,12 @@ async function startMap(){st.phase='map';
   const last=LSG('spot','castelporziano'),ls=MP.spots.find(x=>x.sp.id===last)||MP.spots.find(x=>x.sp.id==='castelporziano');
   MP.car={s:Math.max(0,ls.s-4),v:0,dir:1,acc:0,brk:0,ramp:null};MP.near=-1;MP.parking=null;MP.arm=null;MP.key='';MP.land=landTex();
   // grafica 3D se possibile, altrimenti la mappa disegnata
-  const myRoot=root;try{T=await (MP.three||loadThree());if(root!==myRoot||!root.isConnected||st.phase!=='map')return;c.remove();MP.c=null;build3D();}catch(e){console.warn(e);dispose3D();if(!MP.c){c.id='gmapc';root.insertBefore(c,root.firstChild);MP.c=c;MP.g=c.getContext('2d');}}
+  const myRoot=root;try{T=await (MP.three||loadThree());if(root!==myRoot||!root.isConnected||st.phase!=='map')return;
+    ui.innerHTML='<div class="gpanel"><b>🧭 Cerco la tua posizione…</b><div class="gs">Parti da dove sei e la strada ti porta verso la costa.</div></div>';
+    const pos=await posP;let ap=null;if(pos){ui.querySelector('b').textContent='🧭 Calcolo la strada verso il mare…';ap=await approachRoute(pos);}
+    if(root!==myRoot||!root.isConnected||st.phase!=='map')return;MP.app=null;
+    if(ap){MP.car.s=ap.s;MP.car.dir=ls.s>=ap.s?1:-1;if(ap.app){MP.app={...ap.app,s:ap.s};MP.car.app={...ap.app,u:0,dir:MP.car.dir};}}
+    c.remove();MP.c=null;build3D();}catch(e){console.warn(e);dispose3D();if(!MP.c){c.id='gmapc';root.insertBefore(c,root.firstChild);MP.c=c;MP.g=c.getContext('2d');}}
   mapUI();sizeMap();addEventListener('resize',sizeMap);let lt=performance.now();
   const step=now=>{if(st.phase!=='map'&&st.phase!=='parking')return;const dt=Math.min(.05,(now-lt)/1000);lt=now;if(M3.on){mapPhys3(dt);draw3D(dt);}else{mapPhys(dt);drawMap(now/1000);}MP.raf=requestAnimationFrame(step);};MP.raf=requestAnimationFrame(step);}
 function landTex(){const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d');g.fillStyle='#7d9656';g.fillRect(0,0,256,256);
@@ -573,12 +578,12 @@ function mapPhys(dt){const c=MP.car;if(MP.parking){const P=MP.parking;P.t+=dt;c.
 function mapUI(){ui.innerHTML=`<div class="gpanel slim"><div class="grow" style="justify-content:space-between"><b style="font-size:16px">🚗 Lungo la costa del Lazio</b><b id="gkmh">0 km/h</b></div>
   <div id="gpark" class="gs" style="min-height:22px"></div>
   <div class="grow"><button class="gb" id="gbrk" style="flex:1;background:#4a1f26">🛑 Frena</button><button class="gb big" id="gacc" style="flex:2">⬆ Accelera</button></div>
-  <div class="grow" style="justify-content:center"><button class="gc" onclick="GAME.flip()">🔄 Inverti senso</button><button class="gc" onclick="GAME.spotList()">📍 Scegli lo spot</button></div></div>`;
+  <div class="grow" style="justify-content:center"><button class="gc" onclick="GAME.flip()">🔄 Inverti senso</button><button class="gc" onclick="GAME.spotList()">📍 Scegli lo spot</button></div>${M3.on?'<div style="font-size:10.5px;opacity:.55;text-align:center;margin-top:4px">Immagini © Esri, Maxar · Strade © OpenStreetMap (OSRM)</div>':''}</div>`;
   const hold=(id,k)=>{const b=document.getElementById(id);const on=e=>{e.preventDefault();ac();MP.car[k]=1;},off=()=>{MP.car[k]=0;};b.onpointerdown=on;b.onpointerup=off;b.onpointerleave=off;b.onpointercancel=off;};hold('gacc','acc');hold('gbrk','brk');mapPark();}
 function mapPark(){const e=document.getElementById('gpark');if(!e)return;const i=MP.near;
   if(i<0){const nx=MP.spots.map((p,k)=>[k,(p.s-MP.car.s)*MP.car.dir]).filter(x=>x[1]>0).sort((a,b)=>a[1]-b[1])[0];e.innerHTML=nx?`Prossimo spot: <b>${MP.spots[nx[0]].sp.name}</b> tra ${nx[1].toFixed(1).replace('.',',')} km`:'Fine della strada: inverti il senso.';return;}
   const n=MP.spots[i].sp.name;e.innerHTML=MP.slow?`<button class="gb big" style="margin:0" onclick="GAME.park(${i})">🅿️ Parcheggia a ${n}</button>`:`🅿️ <b>${n}</b>: rallenta per fermarti`;}
-G.flip=()=>{if(MP.car.ramp)return;if(MP.car.v<.1){MP.car.dir*=-1;MP.key='';MP.arm=null;}else{const e=document.getElementById('gpark');if(e)e.textContent='Fermati prima di invertire.';}};
+G.flip=()=>{if(MP.car.ramp||MP.car.app)return;if(MP.car.v<.1){MP.car.dir*=-1;MP.key='';MP.arm=null;}else{const e=document.getElementById('gpark');if(e)e.textContent='Fermati prima di invertire.';}};
 G.park=i=>{if(MP.car.v>.3)return;MP.parking={i,t:0};st.phase='parking';ui.innerHTML=`<div class="gpanel"><b>🅿️ Parcheggi a ${MP.spots[i].sp.name}</b><div class="gs">Prendi l'attrezzatura e scendi in spiaggia…</div></div>`;};
 G.spotList=()=>{ui.innerHTML=`<div class="gpanel"><b>📍 Dove vuoi pescare?</b><div class="gtalk">${SPOTS.map((sp,i)=>`<button class="gc" onclick="GAME.arrive(${i})">${sp.name}</button>`).join('')}</div>${btn('↩ Torna a guidare','mapBack()')}</div>`;};
 G.mapBack=()=>mapUI();
@@ -656,33 +661,62 @@ function exitSign(name,left){const t=canvasTex(512,256,(g,w,h)=>{g.fillStyle='#1
   const grp=new T.Group(),pm=new T.MeshLambertMaterial({color:0x9aa0a6});[-.022,.022].forEach(x=>{const p=new T.Mesh(new T.CylinderGeometry(.0012,.0012,.04,5),pm);p.position.set(x,.02,0);grp.add(p);});
   const pl=new T.Mesh(new T.PlaneGeometry(.07,.035),new T.MeshBasicMaterial({map:t,side:T.DoubleSide}));pl.position.y=.045;pl.rotation.x=-.75;grp.add(pl);return grp;}
 function nearRoad(q){let bi=0,bd=1e9;const r=MP.road;for(let i=0;i<r.length;i+=2){const d=(r[i][0]-q[0])**2+(r[i][1]-q[1])**2;if(d<bd){bd=d;bi=i;}}const t=roadAt(MP.cum[bi]),n=seaN(t);return {i:bi,s:MP.cum[bi],o:(q[0]-t.x)*n[0]+(q[1]-t.y)*n[1],t,n};}
-function build3D(){
+// posizione attuale: GPS del telefono, altrimenti quella già nota all'app
+function gamePos(){return new Promise(res=>{let done=false;const fin=v=>{if(!done){done=true;res(v);}};
+  const app=(()=>{try{const h=(0,eval)('S').spots.find(x=>x.here&&x.approx!==true);return h?{lat:+h.lat,lon:+h.lon}:null;}catch(e){return null;}})();
+  setTimeout(()=>fin(app),6000);
+  if(navigator.geolocation)navigator.geolocation.getCurrentPosition(p=>fin({lat:p.coords.latitude,lon:p.coords.longitude}),()=>fin(app),{enableHighAccuracy:false,timeout:5500,maximumAge:600000});else fin(app);});}
+// strada vera (OSRM, dati OpenStreetMap) da dove sei fino alla strada costiera; se non risponde, una strada diritta
+async function approachRoute(pos){const q=PJ(pos.lat,pos.lon),nr=nearRoad(q),dist=Math.hypot(q[0]-nr.t.x,q[1]-nr.t.y);
+  if(dist<1.2)return {s:nr.s};if(dist>250)return null;
+  const tla=nr.t.y/KY+LAT0,tlo=nr.t.x/KX+LON0;let pts=null;
+  try{const ac=new AbortController();setTimeout(()=>ac.abort(),8000);
+    const j=await (await fetch(`https://router.project-osrm.org/route/v1/driving/${pos.lon.toFixed(3)},${pos.lat.toFixed(3)};${tlo.toFixed(4)},${tla.toFixed(4)}?overview=full&geometries=geojson`,{signal:ac.signal})).json();
+    const co=j.routes?.[0]?.geometry?.coordinates;if(co&&co.length>1){pts=[];for(const [lo,la] of co){const p=PJ(la,lo),l=pts[pts.length-1];if(!l||Math.hypot(p[0]-l[0],p[1]-l[1])>.025)pts.push(p);}}}catch(e){}
+  if(!pts){pts=[];const n=Math.max(2,Math.ceil(dist/.3));for(let i=0;i<n;i++)pts.push([lerp(q[0],nr.t.x,i/n),lerp(q[1],nr.t.y,i/n)]);}
+  pts.push([nr.t.x,nr.t.y]);const cum=[0];for(let i=1;i<pts.length;i++)cum.push(cum[i-1]+Math.hypot(pts[i][0]-pts[i-1][0],pts[i][1]-pts[i-1][1]));
+  return {s:nr.s,app:{pts,cum,len:cum[cum.length-1]}};}
+// immagini satellitari (le stesse della mappa degli spot) caricate a tessere attorno all'auto
+const SAT={cache:new Map(),any:false};
+function satLoad(z,x,y,k){const o={m:null,ok:false,t:M3.t};SAT.cache.set(k,o);
+  const n=2**z,lo=i=>i/n*360-180,la=j=>Math.atan(Math.sinh(Math.PI*(1-2*j/n)))/R,a=PJ(la(y),lo(x)),b=PJ(la(y+1),lo(x+1)),h=z<15?-.001:0;
+  const m=new T.Mesh(flatGeo([a[0],h,-a[1],b[0],h,-a[1],a[0],h,-b[1],b[0],h,-b[1]],[0,1,1,1,0,0,1,0],[0,2,1,1,2,3]),new T.MeshBasicMaterial({color:0xffffff,side:T.DoubleSide,toneMapped:false}));m.visible=false;M3.S.add(m);o.m=m;
+  new T.TextureLoader().setCrossOrigin('anonymous').load(`https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${z}/${y}/${x}`,t=>{if(!M3.S||!o.m){t.dispose();return;}t.encoding=T.sRGBEncoding;t.anisotropy=4;m.material.map=t;m.material.needsUpdate=true;o.ok=true;SAT.any=true;},undefined,()=>{});}
+function satTiles(cx,cy,z,rad,on,need){const lat=cy/KY+LAT0,lon=cx/KX+LON0,n=2**z,tx=Math.floor((lon+180)/360*n),ty=Math.floor((1-Math.log(Math.tan(lat*R)+1/Math.cos(lat*R))/Math.PI)/2*n);
+  if(!on)return;for(let dx=-rad;dx<=rad;dx++)for(let dy=-rad;dy<=rad;dy++){const k=z+'/'+(tx+dx)+'/'+(ty+dy);need.add(k);if(!SAT.cache.has(k))satLoad(z,tx+dx,ty+dy,k);}}
+function satUpdate(cx,cy,fast){const need=new Set();satTiles(cx,cy,13,2,true,need);satTiles(cx,cy,15,2,!fast,need);
+  for(const [k,o] of SAT.cache){const v=need.has(k);if(o.m)o.m.visible=v&&o.ok;if(v)o.t=M3.t;}
+  if(SAT.cache.size>170){[...SAT.cache].filter(([k])=>!need.has(k)).sort((a,b)=>a[1].t-b[1].t).slice(0,SAT.cache.size-140).forEach(([k,o])=>{if(o.m){M3.S.remove(o.m);o.m.geometry.dispose();o.m.material.map?.dispose();o.m.material.dispose();o.m=null;}SAT.cache.delete(k);});}
+  if(M3.deco)M3.deco.visible=!SAT.any;}
+function build3D(){SAT.cache.clear();SAT.any=false;
   const R=new T.WebGLRenderer({antialias:true,powerPreference:'high-performance'});R.setPixelRatio(Math.min(1.6,devicePixelRatio||1));R.toneMapping=T.ACESFilmicToneMapping;R.outputEncoding=T.sRGBEncoding;
   const cv=R.domElement;cv.id='gmapc';cv.style.width=cv.style.height='100%';root.insertBefore(cv,root.firstChild);
   const S=new T.Scene();S.background=new T.Color('#9fd3f0');S.fog=new T.Fog('#b4dcf2',2.2,6.5);
-  const cam=new T.PerspectiveCamera(52,1,.01,30);Object.assign(M3,{R,S,cam,on:true,blob:blobTex(),cars:[],pins:[],t:0});
+  const cam=new T.PerspectiveCamera(52,1,.02,40);Object.assign(M3,{R,S,cam,on:true,blob:blobTex(),cars:[],pins:[],t:0});
   const sun=new T.DirectionalLight(0xfff1dc,1.15);S.add(sun);S.add(sun.target);M3.sun=sun;M3.sunDir=new T.Vector3(-.45,.8,.4).normalize();
   S.add(new T.HemisphereLight(0xcfe6ff,0x6d7a4a,.75));
   // mare
   const wn=normalTex();wn.encoding=T.LinearEncoding;wn.wrapS=wn.wrapT=T.RepeatWrapping;const mid=MP.road[MP.road.length>>1];
   wn.repeat.set(420,420);const wat=new T.Mesh(new T.PlaneGeometry(160,160),new T.MeshPhongMaterial({color:0x1b78a8,specular:0xbfe6ff,shininess:70,normalMap:wn,normalScale:new T.Vector2(.55,.55)}));M3.wn=wn;
-  wat.rotation.x=-Math.PI/2;wat.position.set(mid[0],-.002,-mid[1]);S.add(wat);M3.water=wat;
+  wat.rotation.x=-Math.PI/2;wat.position.set(mid[0],-.005,-mid[1]);S.add(wat);M3.water=wat;
   // terra e spiaggia lungo la costa
   const cs=MP.coast,sn=MP.sn,ext=(a,b,k)=>{const x=a[0]-b[0],y=a[1]-b[1],l=Math.hypot(x,y)||1;return [a[0]+x/l*k,a[1]+y/l*k];};
   const C2=[ext(cs[0],cs[6],40),ext(cs[0],cs[6],6),...cs,ext(cs[cs.length-1],cs[cs.length-7],6),ext(cs[cs.length-1],cs[cs.length-7],40)];
   const off=(P,k)=>P.map(q=>[q[0]+sn[0]*k,q[1]+sn[1]*k]);
-  const lt=landTex3();S.add(new T.Mesh(stripGeo(off(C2,-.06),off(C2,-45),0,.9),new T.MeshLambertMaterial({map:lt,side:T.DoubleSide})));
+  const deco=new T.Group();S.add(deco);M3.deco=deco;const lt=landTex3();S.add(new T.Mesh(stripGeo(off(C2,-.06),off(C2,-45),-.003,.9),new T.MeshLambertMaterial({map:lt,side:T.DoubleSide})));
   const st2=canvasTex(128,128,(g,w,h)=>{g.fillStyle='#e6d09c';g.fillRect(0,0,w,h);for(let i=0;i<900;i++){g.fillStyle=`rgba(${Math.random()<.5?'160,130,80':'255,245,215'},${Math.random()*.35})`;g.fillRect(Math.random()*w,Math.random()*h,1.5,1.5);}},[1,1]);st2.wrapS=st2.wrapT=T.RepeatWrapping;
-  S.add(new T.Mesh(stripGeo(off(C2,.018),off(C2,-.12),.0015,.08),new T.MeshLambertMaterial({map:st2,side:T.DoubleSide})));
+  deco.add(new T.Mesh(stripGeo(off(C2,.018),off(C2,-.12),.0015,.08),new T.MeshLambertMaterial({map:st2,side:T.DoubleSide})));
   // schiuma della battigia
-  S.add(new T.Mesh(stripGeo(off(C2,.032),off(C2,.016),.0012,.05),new T.MeshBasicMaterial({color:0xf4fbff,transparent:true,opacity:.55,side:T.DoubleSide})));
+  deco.add(new T.Mesh(stripGeo(off(C2,.032),off(C2,.016),.0012,.05),new T.MeshBasicMaterial({color:0xf4fbff,transparent:true,opacity:.55,side:T.DoubleSide})));
   // strada
   const rt=roadTex();rt.wrapS=rt.wrapT=T.RepeatWrapping;const roadM=new T.MeshLambertMaterial({map:rt,side:T.DoubleSide});
   S.add(new T.Mesh(ribbonGeo(MP.road,.042,.004,.07),new T.MeshLambertMaterial({color:0x8a8f6a,side:T.DoubleSide})).translateY(-.0005));
   S.add(new T.Mesh(ribbonGeo(MP.road,.03,.0045,.07),roadM));
+  if(MP.app){S.add(new T.Mesh(ribbonGeo(MP.app.pts,.038,.0039,.07),new T.MeshLambertMaterial({color:0x8a8f6a,side:T.DoubleSide})));S.add(new T.Mesh(ribbonGeo(MP.app.pts,.026,.0044,.07),roadM));
+    const me=labelSprite('📍 Parti da qui',{bg:'rgba(255,77,94,.9)',fs:46,k:.034});me.position.set(MP.app.pts[0][0],.05,-MP.app.pts[0][1]);S.add(me);}
   // Monte Circeo
   const cq=PJ(CIRCEO.lat,CIRCEO.lon),mg=new T.SphereGeometry(1,40,20,0,Math.PI*2,0,Math.PI/2);const mp=mg.attributes.position;for(let i=0;i<mp.count;i++){const y=mp.getY(i);mp.setY(i,y*(1+.12*Math.sin(mp.getX(i)*9)*Math.cos(mp.getZ(i)*7)));}mg.computeVertexNormals();
-  const mt=new T.Mesh(mg,new T.MeshLambertMaterial({color:0x5b7a3c}));mt.scale.set(2.6,.54,.9);mt.rotation.y=.15;mt.position.set(cq[0],0,-cq[1]);S.add(mt);
+  const mt=new T.Mesh(mg,new T.MeshLambertMaterial({color:0x5b7a3c}));mt.scale.set(2.6,.54,.9);mt.rotation.y=.15;mt.position.set(cq[0],0,-cq[1]);deco.add(mt);
   // paesi: case con tetti in coppo
   const bx=new T.BoxGeometry(1,1,1);bx.translate(0,.5,0);const rf=new T.ConeGeometry(.75,1,4);rf.rotateY(Math.PI/4);rf.translate(0,.5,0);
   const houses=[],exitZ=[];MP.spots.forEach(q=>{const J=roadAt(q.s),n=seaN(J);exitZ.push([J.x+n[0]*.1,J.y+n[1]*.1,.17]);for(const d of [-1,1]){const A=roadAt(clamp(q.s-d*.15,0,MP.len));exitZ.push([A.x+n[0]*.04,A.y+n[1]*.04,.08]);}});const big=/Ostia|Civitavecchia|Terracina|Anzio|Nettuno|Ladispoli|Fiumicino|Sabaudia|Santa Marinella|Torvaianica/;
@@ -692,7 +726,7 @@ function build3D(){
   const HM=new T.InstancedMesh(bx,new T.MeshLambertMaterial(),houses.length),RM=new T.InstancedMesh(rf,new T.MeshLambertMaterial(),houses.length),o3=new T.Object3D(),HC=['#f3ead8','#ead4a6','#f6f1e7','#dfb88c','#efe1c2','#e9c9a8'].map(c=>new T.Color(c));
   houses.forEach(([p,a],i)=>{const w=rnd(.014,.032),d=rnd(.012,.026),h=rnd(.008,.026);o3.position.set(p[0],0,-p[1]);o3.rotation.set(0,a,0);o3.scale.set(w,h,d);o3.updateMatrix();HM.setMatrixAt(i,o3.matrix);HM.setColorAt(i,pick(HC));
     o3.position.y=h;o3.scale.set(w*1.02,Math.min(w,d)*.45,d*1.02);o3.updateMatrix();RM.setMatrixAt(i,o3.matrix);RM.setColorAt(i,new T.Color(pick(['#b5563a','#a94c33','#c0674a','#9c4a35'])));});
-  S.add(HM,RM);
+  deco.add(HM,RM);
   // uscite: due rampe (una per senso di marcia), parcheggio, sentiero sulla spiaggia, cartelli e segnaposto
   const pkT=canvasTex(128,96,(g,w,h)=>{g.fillStyle='#55595f';g.fillRect(0,0,w,h);g.strokeStyle='#fff';g.lineWidth=2;for(let x=8;x<w;x+=16){g.beginPath();g.moveTo(x,4);g.lineTo(x,30);g.moveTo(x,h-4);g.lineTo(x,h-30);g.stroke();}});
   const pathM=new T.MeshLambertMaterial({color:0xd9c08a,side:T.DoubleSide});
@@ -718,28 +752,36 @@ function build3D(){
   const crown=new T.SphereGeometry(1,8,5);crown.scale(1,.45,1);const trunk=new T.CylinderGeometry(.08,.1,1,5);trunk.translate(0,.5,0);
   const TC=new T.InstancedMesh(crown,new T.MeshLambertMaterial(),trees.length),TT=new T.InstancedMesh(trunk,new T.MeshLambertMaterial({color:0x6b4a32}),trees.length),GC=['#2f5a2a','#3c6a2f','#29502a','#467536'].map(c=>new T.Color(c));
   trees.forEach((p,i)=>{const s=rnd(.008,.015),h=s*rnd(1.2,1.9);o3.position.set(p[0],0,-p[1]);o3.rotation.set(0,0,0);o3.scale.set(s,h,s);o3.updateMatrix();TT.setMatrixAt(i,o3.matrix);o3.position.y=h;o3.scale.set(s,s,s);o3.updateMatrix();TC.setMatrixAt(i,o3.matrix);TC.setColorAt(i,pick(GC));});
-  S.add(TT,TC);
+  deco.add(TT,TC);
   // auto: la mia (con le canne sul tetto) e il traffico
   M3.car=makeCar3(0x1f9a8e,true);S.add(M3.car);M3.yaw=null;
   for(let k=0;k<22;k++){const c=makeCar3(pick([0xd94a3a,0xf2f2f2,0x2b62c9,0x333840,0xe0b33a,0x8a2be2,0x2e7d32]));S.add(c);M3.cars.push({o:c,s:Math.random()*MP.len,d:Math.random()<.5?1:-1,v:rnd(.5,1.05)});}
   // minimappa
   const mm=document.createElement('canvas');mm.id='gmini';root.appendChild(mm);M3.mini=mm;
   sizeMap();}
-function carPose(){const c=MP.car;if(c.ramp){const R=c.ramp,P=R.r.pts,cu=R.r.cum;let k=1;while(k<cu.length-1&&cu[k]<R.u)k++;const f=clamp((R.u-cu[k-1])/Math.max(1e-6,cu[k]-cu[k-1]),0,1);
-    return {x:lerp(P[k-1][0],P[k][0],f),y:lerp(P[k-1][1],P[k][1],f),hx:P[k][0]-P[k-1][0],hy:P[k][1]-P[k-1][1]};}
+function polyPose(P,cu,u,lane){let lo=0,hi=cu.length-1;while(hi-lo>1){const m=(lo+hi)>>1;if(cu[m]<=u)lo=m;else hi=m;}const k=hi,f=clamp((u-cu[k-1])/Math.max(1e-6,cu[k]-cu[k-1]),0,1);
+  const a=P[Math.max(0,k-3)],b=P[Math.min(P.length-1,k+2)];let hx=b[0]-a[0],hy=b[1]-a[1];const l=Math.hypot(hx,hy)||1;hx/=l;hy/=l;return {x:lerp(P[k-1][0],P[k][0],f)+hy*lane,y:lerp(P[k-1][1],P[k][1],f)-hx*lane,hx,hy};}
+function carPose(){const c=MP.car;if(c.ramp)return polyPose(c.ramp.r.pts,c.ramp.r.cum,c.ramp.u,0);if(c.app)return polyPose(c.app.pts,c.app.cum,c.app.u,.0075);
   const t=roadAt(c.s),h=roadDir(c.s),hx=h[0]*c.dir,hy=h[1]*c.dir;return {x:t.x+hy*.0075,y:t.y-hx*.0075,hx,hy};}
 function mapPhys3(dt){const c=MP.car;
-  if(c.ramp){const R=c.ramp,left=R.r.len-R.u,vmax=Math.min(.45,left*1.6+.04);if(c.acc)c.v+=dt*.45;else c.v-=dt*.06;if(c.brk)c.v-=dt*1.4;if(c.v>vmax)c.v=Math.max(vmax,c.v-dt*1.6);c.v=clamp(c.v,.03,1.3);R.u=Math.min(R.r.len,R.u+c.v*dt);
+  if(c.ramp){const R=c.ramp,left=R.r.len-R.u,vmax=Math.min(.45,left*1.6+.04);if(c.acc)c.v+=dt*.45;else c.v-=dt*.06;if(c.brk)c.v-=dt*1.4;if(c.v>vmax)c.v=Math.max(vmax,c.v-dt*Math.max(1.6,c.v*2));c.v=clamp(c.v,.03,8);R.u=Math.min(R.r.len,R.u+c.v*dt);
     if(R.u>=R.r.len-.002&&!R.done){R.done=1;c.v=0;motor(false);st.phase='parking';ui.innerHTML=`<div class="gpanel"><b>🅿️ Parcheggi a ${MP.spots[R.i].sp.name}</b><div class="gs">Prendi l'attrezzatura e scendi in spiaggia…</div></div>`;setTimeout(()=>{if(st.phase==='parking')G.arrive(R.i);},1500);}
-    if(!R.done)motor(c.v>.02,60+c.v*90);const sp=document.getElementById('gkmh');if(sp)sp.textContent=Math.round(c.v/1.3*130)+' km/h';return;}
-  if(c.acc)c.v+=dt*.45;else c.v-=dt*.08;if(c.brk)c.v-=dt*1.4;c.v=clamp(c.v,0,1.3);const prev=c.s;c.s=clamp(c.s+c.v*c.dir*dt,0,MP.len);if(c.s<=0||c.s>=MP.len)c.v=0;
-  motor(c.v>.02,60+c.v*90);
-  if(MP.arm!=null){const p=MP.spots[MP.arm],r=p.ramps[c.dir];if(r&&(prev-r.rs)*c.dir<=0&&(c.s-r.rs)*c.dir>=0){c.ramp={i:MP.arm,r,u:0};MP.arm=null;ui.querySelector('#gpark').innerHTML=`↘ Esci per <b>${p.sp.name}</b>…`;MP.key='ramp';return;}
+    if(!R.done)motor(c.v>.02,60+Math.min(c.v,3)*60);kmh();return;}
+  // più tieni premuto l'acceleratore, più l'auto va veloce (fino a 800 km/h)
+  if(c.acc){c.hold=(c.hold||0)+dt;c.v+=dt*(.45+Math.max(0,c.hold-1.2)*1.1);}else{c.hold=0;c.v-=dt*(.08+c.v*.05);}if(c.brk)c.v-=dt*(1.4+c.v*.8);c.v=clamp(c.v,0,8);
+  if(c.app){const A=c.app;A.u=Math.min(A.len,A.u+c.v*dt);motor(c.v>.02,60+Math.min(c.v,3)*60);kmh();
+    if(A.u>=A.len){c.app=null;c.dir=A.dir;MP.key='';}else{const e=document.getElementById('gpark');if(e){const d=A.len-A.u;e.innerHTML=`🧭 Verso la costa: <b>${d<1?Math.round(d*20)*50+' m':d.toFixed(1).replace('.',',')+' km'}</b> · tieni premuto ⬆ per andare più veloce`;}}return;}
+  // con la freccia inserita l'auto rallenta da sola per prendere l'uscita
+  if(MP.arm!=null){const r=MP.spots[MP.arm].ramps[c.dir],d=(r.rs-c.s)*c.dir;if(d>0){const vt=Math.max(.5,Math.sqrt(2*3*d));if(c.v>vt)c.v=vt;}}
+  const prev=c.s;c.s=clamp(c.s+c.v*c.dir*dt,0,MP.len);if(c.s<=0||c.s>=MP.len)c.v=0;
+  motor(c.v>.02,60+Math.min(c.v,3)*60);
+  if(MP.arm!=null){const p=MP.spots[MP.arm],r=p.ramps[c.dir];if(r&&(prev-r.rs)*c.dir<=0&&(c.s-r.rs)*c.dir>=0){c.ramp={i:MP.arm,r,u:0};c.v=Math.min(c.v,.6);MP.arm=null;ui.querySelector('#gpark').innerHTML=`↘ Esci per <b>${p.sp.name}</b>…`;MP.key='ramp';return;}
     if((c.s-r.rs)*c.dir>.05){MP.arm=null;}}
   let nx=-1,nd=1e9;MP.spots.forEach((p,i)=>{const d=(p.ramps[c.dir].rs-c.s)*c.dir;if(d>.01&&d<nd){nd=d;nx=i;}});
-  const key=nx+'|'+(nd<2)+'|'+MP.arm;if(key!==MP.key){MP.key=key;MP.nx=nx;exitUI(nx,nd<2);}
+  const nearK=nd<Math.max(2,c.v*3),key=nx+'|'+nearK+'|'+MP.arm;if(key!==MP.key){MP.key=key;MP.nx=nx;exitUI(nx,nearK);}
   const e=document.getElementById('gexd');if(e&&nx>=0){const d=MP.arm!=null?(MP.spots[MP.arm].ramps[c.dir].rs-c.s)*c.dir:nd;e.textContent=d<1?Math.max(0,Math.round(d*20)*50)+' m':d.toFixed(1).replace('.',',')+' km';}
-  const sp=document.getElementById('gkmh');if(sp)sp.textContent=Math.round(c.v/1.3*130)+' km/h';}
+  kmh();}
+function kmh(){const sp=document.getElementById('gkmh');if(sp){const k=Math.round(MP.car.v*100);sp.textContent=k+' km/h';sp.style.color=k>150?'#ffb547':'';}}
 function exitUI(nx,near){const e=document.getElementById('gpark');if(!e)return;
   if(nx<0){e.innerHTML='Fine della strada: fermati e inverti il senso.';return;}const n=MP.spots[nx].sp.name;
   if(MP.arm!=null)e.innerHTML=`<span style="color:#ffb547">⟹ Freccia inserita</span>: esci per <b>${MP.spots[MP.arm].sp.name}</b> tra <b id="gexd"></b>`;
@@ -749,21 +791,22 @@ G.takeExit=i=>{MP.arm=i;MP.key='';click();};G._mp=()=>({MP,M3});
 function draw3D(dt){const c=MP.car,P=carPose(),car=M3.car;M3.t+=dt;const t=M3.t;
   const yaw=Math.atan2(P.hx,-P.hy);if(M3.yaw==null)M3.yaw=yaw;let dy=yaw-M3.yaw;dy=Math.atan2(Math.sin(dy),Math.cos(dy));M3.yaw+=dy*Math.min(1,dt*6);
   car.position.set(P.x,0,-P.y);car.rotation.y=M3.yaw;car.userData.brake.color.set(c.brk?0xff2a2a:0x661111);
-  const bl=(MP.arm!=null||c.ramp&&!c.ramp.done)&&(t*2.2%1)<.5,side=(c.ramp?c.ramp.r===MP.spots[c.ramp.i].ramps[1]:c.dir===1)?1:0;car.userData.blink.forEach((pr,k)=>pr.forEach(b=>b.visible=bl&&k===(side?0:1)));
+  const bl=(MP.arm!=null||c.ramp&&!c.ramp.done)&&(t*2.2%1)<.5,side=(c.app?1:c.ramp?c.ramp.r===MP.spots[c.ramp.i].ramps[1]:c.dir===1)?1:0;car.userData.blink.forEach((pr,k)=>pr.forEach(b=>b.visible=bl&&k===(side?0:1)));
   // telecamera dall'alto, un po' dietro
-  const fx=Math.sin(M3.yaw),fz=Math.cos(M3.yaw),back=.22+c.v*.1,hgt=.52+c.v*.16,cam=M3.cam,sn2=c.ramp?MP.spots[c.ramp.i].n:seaN(roadAt(c.s));if(!M3.sn)M3.sn=[...sn2];M3.sn[0]=lerp(M3.sn[0],sn2[0],Math.min(1,dt*2));M3.sn[1]=lerp(M3.sn[1],sn2[1],Math.min(1,dt*2));const nx=M3.sn[0],nz=-M3.sn[1],tp=new T.Vector3(P.x-fx*back+nx*.08,hgt,-P.y-fz*back+nz*.08);
-  if(!M3.cp)M3.cp=tp.clone();M3.cp.lerp(tp,Math.min(1,dt*3));cam.position.copy(M3.cp);cam.lookAt(P.x+fx*.16+nx*.12,0,-P.y+fz*.16+nz*.12);
+  const fx=Math.sin(M3.yaw),fz=Math.cos(M3.yaw),back=.22+Math.min(c.v,8)*.1,hgt=.52+Math.min(c.v,8)*.16,cam=M3.cam,sn2=c.ramp?MP.spots[c.ramp.i].n:seaN(roadAt(c.app?MP.app.s??c.s:c.s));if(!M3.sn)M3.sn=[...sn2];M3.sn[0]=lerp(M3.sn[0],sn2[0],Math.min(1,dt*2));M3.sn[1]=lerp(M3.sn[1],sn2[1],Math.min(1,dt*2));const nx=M3.sn[0],nz=-M3.sn[1],tp=new T.Vector3(P.x-fx*back+nx*.08,hgt,-P.y-fz*back+nz*.08);
+  if(!M3.cp)M3.cp=tp.clone();M3.cp.lerp(tp,Math.min(1,dt*3));cam.position.copy(M3.cp);cam.lookAt(P.x+fx*.24+nx*.12,0,-P.y+fz*.24+nz*.12);
+  const lx=P.x+fx*.24+nx*.12,ly=P.y-(fz*.24+nz*.12);satUpdate(lx,ly,c.v>2.2);M3.S.fog.near=2.2+c.v*.5;M3.S.fog.far=6.5+c.v*.9;
   M3.sun.position.set(P.x+M3.sunDir.x*3,M3.sunDir.y*3,-P.y+M3.sunDir.z*3);M3.sun.target.position.set(P.x,0,-P.y);
   M3.wn.offset.x+=dt*.02;M3.wn.offset.y+=dt*.013;
   M3.pins.forEach((p,i)=>{p.position.y=.008+Math.sin(t*2.2+i)*.006;p.children[0].parent.rotation.y=t*.8;});
   for(const k of M3.cars){k.s+=k.d*k.v*dt;if(k.s<0)k.s+=MP.len;if(k.s>MP.len)k.s-=MP.len;const r=roadAt(k.s),h=roadDir(k.s),hx=h[0]*k.d,hy=h[1]*k.d;k.o.position.set(r.x+hy*.0075,0,-(r.y-hx*.0075));k.o.rotation.y=Math.atan2(hx,-hy);}
   M3.R.render(M3.S,cam);drawMini(P);}
 function drawMini(P){const c=M3.mini;if(!c)return;const g=c.getContext('2d'),d=MP.d||1,W=c.width,H=c.height;
-  if(!M3.mbg||M3.mbg.width!==W){const b=document.createElement('canvas');b.width=W;b.height=H;const bg=b.getContext('2d');const xs=MP.road.map(q=>q[0]),ys=MP.road.map(q=>q[1]),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys),ks=Math.min((W-16*d)/(x1-x0),(H-16*d)/(y1-y0));
+  if(!M3.mbg||M3.mbg.width!==W){const b=document.createElement('canvas');b.width=W;b.height=H;const bg=b.getContext('2d');const all=MP.app?MP.road.concat(MP.app.pts):MP.road,xs=all.map(q=>q[0]),ys=all.map(q=>q[1]),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys),ks=Math.min((W-16*d)/(x1-x0),(H-16*d)/(y1-y0));
     M3.MX=x=>8*d+(x-x0)*ks;M3.MY=y=>H-8*d-(y-y0)*ks;bg.fillStyle='rgba(4,14,26,.72)';bg.fillRect(0,0,W,H);bg.strokeStyle='#e6d3a2';bg.lineWidth=2*d;bg.beginPath();MP.coast.forEach((q,i)=>i?bg.lineTo(M3.MX(q[0]),M3.MY(q[1])):bg.moveTo(M3.MX(q[0]),M3.MY(q[1])));bg.stroke();
-    MP.spots.forEach(p=>{bg.fillStyle='#2fe0cf';bg.beginPath();bg.arc(M3.MX(p.q[0]),M3.MY(p.q[1]),2.2*d,0,7);bg.fill();});M3.mbg=b;}
+    if(MP.app){bg.strokeStyle='#ffffff';bg.lineWidth=1.5*d;bg.beginPath();MP.app.pts.forEach((q,i)=>i?bg.lineTo(M3.MX(q[0]),M3.MY(q[1])):bg.moveTo(M3.MX(q[0]),M3.MY(q[1])));bg.stroke();}MP.spots.forEach(p=>{bg.fillStyle='#2fe0cf';bg.beginPath();bg.arc(M3.MX(p.q[0]),M3.MY(p.q[1]),2.2*d,0,7);bg.fill();});M3.mbg=b;}
   g.clearRect(0,0,W,H);g.drawImage(M3.mbg,0,0);g.fillStyle='#ff4d5e';g.beginPath();g.arc(M3.MX(P.x),M3.MY(P.y),4*d,0,7);g.fill();}
-function dispose3D(){if(M3.R){try{M3.R.dispose();M3.R.forceContextLoss?.();}catch(e){}}M3.R=null;M3.on=false;M3.S=null;M3.cp=null;M3.sn=null;M3.mbg=null;document.getElementById('gmini')?.remove();}
+function dispose3D(){if(M3.R){try{M3.R.dispose();M3.R.forceContextLoss?.();}catch(e){}}M3.R=null;M3.on=false;M3.S=null;SAT.cache.clear();M3.cp=null;M3.sn=null;M3.mbg=null;document.getElementById('gmini')?.remove();}
 
 /* ---------- interfaccia ---------- */
 function mount(v){
