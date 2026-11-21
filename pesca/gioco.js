@@ -743,10 +743,12 @@ function exitSign(name,left){const t=canvasTex(512,256,(g,w,h)=>{g.fillStyle='#1
   const pl=new T.Mesh(new T.PlaneGeometry(.07,.035),new T.MeshBasicMaterial({map:t,side:T.DoubleSide}));pl.position.y=.045;pl.rotation.x=-.75;grp.add(pl);return grp;}
 function nearRoad(q){let bi=0,bd=1e9;const r=MP.road;for(let i=0;i<r.length;i+=2){const d=(r[i][0]-q[0])**2+(r[i][1]-q[1])**2;if(d<bd){bd=d;bi=i;}}const t=roadAt(MP.cum[bi]),n=seaN(t);return {i:bi,s:MP.cum[bi],o:(q[0]-t.x)*n[0]+(q[1]-t.y)*n[1],t,n};}
 // posizione attuale: GPS del telefono, altrimenti quella già nota all'app
-function gamePos(){if(window.GP_POS)return Promise.resolve(window.GP_POS);return new Promise(res=>{let done=false;const fin=v=>{if(!done){done=true;res(v);}};
+function gamePos(){if(window.GP_POS)return Promise.resolve(window.GP_POS);return new Promise(res=>{let done=false,net=null,dev=null;const fin=v=>{if(!done){done=true;res(v);}};
   const app=(()=>{try{const h=(0,eval)('S').spots.find(x=>x.here&&x.approx!==true);return h?{lat:+h.lat,lon:+h.lon}:null;}catch(e){return null;}})();
-  setTimeout(()=>fin(app),15000);
-  if(navigator.geolocation)navigator.geolocation.getCurrentPosition(p=>fin({lat:p.coords.latitude,lon:p.coords.longitude}),()=>fin(app),{enableHighAccuracy:false,timeout:14000,maximumAge:600000});else fin(app);});}
+  // posizione veloce: quella del telefono se è già pronta (anche di qualche minuto fa), altrimenti quella approssimata dalla rete (in pochi decimi di secondo)
+  if(navigator.geolocation)navigator.geolocation.getCurrentPosition(p=>{dev={lat:p.coords.latitude,lon:p.coords.longitude};fin(dev);},()=>{},{enableHighAccuracy:false,timeout:4000,maximumAge:3600000});
+  fetch('https://get.geojs.io/v1/ip/geo.json').then(r=>r.json()).then(j=>{const la=+j.latitude,lo=+j.longitude;if(!isNaN(la)&&!isNaN(lo))net={lat:la,lon:lo};}).catch(()=>{});
+  const t0=Date.now(),iv=setInterval(()=>{const el=Date.now()-t0;if(done){clearInterval(iv);return;}if(net&&el>1500){clearInterval(iv);fin(net);}else if(el>5000){clearInterval(iv);fin(net||app);}},150);});}
 // strada vera (OSRM, dati OpenStreetMap) da dove sei fino alla strada costiera; se non risponde, una strada diritta
 async function approachRoute(pos){const q=PJ(pos.lat,pos.lon),nr=nearRoad(q),dist=Math.hypot(q[0]-nr.t.x,q[1]-nr.t.y);
   if(dist<1.2)return {s:nr.s};if(dist>250)return null;
