@@ -449,7 +449,7 @@ function say(a,text,secs=4){if(a.bub){a.obj.remove(a.bub);a.bub.material.map.dis
     g.fillStyle='#1c2430';g.font='600 28px Outfit,sans-serif';g.textAlign='center';lines.forEach((l,i)=>g.fillText(l,256,44+i*34));});
   const sp=new T.Sprite(new T.SpriteMaterial({map:tx,depthTest:false,transparent:true}));sp.scale.set(1.6,1.6*H/512,1);sp.position.y=2.35;sp.renderOrder=10;a.obj.add(sp);a.bub=sp;a.bubT=secs;}
 const NPC_LINES={
-  greet:a=>pick([`Ciao! Io sono ${a.per.name}.`,'Buongiorno! Come va da te?','Allora, abboccano?','Ciao collega!']),
+  greet:a=>pick([`Ciao! Io sono ${a.per.name}.`,...(window.GP_NAME?[`Ciao ${window.GP_NAME}! Io sono ${a.per.name}.`,`Oh, ${window.GP_NAME}! Come va?`]:[]),'Buongiorno! Come va da te?','Allora, abboccano?','Ciao collega!']),
   catch:(a,f)=>pick([`Presa! ${f.n} da ${Math.round(f.l)} cm!`,`Eccola! ${f.n}!`,`${f.n}! Finalmente…`]),
   miss:()=>pick(['Niente, mi ha pulito l\'amo.','Granchi maledetti!','Era solo l\'onda…','Mancato!']),
   chat:()=>pick(['Hai visto che mare?','Da te abboccano?','Stanotte ho preso una spigola!','Hai un piombo da 150?','Domani gira il vento…','Passami un bibi, va.','Il caffè è finito?']),
