@@ -26,7 +26,7 @@
   <p>Surfcasting sulla costa del Lazio: parti da dove sei, guida lungo la costa e scegli lo spot. Meteo e mare sono quelli veri.</p>
   <input id="nm" maxlength="24" placeholder="Come ti chiami?" autocomplete="given-name">
   <button id="go" disabled>🎣 Andiamo a Pescare</button>
-  <p class="note">Ti verrà chiesta la posizione per partire da dove ti trovi (puoi anche rifiutare).</p>
+  <p class="note">Si parte in auto da Tivoli.</p>
 </div></div>
 <script>
 // pagina a sé: carica solo il gioco di LenzApp (../pesca/gioco.js) con meteo, mare e costa che servono al gioco
@@ -56,7 +56,8 @@ window.build=(w,m)=>{const H=w.hourly,mi={};if(m&&m.hourly)m.hourly.time.forEach
   return {hours};};
 // uscita dal gioco: si torna alla schermata iniziale
 window.go=()=>{document.getElementById('start').style.display='';};
-async function start(){const n=nm.value.trim().slice(0,24);if(n.length<2)return;try{localStorage.setItem('gp.name',n);}catch(e){}window.GP_NAME=n;
+async function start(){const n=nm.value.trim().slice(0,24);if(n.length<2)return;try{localStorage.setItem('gp.name',n);}catch(e){}window.GP_NAME=n;window.GP_POS={lat:41.9634,lon:12.7979};// anteprima: si parte sempre da Tivoli
+  
   document.getElementById('start').style.display='none';
   if(window.GAME){GAME.mount(null);return;}
   bt.disabled=true;const sc=document.createElement('script');sc.src=PB+'gioco.js?v='+Date.now();
