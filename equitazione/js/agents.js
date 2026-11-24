@@ -164,17 +164,29 @@ EQ.populate.yard=function(W){
   const S=W.spots,A=S.arena;
   // cavalieri nel campo
   const track=Path(ellipse(A.cx,A.cz,A.hx-3.2,A.hz-3.2,56),true);
-  [[2,1],[4.6,-1],[7.5,1]].forEach(([sp,dir],i)=>{const fem=Math.random()<.65;const e=rider(W,fem);const a=pathAgent(W,e,track,{speed:sp,dir,s:i*track.L/3,stopR:6,colR:.75,colOff:.7,two:true,far:200});
-    a.label=label(e,EQ.randName(fem),3.15);});
-  // istruttrice al centro
-  {const e=addTo(W,person({fem:true,top:0x2f6b33,pants:0xd9c7a5,cap:0x2f6b33,boots:0x141414}));let tgt=0;
-   const a=staticAgent(W,e,A.cx+2,A.cz+1,0,(dt,t,a,p)=>{const r=W.agents.find(x=>x.ent.horse);if(r){const h=Math.atan2(r.x-a.x,r.z-a.z);a.h+=U.wrapA(h-a.h)*Math.min(1,dt*2);e.root.rotation.y=a.h;}
-     e.npc.pose(dt,Math.sin(t*.4)>.7?'wave':'stand',{});});a.label=label(e,'Istruttrice '+EQ.randName(true),2.15);}
+  [[2,1],[3.5,1],[4.6,-1]].forEach(([sp,dir],i)=>{const fem=Math.random()<.65;const e=rider(W,fem);const a=pathAgent(W,e,track,{speed:sp,dir,s:i*track.L/3,stopR:6,colR:.75,colOff:.7,two:true,far:200});
+    a.lesson=true;a.label=label(e,'Allievo · '+EQ.randName(fem),3.15);e.name=e.name.replace('Allievo · ','');});
+  // Betta, istruttrice (45 anni, capelli lunghi raccolti in una coda) al centro del campo con gli allievi
+  {const e=addTo(W,person({fem:true,s:1.0,skin:0xe8b896,hair:0x5a3418,hairStyle:'pony',top:0x2f6b33,pants:0xd9c7a5,boots:0x141414,sleeves:'long',glasses:false}));
+   const a=staticAgent(W,e,A.cx+2,A.cz+1,0,(dt,t,a,p)=>{const r=W.agents.find(x=>x.ent.horse&&x.lesson);if(r){const h=Math.atan2(r.x-a.x,r.z-a.z);a.h+=U.wrapA(h-a.h)*Math.min(1,dt*2);e.root.rotation.y=a.h;}
+     const m=Math.sin(t*.45);e.npc.pose(dt,m>.75?'wave':m>.2?'talk':'stand',{});});
+   a.label=label(e,'Betta · istruttrice',2.15);e.name='Betta';
+   e.lines=['Talloni giù e schiena dritta!','Brava, ora passate al trotto!','Guardate dove volete andare, non il cavallo.','Più gamba, accompagna con le mani!','Oggi lavoriamo sulle transizioni.','Ottimo! Il cavallo ti ascolta.','Vuoi fare lezione anche tu? Entra in campo!'];}
+  // Carlo, addestratore (50 anni, brizzolato) che lavora un cavallo alla corda nel paddock
+  {const A2=S.arena2,cx=A2.cx,cz=A2.cz,R0=6.5;const e=addTo(W,person({fem:false,s:1.04,skin:0xe0b090,hair:0x8a8580,hairStyle:'short',beard:true,top:0x6b5a45,pants:0x2c3e66,boots:0x5a3418,sleeves:'long'}));
+   const h=horseOnly(W,{halter:true,halterColor:0x2a58c8});const rp=rope(W);let ang=0;
+   const whip=new THREE.Group();e.npc.handL.add(whip);mesh(G.cyl(.012,.006,1.8,5),mat(0x222222,.5),0,0,.8,whip).rotation.x=Math.PI/2;whip.rotation.x=-.6;
+   const a=staticAgent(W,e,cx,cz,0,(dt,t,a,p,d)=>{const sp=3.2+Math.sin(t*.12)*1.6;ang+=sp/R0*dt;
+     const hx=cx+Math.cos(ang)*R0,hz=cz+Math.sin(ang)*R0;h.root.position.set(hx,0,hz);h.root.rotation.y=Math.atan2(-Math.sin(ang),Math.cos(ang));h.animate(dt,{speed:sp,turn:.25});
+     e.root.rotation.y=Math.atan2(hx-cx,hz-cz);e.npc.pose(dt,'lead',{speed:0});
+     if(d<70){h.root.updateMatrixWorld();e.root.updateMatrixWorld();e.npc.handR.getWorldPosition(tv);h.chin.getWorldPosition(tv2);rp.set(tv,tv2);}},{far:200});
+   a.extra=[h.root,rp.l];a.label=label(e,'Carlo · addestratore',2.25);e.name='Carlo';
+   for(let i=0;i<2;i++){const hh=horseOnly(W,{halter:true});wanderAgent(W,{root:hh.root,anim:(dt,sp,a,t)=>hh.animate(dt,{speed:sp,eat:sp<.2?1:0,graze:1})},{x:A2.cx-A2.hx+4,z:A2.cz,hx:2.5,hz:A2.hz-4},{speed:1,idle:[4,12],step:6,far:170});}
+   e.lines=['Questo puledro sta imparando a girare alla corda.','Con i cavalli ci vuole pazienza e voce calma.','Guarda come allunga il trotto, bravo!','Prima la fiducia, poi la sella.','Se vuoi ti insegno a lavorare il cavallo da terra.','Ogni cavallo ha il suo carattere.'];
+   W.colliders.push({x:cx,z:cz,r:.6});}
   // cavalieri sulle strade (vanno e tornano dalle altre località)
   if(W.paths){[[0,4],[1,5],[2,3.5]].forEach(([k,sp])=>{const P2=Path(W.paths[k].pts,false);const fem=Math.random()<.6;const e=rider(W,fem);
     const a=pathAgent(W,e,P2,{speed:sp,lat:1.4,pause:6,stopR:6,colR:.75,colOff:.7,two:true,far:220});a.label=label(e,EQ.randName(fem),3.15);});}
-  // giro attorno al paddock
-  {const e=rider(W,true);const a=pathAgent(W,e,Path(rect(36,19,15,16.5),true),{speed:3.2,stopR:6,colR:.75,colOff:.7,two:true});a.label=label(e,EQ.randName(true),3.15);}
   // pulizia alla seconda posta
   {const sp=S.posta2.horse;const h=horseOnly(W);(W.petHorses=W.petHorses||[]).push({h,name:pick(EQ.HORSE_NAMES)});h.root.position.set(sp.x,0,sp.z);h.root.rotation.y=sp.h;h.addDirt(6);
    const e=addTo(W,person(Object.assign(riderOpts(true),{helmet:null,hairStyle:'pony'})));const lx=Math.cos(sp.h),lz=-Math.sin(sp.h);
@@ -208,7 +220,7 @@ EQ.populate.yard=function(W){
    const a=pathAgent(W,e,pth,{speed:1,pause:3,stopR:3,far:120,check:(a,tg,p,t)=>Math.sin(t*.5+a.s)>.75?0:tg});e.anim=(dt,sp)=>e.npc.pose(dt,sp>.1?'push':'stand',{speed:sp});
    a.label=label(e,EQ.randName(false),2.2);addCol(W,a,.8);}
   // tribuna: pubblico seduto e tifosi
-  {const st=S.stands;const vars=bakedVariants(10,'sit',()=>({}),(g)=>{g.rotateY(Math.PI);return g;});const L=[];
+  if(S.stands){const st=S.stands;const vars=bakedVariants(10,'sit',()=>({}),(g)=>{g.rotateY(Math.PI);return g;});const L=[];
    for(let r=0;r<st.rows;r++)for(let x=-13.5;x<=13.5;x+=.85){if(Math.random()<.3)continue;L.push({x:x+rnd(-.1,.1),y:.5+r*st.step-.42,z:1.4*r+.55,ry:rnd(-.15,.15)});}
    const tmp=new THREE.Group();st.g.add(tmp);const fake={group:tmp};placeBaked(fake,vars,L);
    for(let i=0;i<8;i++){const e=person({});st.g.add(e.root);const r=i%st.rows,x=-12+i*3.3;e.root.position.set(x,.5+r*st.step-.42,1.4*r+.55);e.root.rotation.y=Math.PI;const ph=rnd(0,9);
@@ -238,6 +250,34 @@ EQ.populate.yard=function(W){
 };
 
 /* ======================= SPIAGGIA ======================= */
+/* ======================= CONCORSO ======================= */
+EQ.populate.show=function(W){
+  const vars=bakedVariants(12,'sit',()=>({}),(g)=>{g.rotateY(Math.PI);return g;});
+  (W.spots.standsList||[]).forEach(st=>{const L=[];const hl=st.len/2-1;
+    for(let r=0;r<st.rows;r++)for(let x=-hl;x<=hl;x+=.85){if(Math.random()<.18)continue;L.push({x:x+rnd(-.1,.1),y:.5+r*st.step-.42,z:1.4*r+.55,ry:rnd(-.15,.15)});}
+    const tmp=new THREE.Group();st.g.add(tmp);placeBaked({group:tmp},vars,L);
+    for(let i=0;i<10;i++){const e=person({});st.g.add(e.root);const r=i%st.rows,x=-hl+2+i*(st.len-4)/10;e.root.position.set(x,.5+r*st.step-.42,1.4*r+.55);e.root.rotation.y=Math.PI;const ph=rnd(0,9);
+      W.updaters.push((dt,t,p)=>{const m=Math.sin(t*.4+ph);e.npc.pose(dt,(W.cheer>0)?(m>0?'cheer':'clap'):m>.7?'clap':'sit',{});});}});
+  W.cheer=0;W.updaters.push((dt)=>{if(W.cheer>0)W.cheer-=dt;});
+  // giudici nella torre
+  const j=W.spots.judges;for(let i=0;i<2;i++){const e=person({fem:i===1,top:0x1f3b7a,pants:0x2a2a2e,sleeves:'long',glasses:true});W.group.add(e.root);e.npc.pose(1,'sit',{snap:true});e.root.position.set(j.x-.7+i*1.4,j.y-.05,j.z+.4);}
+  // altri concorrenti nel campo prova
+  const wm=W.spots.warm;const tr=Path(ellipse(wm.x,wm.z,wm.hx-3,wm.hz-3,40),true);
+  for(let i=0;i<3;i++){const fem=Math.random()<.6;const e=rider(W,fem);const a=pathAgent(W,e,tr,{speed:[2,4.5,6][i],s:i*tr.L/3,stopR:6,colR:.75,colOff:.7,two:true,far:220});a.label=label(e,EQ.randName(fem),3.15);}
+  // groom e pubblico a terra
+  for(let i=0;i<8;i++){const fem=Math.random()<.5;const e=addTo(W,person({fem}));const a=wanderAgent(W,e,{x:0,z:-40,hx:20,hz:5},{speed:1.1,idle:[3,9],step:8,cols:.3});addCol(W,a,.35);}
+  for(let i=0;i<2;i++){const d=EQ.buildDog({});W.group.add(d.root);wanderAgent(W,{root:d.root,anim:(dt,sp)=>d.animate(dt,sp)},{x:0,z:-40,hx:18,hz:5},{speed:2,idle:[1,4],step:6});}
+};
+/* ======================= CASA MIA ======================= */
+EQ.populate.home=function(W){
+  const g=W.spots.garden;
+  const c=EQ.buildCat();W.group.add(c.root);wanderAgent(W,{root:c.root,anim:(dt,sp)=>c.animate(dt,sp)},{x:0,z:-8,hx:18,hz:3},{speed:.8,run:3,idle:[3,10],step:6,far:90});
+  const d=EQ.buildDog({col:0xc8a060});W.group.add(d.root);wanderAgent(W,{root:d.root,anim:(dt,sp)=>d.animate(dt,sp)},{x:0,z:3,hx:18,hz:12},{speed:2.3,run:5,idle:[1,4],step:8,far:120});
+  // famiglia
+  const mom=addTo(W,person({fem:true,hairStyle:'bun',top:0xe86aa6,pants:0x2c3e66}));const a=staticAgent(W,mom,-3,-11.5,0,(dt,t,a,p)=>{if(p){a.h+=U.wrapA(Math.atan2(p.x-a.x,p.z-a.z)-a.h)*Math.min(1,dt*2);mom.root.rotation.y=a.h;}mom.npc.pose(dt,Math.sin(t*.4)>.75?'wave':'stand',{});});
+  a.label=label(mom,'Mamma',2.15);mom.name='Mamma';mom.lines=['Ciao tesoro! Hai portato il cavallo a casa?','Ricordati di dargli acqua fresca.','Il palo per legarlo è vicino al garage.','Che bello vederti a cavallo!','Merenda pronta tra poco!'];
+  const kid=addTo(W,person({kid:true,fem:Math.random()<.5}));const ka=wanderAgent(W,kid,{x:-8,z:4,hx:10,hz:8},{speed:2.6,idle:[.5,2],step:6});kid.anim=(dt,sp)=>kid.npc.pose(dt,sp>.2?'run':'play',{speed:sp});ka.label=label(kid,'Fratellino',1.55);kid.name='Fratellino';
+};
 EQ.populate.beach=function(W){
   const sh=W.shore,H=W.height,S=W.spots;
   // bagnanti stesi su asciugamani

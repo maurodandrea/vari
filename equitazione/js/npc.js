@@ -308,6 +308,22 @@ EQ.buildMoto=function(col){col=col!=null?col:pick([0xc0392b,0x111111,0x2a58c8,0x
   P.push(T(X(G.box(.08,.5,.08),0,.78,.66,-.35,0,0),0x999999));P.push(T(X(G.box(.62,.04,.04),0,1.05,.56),0x222222));P.push(T(X(G.cyl(.09,.09,.08,10),0,.9,.74,Math.PI/2,0,0),0xfff8e0));
   P.push(T(X(G.box(.26,.12,.5),0,.62,-.72,.2,0,0),col));P.push(T(X(G.cyl(.05,.05,.6,8),.16,.38,-.35,Math.PI/2,0,0),0xb8bcc0));
   const g=new THREE.Group();const m=new THREE.Mesh(EQ.merge(P),CARMAT);m.castShadow=true;g.add(m);return g;};
+/* camion per il trasporto dei cavalli (muso verso +z, rampa dietro) */
+EQ.buildHorseTruck=function(col,stripe){col=col||0xf4f4f2;stripe=stripe||0x2f6b33;const P=[];
+  P.push(T(X(G.box(2.55,.5,8.6),0,.85,0),0x2a2a2a));
+  P.push(T(X(G.box(2.6,3.1,6.4),0,2.55,-1.1),col));P.push(T(X(G.box(2.62,.35,6.42),0,1.35,-1.1),stripe));P.push(T(X(G.box(2.62,.12,6.42),0,3.6,-1.1),stripe));
+  for(const sd of [1,-1])for(let i=0;i<3;i++){P.push(T(X(G.box(.04,.45,.9),sd*1.31,3.05,-3.3+i*1.5),0x1b232c));P.push(T(X(G.box(.05,.06,1),sd*1.32,2.82,-3.3+i*1.5),0x888888));}
+  P.push(T(X(G.box(2.5,2.6,2.3),0,2.25,3.3),col));P.push(T(X(G.box(2.52,.35,2.32),0,1.25,3.3),stripe));
+  P.push(T(X(G.box(2.3,1.05,.08),0,2.85,4.46,-.12,0,0),0x1b232c));for(const sd of [1,-1])P.push(T(X(G.box(.06,.8,1.3),sd*1.26,2.8,3.6),0x1b232c));
+  P.push(T(X(G.box(2.3,.35,.15),0,1.15,4.5),0x222222));for(const sd of [1,-1]){P.push(T(X(G.box(.4,.2,.08),sd*.9,1.5,4.48),0xfff8e0));P.push(T(X(G.box(.08,.25,.3),sd*1.4,3.0,4.3),0x222222));}
+  for(const sd of [1,-1])for(const z of [3.2,-1.6,-3.0]){P.push(T(X(G.cyl(.5,.5,.32,16),sd*1.12,.5,z,0,0,Math.PI/2),0x141414));P.push(T(X(G.cyl(.28,.28,.33,10),sd*1.12,.5,z,0,0,Math.PI/2),0xb8bcc0));}
+  // rampa abbassata
+  P.push(T(X(G.box(2.2,.1,2.6),0,.6,-5.4,-.38,0,0),0x6b4a2a));for(let i=0;i<6;i++)P.push(T(X(G.box(2.1,.04,.06),0,.66-i*.17,-4.5-i*.42,-.38,0,0),0x3a2a1a));
+  P.push(T(X(G.box(2.6,3.1,.1),0,2.55,-4.3),0x333333));
+  const g=new THREE.Group();const m=new THREE.Mesh(EQ.merge(P),CARMAT);m.castShadow=true;m.receiveShadow=true;g.add(m);
+  const t=EQ.labelTex('🐴 TRASPORTO CAVALLI',{bg:'#2f6b33',w:1024,h:128,radius:10,font:'bold 70px Fredoka, Trebuchet MS, sans-serif'});
+  for(const sd of [1,-1]){const l=new THREE.Mesh(new THREE.PlaneGeometry(5,.62),new THREE.MeshBasicMaterial({map:t}));l.position.set(sd*1.315,2.15,-1.1);l.rotation.y=sd*Math.PI/2;g.add(l);}
+  return g;};
 EQ.buildQuadBike=function(col){
   col=col!=null?col:pick([0xc0392b,0x2f6b33,0xf1c40f,0x2a58c8]);const P=[];
   for(const sd of [1,-1])for(const z of [-.55,.55]){P.push(T(X(G.cyl(.3,.3,.26,12),sd*.5,.3,z,0,0,Math.PI/2),0x151515));P.push(T(X(G.cyl(.15,.15,.27,8),sd*.5,.3,z,0,0,Math.PI/2),0x777777));}
