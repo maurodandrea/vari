@@ -1197,6 +1197,13 @@ function vGioco(v){
   sc.onload=()=>{vGioco.busy=false;if(S.tab==='gioco'&&window.GAME)GAME.mount(document.getElementById('view'));};
   sc.onerror=()=>{vGioco.busy=false;v.innerHTML=subHead('Gioco','Surfcasting sulla costa del Lazio','home')+'<div class="card" style="text-align:center;padding:30px"><p class="mut">Il gioco non si è caricato: controlla la connessione.</p><button class="btn" onclick="render()">↻ Riprova</button></div>';};
   document.body.appendChild(sc);}
+// euro per il gioco guadagnati usando l'app: 0,10 € al minuto (fino a 6 € al giorno), 3 € per ogni uscita nel diario e 1 € per ogni cattura registrata (fino a 20 € al giorno)
+(function appEarn(){const K=k=>'lenza.gioco.'+k,get=(k,d)=>{try{const v=JSON.parse(localStorage.getItem(K(k)));return v==null?d:v;}catch(e){return d;}},set=(k,v)=>{try{localStorage.setItem(K(k),JSON.stringify(v));}catch(e){}};
+  const day=()=>new Date().toISOString().slice(0,10),add=(v,cap,slot)=>{const e=get('appEarn',{});if(e.d!==day()){e.d=day();e.t=0;e.r=0;}const a=Math.max(0,Math.min(v,cap-(e[slot]||0)));if(a<=0)return;e[slot]=(e[slot]||0)+a;set('appEarn',e);set('pend',Math.round((+get('pend',0)+a)*100)/100);};
+  const seen=()=>{const d=(S.diary||[]),n=d.length,c=d.reduce((a,e)=>a+(e.catches?.length||0),0);return {n,c};};
+  setTimeout(()=>{if(get('diarySeen',null)==null)set('diarySeen',seen());},3000);
+  setInterval(()=>{if(document.hidden||S.tab==='gioco'||document.getElementById('gamebox'))return;add(.1,6,'t');
+    const now=seen(),old=get('diarySeen',now);if(now.n>old.n||now.c>old.c)add(Math.max(0,now.n-old.n)*3+Math.max(0,now.c-old.c),20,'r');set('diarySeen',now);},60000);})();
 function countUp(root){
   root.querySelectorAll('[data-count]').forEach(el=>{
     const to=+el.dataset.count,t0=performance.now(),dur=1300;

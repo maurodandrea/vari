@@ -390,8 +390,10 @@ function makeRod(){const g=new T.Group(),segs=[];let parent=g;
   const glow=new T.Sprite(new T.SpriteMaterial({map:glowTex('rgba(150,255,130,1)'),transparent:true,depthWrite:false,blending:T.AdditiveBlending}));glow.scale.set(.5,.5,.5);glow.position.y=ROD_LEN/SEG;segs[SEG-1].add(glow);g.userData.glow=glow;
   return g;}
 function bendRod(rod,b){const s=rod.userData.segs;for(let i=0;i<SEG;i++){const u=i/SEG;s[i].rotation.x=-b*u*u*.32;}}
-function makeSpike(pro){const g=new T.Group(),sm=pro?MAT.alu:new T.MeshStandardMaterial({color:'#d8d8d2',roughness:.7}),p=new T.Mesh(new T.CylinderGeometry(pro?.014:.02,.008,1.6,8),sm);p.position.y=.55;g.add(p);
-  if(pro)for(let k=0;k<3;k++){const l=new T.Mesh(new T.CylinderGeometry(.006,.006,.5,6),MAT.alu);const a=k*2.09;l.position.set(Math.cos(a)*.12,.32,Math.sin(a)*.12);l.rotation.set(Math.sin(a)*.45,0,-Math.cos(a)*.45);g.add(l);}
+function makeSpike(kind){const pro=!!kind,g=new T.Group(),sm=pro?MAT.alu:new T.MeshStandardMaterial({color:'#d8d8d2',roughness:.7}),p=new T.Mesh(new T.CylinderGeometry(pro?.014:.02,.008,1.6,8),sm);p.position.y=.55;g.add(p);
+  if(kind==='long'){p.scale.y=1.25;}
+  if(kind==='tripod'){for(let k=0;k<3;k++){const l=new T.Mesh(new T.CylinderGeometry(.012,.012,1.5,6),MAT.alu);const a=k*2.09;l.position.set(Math.cos(a)*.32,.68,Math.sin(a)*.32);l.rotation.set(Math.sin(a)*.42,0,-Math.cos(a)*.42);g.add(l);}}
+  else if(pro)for(let k=0;k<3;k++){const l=new T.Mesh(new T.CylinderGeometry(.006,.006,.5,6),MAT.alu);const a=k*2.09;l.position.set(Math.cos(a)*.12,.32,Math.sin(a)*.12);l.rotation.set(Math.sin(a)*.45,0,-Math.cos(a)*.45);g.add(l);}
   const cup=new T.Mesh(new T.CylinderGeometry(.035,.025,.12,10,1,true),sm);cup.position.y=.12;g.add(cup);
   const v=new T.Mesh(new T.TorusGeometry(.04,.006,6,12,Math.PI),sm);v.position.y=1.32;v.rotation.z=Math.PI;g.add(v);g.traverse(o=>{if(o.isMesh)o.castShadow=true;});return g;}
 
@@ -459,7 +461,7 @@ function buildWorld(){
   for(const sx of[-1,1]){tube(V(sx*.22,.75,-.15),V(sx*.22,.75,.2),.014);tube(V(sx*.22,.75,-.15),V(sx*.2,.55,-.15));const pad=new T.Mesh(new T.BoxGeometry(.05,.02,.3),MAT.boot);pad.position.set(sx*.22,.765,.03);ch.add(pad);}
   const rh=new T.Mesh(new T.CylinderGeometry(.025,.02,.22,10,1,true),MAT.chairF);rh.position.set(.27,.68,-.05);rh.rotation.x=-.5;ch.add(rh);// porta-canna laterale
   CHAIRHIT=new T.Mesh(new T.BoxGeometry(1.6,1.6,1.4),new T.MeshBasicMaterial({visible:false}));CHAIRHIT.position.set(CHAIR.x+.3,CHAIR.z*.035+.7,CHAIR.z);scene.add(CHAIRHIT);
-  ch.position.set(CHAIR.x,CHAIR.z*.035,CHAIR.z);ch.traverse(o=>{if(o.isMesh)o.castShadow=true;});scene.add(ch);CHAIRG=ch;
+  ch.position.set(CHAIR.x,CHAIR.z*.035,CHAIR.z);ch.traverse(o=>{if(o.isMesh)o.castShadow=true;});scene.add(ch);CHAIRG=ch;ch.userData.tela=tela;styleCamp();
   const bag=new T.Mesh(new T.BoxGeometry(.4,.35,.25),MAT.bag);bag.position.set(CHAIR.x+.8,CHAIR.z*.035+.17,CHAIR.z+.6);bag.castShadow=true;scene.add(bag);
   // cassettina da pesca con coperchio aperto, scomparti e minuteria colorata, e scatola delle esche
   const box=new T.Group(),bxm=new T.MeshStandardMaterial({color:'#2f6b57',roughness:.55}),bl=new T.MeshStandardMaterial({color:'#3e8a70',roughness:.5});
@@ -567,6 +569,19 @@ function updCrabs(dt,t){const nightK=night();for(const c of CRABS){const u=c.use
 function nearCrab(){let best=null,bd=1.6;for(const c of CRABS){if(!c.visible)continue;const d=Math.hypot(c.position.x-AN.pos.x,c.position.z-AN.pos.z);if(d<bd){bd=d;best=c;}}return best;}
 G.crab=()=>seq(async()=>{const c=nearCrab();if(!c)return;st.phase='busy';setUI();const fc=Math.atan2(-(c.position.x-AN.pos.x),-(c.position.z-AN.pos.z));AN.faceTo=fc;pose('bend');await sleep(.7);
   c.userData.hid=rnd(15,40);c.visible=false;st.inv.granchio++;click();pose('stand');AN.faceTo=null;st.msg=`🦀 Preso un granchio! Ne hai ${st.inv.granchio} da innescare.`;st.phase='wait';setUI();});
+// sedia scelta, riparo, borsoni e frangivento sulla postazione
+let CAMPX=[];function styleCamp(){const g=st.gear,ch=CHAIRG;if(!ch)return;CAMPX.forEach(o=>scene.remove(o));CAMPX=[];const add=o=>{o.traverse(m=>{if(m.isMesh)m.castShadow=true;});scene.add(o);CAMPX.push(o);MYG.push(o);return o;};
+  const c=g.chair||'chairStd';ch.userData.tela.color.set({chairStd:'#4b5a36',chairHigh:'#1d3557',chairLevel:'#2f6fb5',chairArm:'#7a2018'}[c]);ch.scale.set(1,c==='chairHigh'?1.12:1,1);
+  const Y=CHAIR.z*.035,M=(cl,o={})=>new T.MeshStandardMaterial({color:cl,roughness:.8,...o});
+  if(c==='chairArm'){for(const sx of[-1,1]){const a=new T.Mesh(new T.BoxGeometry(.09,.1,.36),M('#5a1810'));a.position.set(CHAIR.x+sx*.24,Y+.78,CHAIR.z+.02);add(a);}const cup=new T.Mesh(new T.CylinderGeometry(.04,.035,.09,10,1,true),M('#2b2f36'));cup.position.set(CHAIR.x-.32,Y+.8,CHAIR.z-.1);add(cup);}
+  if(g.shelter==='umbrella'){const u=new T.Group(),pole=new T.Mesh(new T.CylinderGeometry(.02,.02,2.3,8),M('#c0c4c8',{metalness:.7}));pole.position.y=1.15;u.add(pole);const can=new T.Mesh(new T.ConeGeometry(1.25,.5,14,1,true),new T.MeshStandardMaterial({color:'#2f6fb5',side:T.DoubleSide,roughness:.7}));can.position.y=2.2;u.add(can);
+    const sk=new T.Mesh(new T.CylinderGeometry(1.25,1.25,.9,14,1,true,Math.PI*.2,Math.PI*.9),new T.MeshStandardMaterial({color:'#24548a',side:T.DoubleSide,roughness:.8}));sk.position.y=1.5;sk.rotation.y=Math.PI*.5;u.add(sk);u.position.set(CHAIR.x+.2,Y,CHAIR.z+.4);u.rotation.z=-.08;add(u);}
+  if(g.shelter==='bivvy'){const b=new T.Mesh(new T.SphereGeometry(1.2,20,10,Math.PI*.05,Math.PI*.9,0,Math.PI/2),new T.MeshStandardMaterial({color:'#3a4a2a',side:T.DoubleSide,roughness:.9}));b.scale.set(1,.85,.9);b.position.set(CHAIR.x,Y,CHAIR.z+.3);b.rotation.y=Math.PI;add(b);}
+  if(g.bought?.windbreak){for(let k=0;k<4;k++){const pnl=new T.Mesh(new T.PlaneGeometry(.9,1),new T.MeshStandardMaterial({color:['#c0392b','#e8e2d0'][k%2],side:T.DoubleSide,roughness:.9}));pnl.position.set(CHAIR.x-1.6+k*.85,Y+.5,CHAIR.z+1.4+Math.sin(k)*.1);add(pnl);}}
+  if(g.bought?.bagRod){const t=new T.Mesh(new T.CylinderGeometry(.07,.07,1.6,10),M('#2b2f36'));t.rotation.z=Math.PI/2;t.position.set(CHAIR.x+1.1,Y+.07,CHAIR.z+.9);add(t);}
+  if(g.bought?.bagBack){const z=new T.Mesh(new T.BoxGeometry(.32,.48,.2),M('#3a5a2a'));z.position.set(CHAIR.x-.75,Y+.24,CHAIR.z+.75);z.rotation.y=.4;add(z);}
+  if(g.bought?.bagTackle){const z=new T.Mesh(new T.BoxGeometry(.38,.22,.26),M('#2f6fb5'));z.position.set(CHAIR.x+.55,Y+.11,CHAIR.z+.95);add(z);}
+  if(g.bought?.cart){const cg=new T.Group(),bd=new T.Mesh(new T.BoxGeometry(.9,.3,.55),M('#5a6470',{metalness:.5}));bd.position.y=.35;cg.add(bd);for(const sx of[-1,1]){const w=new T.Mesh(new T.CylinderGeometry(.16,.16,.14,16),M('#1b1b1b'));w.rotation.x=Math.PI/2;w.position.set(sx*.3,.16,.32);cg.add(w);}cg.position.set(CHAIR.x-1.5,Y,CHAIR.z+.4);add(cg);}}
 function cooler(x,z,ry,c1='#2f6fb5'){const g=new T.Group(),b=new T.Mesh(new T.BoxGeometry(.5,.32,.32),new T.MeshStandardMaterial({color:c1,roughness:.5}));b.position.y=.16;g.add(b);
   const lid=new T.Mesh(new T.BoxGeometry(.52,.06,.34),new T.MeshStandardMaterial({color:'#f2f2f2',roughness:.5}));lid.position.y=.34;g.add(lid);const h=new T.Mesh(new T.TorusGeometry(.12,.012,6,12,Math.PI),MAT.chairF);h.position.y=.37;g.add(h);
   g.position.set(x,Math.max(0,z*.035),z);g.rotation.y=ry;g.traverse(o=>{if(o.isMesh)o.castShadow=true;});scene.add(g);return g;}
@@ -654,7 +669,7 @@ function buildLandmarks(){const rm=new T.MeshStandardMaterial({color:'#6f6a62',r
   // il Circeo all'orizzonte (da Anzio a Sabaudia)
   const c=azPos(CIRCEO.lat,CIRCEO.lon);if(c.d>2000&&c.d<70000&&c.z<1000){const k=Math.min(1,9000/c.d),m=new T.Mesh(new T.ConeGeometry(2400*k*2.2,CIRCEO.h*1.3*k*2,7,1),new T.MeshStandardMaterial({color:'#4f5a52',roughness:1}));const sc=Math.min(1,6000/c.d);m.position.set(c.x*sc,CIRCEO.h*k*.6,Math.max(c.z*sc,0)+2000*k);m.scale.set(.75,1,.4);scene.add(m);}}
 function setupRods(){st.rods.forEach(r=>{scene.remove(r.hit);scene.remove(r.obj);scene.remove(r.spike);scene.remove(r.line);scene.remove(r.sinker);});
-  st.rods=Array.from({length:st.nRods},(_,i)=>{const x=rodX(i,st.nRods),spike=makeSpike(!!st.gear.bought?.spike);spike.position.set(x,ROD_Z*.035,ROD_Z);scene.add(spike);
+  st.rods=Array.from({length:st.nRods},(_,i)=>{const x=rodX(i,st.nRods),spike=makeSpike(st.gear.spikeT||(st.gear.bought?.spike?'alu':''));spike.position.set(x,ROD_Z*.035,ROD_Z);scene.add(spike);
     const obj=makeRod();skinRod(obj,st.gear.rod,st.gear.reel);scene.add(obj);const lg=new T.BufferGeometry();lg.setAttribute('position',new T.Float32BufferAttribute(new Float32Array(40*3),3));const line=new T.Line(lg,MAT.line);line.frustumCulled=false;scene.add(line);
     const sinker=new T.Mesh(new T.SphereGeometry(.05,8,6),MAT.lead);sinker.visible=false;scene.add(sinker);
     const hit=new T.Mesh(new T.CylinderGeometry(.6,.6,4.6,8),new T.MeshBasicMaterial({visible:false}));hit.position.set(x,2,ROD_Z-1.1);hit.rotation.x=-40*R;scene.add(hit);
@@ -668,7 +683,7 @@ const MP={zoom:42};
 const LAT0=41.75,LON0=12.4,KX=111.32*Math.cos(41.75*R),KY=110.57;
 const PJ=(lat,lon)=>[(lon-LON0)*KX,(lat-LAT0)*KY];
 async function startMap(){st.phase='map';
-  if(!MP.skipAsk&&!MP.from){const ch=await new Promise(res=>{G.startChoice=res;ui.innerHTML=`<div class="gpanel"><b>🚗 Dove andiamo?</b><div class="gs">💶 Nel portafoglio: <b>${eur(st.money)}</b></div><div class="grow"><button class="gb big" style="flex:1" onclick="GAME.startChoice('pesca')">🎣 A pesca</button><button class="gb big" style="flex:1;background:#7a5a2a" onclick="GAME.startChoice('negozio')">🛒 Al negozio di pesca</button></div></div>`;});
+  if(!MP.skipAsk&&!MP.from){const ch=await new Promise(res=>{G.startChoice=res;ui.innerHTML=`<div class="gpanel"><b>🚗 Dove andiamo?</b><div class="gs">💶 Nel portafoglio: <b>${eur(st.money)}</b></div><div class="gs" style="font-size:12.5px;opacity:.8">Guadagni pescando (0,50 € al minuto, fino a 15 € al giorno), con ogni cattura (di più se rilasci o fai un record), usando l'app e con il bonus giornaliero del negozio.</div><div class="grow"><button class="gb big" style="flex:1" onclick="GAME.startChoice('pesca')">🎣 A pesca</button><button class="gb big" style="flex:1;background:#7a5a2a" onclick="GAME.startChoice('negozio')">🛒 Al negozio di pesca</button></div></div>`;});
     if(ch==='negozio'){openShop();return;}}
   MP.skipAsk=false;
   ['#gspd','#glamp','#gjoy'].forEach(q=>{const e=root.querySelector(q);if(e)e.style.display='none';});hud.innerHTML='';
@@ -1052,26 +1067,44 @@ G.rback=()=>{st.phase='wait';st.msg='';setUI();};
 G.rsend=()=>{const el=document.getElementById('grtx'),txt=(el?.value||'').trim().slice(0,200),C=rpCloud(),a=RP.list.get(st.rtalk);if(!txt||!C||!a)return;el.value='';
   C.ff.setDoc(C.ff.doc(C.db,'gamemsgs',C.user.uid+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,6)),{from:C.user.uid,name:C.name()||'Pescatore',to:a.id,spot:SPOT.id,text:txt,t:Date.now()}).catch(e=>{st.msg='Messaggio non inviato: '+(e.code||e.message);});
   (RP.log[a.id]=RP.log[a.id]||[]).push({me:true,text:txt});say(AN,txt,6);const lg=document.getElementById('grlog');if(lg)lg.innerHTML=rpLog(a.id);};
-G._rp=RP;G._cast=(style,pw,ms=1600)=>{st.castStyle=style;st.cast={p:pw,dir:0,on:true};castAnimStart('load');setTimeout(()=>doCast(),ms);};G._bolt=()=>strikeBolt();G._land=n=>{const sp=SP.find(x=>x.n===n);const r=st.rods[0];st.sel=0;r.held=true;AN.holding=0;r.bait="bibi";const w=sp.w[1]*1.6;st.fight={r,sp,w,len:lenOf(sp,w),dist:0,ten:.3,reel:false,drag:5,run:0,slack:0,t:0,pow:1};endFight(true);};G._jump=n=>{const sp=SP.find(x=>x.n===n);const r=st.rods[1];r.dist=20;r.sz=-90;const w=sp.w[2];st.fight={r,sp,w,len:lenOf(sp,w),dist:20,ten:.3,run:0,slack:0,t:0,pow:1,jump:{t:0}};st.fight.obj=makeFish3D(sp,st.fight.len/100);scene.add(st.fight.obj);};
+G._rp=RP;G._chair=()=>CHAIR;G._cast=(style,pw,ms=1600)=>{st.castStyle=style;st.cast={p:pw,dir:0,on:true};castAnimStart('load');setTimeout(()=>doCast(),ms);};G._bolt=()=>strikeBolt();G._land=n=>{const sp=SP.find(x=>x.n===n);const r=st.rods[0];st.sel=0;r.held=true;AN.holding=0;r.bait="bibi";const w=sp.w[1]*1.6;st.fight={r,sp,w,len:lenOf(sp,w),dist:0,ten:.3,reel:false,drag:5,run:0,slack:0,t:0,pow:1};endFight(true);};G._jump=n=>{const sp=SP.find(x=>x.n===n);const r=st.rods[1];r.dist=20;r.sz=-90;const w=sp.w[2];st.fight={r,sp,w,len:lenOf(sp,w),dist:20,ten:.3,run:0,slack:0,t:0,pow:1,jump:{t:0}};st.fight.obj=makeFish3D(sp,st.fight.len/100);scene.add(st.fight.obj);};
 
 /* ============ negozio di pesca: portafoglio, zaino e catalogo da surfcasting ============ */
 const today=()=>new Date().toISOString().slice(0,10);
 const GEAR0={rod:'surf420',rods:['surf420'],reel:'r8000',reels:['r8000'],drag:12,line:.25,leader:2,fluo:.30,baits:{koreano:10,bibi:6,arenicola:6,americano:6,cannolicchio:6,cozza:8,sarda:6,seppia:4,gambero:6,cefalotto:2},
   hooks:{0:5,2:10,4:10,6:10,8:5},leads:{80:2,100:3,125:4,150:6,175:4,200:2},grip:{},starlight:6,swivels:10,snaps:10,needle:true,elastic:false,lamp:false,own:{}};
 function gearLoad(){const g=LSG('gear',null);const G0=JSON.parse(JSON.stringify(GEAR0));if(!g)return G0;for(const k in G0)if(g[k]===undefined)g[k]=G0[k];return g;}
-st.gear=gearLoad();st.money=LSG('money',150);
+st.gear=gearLoad();st.money=LSG('money',300);if(!LSG('eco3',0)){st.money=Math.max(st.money,300);LSS('eco3',1);LSS('money',st.money);}
+// guadagni: tempo di pesca nel gioco, catture e uso dell'app (con un tetto al giorno)
+const EARN={fish:.5,fishMax:15};function earnDay(){const e=LSG('earn',{});if(e.d!==today())return {d:today(),fish:0,app:0};return e;}
+function earn(kind,v,why){const e=earnDay(),max=kind==='fish'?EARN.fishMax:1e9,add=Math.max(0,Math.min(v,max-(e[kind]||0)));if(add<=0)return 0;e[kind]=(e[kind]||0)+add;LSS('earn',e);st.money+=add;gearSave();moneyPop(add,why);return add;}
+function moneyPop(v,why){if(!root)return;const d=document.createElement('div');d.className='gmoney';d.textContent='💶 +'+eur(v)+(why?' · '+why:'');root.appendChild(d);setTimeout(()=>d.remove(),2600);}
+function appCredit(){try{const v=+JSON.parse(localStorage.getItem('lenza.gioco.pend')||'0');if(v>0){localStorage.setItem('lenza.gioco.pend','0');st.money+=v;gearSave();setTimeout(()=>moneyPop(v,'uso dell\'app'),1500);}}catch(e){}}
+function earnTick(dt){if(document.hidden||!['wait','atrod','fight','cast','bait','rig','busy','catch','snag','talk','rtalk','pilot','gear','bag'].includes(st.phase))return;st.fishSec=(st.fishSec||0)+dt;if(st.fishSec>=60){st.fishSec-=60;earn('fish',EARN.fish,'un minuto di pesca');}}
 const gearSave=()=>{LSS('gear',st.gear);LSS('money',Math.round(st.money*100)/100);};
 const eur=v=>'€ '+v.toFixed(2).replace('.',',');
-const ROD={surf420:{n:'Surf 4,20 m',mul:1},surf420s:{n:'Spiaggia 4,20 m leggera',mul:1.02},surf450:{n:'Surf 4,50 m carbonio',mul:1.06},surf480:{n:'Tournament 4,80 m',mul:1.12}};
+const ROD={surf420:{n:'Surf 4,20 m',mul:1},beach390:{n:'Beach 3,90 m',mul:.9},tele420:{n:'Telescopica 4,20 m',mul:.92},surf420s:{n:'Spiaggia 4,20 m leggera',mul:1.02},surf420c:{n:'Surf 4,20 m carbonio',mul:1.04},surf450:{n:'Surf 4,50 m carbonio',mul:1.06},surf450h:{n:'Surf 4,50 m ibrida',mul:1.08},surf470:{n:'Surf 4,70 m parabolica',mul:1.1},surf480:{n:'Tournament 4,80 m',mul:1.12},surf500:{n:'Long Cast 5,00 m',mul:1.16}};
+const REELS={r5000:{n:'5000 leggero',drag:7,cast:1},r6000:{n:'6000',drag:8,cast:1},r8000:{n:'8000',drag:12,cast:1},r10000:{n:'10000',drag:15,cast:1},r14000:{n:'14000',drag:20,cast:1.01},rRear:{n:'7000 frizione posteriore',drag:10,cast:1},rLC:{n:'Long Cast 12000',drag:18,cast:1.04},rMult:{n:'Moltiplicatore da lancio',drag:22,cast:1.06},rT:{n:'Tournament 14000',drag:25,cast:1.03}};
+const reelN=id=>REELS[id]?.n||id,reelDrag=id=>REELS[id]?.drag||12;
 // prezzi e confezioni realistici; o = opzioni scelte
 const CAT=[
   {k:'canne',n:'🎣 Canne',items:[
-    {id:'surf420',n:'Canna surfcasting 4,20 m',d:'Vetro-carbonio, lancio 100-200 g, tre pezzi. Robusta, ideale per iniziare.',p:()=>69},
-    {id:'surf420s',n:'Canna Spiaggia 4,20 m leggera',d:'Carbonio, 50-150 g, vetta in fibra piena sensibile: mormore e orate con mare calmo.',p:()=>89},
-    {id:'surf450',n:'Canna surfcasting 4,50 m',d:'Carbonio, 100-250 g, azione di punta: più distanza (+6%).',p:()=>139},
-    {id:'surf480',n:'Canna Tournament 4,80 m',d:'Carbonio alto modulo, 150-250 g, per i lanci lunghi (+12%). Da veri agonisti.',p:()=>279}]},
+    {id:'beach390',rod:1,n:'Canna Beach 3,90 m',d:'Vetro pieno, 80-150 g: indistruttibile, perfetta per la pesca sotto riva (-10% distanza).',p:()=>39},
+    {id:'tele420',rod:1,n:'Canna telescopica 4,20 m da viaggio',d:'Si chiude in 1,2 m, sta nel bagagliaio. Lancia un po\' meno (-8%).',p:()=>45},
+    {id:'surf420',rod:1,n:'Canna surfcasting 4,20 m',d:'Vetro-carbonio, lancio 100-200 g, tre pezzi. Robusta, ideale per iniziare.',p:()=>69},
+    {id:'surf420s',rod:1,n:'Canna Spiaggia 4,20 m leggera',d:'Carbonio, 50-150 g, vetta in fibra piena sensibile: mormore e orate con mare calmo.',p:()=>89},
+    {id:'surf420c',rod:1,n:'Canna surfcasting 4,20 m carbonio 3 pezzi',d:'Carbonio 30 t, 100-200 g, anelli SiC: leggera e reattiva (+4%).',p:()=>119},
+    {id:'surf450',rod:1,n:'Canna surfcasting 4,50 m',d:'Carbonio, 100-250 g, azione di punta: più distanza (+6%).',p:()=>139},
+    {id:'surf450h',rod:1,n:'Canna surfcasting 4,50 m ibrida',d:'Fusto tubolare e vetta in carbonio pieno: lancia lontano (+8%) e segnala le tocche delicate.',p:()=>169},
+    {id:'surf470',rod:1,n:'Canna surfcasting 4,70 m parabolica',d:'Azione progressiva, 120-250 g: perdona gli errori nel lancio pendolare (+10%).',p:()=>199},
+    {id:'surf480',rod:1,n:'Canna Tournament 4,80 m',d:'Carbonio alto modulo, 150-250 g, per i lanci lunghi (+12%). Da veri agonisti.',p:()=>279},
+    {id:'surf500',rod:1,n:'Canna Long Cast 5,00 m',d:'Carbonio 46 t, 175-275 g, anelli Low Rider: la regina della distanza (+16%).',p:()=>389}]},
   {k:'mulinelli',n:'⚙️ Mulinelli',items:[
     {id:'reel',n:'Mulinello surfcasting bobina lunga',d:'Bobina conica in alluminio, frizione anteriore. Più grande = frizione più potente.',opts:[{k:'t',n:'Taglia',v:['6000','8000','10000','14000']}],p:o=>[45,69,119,189][o.t]},
+    {id:'rm_r5000',reel:'r5000',n:'Mulinello leggero 5000',d:'Per la canna leggera e i pesci di taglia piccola: frizione 7 kg.',p:()=>35},
+    {id:'rm_rRear',reel:'rRear',n:'Mulinello 7000 a frizione posteriore',d:'La frizione si regola senza toccare la bobina: comoda in combattimento, 10 kg.',p:()=>59},
+    {id:'rm_rLC',reel:'rLC',n:'Mulinello Long Cast 12000',d:'Bobina conica da 30 mm a passo corto: il filo esce senza attriti (+4% distanza), 18 kg.',p:()=>159},
+    {id:'rm_rMult',reel:'rMult',n:'Moltiplicatore da lancio',d:'Il mulinello rotante dei campioni di distanza (+6%): frizione a stella 22 kg.',p:()=>229},
     {id:'reelT',n:'Mulinello Tournament 14000 SA',d:'Corpo in alluminio, 7+1 cuscinetti, frizione 25 kg in carbonio.',p:()=>299}]},
   {k:'esche',n:'🪱 Esche',items:BAITS.filter(b=>!b.lim).map(b=>({id:'b_'+b.k,n:b.n+' '+b.e,d:b.d,bait:b.k,pk:{koreano:12,bibi:8,arenicola:8,americano:10,cannolicchio:10,cozza:15,sarda:10,seppia:8,gambero:10,cefalotto:3}[b.k],p:()=>({koreano:4.5,bibi:7,arenicola:6.5,americano:5,cannolicchio:5,cozza:3,sarda:3.5,seppia:4,gambero:4,cefalotto:6})[b.k]}))},
   {k:'ami',n:'🪝 Ami',items:[{id:'hook',n:'Ami da surfcasting · busta da 10',d:'Aberdeen a filo sottile per vermi e bibi, oppure forgiati per esche dure e pesci grossi.',opts:[{k:'m',n:'Misura',v:['0','2','4','6','8']},{k:'t',n:'Tipo',v:['Aberdeen','Forgiato']}],p:o=>o.t?3.9:2.9}]},
@@ -1086,18 +1119,50 @@ const CAT=[
     {id:'snap',n:'Moschettoni rapidi · busta da 15',d:'Per agganciare il piombo al volo; servono per rifare il terminale.',p:()=>2.9},
     {id:'needle',n:'Aghi da innesco · set da 3',d:'Indispensabili per innescare bibi, coreani e arenicole.',p:()=>4.5},
     {id:'elastic',n:'Filo elastico per esche · bobina',d:'Avvolto sull\'esca morbida la fa durare il 30% in più.',p:()=>3.9},
-    {id:'lampF',n:'Lampada frontale LED 500 lumen',d:'Luce più forte e più lunga per pescare di notte.',p:()=>24.9},
-    {id:'spike',n:'Picchetto portacanna in alluminio 1,5 m',d:'Ben piantato nella sabbia, la canna non cade con il vento.',p:()=>14.9},
     {id:'beads',n:'Perline fosforescenti e salvanodo',d:'Proteggono i nodi e attirano il pesce di notte.',p:()=>2},
     {id:'box',n:'Cassetta portaminuteria',d:'Tutto in ordine: ami, girelle, moschettoni, starlight.',p:()=>12.9},
     {id:'bucket',n:'Secchio portaesche con coperchio',d:'Tiene vive e fresche le esche.',p:()=>9.9},
-    {id:'scis',n:'Forbici per trecciato',d:'Taglio netto anche del multifibra.',p:()=>8.9}]}];
-const ITEM=Object.fromEntries(CAT.flatMap(c=>c.items.map(i=>[i.id,{...i,cat:c.k}])));
+    {id:'scis',n:'Forbici per trecciato',d:'Taglio netto anche del multifibra.',p:()=>8.9}]},
+  {k:'sedie',n:'🪑 Sedie',items:[
+    {id:'chairHigh',chair:1,n:'Sedia alta da surfcasting',d:'Seduta a 60 cm con schienale alto: vedi meglio le cime.',p:()=>39},
+    {id:'chairLevel',chair:1,n:'Sedia con gambe regolabili',d:'Ogni gamba si regola: sempre dritta anche sulla sabbia in pendenza.',p:()=>54},
+    {id:'chairArm',chair:1,n:'Poltrona imbottita con braccioli',d:'Imbottita, con portacanna e portabicchiere: per le nottate lunghe.',p:()=>79}]},
+  {k:'borsoni',n:'👜 Borsoni',items:[
+    {id:'bagTackle',n:'Borsa portaminuteria con 4 scatole',d:'Ami, girelle e piombi sempre in ordine.',p:()=>29},
+    {id:'bagRod',n:'Fodero porta canne 1,60 m',d:'Porta 3 canne montate con i mulinelli.',p:()=>35},
+    {id:'bagBack',n:'Zaino da surfcasting 45 l',d:'Mani libere per portare tutto in spiaggia.',p:()=>49},
+    {id:'cart',n:'Carrello da spiaggia con ruote larghe',d:'Porta tutta l\'attrezzatura senza fatica sulla sabbia.',p:()=>89}]},
+  {k:'abbigliamento',n:'🧥 Abbigliamento',items:[
+    {id:'o_neo',outfit:'neo',n:'Scafandro in neoprene 4 mm',d:'Caldo anche d\'inverno: entri in acqua senza congelarti.',p:()=>119},
+    {id:'o_thermo',outfit:'thermo',n:'Giacca impermeabile termica',d:'Imbottita e antipioggia, cappuccio e polsini stagni.',p:()=>89},
+    {id:'o_wind',outfit:'wind',n:'Tuta antivento',d:'Leggera, blocca il vento di tramontana.',p:()=>49},
+    {id:'o_float',outfit:'float',n:'Giacca galleggiante arancione',d:'Visibile e sicura sugli scogli.',p:()=>99},
+    {id:'h_bucket',hat:'bucket',n:'Cappello da pescatore',d:'Ripara dal sole e dalla pioggia.',p:()=>15},
+    {id:'h_beanie',hat:'beanie',n:'Berretto di lana',d:'Per le uscite invernali.',p:()=>12},
+    {id:'h_none',hat:'none',n:'Fascia per la frontale (senza cappello)',d:'Solo la frontale, capelli al vento.',p:()=>5},
+    {id:'boots',n:'Stivali in gomma alti',d:'Piedi asciutti sulla battigia.',p:()=>29}]},
+  {k:'picchetti',n:'📍 Picchetti',items:[
+    {id:'spike',n:'Picchetto portacanna in alluminio 1,5 m',d:'Con il treppiede: ben piantato, la canna non cade con il vento.',p:()=>14.9},
+    {id:'spikeLong',n:'Picchetto 1,80 m con doppio supporto',d:'Tiene la canna più alta, sopra i frangenti.',p:()=>22},
+    {id:'tripod',n:'Tripode portacanne per 3 canne',d:'In alluminio, per gli scogli e la sabbia dura.',p:()=>59}]},
+  {k:'torce',n:'🔦 Torce',items:[
+    {id:'lampF',torch:2,n:'Frontale LED 500 lumen',d:'Luce più forte per pescare di notte.',p:()=>24.9},
+    {id:'lamp1000',torch:3,n:'Frontale 1000 lumen ricaricabile',d:'La più potente: illumina la canna a 10 m.',p:()=>39},
+    {id:'lampRed',n:'Frontale con luce rossa',d:'La luce rossa non spaventa i pesci sotto riva: di notte abboccano un po\' di più.',p:()=>19},
+    {id:'lanternLED',n:'Lanterna LED da campeggio',d:'Illumina tutta la postazione.',p:()=>24}]},
+  {k:'ombrelloni',n:'⛱️ Ombrelloni',items:[
+    {id:'umbrella',shelter:1,n:'Ombrellone da pesca 2,50 m con teli',d:'Ripara da sole, vento e pioggia.',p:()=>45},
+    {id:'bivvy',shelter:1,n:'Tenda riparo da spiaggia',d:'Mezza cupola chiusa: per le nottate di pesca.',p:()=>99},
+    {id:'windbreak',n:'Frangivento 4 pannelli',d:'Ferma la sabbia e il vento sulla postazione.',p:()=>25}]}];
+const ITEM0=0;const ITEM=Object.fromEntries(CAT.flatMap(c=>c.items.map(i=>[i.id,{...i,cat:c.k}])));
 const fullO=(it,o)=>{const r={};(it.opts||[]).forEach(op=>r[op.k]=o?.[op.k]||0);return r;};
 const optTxt=(it,o)=>(it.opts||[]).map(op=>op.v[o[op.k]||0]).join(' · ');
 // effetti sull'attrezzatura
 function giveItem(it,o){const g=st.gear;(g.bought=g.bought||{})[it.id]=true;switch(it.id){
-  case 'surf420':case 'surf420s':case 'surf450':case 'surf480':if(!g.rods.includes(it.id))g.rods.push(it.id);g.rod=it.id;break;
+  case 'needle':g.needle=true;break;case 'elastic':g.elastic=true;break;case 'lampF':g.lamp=true;g.torch=Math.max(g.torch||1,2);break;
+  case 'lamp1000':g.lamp=true;g.torch=3;break;case 'lampRed':g.red=true;break;case 'lanternLED':g.lanternLED=true;break;
+  case 'spike':g.spikeT='alu';break;case 'spikeLong':g.spikeT='long';break;case 'tripod':g.spikeT='tripod';break;
+  case 'boots':g.boots=true;break;
   case 'reel':{const t=['6000','8000','10000','14000'][o.t||0],id='r'+t;if(!g.reels.includes(id))g.reels.push(id);g.reel=id;g.drag=[8,12,15,20][o.t||0];break;}
   case 'reelT':if(!g.reels.includes('rT'))g.reels.push('rT');g.reel='rT';g.drag=25;break;
   case 'hook':{const m=[0,2,4,6,8][o.m||0];g.hooks[m]=(g.hooks[m]||0)+10;if(o.t===1){g.forged=g.forged||{};g.forged[m]=(g.forged[m]||0)+10;}break;}
@@ -1106,32 +1171,36 @@ function giveItem(it,o){const g=st.gear;(g.bought=g.bought||{})[it.id]=true;swit
   case 'leader':g.leader+=5;break;
   case 'fluo':g.fluo=[.25,.3,.35,.4][o.d||0];break;
   case 'star':g.starlight+=10;break;case 'swiv':g.swivels+=15;break;case 'snap':g.snaps+=15;break;
-  case 'needle':g.needle=true;break;case 'elastic':g.elastic=true;break;case 'lampF':g.lamp=true;break;
-  default:if(it.bait){g.baits[it.bait]=(g.baits[it.bait]||0)+it.pk;}else g.own[it.id]=(g.own[it.id]||0)+1;}}
+  default:if(it.rod){if(!g.rods.includes(it.id))g.rods.push(it.id);g.rod=it.id;break;}
+    if(it.reel){if(!g.reels.includes(it.reel))g.reels.push(it.reel);g.reel=it.reel;g.drag=reelDrag(it.reel);break;}
+    if(it.chair){g.chairs=g.chairs||['chairStd'];if(!g.chairs.includes(it.id))g.chairs.push(it.id);g.chair=it.id;break;}
+    if(it.outfit){g.outfits=g.outfits||[];if(!g.outfits.includes(it.outfit))g.outfits.push(it.outfit);st.outfit=it.outfit;LSS('outfit',it.outfit);break;}
+    if(it.hat){g.hats=g.hats||['cap'];if(!g.hats.includes(it.hat))g.hats.push(it.hat);g.hat=it.hat;break;}
+    if(it.shelter){g.shelters=g.shelters||[];if(!g.shelters.includes(it.id))g.shelters.push(it.id);g.shelter=it.id;break;}if(it.bait){g.baits[it.bait]=(g.baits[it.bait]||0)+it.pk;}else g.own[it.id]=(g.own[it.id]||0)+1;}}
 // premi: un bonus al giorno e un compenso per ogni cattura
 function gearQuality(){const g=st.gear,b=g.bought||{},w=wxAt(st.gt);let q=.7;
   q+={surf420:0,surf420s:(w.wave||0)<.6?.12:.04,surf450:.1,surf480:.14}[g.rod]||0;q+={r6000:.02,r8000:0,r10000:.05,r14000:.06,rT:.09}[g.reel]||0;
-  if(b.fluo)q+=g.fluo<=.25?.07:g.fluo<=.3?.05:.03;if(b.line)q+=.02;if(b.hook)q+=.03;if(b.beads&&night()>.3)q+=.05;if(b.bucket)q+=.03;if(Object.keys(b).some(k=>k.startsWith('b_')))q+=.04;
+  if(b.fluo)q+=g.fluo<=.25?.07:g.fluo<=.3?.05:.03;if(b.line)q+=.02;if(b.hook)q+=.03;if(b.beads&&night()>.3)q+=.05;if(g.red&&night()>.3)q+=.04;if(b.bucket)q+=.03;if(Object.keys(b).some(k=>k.startsWith('b_')))q+=.04;
   return Math.min(1.2,q);}
-const ROD_COL={surf420:['#2b2f36','#3a4049'],surf420s:['#e8e8e4','#cfd3d6'],surf450:['#0f2f5a','#1d4f8a'],surf480:['#5a0f12','#8a1c20']},REEL_COL={r6000:'#2b2f36',r8000:'#3d4550',r10000:'#b8352a',r14000:'#c9a24a',rT:'#d9dde2'};
+const ROD_COL={surf420:['#2b2f36','#3a4049'],beach390:['#d9b24a','#c9a24a'],tele420:['#1b1b1b','#2b2b2b'],surf420s:['#e8e8e4','#cfd3d6'],surf420c:['#1b3d22','#2b5d32'],surf450:['#0f2f5a','#1d4f8a'],surf450h:['#3a1f5c','#5a3a8a'],surf470:['#7a5a2a','#9a7a3a'],surf480:['#5a0f12','#8a1c20'],surf500:['#101010','#c9a24a']},REEL_COL={r5000:'#6b7480',r6000:'#2b2f36',r8000:'#3d4550',r10000:'#b8352a',r14000:'#c9a24a',rRear:'#2f6fb5',rLC:'#d4d8dc',rMult:'#8a1c20',rT:'#d9dde2'};
 // la canna e il mulinello scelti si vedono sul modello
 function skinRod(obj,rodId,reelId){const g=st.gear,U=obj.userData;if(!U.sk){U.sk={m1:new T.MeshStandardMaterial({roughness:.3,metalness:.35}),m2:new T.MeshStandardMaterial({roughness:.3,metalness:.35}),mr:new T.MeshStandardMaterial({roughness:.3,metalness:.75}),base:U.reel.scale.x};
     obj.traverse(o=>{if(!o.isMesh)return;if(o.material===MAT.blank)o.material=U.sk.m1;else if(o.material===MAT.blank2)o.material=U.sk.m2;else if(o.material===MAT.reel)o.material=U.sk.mr;});}
   const rc=ROD_COL[rodId]||ROD_COL.surf420;U.sk.m1.color.set(rc[0]);U.sk.m2.color.set(rc[1]);U.sk.mr.color.set(REEL_COL[reelId]||'#3d4550');
-  U.reel.scale.setScalar(U.sk.base*({r10000:1.08,r14000:1.16,rT:1.18,r6000:.92}[reelId]||1));
+  U.reel.scale.setScalar(U.sk.base*({r5000:.85,r10000:1.08,r14000:1.16,rLC:1.12,rMult:.9,rT:1.18,r6000:.92}[reelId]||1));
   if(g.bought?.beads){const bm=new T.MeshStandardMaterial({color:'#9dff7a',emissive:'#5aff3a',emissiveIntensity:.5});obj.userData.beads=bm;}}
 function gearChips(){const g=st.gear,b=g.bought||{},q=gearQuality(),rn=id=>id==='rT'?'Tournament 14000':id.slice(1);
   return `<div class="grow" style="flex-wrap:wrap;gap:4px"><span>Canna</span>${g.rods.map(id=>`<button class="gc ${g.rod===id?'on':''}" onclick="GAME.useRod('${id}')">${ROD[id].n}</button>`).join('')}</div>
-    <div class="grow" style="flex-wrap:wrap;gap:4px"><span>Mulinello</span>${g.reels.map(id=>`<button class="gc ${g.reel===id?'on':''}" onclick="GAME.useReel('${id}')">${rn(id)}</button>`).join('')}</div>
+    <div class="grow" style="flex-wrap:wrap;gap:4px"><span>Mulinello</span>${g.reels.map(id=>`<button class="gc ${g.reel===id?'on':''}" onclick="GAME.useReel('${id}')">${reelN(id)}</button>`).join('')}</div>
     <div class="gs">🎒 Filo ${String(g.line).replace('.',',')} mm${b.leader||g.leader?` · shock leader ${g.leader}`:''}${b.fluo?` · fluorocarbon ${String(g.fluo).replace('.',',')}`:''} · starlight ${g.starlight}${b.beads?' · perline':''}${b.elastic?' · elastico':''}${b.lamp||b.lampF?' · frontale LED':''}${b.spike?' · picchetti in alluminio':''}${b.box?' · cassetta':''}${b.bucket?' · secchio esche':''}</div>
     <div class="gs" style="color:${q<.8?'#ffb547':'#5ee08a'}">${q<.8?'⚠️ Attrezzatura di base: pescherai meno. Al negozio trovi di meglio.':'✅ Attrezzatura buona: '+Math.round(q*100)+'% di efficacia.'}</div>`;}
-G.useReel=id=>{const g=st.gear;g.reel=id;g.drag={r6000:8,r8000:12,r10000:15,r14000:20,rT:25}[id]||12;gearSave();if(st.phase==='shop')shopUI();else setUI();};
+G.useReel=id=>{const g=st.gear;g.reel=id;g.drag=reelDrag(id);gearSave();if(st.phase==='shop')shopUI();else setUI();};
 G.gearView=()=>{st.phaseBack=st.phase;st.phase='gear';setUI();};G.gearBack=()=>{st.phase=st.phaseBack||'wait';setUI();};
 function dailyBonus(){if(LSG('bonusDay','')!==today()){LSS('bonusDay',today());st.money+=20;gearSave();return true;}return false;}
 
 /* ---------- la scena del negozio ---------- */
 const SH={cart:[],cat:'canne',sel:{},cam:{p:null,l:null},hits:[]};
-const SHCAM={ingresso:[[0,1.7,1.2],[0,1.3,-5]],canne:[[-2.1,1.6,-3.6],[-4.9,1.5,-4.2]],mulinelli:[[1.4,1.6,-1.4],[3.6,1.05,-2.4]],esche:[[2,1.6,-5],[3.9,1.2,-7.4]],ami:[[-2.4,1.6,-5],[-2.6,1.4,-7.9]],piombi:[[-2.4,1.6,-5],[-2.6,1.2,-7.9]],fili:[[-.4,1.6,-5],[-.4,1.4,-7.9]],accessori:[[1.3,1.6,-5.2],[1.4,1.4,-7.9]],cassa:[[1.6,1.7,-3],[4.2,1.4,-4.1]]};
+const SHCAM={ingresso:[[0,1.7,1.2],[0,1.3,-5]],canne:[[-2.1,1.6,-3.6],[-4.9,1.5,-4.2]],mulinelli:[[1.4,1.6,-1.4],[3.6,1.05,-2.4]],esche:[[2,1.6,-5],[3.9,1.2,-7.4]],ami:[[-2.4,1.6,-5],[-2.6,1.4,-7.9]],piombi:[[-2.4,1.6,-5],[-2.6,1.2,-7.9]],fili:[[-.4,1.6,-5],[-.4,1.4,-7.9]],accessori:[[1.3,1.6,-5.2],[1.4,1.4,-7.9]],cassa:[[1.6,1.7,-3],[4.2,1.4,-4.1]],sedie:[[.6,1.6,.6],[2.8,.8,-1.2]],ombrelloni:[[.6,1.7,.6],[2.8,1.4,-1.2]],abbigliamento:[[-.6,1.6,.6],[-3.2,1.2,-1.2]],borsoni:[[-.6,1.6,.6],[-3.2,.8,-1.2]],picchetti:[[-2.1,1.6,-3.6],[-4.9,1.2,-4.2]],torce:[[1.3,1.6,-5.2],[1.4,1.4,-7.9]]};
 function shopTex(txt,o={}){return canvasTex(o.w||512,o.h||128,(g,W,H)=>{g.fillStyle=o.bg||'#12324a';g.fillRect(0,0,W,H);if(o.border){g.strokeStyle=o.border;g.lineWidth=8;g.strokeRect(6,6,W-12,H-12);}g.fillStyle=o.col||'#fff';g.textAlign='center';g.textBaseline='middle';let fs=o.fs||64;g.font=`800 ${fs}px Outfit,sans-serif`;while(g.measureText(txt).width>W-40&&fs>20){fs-=4;g.font=`800 ${fs}px Outfit,sans-serif`;}g.fillText(txt,W/2,H/2+3);});}
 function buildShop(){scene=new T.Scene();scene.background=new T.Color('#1a1612');camera=new T.PerspectiveCamera(60,1,.05,80);
   renderer.toneMapping=T.ACESFilmicToneMapping;renderer.outputEncoding=T.sRGBEncoding;renderer.toneMappingExposure=.95;renderer.shadowMap.enabled=false;
@@ -1176,8 +1245,14 @@ function buildShop(){scene=new T.Scene();scene.background=new T.Color('#1a1612')
   // il commesso
   const so=makeAngler({suit:'jacket',j:'#7a3b2e',j2:'#5e2c22',hat:'none',beard:'full',beardCol:'#8a8a84',hair:'#8a8a84',glasses:true,skin:'#d8a588',p:'#3a3a3a'});
   SH.clerk={obj:so,pose:JSON.parse(JSON.stringify(POSES.stand)),target:'stand',walk:0,moving:false,speed:1,pos:new T.Vector3(4.45,0,-3.6),rotY:Math.PI/2,holding:-1,reelSpin:0,crank:0,faceTo:null};scene.add(so);
+  // esposizione: sedia e ombrellone aperto, stand dei vestiti con le giacche, borsoni
+  {const u=new T.Group(),pole=box(.03,2.2,.03,M('#c0c4c8',{metalness:.7}),0,1.1,0,u);const can=new T.Mesh(new T.ConeGeometry(1.1,.45,12,1,true),new T.MeshStandardMaterial({color:'#2f6fb5',side:T.DoubleSide,roughness:.7}));can.position.y=2.1;u.add(can);u.position.set(2.8,0,-1.2);scene.add(u);
+    const c=new T.Group();box(.45,.04,.4,M('#4b5a36'),0,.5,0,c);box(.45,.45,.04,M('#4b5a36'),0,.75,.2,c);for(const x of[-.2,.2])for(const z of[-.18,.18])box(.025,.5,.025,M('#9aa3ad',{metalness:.6}),x,.25,z,c);c.position.set(2.6,0,-.8);c.rotation.y=-.6;scene.add(c);
+    const rk=new T.Group();box(1.4,.03,.03,M('#9aa3ad',{metalness:.7}),0,1.7,0,rk);for(const x of[-.65,.65])box(.03,1.7,.03,M('#9aa3ad',{metalness:.7}),x,.85,0,rk);
+    ['#c0392b','#2f6fb5','#3a5a2a','#e67e22','#2b2f36'].forEach((cl,i)=>{const j=box(.26,.6,.1,M(cl),-.5+i*.25,1.32,0,rk);j.rotation.y=.3;});rk.position.set(-3.2,0,-1.2);rk.rotation.y=.4;scene.add(rk);
+    ['#3d434b','#5a3a2a','#2f6fb5'].forEach((cl,i)=>box(.5,.32,.3,M(cl),-3.4+i*.55,.16,-.3));}
   // zone toccabili
-  SH.hits=[['canne',-4.8,1.3,-4.2,.6,2.6,5.6],['mulinelli',3.8,.9,-2.6,1,.9,3],['esche',3.9,1,-7.7,1.2,2.1,1.2],['ami',-2.6,1,-8.2,2,2,.6],['fili',-.4,1,-8.2,2,2,.6],['accessori',1.8,1,-8.2,2,2,.6],['cassa',4.4,1,-3.8,.8,2,1]].map(([k,x,y,z,w,h,d])=>{const m=new T.Mesh(new T.BoxGeometry(w,h,d),new T.MeshBasicMaterial({visible:false}));m.position.set(x,y,z);m.userData.k=k;scene.add(m);return m;});
+  SH.hits=[['canne',-4.8,1.3,-4.2,.6,2.6,5.6],['mulinelli',3.8,.9,-2.6,1,.9,3],['esche',3.9,1,-7.7,1.2,2.1,1.2],['ami',-2.6,1,-8.2,2,2,.6],['fili',-.4,1,-8.2,2,2,.6],['accessori',1.8,1,-8.2,2,2,.6],['cassa',4.4,1,-3.8,.8,2,1],['sedie',2.7,.6,-1,1.4,1.4,1.4],['abbigliamento',-3.2,1,-1.2,1.6,2,.8]].map(([k,x,y,z,w,h,d])=>{const m=new T.Mesh(new T.BoxGeometry(w,h,d),new T.MeshBasicMaterial({visible:false}));m.position.set(x,y,z);m.userData.k=k;scene.add(m);return m;});
   SH.cam.p=new T.Vector3(0,1.7,2.4);SH.cam.l=new T.Vector3(0,1.3,-5);SH.go='ingresso';}
 async function openShop(){st.phase='shop';stop();root=null;mountShell();try{T=await (MP.three||loadThree());}catch(e){ui.innerHTML='<div class="gpanel">Negozio non disponibile</div>';return;}
   renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(1.6,devicePixelRatio||1));cvs=renderer.domElement;root.querySelector('#g3').appendChild(cvs);
@@ -1194,19 +1269,19 @@ const cartTot=()=>SH.cart.reduce((a,c)=>a+c.price,0);
 function shopUI(){const c=CAT.find(x=>x.k===SH.cat),tot=cartTot();hud.innerHTML=`<div>🛒 Pesca Sport</div><div>💶 <b>${eur(st.money)}</b></div>${SH.cart.length?`<div>🧺 ${SH.cart.length} · ${eur(tot)}</div>`:''}`;
   if(SH.cat==='zaino'){const g=st.gear;ui.innerHTML=`<div class="gpanel"><div class="grow" style="justify-content:space-between"><b>🎒 Il tuo zaino</b>${btn('↩ Negozio',"shopCat('canne')")}</div>
     <div class="gs">Canna: <b>${ROD[g.rod].n}</b>${g.rods.length>1?' · '+g.rods.map(id=>`<u style="cursor:pointer" onclick="GAME.useRod('${id}')">${ROD[id].n}</u>`).join(' · '):''}</div>
-    <div class="gs">Mulinello: <b>${g.reel==='rT'?'Tournament 14000':g.reel.slice(1)}</b> (frizione ${g.drag} kg) · filo madre ${String(g.line).replace('.',',')} mm · terminale ${String(g.fluo).replace('.',',')} mm · shock leader ${g.leader}</div>
+    <div class="gs">Mulinello: <b>${reelN(g.reel)}</b> (frizione ${g.drag} kg) · filo madre ${String(g.line).replace('.',',')} mm · terminale ${String(g.fluo).replace('.',',')} mm · shock leader ${g.leader}</div>
     <div class="gs">Esche: ${BAITS.filter(b=>!b.lim).map(b=>`${b.n} ${g.baits[b.k]||0}`).join(' · ')}</div>
     <div class="gs">Ami: ${[0,2,4,6,8].map(m=>`n.${m}: ${g.hooks[m]||0}`).join(' · ')}</div>
     <div class="gs">Piombi: ${[80,100,125,150,175,200].map(w=>`${w} g: ${g.leads[w]||0}${g.grip[w]?' ('+g.grip[w]+' a ragno)':''}`).join(' · ')}</div>
     <div class="gs">Starlight ${g.starlight} · girelle ${g.swivels} · moschettoni ${g.snaps} · aghi ${g.needle?'sì':'no'} · elastico ${g.elastic?'sì':'no'} · frontale ${g.lamp?'LED 500 lm':'base'}${Object.keys(g.own).length?' · '+Object.keys(g.own).map(k=>ITEM[k]?.n.split(' ')[0]).join(', '):''}</div></div>`;return;}
   const items=SH.cat==='cassa'?null:c.items;
   ui.innerHTML=`<div class="gpanel" style="max-height:56vh"><div class="grow" style="flex-wrap:nowrap;overflow-x:auto;gap:5px;scrollbar-width:none">${CAT.map(x=>`<button class="gc ${SH.cat===x.k?'on':''}" style="flex:none" onclick="GAME.shopCat('${x.k}')">${x.n}</button>`).join('')}<button class="gc" style="flex:none" onclick="GAME.shopCat('zaino')">🎒 Zaino</button></div>
-    ${items?items.map(it=>{const o=SH.sel[it.id]||(SH.sel[it.id]={});const own=(it.id.startsWith('surf')&&st.gear.rods.includes(it.id));return `<div class="gitem"><div style="flex:1;min-width:0"><b>${it.n}</b><div class="gs" style="margin:2px 0">${it.d}${it.pk?` · confezione da ${it.pk} innesci (ne hai ${st.gear.baits[it.bait]||0})`:''}</div>
+    ${items?items.map(it=>{const o=SH.sel[it.id]||(SH.sel[it.id]={});const G2=st.gear,own=(it.rod&&G2.rods.includes(it.id))||(it.reel&&G2.reels.includes(it.reel))||(it.id==='reelT'&&G2.reels.includes('rT'))||(it.chair&&(G2.chairs||[]).includes(it.id))||(it.outfit&&(G2.outfits||[]).includes(it.outfit))||(it.hat&&(G2.hats||[]).includes(it.hat))||(it.shelter&&(G2.shelters||[]).includes(it.id))||(['spike','spikeLong','tripod','lampF','lamp1000','lampRed','lanternLED','boots','bagTackle','bagRod','bagBack','cart','windbreak','needle','elastic','box','bucket','scis'].includes(it.id)&&G2.bought?.[it.id]);return `<div class="gitem"><div style="flex:1;min-width:0"><b>${it.n}</b><div class="gs" style="margin:2px 0">${it.d}${it.pk?` · confezione da ${it.pk} innesci (ne hai ${st.gear.baits[it.bait]||0})`:''}</div>
       ${(it.opts||[]).map(op=>`<div class="grow" style="gap:4px;margin:3px 0;flex-wrap:wrap"><span style="font-size:12.5px;opacity:.8">${op.n}</span>${op.v.map((v,i)=>`<button class="gc ${(o[op.k]||0)===i?'on':''}" style="padding:4px 9px;font-size:12.5px" onclick="GAME.shopOpt('${it.id}','${op.k}',${i})">${v}</button>`).join('')}</div>`).join('')}</div>
       <div style="text-align:right;flex:none"><b style="color:#ffd76a">${eur(it.p(fullO(it,o)))}</b><br>${own?'<span class="gs">già tua</span>':`<button class="gb" style="margin:4px 0 0;padding:8px 12px" onclick="GAME.shopAdd('${it.id}')">＋ Carrello</button>`}</div></div>`;}).join('')
     :`<b>🧾 Alla cassa</b>${SH.cart.length?SH.cart.map((x,i)=>`<div class="grow" style="justify-content:space-between;margin:3px 0"><span class="gs" style="margin:0">${ITEM[x.id].n}${x.o&&ITEM[x.id].opts?' · '+optTxt(ITEM[x.id],x.o):''}</span><span>${eur(x.price)} <u style="cursor:pointer" onclick="GAME.shopDel(${i})">✕</u></span></div>`).join(''):'<div class="gs">Il carrello è vuoto.</div>'}`}
     <div class="grow" style="margin-top:8px">${SH.cart.length?`<button class="gb ${SH.cat==='cassa'?'big':''}" style="flex:2" onclick="GAME.${SH.cat==='cassa'?'shopPay':"shopCat('cassa')"}()">💳 ${SH.cat==='cassa'?'Paga':'Vai alla cassa'} ${eur(tot)}</button>`:''}<button class="gb" style="flex:1;background:#33404d" onclick="GAME.shopExit()">🚪 Esci</button></div>${st.msg?`<div class="gs" style="text-align:center">${st.msg}</div>`:''}</div>`;}
-G.shopCat=k=>{SH.cat=k;SH.go=k==='zaino'?'ingresso':k;st.msg='';click();shopUI();const L={canne:'Queste sono le canne: più lunghe lanciano più lontano.',mulinelli:'I mulinelli sono nel bancone: con la bobina lunga il filo esce meglio.',esche:'Esche vive, appena arrivate!',ami:'Ami di tutte le misure: più è alto il numero, più è piccolo.',piombi:'Il piombo a ragno tiene anche con la corrente.',fili:'Lo shock leader ti salva dal crack-off.',accessori:'Le starlight non devono mai mancare di notte!',cassa:'Vieni pure alla cassa.'};if(L[k])say(SH.clerk,L[k],3.5);};
+G.shopCat=k=>{SH.cat=k;SH.go=k==='zaino'?'ingresso':k;st.msg='';click();shopUI();const L={sedie:'Una sedia comoda fa la differenza nelle nottate.',ombrelloni:'Con l\'ombrellone niente più pioggia sulla testa.',abbigliamento:'Lo scafandro in neoprene è caldissimo.',borsoni:'Con il carrello porti tutto in un viaggio.',picchetti:'Il tripode è perfetto sugli scogli.',torce:'La luce rossa non spaventa i pesci.',canne:'Queste sono le canne: più lunghe lanciano più lontano.',mulinelli:'I mulinelli sono nel bancone: con la bobina lunga il filo esce meglio.',esche:'Esche vive, appena arrivate!',ami:'Ami di tutte le misure: più è alto il numero, più è piccolo.',piombi:'Il piombo a ragno tiene anche con la corrente.',fili:'Lo shock leader ti salva dal crack-off.',accessori:'Le starlight non devono mai mancare di notte!',cassa:'Vieni pure alla cassa.'};if(L[k])say(SH.clerk,L[k],3.5);};
 G.shopOpt=(id,k,i)=>{(SH.sel[id]=SH.sel[id]||{})[k]=i;shopUI();};
 G.shopAdd=id=>{const it=ITEM[id],o=fullO(it,SH.sel[id]),price=Math.round(it.p(o)*100)/100;SH.cart.push({id,o,price});st.msg=`🧺 Aggiunto: ${it.n}${it.opts?' · '+optTxt(it,o):''}`;click();shopUI();};
 G.shopDel=i=>{SH.cart.splice(i,1);shopUI();};
@@ -1216,7 +1291,7 @@ G.useRod=id=>{st.gear.rod=id;gearSave();if(st.phase==='shop')shopUI();else setUI
 G.shopExit=()=>{cancelAnimationFrame(raf);stop();MP.skipAsk=true;mount(null);};
 
 /* ---------- interfaccia ---------- */
-function mount(v){
+function mount(v){setTimeout(appCredit,0);
   stop();root=document.createElement('div');root.id='gamebox';
   root.innerHTML=`<div id="g3"></div><div id="ghud"></div><div id="gui"></div><button id="gx" aria-label="Esci">✕</button><button id="gau" aria-label="Audio">${AU.on?'🔊':'🔇'}</button><button id="glamp" aria-label="Torcia" class="${st.lamp?'':'off'}">🔦</button><button id="gspd" aria-label="Velocità del tempo">⏩ ${st.speed}x</button><div id="gjoy"><i></i></div><div id="gflash" style="position:absolute;inset:0;background:#eef4ff;opacity:0;pointer-events:none;mix-blend-mode:screen"></div>`;
   document.body.appendChild(root);document.body.classList.add('gaming');ui=root.querySelector('#gui');hud=root.querySelector('#ghud');
@@ -1255,7 +1330,10 @@ function setUI(){const p=st.phase;let h='';
       <div class="grow"><span>Piombo</span>${[80,100,125,150,175,200].map(g=>`<button class="gc ${st.lead===g?'on':''}" onclick="GAME.setLead(${g})">${g} g</button>`).join('')}</div>
       <div class="gs">Consigliato ${sug} g: più leggero lanci più lontano, ma la corrente lo trascina.</div>
       <div class="grow"><span>Amo</span>${[0,2,4,6,8].map(k=>`<button class="gc ${st.hook===k?'on':''}" onclick="GAME.setHook(${k})">${k}</button>`).join('')}</div>
-      <div class="grow"><span>Vestito</span>${[['tracksuit','Tuta'],['waders','Scafandro'],['jacket','Giacca impermeabile']].map(([k,n])=>`<button class="gc ${st.outfit===k?'on':''}" onclick="GAME.setOutfit('${k}')">${n}</button>`).join('')}</div>
+      <div class="grow" style="flex-wrap:wrap;gap:4px"><span>Vestito</span>${['tracksuit','waders','jacket',...(st.gear.outfits||[])].map(k=>`<button class="gc ${st.outfit===k?'on':''}" onclick="GAME.setOutfit('${k}')">${OUTF[k].n}</button>`).join('')}</div>
+      ${(st.gear.hats||[]).length>1?`<div class="grow" style="gap:4px"><span>Cappello</span>${st.gear.hats.map(k=>`<button class="gc ${(st.gear.hat||'cap')===k?'on':''}" onclick="GAME.setHat('${k}')">${{cap:'Berretto',bucket:'Da pescatore',beanie:'Lana',none:'Nessuno'}[k]}</button>`).join('')}</div>`:''}
+      ${(st.gear.chairs||[]).length>1?`<div class="grow" style="gap:4px;flex-wrap:wrap"><span>Sedia</span>${st.gear.chairs.map(k=>`<button class="gc ${(st.gear.chair||'chairStd')===k?'on':''}" onclick="GAME.setGearK('chair','${k}')">${{chairStd:'Pieghevole',chairHigh:'Alta',chairLevel:'Regolabile',chairArm:'Poltrona'}[k]}</button>`).join('')}</div>`:''}
+      ${(st.gear.shelters||[]).length?`<div class="grow" style="gap:4px"><span>Riparo</span>${['',...st.gear.shelters].map(k=>`<button class="gc ${(st.gear.shelter||'')===k?'on':''}" onclick="GAME.setGearK('shelter','${k}')">${{'':'Nessuno',umbrella:'Ombrellone',bivvy:'Tenda'}[k]}</button>`).join('')}</div>`:''}
       <div class="gs">Con lo scafandro entri in acqua senza bagnarti (e senza congelarti).</div>
       ${gearChips()}
       ${btn('🔧 Monta l\'attrezzatura','start(1)','big')}${btn('🎣 Già montato: vai subito in pesca','ready()')}</div>`;}
@@ -1269,7 +1347,7 @@ function setUI(){const p=st.phase;let h='';
     ${r.state==='bite'?btn('⚡ FERRA!','strike()','big hot'):''}${r.state==='hooked'?btn('🌀 Prendi la canna e recupera','fightHooked()','big hot'):''}${r.state==='tangled'?btn('🧶 Recupera e districa','untangle()','big hot'):''}${r.dismantled?btn('🔧 Rimonta la canna','remount()','big'):(r.state==='tangled'?'':r.bait?btn('🌀 Recupera e cambia esca','rebait()'):btn('🪝 Innesca','rebait()','big'))+(r.state==='tangled'?'':btn('🔧 Montatura · '+r.lead+' g, amo '+'n. '+hookNum(r.hook)+', '+({lungo:'lungo 1,5 m',corto:'corto 75 cm','2ami':'2 ami'})[r.rig],'rigAt()'))+(r.bait?'':btn('🧰 Smonta la canna','dismantle()'))}${btn('🪑 Torna a sedere','back()')}</div>`;}
   else if(p==='rig'){const r=st.rods[st.sel],w=wxAt(st.gt);h=`<div class="gpanel"><b>🔧 Montatura della canna ${st.sel+1}</b>${r.broken?'<div class="gs warn">La lenza si è rotta: rifai il terminale (perdi piombo e amo).</div>':''}
     ${st.gear.rods.length>1?`<div class="grow" style="flex-wrap:wrap;gap:4px"><span>Canna</span>${st.gear.rods.map(id=>`<button class="gc ${r.rodId===id?'on':''}" onclick="GAME.setRig('rodId','${id}')">${ROD[id].n}</button>`).join('')}</div>`:''}
-    ${st.gear.reels.length>1?`<div class="grow" style="flex-wrap:wrap;gap:4px"><span>Mulinello</span>${st.gear.reels.map(id=>`<button class="gc ${r.reelId===id?'on':''}" onclick="GAME.setRig('reelId','${id}')">${id==='rT'?'Tournament 14000':id.slice(1)}</button>`).join('')}</div>`:''}
+    ${st.gear.reels.length>1?`<div class="grow" style="flex-wrap:wrap;gap:4px"><span>Mulinello</span>${st.gear.reels.map(id=>`<button class="gc ${r.reelId===id?'on':''}" onclick="GAME.setRig('reelId','${id}')">${reelN(id)}</button>`).join('')}</div>`:''}
     <div class="grow"><span>Piombo</span>${[80,100,125,150,175,200].map(g=>`<button class="gc ${r.lead===g?'on':''}" ${st.gear.leads[g]>0||r.lead===g?'':'disabled style="opacity:.4"'} onclick="GAME.setRig('lead',${g})">${g} g <small style="opacity:.7">${st.gear.leads[g]||0}</small></button>`).join('')}</div>${(st.gear.grip[r.lead]>0||(st.gear.ogiva||{})[r.lead]>0)?`<div class="grow" style="gap:4px"><span>Forma</span>${[['piramidale','🔺 Piramidale'],['ogiva','💧 Ogiva'],['ragno','🕷️ A ragno']].filter(([k])=>leadOk(r.lead,k)).map(([k,n])=>`<button class="gc ${(r.leadT||'piramidale')===k?'on':''}" onclick="GAME.setRig('leadT','${k}')">${n}</button>`).join('')}</div>`:''}
     <div class="gs">Con mare ${seaName(w.wave)} servono almeno ${suggestLead(w.wave)} g, sennò la corrente trascina il piombo verso riva.</div>
     <div class="grow"><span>Amo</span>${[0,2,4,6,8].map(k=>`<button class="gc ${hookNum(r.hook)===k?'on':''}" ${st.gear.hooks[k]>0||hookNum(r.hook)===k?'':'disabled style="opacity:.4"'} onclick="GAME.setRig('hook',${k})">${k} <small style="opacity:.7">${st.gear.hooks[k]||0}</small></button>`).join('')}</div>${(st.gear.forged||{})[hookNum(r.hook)]>0?`<div class="grow" style="gap:4px"><span>Tipo amo</span>${[['aberdeen','Aberdeen (filo sottile)'],['forgiato','Forgiato (robusto)']].map(([k,n])=>`<button class="gc ${(r.hookT||'aberdeen')===k?'on':''}" onclick="GAME.setRig('hookT','${k}')">${n}</button>`).join('')}</div>`:''}
@@ -1306,8 +1384,9 @@ function setUI(){const p=st.phase;let h='';
 }
 G.setN=n=>{st.nRods=n;LSS('nrods',n);setUI();};G.setLead=g=>{st.lead=g;LSS('lead',g);setUI();};G.setHook=k=>{st.hook=k;LSS('hook',k);setUI();};
 G.setSpeed=s=>{st.speed=s;LSS('speed',s);const b=document.getElementById('gspd');if(b)b.textContent='⏩ '+s+'x';if(st.phase==='wait')setUI();};G.bagView=()=>{st.phase='bag';setUI();};G.toWait=()=>{st.phase='wait';setUI();};G.drag=v=>{if(st.fight)st.fight.drag=+v;};
-G.setOutfit=k=>{st.outfit=k;LSS('outfit',k);setUI();};
-function setPlayerLook(){const old=AN.obj,ph=myPhoto();const n=makeAngler({suit:st.outfit,hat:'cap',beard:ph?'none':'stubble',photo:ph,j:'#2f5544',j2:'#264638',c:'#b8352a',p:'#2c3445'});
+G.setOutfit=k=>{st.outfit=k;LSS('outfit',k);setUI();};G.setHat=k=>{st.gear.hat=k;gearSave();setUI();};G.setGearK=(k,v)=>{st.gear[k]=v;gearSave();if(scene&&CHAIRG){styleCamp();}setUI();};
+const OUTF={tracksuit:{n:'Tuta',suit:'tracksuit',j:'#2f5544',j2:'#264638',p:'#2c3445'},waders:{n:'Scafandro',suit:'waders',j:'#2f5544',j2:'#264638',p:'#2c3445'},jacket:{n:'Giacca impermeabile',suit:'jacket',j:'#2f5544',j2:'#264638',p:'#2c3445'},neo:{n:'Neoprene',suit:'waders',rubber:'#16191d',j:'#16191d',j2:'#2f6fb5',p:'#16191d'},thermo:{n:'Giacca termica',suit:'jacket',j:'#b8352a',j2:'#7a2018',p:'#2b2f36'},wind:{n:'Tuta antivento',suit:'tracksuit',j:'#1d3557',j2:'#14243b',p:'#1d3557'},float:{n:'Galleggiante',suit:'jacket',j:'#e67e22',j2:'#c0392b',p:'#2b2f36'}};
+function setPlayerLook(){const old=AN.obj,ph=myPhoto(),O=OUTF[st.outfit]||OUTF.waders,g=st.gear;const n=makeAngler({...O,hat:g.hat||'cap',boots:g.boots&&O.suit!=='waders'?'tall':undefined,beard:ph?'none':'stubble',photo:ph,c:'#b8352a'});
   n.position.copy(old.position);n.rotation.copy(old.rotation);scene.remove(old);scene.add(n);AN.obj=n;
   AN.obj.userData.J.head.add(headLamp);const lt=new T.Object3D();lt.position.set(0,-1.2,-6);AN.obj.userData.J.head.add(lt);headLamp.target=lt;}
 function buildSteps(){const S2=[],q=st.auto?.55:1,sp=st.auto?3.4:2.4;
@@ -1415,7 +1494,7 @@ function doCast(){const c=st.cast;c.on=false;const r=st.rods[st.sel],w=wxAt(st.g
   const rnd2=Math.random(),lk=st.gear.leader>0?.3:1;if((S.crack&&p>g1+.03&&rnd2<S.crack*lk)||rnd2<(.02+((r.lead||st.lead)>175?.015:0))*lk){if(st.gear.leader>0){st.gear.leader--;gearSave();}st.cast=null;seq(async()=>{st.phase='busy';setUI();castAnimStart('fire');await sleep(.3);whoosh();st.castLead=null;await sleep(.4);st.castAnim=null;st.castCam=false;CAM.cl=null;click();vib([60,30,60]);r.broken=true;r.bait=null;r.state='idle';r.dist=0;r.sinker.visible=false;pose('hold');
     st.msg=p>g1+.03?'💥 Crack-off! Troppa forza: il filo si è rotto al lancio e il piombo è volato via. Rifai il terminale.':'💥 La lenza si è spezzata al lancio (nodo indebolito): piombo perso, rifai il terminale.';st.phase='rig';setUI();});return;}
   // zona verde: fino al massimo dello stile; con poca potenza anche solo 10 m; oltre la zona verde il lancio si sporca
-  const GR=st.gear,M=S.max*(ROD[r.rodId||GR.rod]?.mul||1)*(1+(.25-GR.line)*.8)*(r.leadT==='ogiva'?1.05:1),base=green?M*(1-Math.abs(p-gm)*.45):p<g0?lerp(10,M*.92,Math.pow(p/g0,1.15)):lerp(M*.92,M*.4,(p-g1)/(1-g1));
+  const GR=st.gear,M=S.max*(ROD[r.rodId||GR.rod]?.mul||1)*(REELS[r.reelId||GR.reel]?.cast||1)*(1+(.25-GR.line)*.8)*(r.leadT==='ogiva'?1.05:1),base=green?M*(1-Math.abs(p-gm)*.45):p<g0?lerp(10,M*.92,Math.pow(p/g0,1.15)):lerp(M*.92,M*.4,(p-g1)/(1-g1));
   const leadF=clamp(1.15-((r.lead||st.lead)-100)/400,.85,1.1)*(r.rig==='2ami'?.93:r.rig==='corto'?1.04:1),baitF=r.bait==='cefalotto'?.55:r.bait==='sarda'||r.bait==='seppia'?.85:1,wind=1+windHelp(w.wd)*clamp(w.ws/60,0,.35);
   const dist=clamp(base*leadF*baitF*wind+rnd(-3,3),8,155);st.cast=null;
   r.star=night()>.25?(st.gear.starlight>0?(st.gear.starlight--,gearSave(),true):false):r.star;
@@ -1548,7 +1627,7 @@ function updFight(dt){const f=st.fight;if(!f||st.phase!=='fight')return;f.t+=dt;
   if(f.run<=0&&Math.random()<dt*.5*f.pow){f.run=rnd(.6,2)*f.pow;vib([90+Math.round(f.pow*60),50,140+Math.round(f.pow*80)]);}f.run=Math.max(0,f.run-dt);
   // durante la fuga e con la tensione alta: piccoli strattoni
   f.vt=(f.vt||0)-dt;if(f.vt<=0&&(f.run>0||f.ten>.75)){vib(f.run>0?Math.round(35+f.pow*30):25);f.vt=f.run>0?rnd(.25,.5):rnd(.6,1.1);}
-  const pull=(f.run>0?.6:.18)*f.pow+(w.wave||0)*.08*Math.max(0,Math.sin(performance.now()/700));const dragMax=.35+f.drag*.07+(({r6000:8,r8000:12,r10000:15,r14000:20,rT:25}[r.reelId||st.gear.reel]||12)-12)*.012;
+  const pull=(f.run>0?.6:.18)*f.pow+(w.wave||0)*.08*Math.max(0,Math.sin(performance.now()/700));const dragMax=.35+f.drag*.07+(reelDrag(r.reelId||st.gear.reel)-12)*.012;
   let ten=(f.reel?.45:.12)+pull;if(ten>dragMax){const out=(ten-dragMax)*dt*25;f.dist+=out;ten=dragMax+(ten-dragMax)*.25;AN.reelSpin=-.6;
     // la frizione cede: crepitio tanto più fitto quanto più filo esce, e vibrazione continua
     f.dAcc=(f.dAcc||0)+out;let n=0;while(f.dAcc>.05&&n<4){f.dAcc-=.05;n++;dragTick(n*.012);}f.dv=(f.dv||0)-dt;if(f.dv<=0){f.dv=.22;vib(Math.round(40+Math.min(80,out/dt*6)));}}
@@ -1725,7 +1804,7 @@ G.skip=up=>{if(st.busy||st.phase!=='wait')return;let t=st.gt,prev=sunPos(new Dat
 G.center=()=>{LOOK.yaw=0;LOOK.pitch=0;};
 
 /* ---------- ciclo principale ---------- */
-function loop(){raf=requestAnimationFrame(loop);if(!renderer)return;const dt=Math.min(.05,clock.getDelta()),t=clock.elapsedTime;
+function loop(){raf=requestAnimationFrame(loop);if(!renderer)return;const dt=Math.min(.05,clock.getDelta()),t=clock.elapsedTime;earnTick(dt);
   const gmul=(st.phase==='wait'&&!st.busy)?st.speed:1;st.gmul=gmul;st.gt+=dt*1000*gmul;const gmin=dt*gmul/60;const w=wxAt(st.gt);
   // pescatore e vicini di spiaggia
   joyMove(dt,t);moveActor(AN,dt);lerpPose(dt,st.castAnim?(st.castAnim.phase==='fire'?16:7):/Fwd$|^strike$/.test(AN.target)?14:6);applyPose(t);if(AN.holding>=0&&(st.phase==='fight'||AN.reelSpin!==0||AN.target==='reel'))reelIK();updCrabs(dt,t);nearUI(t);
@@ -1820,8 +1899,8 @@ function updEnv(w,t,dt){const d=gameDate(),s0=sunPos(d,SPOT.lat,SPOT.lon),sun=su
     const env=Math.sin(Math.min(1,u.life)*Math.PI),want=i<n?1:0;u.vis=lerp(u.vis,want,1-Math.exp(-dt*gm/(rainy?6:40)));
     const grow=.75+.35*u.life+.06*Math.sin(u.ph+st.gt/9e5);c.scale.set(u.w*grow,u.h*(.85+.3*env),1);
     c.material.color.copy(tint);c.material.opacity=clamp(.55+cc*.4,0,1)*Math.pow(env,.6)*u.vis;c.visible=c.material.opacity>.01;});
-  for(const L of LANTERNS){L.userData.glass.material.emissiveIntensity=NIGHT>.4?1.6:0;if(L.userData.pl)L.userData.pl.intensity=NIGHT>.4?1.1:0;}
-  const lampOn=NIGHT>.5&&st.lamp;headLamp.intensity=lampOn?(st.gear.lamp?2.6:1.6):0;AN.obj.userData.J.lamp.material.emissiveIntensity=lampOn?2:0;
+  for(const L of LANTERNS){L.userData.glass.material.emissiveIntensity=NIGHT>.4?1.6:0;if(L.userData.pl)L.userData.pl.intensity=NIGHT>.4?(st.gear.lanternLED?2.2:1.1):0;}
+  const lampOn=NIGHT>.5&&st.lamp;headLamp.intensity=lampOn?[1.6,1.6,2.6,3.6][st.gear.torch||(st.gear.lamp?2:1)]:0;if(lampOn)headLamp.color.set(st.gear.red?0xff6a5a:0xfff6d8);AN.obj.userData.J.lamp.material.emissiveIntensity=lampOn?2:0;
   // frangenti e risacca: più numerosi e alti con mare grosso
   const per=Math.max(3,w.wper||5),wh=w.wave||.3,nb=wh<.2?1:wh<.6?2:wh<1.2?3:4;
   const nf=Math.min(foams.length,2+Math.round(wh*4));
@@ -1869,7 +1948,7 @@ function updCam(dt,t){let p,l;const a=AN.pos;
   if(!CAM.p){CAM.p=p.clone();CAM.l=l.clone();}const f=1-Math.exp(-(sittingView()?7:2.5)*dt);CAM.p.lerp(p,f);CAM.l.lerp(l,f);camera.position.copy(CAM.p);camera.position.y+=Math.sin(t*.4)*.02;camera.lookAt(CAM.l);}
 function drawHud(w){const d=gameDate(),mp=moonPosG(d,SPOT.lat,SPOT.lon);
   const wi=w.code>=95?'⛈️':w.code>=80?'🌦️':w.code>=51?'🌧️':w.code>=45?'🌫️':w.cc>75?'☁️':w.cc>35?'⛅':sunPos(d,SPOT.lat,SPOT.lon).alt>0?'☀️':'🌙';
-  const h=`<div>📍 ${escH(SPOT.name.split(' · ')[0])} · <b>${d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</b>${st.speed>1&&st.phase==='wait'&&!st.busy?' ⏩':''}</div><div>${wi} ${Math.round(w.temp)}° ${['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'][Math.round(mp.ph/45)%8]} 🎣${w.idx}${st.sim?' ⚠️':''}</div><br><div>🌬️ ${Math.round(w.ws)} ${windName(w.wd)}</div><div>🌊 ${(w.wave||0).toFixed(1).replace('.',',')} m · ${Math.round(w.sst)}°</div>`;if(hud.innerHTML!==h)hud.innerHTML=h;}
+  const h=`<div>📍 ${escH(SPOT.name.split(' · ')[0])} · <b>${d.toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</b>${st.speed>1&&st.phase==='wait'&&!st.busy?' ⏩':''}</div><div>${wi} ${Math.round(w.temp)}° ${['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'][Math.round(mp.ph/45)%8]} 🎣${w.idx}${st.sim?' ⚠️':''}</div><br><div>🌬️ ${Math.round(w.ws)} ${windName(w.wd)}</div><div>🌊 ${(w.wave||0).toFixed(1).replace('.',',')} m · ${Math.round(w.sst)}°</div><div>💶 ${eur(st.money)}</div>`;if(hud.innerHTML!==h)hud.innerHTML=h;}
 G._bite=i=>startBite(st.rods[i]);G._sp=n=>SP.find(x=>x.n===n);G._ui=()=>setUI();G._an=AN;G._cam=()=>camera;G._npcs=()=>NPCS;G._crabs=()=>CRABS;G._tangle=r=>checkTangle(r);G._look=(y,p)=>{LOOK.yaw=y;LOOK.pitch=p;};
 /* ---------- meteo reale per l'ora di gioco ---------- */
 async function loadWx(){
@@ -1905,7 +1984,7 @@ function biteRate(r){// abboccate per minuto di gioco
 
 function sizeOf(sp){const [a,t,b]=sp.w;let x=Math.exp(Math.log(t)+(Math.random()+Math.random()+Math.random()-1.5)*.55);if(Math.random()<.04)x*=1.6;return clamp(x,a,b);}
 function lenOf(sp,w){const [a,b]=sp.lw;return Math.round(Math.pow(w*1000/a,1/b)*(sp.crab?.1:1)*10)/10||Math.round(Math.pow(w*1000/a,1/b));}
-function record(rel){const c=st.catchShow,r=st.rods[st.sel];{const gain=Math.round((3+c.w*2+(rel?2:0))*100)/100;st.money+=gain;gearSave();setTimeout(()=>{st.msg=(st.msg?st.msg+' · ':'')+'💶 +'+eur(gain);},0);}const e={n:c.sp.n,w:Math.round(c.w*100)/100,l:c.l,t:st.gt,rel,bait:c.bait||''};st.bag.push(e);LSS('bag',st.bag.slice(-200));
+function record(rel){const c=st.catchShow,r=st.rods[st.sel];{const gain=Math.round((3+c.w*2+(rel?2:0)+(c.rec?5:0))*100)/100;earn('catch',gain,c.rec?'cattura da record':'cattura');}const e={n:c.sp.n,w:Math.round(c.w*100)/100,l:c.l,t:st.gt,rel,bait:c.bait||''};st.bag.push(e);LSS('bag',st.bag.slice(-200));
   if(c.rec){st.best[c.sp.n]=e.w;LSS('best',st.best);}st.total.n++;st.total.kg+=e.w;st.total.pts+=Math.round(e.w*100)+(rel?50:0)+(c.sp.ab<.1?300:0);LSS('total',st.total);}
 G.release=()=>{record(true);st.msg='💚 Rilasciato. Bravo!';G.rebait();};
 G.keep=()=>{record(false);st.msg='🧺 Nel carniere';G.rebait();};
@@ -1987,7 +2066,7 @@ body.gaming{overflow:hidden}
 #glamp.off{opacity:.45;filter:grayscale(1)}#gspd{position:absolute;top:calc(env(safe-area-inset-top) + 56px);right:8px;height:36px;padding:0 12px;border-radius:12px;border:0;background:rgba(4,14,26,.7);color:#fff;font:700 14px Outfit,sans-serif;cursor:pointer}
 #gui{position:absolute;left:0;right:0;bottom:0;padding:10px 10px calc(env(safe-area-inset-bottom) + 10px);pointer-events:none}
 .gpanel{pointer-events:auto;max-width:620px;margin:0 auto;background:rgba(4,14,26,.72);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:12px 14px;color:#fff;font:500 15px Outfit,sans-serif;max-height:62vh;overflow:auto}
-.gpanel.slim{padding:8px 10px}.gitem{display:flex;gap:10px;align-items:flex-start;padding:9px 2px;border-bottom:1px solid rgba(255,255,255,.08)}.gitem:last-of-type{border-bottom:0}.gr.empty{background:rgba(200,40,55,.55);border-color:#ff4d5e}
+.gpanel.slim{padding:8px 10px}.gmoney{position:absolute;left:50%;top:calc(env(safe-area-inset-top) + 70px);transform:translateX(-50%);background:linear-gradient(135deg,#ffd76a,#e0a92a);color:#3a2400;border-radius:999px;padding:6px 14px;font:800 14px Outfit,sans-serif;pointer-events:none;animation:gmoney 2.6s ease forwards;z-index:9}@keyframes gmoney{0%{opacity:0;transform:translate(-50%,8px)}12%{opacity:1;transform:translate(-50%,0)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-14px)}}.gitem{display:flex;gap:10px;align-items:flex-start;padding:9px 2px;border-bottom:1px solid rgba(255,255,255,.08)}.gitem:last-of-type{border-bottom:0}.gr.empty{background:rgba(200,40,55,.55);border-color:#ff4d5e}
 .gpanel>b{display:block;font-size:17px;margin-bottom:4px}
 .gs{font-size:14px;opacity:.9;margin:4px 0}.gs.warn{color:#ffb547}
 .gb{display:block;width:100%;margin-top:8px;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;font:700 16px Outfit,sans-serif;cursor:pointer;touch-action:none}
