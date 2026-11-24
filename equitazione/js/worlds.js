@@ -584,7 +584,7 @@ EQ.buildYard=function(){
    const cg=[];[0,1,2,4,6,7,8].forEach((k,i)=>{const x=PK.x-PK.hx+2.6+k*3.2,top=i%2===0,z=top?PK.z+PK.hz-3:PK.z-PK.hz+3;
      const tp=EQ.pick(['hatch','sedan','suv','van','hatch']),col=EQ.pick(EQ.CAR_COLS);const g=EQ.carGeo(tp,col).clone();g.rotateY(top?0:Math.PI);g.translate(x,0,z);cg.push(g);const cl={x,z,hx:1,hz:2.3,h:1.4,car:true};W.colliders.push(cl);
      (W.parked=W.parked||[]).push({x,z,ry:top?0:Math.PI,tp,col,count:g.attributes.position.count,coll:cl});});
-   W.parkedMesh=mesh(EQ.merge(cg),EQ.CARMAT,0,0,0,grp);{let st=0;W.parked.forEach(p=>{p.start=st;st+=p.count;p.mesh=W.parkedMesh;});}
+   W.parkedMesh=mesh(EQ.merge(cg),EQ.CARMAT,0,0,0,grp);{let st=0;W.parked.forEach(p=>{p.start=st;st+=p.count;p.mesh=W.parkedMesh;});W.parked=[];}
    // van con rimorchio per cavalli
    const vx=PK.x+PK.hx-4,vz=PK.z;const tr=new THREE.Group();tr.position.set(vx,0,vz);tr.rotation.y=Math.PI/2;grp.add(tr);
    mesh(G.box(2.2,2.4,4.2),mat(0xf2f2f2,.3,.2),0,1.55,-1.5,tr);mesh(G.box(2.22,.35,4.22),mat(0x2f6b33,.4),0,.95,-1.5,tr);mesh(G.box(1.9,1,.06),mat(0x2a3a48,.2),0,2.1,.61,tr);
@@ -986,10 +986,11 @@ EQ.buildCity=function(){
   {const geos=[];
    for(let k=-n-1;k<=n;k++){const c=(k+.5)*P;for(let s2=-ext+10;s2<ext-10;s2+=7){if(Math.abs(((s2+ext)%P)-P/2)<R+3)continue;if(Math.random()<.55)continue;
      const vertical=Math.random()<.5;const tp=EQ.pick(['hatch','hatch','sedan','suv','van']);
-     const x=vertical?c+R/2-1.3:s2, z=vertical?s2:c-R/2+1.3, ry=(vertical?0:Math.PI/2)+(Math.random()<.5?Math.PI:0);
+     const x=vertical?c+R/2-1.3:s2, z=vertical?s2:c-R/2+1.3, ry=vertical?Math.PI:-Math.PI/2;
      const col=EQ.pick(EQ.CAR_COLS);const gg=EQ.carGeo(tp,col).clone();gg.rotateY(ry);gg.translate(x,0,z);geos.push(gg);
      const cl={x,z,hx:vertical?1:2.3,hz:vertical?2.3:1,car:true,h:tp==='van'?99:tp==='suv'?1.6:1.4};W.colliders.push(cl);(W.parked=W.parked||[]).push({x,z,ry,tp,col,count:gg.attributes.position.count,coll:cl});}}
-   const pm=mesh(EQ.merge(geos),EQ.CARMAT,0,0,0,W.group);{let st=0;W.parked.forEach(p=>{if(p.mesh)return;p.start=st;st+=p.count;p.mesh=pm;});}}
+   const pm=mesh(EQ.merge(geos),EQ.CARMAT,0,0,0,W.group);{let st=0;W.parked.forEach(p=>{if(p.mesh)return;p.start=st;st+=p.count;p.mesh=pm;});
+    W.parked=W.parked.filter(p=>!W.parked.some(q=>q!==p&&(Math.abs(p.ry-Math.PI)<.01?(Math.abs(q.x-p.x)<.5&&q.z<p.z&&p.z-q.z<11):(Math.abs(q.z-p.z)<.5&&q.x<p.x&&p.x-q.x<11))));}}
   // scuola con cortile e giochi
   blocks.filter(b=>b.type==='school').forEach(b=>{
     patch(W,b.x,b.z,B+1,B+1,TX.concrete(),3,.15,.9);

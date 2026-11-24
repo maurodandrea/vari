@@ -871,10 +871,10 @@ function makeVeh(w,kind,x,z,h,col,tp){
   w.colliders.push(...V.cols);parkCols(V);(w.vehicles=w.vehicles||[]).push(V);return V;}
 function parkCols(V){const fx=Math.sin(V.h),fz=Math.cos(V.h);V.cols.forEach((c,i)=>{const k=V.cols.length>1?(i?-1.2:1.2):0;c.x=V.x+fx*k;c.z=V.z+fz*k;c.off=false;});}
 function spawnVehicles(w){if(w.vehSpawned)return;w.vehSpawned=true;const n=w.name,mk=(k,x,z,h,c)=>makeVeh(w,k,x,z,h,c);
-  if(n==='yard'){mk('car',30,45,-Math.PI/2);mk('car',36.5,45,-Math.PI/2);mk('car',5.6,66,0);mk('bike',5,30,0);mk('bike',5,31.6,0);mk('scooter',5,33.2,0);mk('moto',5.2,35.4,0);}
-  else if(n==='city'){mk('car',14,-23.3,Math.PI/2);mk('car',-14,-32.7,-Math.PI/2);mk('car',32.7,-62,0);mk('car',-32.7,-90,Math.PI);
+  if(n==='yard'){mk('car',30,45,-Math.PI/2);mk('car',36.5,45,-Math.PI/2);mk('car',-1.9,64,0);mk('bike',5,30,0);mk('bike',5,31.6,0);mk('scooter',5,33.2,0);mk('moto',5.2,35.4,0);}
+  else if(n==='city'){
     mk('bike',-8,-24.2,Math.PI/2);mk('bike',-6.5,-24.2,Math.PI/2);mk('scooter',-5,-24.2,Math.PI/2);mk('scooter',-3.8,-24.2,Math.PI/2);mk('moto',4,-24.2,Math.PI/2);mk('moto',6,-24.2,Math.PI/2);}
-  else if(n==='beach'){const sh=w.shore;mk('bike',-40,5,Math.PI/2);mk('scooter',-40,7,Math.PI/2);mk('moto',-44,5.5,Math.PI/2);mk('car',sh(260)-49.6,260,0);mk('bike',sh(-30)-18,-26,Math.PI/2);}
+  else if(n==='beach'){const sh=w.shore;mk('bike',-40,5,Math.PI/2);mk('scooter',-40,7,Math.PI/2);mk('moto',-44,5.5,Math.PI/2);mk('car',sh(260)-49.6,260,Math.PI);mk('bike',sh(-30)-18,-26,Math.PI/2);}
   else if(n==='forest'){const s=w.spawn,rx=-Math.cos(s.h),rz=Math.sin(s.h);mk('bike',s.x+rx*3,s.z+rz*3,s.h);mk('bike',s.x+rx*3.4-Math.sin(s.h)*2,s.z+rz*3.4-Math.cos(s.h)*2,s.h);mk('moto',s.x-rx*3.4,s.z-rz*3.4,s.h);}
 }
 spawnVehicles(yard);
@@ -1362,6 +1362,15 @@ function frame(now){
   }catch(e){console.error(e);}
   requestAnimationFrame(frame);
 }
+/* schermo intero: al primo tocco (i browser lo permettono solo dopo un gesto) e ogni volta che si torna a giocare */
+function isFull(){return !!(document.fullscreenElement||document.webkitFullscreenElement);}
+let fsOff=false;
+function goFull(force){if(isFull()||(fsOff&&!force))return;const el=document.documentElement,rq=el.requestFullscreen||el.webkitRequestFullscreen;if(!rq)return;
+  try{const r=rq.call(el,{navigationUI:'hide'});if(r&&r.catch)r.catch(()=>{});}catch(e){}
+  try{if(screen.orientation&&screen.orientation.unlock)screen.orientation.unlock();}catch(e){}}
+['pointerup','touchend','click'].forEach(ev=>document.addEventListener(ev,e=>{const t=e.target;if(t&&(t.tagName==='INPUT'||t.closest&&t.closest('#nameBox')&&t.id!=='nameOk'))return;goFull();},{passive:true,capture:true}));
+document.querySelectorAll('.fsB').forEach(b=>b.addEventListener('click',()=>{if(isFull()){fsOff=true;(document.exitFullscreen||document.webkitExitFullscreen).call(document);}else{fsOff=false;goFull(true);}}));
+document.addEventListener('fullscreenchange',()=>{document.querySelectorAll('.fsB').forEach(b=>b.textContent=isFull()?'⛶ Esci da schermo intero':'⛶ Schermo intero');setTimeout(EQ.resize,200);});
 /* avvio */
 toMenu();
 requestAnimationFrame(t=>{last=t;$('loading').style.display='none';frame(t);});
