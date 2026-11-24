@@ -1175,7 +1175,7 @@ G.arrive=async i=>{cancelAnimationFrame(MP.raf);motor(false);dispose3D();removeE
     st.phase='setup';setUI();raf=requestAnimationFrame(loop);rpStart();}
   catch(e){ui.innerHTML=`<div class="gpanel"><b>Il gioco 3D non si è caricato</b><div class="gs">${escH(e.message||e)}</div>${btn('↻ Riprova','mount()','big')}</div>`;}};
 G.toMap=()=>{stop();mount(null);};
-function stop(){rpStop();st.bolt=null;st.castAnim=null;st.castLead=null;cancelAnimationFrame(MP.raf);dispose3D();removeEventListener('resize',sizeMap);windSound(0);motor(false);reelWhir(0);cancelAnimationFrame(raf);raf=0;removeEventListener('resize',size);try{renderer?.dispose();renderer?.forceContextLoss?.();}catch(e){}renderer=null;foams=[];clouds=[];st.rods=[];NPCS=[];MYG=[];CRABS=[];LANTERNS=[];CAM.p=null;document.getElementById('gamebox')?.remove();document.body.classList.remove('gaming');seaSound(0);}
+function stop(){rpStop();st.bolt=null;st.castAnim=null;st.castLead=null;st.castCam=false;cancelAnimationFrame(MP.raf);dispose3D();removeEventListener('resize',sizeMap);windSound(0);motor(false);reelWhir(0);cancelAnimationFrame(raf);raf=0;removeEventListener('resize',size);try{renderer?.dispose();renderer?.forceContextLoss?.();}catch(e){}renderer=null;foams=[];clouds=[];st.rods=[];NPCS=[];MYG=[];CRABS=[];LANTERNS=[];CAM.p=null;document.getElementById('gamebox')?.remove();document.body.classList.remove('gaming');seaSound(0);}
 addEventListener('hashchange',()=>{if(location.hash!=='#gioco'&&document.getElementById('gamebox'))stop();});
 G.mount=mount;G.exit=()=>{if(st.phase!=='map'&&st.phase!=='parking'&&renderer&&SPOT){MP.from=String(SPOT.id||'').replace(/^g_/,'');stop();mount(null);return;}MP.from=null;stop();if(window.go)go('home');};
 function size(){if(!renderer)return;const w=root.clientWidth,h=root.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.fov=w<h?68:50;camera.updateProjectionMatrix();}
@@ -1322,7 +1322,7 @@ const CSEQ={above:{drop:1.2,load:[['castBack',.5]],fire:[['castOverTop',.13],['c
   side:{drop:1.6,load:[['castSide',.6]],fire:[['sideSweep',.13],['castOverTop',.11],['castFwd',.1],['castFollow',.7]],hit:.3},
   ground:{drop:2,load:[['otgAddress',.7]],fire:[['otgTurn',.16],['castOverTop',.12],['castFwd',.1],['castFollow',.7]],hit:.34},
   pendulum:{drop:1.5,load:[['pendStart',.45],['pendOut',.45],['castPend',.5]],fire:[['otgTurn',.13],['castOverTop',.11],['castFwd',.1],['castFollow',.7]],hit:.3}};
-function castAnimStart(phase){const q=CSEQ[st.castStyle]||CSEQ.above;st.castAnim={q,phase,i:0,t:0};AN.target=q[phase][0][0];
+function castAnimStart(phase){st.castCam=true;const q=CSEQ[st.castStyle]||CSEQ.above;st.castAnim={q,phase,i:0,t:0};AN.target=q[phase][0][0];
   const r=st.rods[st.sel];if(phase==='load'&&r){const tip=new T.Vector3();r.obj.userData.tip.getWorldPosition(tip);const p=tip.clone();p.y-=q.drop;
     if(st.castStyle==='ground'){const back=new T.Vector3(Math.sin(AN.rotY)*1.6+1.2,0,Math.cos(AN.rotY)*1.6);p.set(tip.x+back.x,.05,tip.z+back.z);}
     st.castLead={r,p,q:p.clone(),drop:q.drop};r.sinker.visible=true;r.sinker.position.copy(p);}}
@@ -1341,7 +1341,7 @@ function riskOf(){const w=wxAt(st.gt),rk=SPOT.rocks||0,wv=w.wave||0;return {rock
 function doCast(){const c=st.cast;c.on=false;const r=st.rods[st.sel],w=wxAt(st.gt),S=cSty();
   const p=c.p,[g0,g1]=S.g,gm=(g0+g1)/2,green=p>=g0&&p<=g1,q=green?1:p<g0?p/g0*.9:.7;
   // troppa forza con ground e pendulum: il filo si rompe al lancio (crack-off) e il piombo vola via
-  const rnd2=Math.random(),lk=st.gear.leader>0?.3:1;if((S.crack&&p>g1+.03&&rnd2<S.crack*lk)||rnd2<(.02+((r.lead||st.lead)>175?.015:0))*lk){if(st.gear.leader>0){st.gear.leader--;gearSave();}st.cast=null;seq(async()=>{st.phase='busy';setUI();castAnimStart('fire');await sleep(.3);whoosh();st.castLead=null;await sleep(.4);st.castAnim=null;click();vib([60,30,60]);r.broken=true;r.bait=null;r.state='idle';r.dist=0;r.sinker.visible=false;pose('hold');
+  const rnd2=Math.random(),lk=st.gear.leader>0?.3:1;if((S.crack&&p>g1+.03&&rnd2<S.crack*lk)||rnd2<(.02+((r.lead||st.lead)>175?.015:0))*lk){if(st.gear.leader>0){st.gear.leader--;gearSave();}st.cast=null;seq(async()=>{st.phase='busy';setUI();castAnimStart('fire');await sleep(.3);whoosh();st.castLead=null;await sleep(.4);st.castAnim=null;st.castCam=false;CAM.cl=null;click();vib([60,30,60]);r.broken=true;r.bait=null;r.state='idle';r.dist=0;r.sinker.visible=false;pose('hold');
     st.msg=p>g1+.03?'💥 Crack-off! Troppa forza: il filo si è rotto al lancio e il piombo è volato via. Rifai il terminale.':'💥 La lenza si è spezzata al lancio (nodo indebolito): piombo perso, rifai il terminale.';st.phase='rig';setUI();});return;}
   // zona verde: fino al massimo dello stile; con poca potenza anche solo 10 m; oltre la zona verde il lancio si sporca
   const GR=st.gear,M=S.max*(ROD[GR.rod]?.mul||1)*(1+(.25-GR.line)*.8),base=green?M*(1-Math.abs(p-gm)*.45):p<g0?lerp(10,M*.92,Math.pow(p/g0,1.15)):lerp(M*.92,M*.4,(p-g1)/(1-g1));
@@ -1352,7 +1352,7 @@ function doCast(){const c=st.cast;c.on=false;const r=st.rods[st.sel],w=wxAt(st.g
     // il piombo vola: parabola dalla cima al punto d'arrivo
     const tip=new T.Vector3();r.obj.userData.tip.getWorldPosition(tip);if(L0)tip.copy(L0.p);const drift=(Math.sin((w.wd-FACE)*R))*w.ws/40*3;const end=new T.Vector3(r.x+drift+rnd(-S.spr,S.spr)+(st.castStyle==='side'?S.spr*.5:0),0,-dist);
     r.flight={a:tip.clone(),b:end,t:0,dur:1.1+dist/120,low:st.castStyle==='side'};r.sinker.visible=true;r.dist=0.01;r.state='flying';
-    await sleep(r.flight.dur);splash();burst(end,1);r.flight=null;r.dist=dist;r.sx=end.x;r.sz=end.z;r.state='fishing';r.landT=st.gt;
+    await sleep(r.flight.dur);splash();burst(end,1);r.flight=null;setTimeout(()=>{st.castCam=false;CAM.cl=null;},700);r.dist=dist;r.sx=end.x;r.sz=end.z;r.state='fishing';r.landT=st.gt;
     st.msg=(q>=1?`Lancio ${S.n} perfetto: ${Math.round(dist)} m!`:q>.8?`Buon lancio ${S.n}: ${Math.round(dist)} m`:`Lancio ${S.n} corto: ${Math.round(dist)} m`);checkTangle(r);setUI();
     st.castAnim=null;pose('hold');await sleep(.6);await putRod(st.sel);await stepBack(st.sel);st.phase='wait';if(r.state!=='tangled')st.msg='Tocca la sedia per sederti, o un\'altra canna per andarci.';setUI();});}
 
@@ -1777,6 +1777,11 @@ function updEnv(w,t,dt){const d=gameDate(),s0=sunPos(d,SPOT.lat,SPOT.lon),sun=su
 const CAM={p:null,l:null};
 function updCam(dt,t){let p,l;const a=AN.pos;
   if(G.camOv){camera.position.set(...G.camOv.p);camera.lookAt(...G.camOv.l);return;}
+  if(st.castCam&&AN.obj){const a=AN.rotY,fx=-Math.sin(a),fz=-Math.cos(a),rx=-fz,rz=fx,P=AN.pos;
+    // di lato e un po' davanti, a 6,5 m: si vede tutto il pescatore con la canna; quando il piombo vola lo segue verso il mare
+    const tp=new T.Vector3(P.x+rx*6.2+fx*2.2,P.y+1.7,P.z+rz*6.2+fz*2.2),r=st.rods[st.sel];let look=new T.Vector3(P.x+fx*.6,P.y+1.25,P.z+fz*.6);
+    if(r?.flight){const s2=r.sinker.position;look=look.lerp(s2,clamp(r.flight.t*1.2,0,.85));tp.lerp(new T.Vector3(P.x+rx*9+fx*6,P.y+3,P.z+rz*9+fz*6),clamp(r.flight.t,0,1));}
+    camera.position.lerp(tp,Math.min(1,dt*3));CAM.cl=CAM.cl?CAM.cl.lerp(look,Math.min(1,dt*5)):look.clone();camera.lookAt(CAM.cl);return;}
   if(st.showFish&&AN.obj){{const J=AN.obj.userData.J,h1=new T.Vector3(),h2=new T.Vector3();J.lHand.getWorldPosition(h1);J.rHand.getWorldPosition(h2);const m=h1.add(h2).multiplyScalar(.5);m.y-=.04;AN.obj.worldToLocal(m);st.showFish.model.position.lerp(m,.5);}const a=AN.rotY,fx=-Math.sin(a),fz=-Math.cos(a),fp=new T.Vector3();st.showFish.model.getWorldPosition(fp);const tp=new T.Vector3(AN.pos.x+fx*1.45-fz*.35,AN.pos.y+1.4,AN.pos.z+fz*1.45+fx*.35);
     camera.position.lerp(tp,Math.min(1,dt*4));camera.lookAt(fp.x,fp.y+.08,fp.z);return;}
   if(st.follow){const v=st.follow.position,boat=VEH.type==='boat';p=new T.Vector3(v.x+2,v.y+(boat?3.5:6),v.z+(boat?9:11));l=new T.Vector3(v.x,boat?0:v.y-4,v.z-8);}
