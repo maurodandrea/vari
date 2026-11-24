@@ -1808,9 +1808,11 @@ const CAM={p:null,l:null};
 function updCam(dt,t){let p,l;const a=AN.pos;
   if(G.camOv){camera.position.set(...G.camOv.p);camera.lookAt(...G.camOv.l);return;}
   if(st.castCam&&AN.obj){const a=AN.rotY,fx=-Math.sin(a),fz=-Math.cos(a),rx=-fz,rz=fx,P=AN.pos;
-    // di lato e un po' davanti, a circa 12 m: si vede tutto il pescatore con la canna; quando il piombo vola lo segue verso il mare
-    const tp=new T.Vector3(P.x+rx*11.5+fx*3,P.y+2.3,P.z+rz*11.5+fz*3),r=st.rods[st.sel];let look=new T.Vector3(P.x+fx*.8,P.y+1.9,P.z+fz*.8);
-    if(r?.flight){const s2=r.sinker.position;look=look.lerp(s2,clamp(r.flight.t*1.2,0,.85));tp.lerp(new T.Vector3(P.x+rx*14+fx*8,P.y+4,P.z+rz*14+fz*8),clamp(r.flight.t,0,1));}
+    // di lato e un po' davanti, a circa 22 m: si vede tutto il pescatore con la canna; quando il piombo vola lo segue verso il mare
+    const tp=new T.Vector3(P.x+rx*21+fx*5,P.y+3.2,P.z+rz*21+fz*5),r=st.rods[st.sel];let look=new T.Vector3(P.x+fx*.8,P.y+2.3,P.z+fz*.8);
+    // da lontano ma con il teleobiettivo: pescatore e canna riempiono l'inquadratura senza la deformazione del grandangolo
+    {const fw=(camera.aspect<1?34:24)*(r?.flight?1.6:1);if(Math.abs(camera.fov-fw)>.05){camera.fov=lerp(camera.fov,fw,Math.min(1,dt*3));camera.updateProjectionMatrix();}}
+    if(r?.flight){const s2=r.sinker.position;look=look.lerp(s2,clamp(r.flight.t*1.2,0,.85));tp.lerp(new T.Vector3(P.x+rx*26+fx*10,P.y+6,P.z+rz*26+fz*10),clamp(r.flight.t,0,1));}
     camera.position.lerp(tp,Math.min(1,dt*3));CAM.cl=CAM.cl?CAM.cl.lerp(look,Math.min(1,dt*5)):look.clone();camera.lookAt(CAM.cl);return;}
   if(st.showFish&&AN.obj){{const J=AN.obj.userData.J,h1=new T.Vector3(),h2=new T.Vector3();J.lHand.getWorldPosition(h1);J.rHand.getWorldPosition(h2);const m=h1.add(h2).multiplyScalar(.5);m.y-=.04;AN.obj.worldToLocal(m);st.showFish.model.position.lerp(m,.5);}const a=AN.rotY,fx=-Math.sin(a),fz=-Math.cos(a),fp=new T.Vector3();st.showFish.model.getWorldPosition(fp);const tp=new T.Vector3(AN.pos.x+fx*1.45-fz*.35,AN.pos.y+1.4,AN.pos.z+fz*1.45+fx*.35);
     camera.position.lerp(tp,Math.min(1,dt*4));camera.lookAt(fp.x,fp.y+.08,fp.z);return;}
