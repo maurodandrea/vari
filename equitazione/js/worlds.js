@@ -363,12 +363,12 @@ EQ.buildYard=function(){
   // zone
   patch(W,-14,14,76,34,TX.gravel(),5,.012);
   patch(W,0,-4,8,10,TX.gravel(),5,.012);
-  const A={cx:0,cz:-32,hx:34,hz:22}; W.spots.arena=A;
+  const A={cx:-20,cz:-54,hx:62,hz:42}; W.spots.arena=A;
   patch(W,A.cx,A.cz,A.hx*2,A.hz*2,TX.sand(),4,.02,1);
   W.surface=(x,z)=>{
     if(Math.abs(x-A.cx)<A.hx&&Math.abs(z-A.cz)<A.hz)return'sand';
-    if(x>-77&&x<-43&&z>-65&&z<-25)return'sand';
-    if(x>24&&x<48&&z>6&&z<32)return'sand';
+    if(x>-79&&x<-11&&z>-190&&z<-110)return'sand';
+    if(x>-6&&x<42&&z>-176&&z<-124)return'sand';
     if(x>-52&&x<24&&z>-3&&z<31)return'hard';
     if(Math.abs(x-24)<16&&Math.abs(z-45)<7)return'hard';
     if((x>45&&x<75&&z>37&&z<53)||(x>53&&x<75&&z>5&&z<31)||(x>53&&x<75&&z>-39&&z<-9))return'dirt';
@@ -385,14 +385,14 @@ EQ.buildYard=function(){
    seg(-ax,-az,ax,-az);seg(-ax,-az,-ax,az);seg(ax,-az,ax,az);seg(-ax,az,-3.5,az);seg(3.5,az,ax,az);
    mesh(EQ.merge(geos),fw,0,0,0,grp);
    // cancello del campo (chiuso solo in gara)
-   const gate=new THREE.Group();grp.add(gate);for(const y of [.5,.95])mesh(G.box(7,.13,.07),mat(0xc0392b,.5),0,y,A.cz+az,gate);
-   W.arenaGate=gate; gate.visible=false; W.gateColl={x:0,z:A.cz+az,hx:3.5,hz:.15,off:true,h:1.1}; W.colliders.push(W.gateColl);
+   const gate=new THREE.Group();grp.add(gate);for(const y of [.5,.95])mesh(G.box(7,.13,.07),mat(0xc0392b,.5),A.cx,y,A.cz+az,gate);
+   W.arenaGate=gate; gate.visible=false; W.gateColl={x:A.cx,z:A.cz+az,hx:3.5,hz:.15,off:true,h:1.1}; W.colliders.push(W.gateColl);
    const words=['EQUITAPP','CIRCOLO IPPICO','SCUDERIA','SALTO OSTACOLI','BRAVA!','GRAN PREMIO'];const bc=['#2f6b33','#c0392b','#1d4ed8','#7c3aed','#d97706','#0f766e'];
    let k=0;const board=(x,z,ry)=>{const t=EQ.labelTex(words[k%6],{bg:bc[k%6],w:512,h:96,radius:6,font:'bold 54px Fredoka, Trebuchet MS, sans-serif'});k++;W.tex.push(t);const m=mesh(new THREE.PlaneGeometry(4,.75),new THREE.MeshStandardMaterial({map:t,roughness:.6}),x,.45,z,grp);m.rotation.y=ry;};
-   for(let x=-28;x<=28;x+=11)board(x,A.cz-az+.08,0);
-   for(let z=-14;z<=14;z+=9){board(A.cx-ax+.08,A.cz+z,Math.PI/2);board(A.cx+ax-.08,A.cz+z,-Math.PI/2);}
+   for(let x=-ax+8;x<=ax-8;x+=12)board(A.cx+x,A.cz-az+.08,0);
+   for(let z=-az+8;z<=az-8;z+=12){board(A.cx-ax+.08,A.cz+z,Math.PI/2);board(A.cx+ax-.08,A.cz+z,-Math.PI/2);}
   }
-  W.spots.gateIn={x:0,z:A.cz+A.hz+3};
+  W.spots.gateIn={x:A.cx,z:A.cz+A.hz+3};
   /* ---- scuderia con box ---- */
   const SB={x0:-52,x1:-20,z0:18,z1:23,n:8}; const bw=(SB.x1-SB.x0)/SB.n;
   const plaster=TX.plaster('#efe6d6'), woodT=TX.wood('#8a5a34'), woodD=TX.wood('#6b4226');
@@ -516,21 +516,23 @@ EQ.buildYard=function(){
   W.spots.paddock={x0:24,x1:48,z0:6,z1:32};
   woodFence(W,[[34,6],[24,6],[24,32],[48,32],[48,6],[38,6]],{h:1.3,rails:3});
   /* campo 3: giro libero (solo il giocatore) */
-  patch(W,36,19,24,26,TX.sand('#c9a878'),4,.02,1);W.spots.free={cx:36,cz:19,hx:12,hz:13};
-  sign(W,'🐴 CAMPO LIBERO · solo tu',36,2.1,5.2,0,3.6,.55,'#7a5230').rotation.y=Math.PI;
+  {const Fq={cx:18,cz:-150,hx:24,hz:26};W.spots.free=Fq;patch(W,Fq.cx,Fq.cz,Fq.hx*2,Fq.hz*2,TX.sand('#c9a878'),4,.02,1);
+   const x0=Fq.cx-Fq.hx,x1=Fq.cx+Fq.hx,z0=Fq.cz-Fq.hz,z1=Fq.cz+Fq.hz;
+   woodFence(W,[[Fq.cx-3.5,z1],[x0,z1],[x0,z0],[x1,z0],[x1,z1],[Fq.cx+3.5,z1]],{h:1.2,rails:3,white:true,post:3});
+   sign(W,'🐴 CAMPO LIBERO · solo tu',Fq.cx,2.1,z1+.3,0,3.6,.55,'#7a5230');}
   /* campo 2: addestramento con Carlo */
-  {const A2={cx:-60,cz:-45,hx:17,hz:20};W.spots.arena2=A2;patch(W,A2.cx,A2.cz,A2.hx*2,A2.hz*2,TX.sand(),4,.02,1);
+  {const A2={cx:-45,cz:-150,hx:34,hz:40};W.spots.arena2=A2;patch(W,A2.cx,A2.cz,A2.hx*2,A2.hz*2,TX.sand(),4,.02,1);
    const geos=[];const seg=(x1,z1,x2,z2)=>{const L=Math.hypot(x2-x1,z2-z1),a=Math.atan2(z2-z1,x2-x1),n=Math.max(1,Math.round(L/3));for(let i=0;i<=n;i++){const t=i/n;geos.push(EQ.xform(G.box(.15,1.3,.15),x1+(x2-x1)*t,.65,z1+(z2-z1)*t));}
      for(const y of [.5,.95])geos.push(EQ.xform(G.box(L,.13,.07),(x1+x2)/2,y,(z1+z2)/2,0,-a,0));W.colliders.push({x:(x1+x2)/2,z:(z1+z2)/2,hx:L/2,hz:.15,rot:a,fence:true,h:1.1});};
    const x0=A2.cx-A2.hx,x1=A2.cx+A2.hx,z0=A2.cz-A2.hz,z1=A2.cz+A2.hz;
    seg(x0,z0,x1,z0);seg(x0,z0,x0,z1);seg(x1,z0,x1,z1);seg(x0,z1,A2.cx-3.5,z1);seg(A2.cx+3.5,z1,x1,z1);
    mesh(EQ.merge(geos),mat(0xf6f6f2,.55),0,0,0,grp);
    sign(W,'🐎 CAMPO ADDESTRAMENTO · Carlo',A2.cx,2.2,z1+.3,Math.PI,4.2,.55,'#5a2e14').rotation.y=0;}
-  sign(W,'🎓 CAMPO LEZIONI · Betta',0,2.2,A.cz+A.hz+.3,0,3.8,.55,'#2f6b33');
+  sign(W,'🎓 CAMPO LEZIONI · Betta',A.cx,2.2,A.cz+A.hz+.3,0,3.8,.55,'#2f6b33');
   /* ---- altre scuderie (cavalli degli altri cavalieri) ---- */
   W.heads=[];
   W.spots.stableB=stableBlock(W,-32,40,0,10);
-  W.spots.stableC=stableBlock(W,-10,-72,Math.PI,10);
+  W.spots.stableC=stableBlock(W,-32,48.6,0,10);
   W.updaters.push((dt,t,p)=>{if(p&&Math.hypot(p.x+20,p.z+10)>160)return;W.heads.forEach(h=>{h.t+=dt;h.bt-=dt;if(h.bt<0){h.bt=rnd(2,7);h.ly=rnd(-.6,.6);h.lx=Math.random()<.25?.5:rnd(-.1,.25);}
     h.neck.rotation.y=U.lerp(h.neck.rotation.y,h.ly,Math.min(1,dt*2));h.neck.rotation.x=U.lerp(h.neck.rotation.x,h.lx,Math.min(1,dt*2));
     h.ears.forEach((e,i)=>e.rotation.x=-.85+(Math.sin(h.t*1.3+i*2)>.85?.5:0));});});
@@ -607,12 +609,12 @@ EQ.buildYard=function(){
      W.spots.dirtPads.push({x,z,hx,hz});});
   }
   // alberi e siepi
-  const busy=[[-80,-68,-40,-22],[44,-200,54,2],[6,36,42,54],[44,36,78,54],[52,4,78,32],[52,-40,78,-8],[-54,35,-10,47],[-32,-80,12,-66],[6,17,22,31],[22,4,50,34],[-62,16,-8,26],[210,50,310,130],[-250,-120,-150,-60]];
+  const busy=[[-86,-202,46,-90],[44,-200,54,2],[6,36,42,54],[44,36,78,54],[52,4,78,32],[52,-40,78,-8],[-54,35,-10,55],[6,17,22,31],[22,4,50,34],[-62,16,-8,26],[210,50,310,130],[-250,-120,-150,-60]];
   const freeT=(x,z)=>!busy.some(b=>x>b[0]-2&&x<b[2]+2&&z>b[1]-2&&z<b[3]+2)&&W.roadD(x,z)>7&&!(Math.abs(x-A.cx)<A.hx+4&&Math.abs(z-A.cz)<A.hz+4)&&!FIELDS.some(f=>Math.abs(x-f[0])<f[2]/2+2&&Math.abs(z-f[1])<f[3]/2+2);
   const trees=[];
   for(let x=-78;x<=74;x+=8){for(const z of [52,-82]){const t={x:x+rnd(-1,1),z:z+rnd(-1.5,1.5),s:rnd(.8,1.1),ry:rnd(0,TAU)};if(freeT(t.x,t.z))trees.push(t);}}
   for(let z=-78;z<=48;z+=8){for(const x of [-80,76]){const t={x:x+rnd(-1.5,1.5),z:z+rnd(-1,1),s:rnd(.8,1.1),ry:rnd(0,TAU)};if(freeT(t.x,t.z))trees.push(t);}}
-  for(let i=0,k=0;i<420*Q()&&k<6000;k++){const x=rnd(-470,470),z=rnd(-200,470);if(x>-95&&x<92&&z>-96&&z<64)continue;if(!freeT(x,z))continue;trees.push({x,z,s:rnd(.8,1.35),ry:rnd(0,TAU)});i++;}
+  for(let i=0,k=0;i<420*Q()&&k<6000;k++){const x=rnd(-470,470),z=rnd(-200,470);if(x>-95&&x<92&&z>-204&&z<64)continue;if(!freeT(x,z))continue;trees.push({x,z,s:rnd(.8,1.35),ry:rnd(0,TAU)});i++;}
   // filari lungo le strade
   [rE,rN,rW].forEach(r=>r.pts.forEach((p,i)=>{if(i%9||Math.hypot(p.x,p.z)<100)return;const q=r.pts[Math.min(r.pts.length-1,i+1)];const dx=q.x-p.x,dz=q.z-p.z,l=Math.hypot(dx,dz)||1;for(const sd of [-1,1]){const x=p.x-dz/l*sd*7,z=p.z+dx/l*sd*7;trees.push({x,z,s:rnd(.8,1.05),ry:rnd(0,3),pop:r===rN});}}));
   addTrees(W,'oak',trees.filter(t=>!t.pop),[0x7aa64a,0x6e9a3e,0x8ab456,0x5f8a34],.45);
@@ -627,7 +629,7 @@ EQ.buildYard=function(){
    grp.add(inst(G.cyl(.06,.09,3.6,8),mat(0x2a2a2a,.4,.6),L.map(a=>({x:a.x,y:1.8,z:a.z}))));
    grp.add(inst(G.sph(.22,10,8),new THREE.MeshStandardMaterial({color:0xfff6d0,emissive:C(0x554422),roughness:.2}),L.map(a=>({x:a.x,y:3.7,z:a.z}))));}
   // recinzione esterna
-  woodFence(W,[[-5,56],[-84,56],[-84,-10]],{h:1.3,rails:2,post:3});woodFence(W,[[54.2,-86],[80,-86],[80,-5]],{h:1.3,rails:2,post:3});woodFence(W,[[-84,-22],[-84,-86],[43.4,-86]],{h:1.3,rails:2,post:3});woodFence(W,[[80,5],[80,56],[5,56]],{h:1.3,rails:2,post:3});
+  woodFence(W,[[-5,56],[-84,56],[-84,-10]],{h:1.3,rails:2,post:3});woodFence(W,[[54.2,-86],[80,-86],[80,-5]],{h:1.3,rails:2,post:3});woodFence(W,[[-84,-22],[-84,-198],[44,-198],[44,-90]],{h:1.3,rails:2,post:3});woodFence(W,[[80,5],[80,56],[5,56]],{h:1.3,rails:2,post:3});
   W.bounds={x0:-470,x1:470,z0:-200,z1:470};
   W.spawn={x:12,z:45,h:-2.4};W.spawnRide={x:30,z:0,h:Math.PI/2};
   /* stanza spogliatoio (interno), lontana dal resto */
@@ -1061,10 +1063,10 @@ EQ.buildShow=function(){
   W.sky={elev:40,azim:160,turb:3,ray:1.3,fog:0xb3c8d8,near:100,far:500};
   const grp=W.group;
   ground(W,1000,TX.grass(),160);
-  const A={cx:0,cz:0,hx:50,hz:34};W.spots.arena=A;
+  const A={cx:0,cz:0,hx:70,hz:48};W.spots.arena=A;
   patch(W,0,0,A.hx*2,A.hz*2,TX.sand(),4,.02,1);
-  patch(W,0,-55,30,16,TX.gravel(),5,.012);
-  W.surface=(x,z)=>Math.abs(x)<A.hx&&Math.abs(z)<A.hz?'sand':(Math.abs(x)<15&&z<-47&&z>-63)?'hard':'grass';
+  patch(W,0,-72,30,16,TX.gravel(),5,.012);
+  W.surface=(x,z)=>Math.abs(x)<A.hx&&Math.abs(z)<A.hz?'sand':(Math.abs(x)<15&&z<-64&&z>-80)?'hard':'grass';
   const fw=mat(0xf6f6f2,.55);
   {const geos=[];const ax=A.hx,az=A.hz;
    const seg=(x1,z1,x2,z2)=>{const L=Math.hypot(x2-x1,z2-z1),a=Math.atan2(z2-z1,x2-x1),n=Math.round(L/3);for(let i=0;i<=n;i++){const t=i/n;geos.push(EQ.xform(G.box(.15,1.3,.15),x1+(x2-x1)*t,.65,z1+(z2-z1)*t));}
@@ -1076,8 +1078,8 @@ EQ.buildShow=function(){
    W.arenaGate=gate;gate.visible=false;W.gateColl={x:0,z:-az,hx:3.5,hz:.15,off:true,h:1.1};W.colliders.push(W.gateColl);
    const words=['GRAN PREMIO','EQUITAPP','CONCORSO IPPICO','SALTO OSTACOLI','CAMPIONATO','BRAVI!'];const bc=['#c0392b','#2f6b33','#1d4ed8','#7c3aed','#d97706','#0f766e'];
    let k=0;const board=(x,z,ry)=>{const t=EQ.labelTex(words[k%6],{bg:bc[k%6],w:512,h:96,radius:6,font:'bold 54px Fredoka, Trebuchet MS, sans-serif'});k++;W.tex.push(t);const m=mesh(new THREE.PlaneGeometry(4,.75),new THREE.MeshStandardMaterial({map:t,roughness:.6}),x,.45,z,grp);m.rotation.y=ry;};
-   for(let x=-44;x<=44;x+=11)board(x,az-.08,Math.PI);
-   for(let z=-27;z<=27;z+=9){board(-ax+.08,z,Math.PI/2);board(ax-.08,z,-Math.PI/2);}}
+   for(let x=-62;x<=62;x+=12)board(x,az-.08,Math.PI);
+   for(let z=-40;z<=40;z+=10){board(-ax+.08,z,Math.PI/2);board(ax-.08,z,-Math.PI/2);}}
   // tribune su tre lati
   W.spots.standsList=[];
   const conc=new THREE.MeshStandardMaterial({map:TX.concrete(),roughness:.85});
@@ -1086,24 +1088,24 @@ EQ.buildShow=function(){
     mesh(G.box(len+2,.2,9.8),mat(0xf2f2f2,.5),0,6.4,3.9,g);for(let xx=-len/2;xx<=len/2+.1;xx+=len/4)mesh(G.box(.2,6.4,.2),mat(0x666666,.5,.5),xx,3.2,8.6,g);
     mesh(G.box(len,3.4,.15),conc,0,1.7,8.4,g);W.spots.standsList.push({g,rows:6,step:.5,depth:1.4,len});
     g.updateMatrixWorld(true);const c=g.localToWorld(new V3(0,0,4.3));W.colliders.push({x:c.x,z:c.z,hx:len/2+.3,hz:4.5,rot:-ry});};
-  stand(0,A.hz+3.2,0,96,[0xc0392b,0xffffff]);stand(A.hx+3.2,0,Math.PI/2,64,[0x1d4ed8,0xffffff]);stand(-A.hx-3.2,0,-Math.PI/2,64,[0x2f6b33,0xffffff]);
+  stand(0,A.hz+3.2,0,136,[0xc0392b,0xffffff]);stand(A.hx+3.2,0,Math.PI/2,92,[0x1d4ed8,0xffffff]);stand(-A.hx-3.2,0,-Math.PI/2,92,[0x2f6b33,0xffffff]);
   // torre della giuria e tabellone
-  {const g=new THREE.Group();g.position.set(40,0,-44);grp.add(g);for(const [x,z] of [[-1.5,-1.5],[1.5,-1.5],[-1.5,1.5],[1.5,1.5]])mesh(G.box(.2,3,.2),mat(0xffffff,.6),x,1.5,z,g);
+  {const g=new THREE.Group();g.position.set(56,0,-60);grp.add(g);for(const [x,z] of [[-1.5,-1.5],[1.5,-1.5],[-1.5,1.5],[1.5,1.5]])mesh(G.box(.2,3,.2),mat(0xffffff,.6),x,1.5,z,g);
    mesh(G.box(3.6,.2,3.6),mat(0x5a3418,.6),0,3,0,g);mesh(G.box(3.6,2,3.6),mat(0x2f6b33,.6),0,4.1,0,g);mesh(G.box(3.4,.9,.06),new THREE.MeshStandardMaterial({color:C(0x88a8c0),roughness:.1,metalness:.3}),0,4.4,1.82,g);
-   mesh(roofGeo(4.2,4.2,1),mat(0xc0392b,.6),0,5.1,0,g);sign(W,'GIURIA',40,6.6,-42.1,0,2.4,.5,'#c0392b');W.colliders.push({x:40,z:-44,hx:2,hz:2});W.spots.judges={x:40,y:3.1,z:-44};
+   mesh(roofGeo(4.2,4.2,1),mat(0xc0392b,.6),0,5.1,0,g);sign(W,'GIURIA',56,6.6,-58.1,0,2.4,.5,'#c0392b');W.colliders.push({x:56,z:-60,hx:2,hz:2});W.spots.judges={x:56,y:3.1,z:-60};
    const sb=EQ.labelTex('🏆 GRAN PREMIO EQUITAPP',{bg:'#111827',fg:'#ffd23f',w:1024,h:160,font:'bold 70px Fredoka, Trebuchet MS, sans-serif'});W.tex.push(sb);
-   for(const x of [-6,6])mesh(G.box(.3,6,.3),mat(0x444444,.4,.6),-40+x,3,-44,grp);mesh(new THREE.PlaneGeometry(13,2),new THREE.MeshBasicMaterial({map:sb}),-40,5.4,-43.8,grp);W.colliders.push({x:-40,z:-44,hx:6.5,hz:.4});}
+   for(const x of [-6,6])mesh(G.box(.3,6,.3),mat(0x444444,.4,.6),-56+x,3,-60,grp);mesh(new THREE.PlaneGeometry(13,2),new THREE.MeshBasicMaterial({map:sb}),-56,5.4,-59.8,grp);W.colliders.push({x:-56,z:-60,hx:6.5,hz:.4});}
   // bandiere
-  {const fc=[0xc0392b,0x1d4ed8,0xf1c40f,0x2f6b33,0xffffff,0x7c3aed];let i=0;for(let x=-45;x<=45;x+=10){for(const z of [-A.hz-3]){mesh(G.cyl(.05,.06,7,6),mat(0xdddddd,.4,.6),x,3.5,z,grp);const f=mesh(G.box(.02,.9,1.4),mat(fc[i++%6],.7),x,6.4,z+.7,grp);}}}
+  {const fc=[0xc0392b,0x1d4ed8,0xf1c40f,0x2f6b33,0xffffff,0x7c3aed];let i=0;for(let x=-65;x<=65;x+=10){for(const z of [-A.hz-3]){mesh(G.cyl(.05,.06,7,6),mat(0xdddddd,.4,.6),x,3.5,z,grp);const f=mesh(G.box(.02,.9,1.4),mat(fc[i++%6],.7),x,6.4,z+.7,grp);}}}
   // camion e campo prova
-  {const tr=EQ.buildHorseTruck();tr.position.set(-8,0,-55);grp.add(tr);W.colliders.push({x:-8,z:-55,hx:1.4,hz:4.4});W.spots.truck={x:-8,z:-55,ramp:{x:-8,z:-61}};
-   const tr2=EQ.buildHorseTruck(0xf4f4f2,0x1d4ed8);tr2.position.set(-14,0,-55);grp.add(tr2);W.colliders.push({x:-14,z:-55,hx:1.4,hz:4.4});
-   patch(W,48,-62,28,20,TX.sand(),4,.02,1);woodFence(W,[[34,-72],[62,-72],[62,-52],[34,-52],[34,-58]],{h:1.2,rails:2,white:true});W.spots.warm={x:48,z:-62,hx:14,hz:10};}
+  {const tr=EQ.buildHorseTruck();tr.position.set(-8,0,-72);grp.add(tr);W.colliders.push({x:-8,z:-72,hx:1.4,hz:4.4});W.spots.truck={x:-8,z:-72,ramp:{x:-8,z:-78}};
+   const tr2=EQ.buildHorseTruck(0xf4f4f2,0x1d4ed8);tr2.position.set(-14,0,-72);grp.add(tr2);W.colliders.push({x:-14,z:-72,hx:1.4,hz:4.4});
+   patch(W,48,-84,28,20,TX.sand(),4,.02,1);woodFence(W,[[34,-94],[62,-94],[62,-74],[34,-74],[34,-80]],{h:1.2,rails:2,white:true});W.spots.warm={x:48,z:-84,hx:14,hz:10};}
   // alberi
-  {const tr=[];for(let i=0;i<220*Q();i++){const a=rnd(0,TAU),r=rnd(105,280);tr.push({x:Math.cos(a)*r,z:Math.sin(a)*r,s:rnd(.8,1.3),ry:rnd(0,TAU)});}addTrees(W,'oak',tr,[0x6e9a3e,0x7aa64a,0x5f8a34],.45);
-   const L=[];for(let i=0;i<1500*Q();i++){const x=rnd(-140,140),z=rnd(-140,140);if(W.surface(x,z)!=='grass'||(Math.abs(x)<66&&Math.abs(z)<50)||(x>32&&x<64&&z<-50&&z>-74))continue;L.push({x,z,ry:rnd(0,3),s:rnd(.6,1.3)});}tufts(W,L);}
-  W.bounds={x0:-150,x1:150,z0:-110,z1:110};
-  W.spawn={x:-2,z:-46,h:0};W.spawnRide=W.spawn;
+  {const tr=[];for(let i=0;i<220*Q();i++){const a=rnd(0,TAU),r=rnd(135,300);tr.push({x:Math.cos(a)*r,z:Math.sin(a)*r,s:rnd(.8,1.3),ry:rnd(0,TAU)});}addTrees(W,'oak',tr,[0x6e9a3e,0x7aa64a,0x5f8a34],.45);
+   const L=[];for(let i=0;i<1500*Q();i++){const x=rnd(-170,170),z=rnd(-170,170);if(W.surface(x,z)!=='grass'||(Math.abs(x)<86&&Math.abs(z)<66)||(x>32&&x<64&&z<-72&&z>-96))continue;L.push({x,z,ry:rnd(0,3),s:rnd(.6,1.3)});}tufts(W,L);}
+  W.bounds={x0:-180,x1:180,z0:-130,z1:130};
+  W.spawn={x:-2,z:-63,h:0};W.spawnRide=W.spawn;
   W.updaters.push((dt,t,p)=>{EQ.loop('crowd',.016+.006*Math.sin(t*.3),420,.4,'lowpass');});
   return W;
 };
