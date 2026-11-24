@@ -1135,7 +1135,7 @@ const CAT=[
     {id:'bagBack',n:'Zaino da surfcasting 45 l',d:'Mani libere per portare tutto in spiaggia.',p:()=>49},
     {id:'cart',n:'Carrello da spiaggia con ruote larghe',d:'Porta tutta l\'attrezzatura senza fatica sulla sabbia.',p:()=>89}]},
   {k:'abbigliamento',n:'🧥 Abbigliamento',items:[
-    {id:'o_neo',outfit:'neo',n:'Scafandro in neoprene 4 mm',d:'Caldo anche d\'inverno: entri in acqua senza congelarti.',p:()=>119},
+    {id:'o_neo',outfit:'neo',n:'Scafandro in neoprene 4 mm',d:'Caldo anche d\'inverno: entri in acqua senza congelarti.',p:()=>59},
     {id:'o_thermo',outfit:'thermo',n:'Giacca impermeabile termica',d:'Imbottita e antipioggia, cappuccio e polsini stagni.',p:()=>89},
     {id:'o_wind',outfit:'wind',n:'Tuta antivento',d:'Leggera, blocca il vento di tramontana.',p:()=>49},
     {id:'o_float',outfit:'float',n:'Giacca galleggiante arancione',d:'Visibile e sicura sugli scogli.',p:()=>99},
