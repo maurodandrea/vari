@@ -1104,7 +1104,7 @@ EQ.buildShow=function(){
    const L=[];for(let i=0;i<1500*Q();i++){const x=rnd(-140,140),z=rnd(-140,140);if(W.surface(x,z)!=='grass'||(Math.abs(x)<66&&Math.abs(z)<50)||(x>32&&x<64&&z<-50&&z>-74))continue;L.push({x,z,ry:rnd(0,3),s:rnd(.6,1.3)});}tufts(W,L);}
   W.bounds={x0:-150,x1:150,z0:-110,z1:110};
   W.spawn={x:-2,z:-46,h:0};W.spawnRide=W.spawn;
-  W.updaters.push((dt,t,p)=>{EQ.loop('crowd',.05+.02*Math.sin(t*.3),900,.3);});
+  W.updaters.push((dt,t,p)=>{EQ.loop('crowd',.016+.006*Math.sin(t*.3),420,.4,'lowpass');});
   return W;
 };
 
