@@ -273,6 +273,7 @@ const POSES={
   hold:{hy:.95,sp:[-.05,0,0],hd:[-.05,0,0],lSh:[.75,0,.25],rSh:[.85,0,-.05],lEl:[1.1,0,0],rEl:[.85,0,0],lHip:[.05,0,0],rHip:[-.1,0,0],lKnee:[-.05,0,0],rKnee:[-.1,0,0],rod:{p:45,f:0}},
   castBack:{hy:.93,sp:[.2,.55,0],hd:[-.1,-.3,0],lSh:[2.5,0,.3],rSh:[2.8,0,-.3],lEl:[.6,0,0],rEl:[.4,0,0],lHip:[.15,0,0],rHip:[-.35,0,0],lKnee:[-.1,0,0],rKnee:[-.25,0,0],rod:{p:128,f:0,y:.35}},
   castFwd:{hy:.92,sp:[-.3,-.3,0],hd:[-.15,.2,0],lSh:[1.1,0,.2],rSh:[1.5,0,-.1],lEl:[.3,0,0],rEl:[.2,0,0],lHip:[-.3,0,0],rHip:[.25,0,0],lKnee:[-.3,0,0],rKnee:[-.05,0,0],rod:{p:25,f:0,y:-.1}},
+  showFish:{hy:.95,sp:[.04,0,0],hd:[.25,0,0],lSh:[.45,0,.42],rSh:[.45,0,-.42],lEl:[1.05,0,0],rEl:[1.05,0,0],lHip:[0,0,0],rHip:[0,0,0],lKnee:[0,0,0],rKnee:[0,0,0],rod:null},
   strike:{hy:.96,sp:[.3,.1,0],hd:[-.25,0,0],lSh:[2.4,0,.3],rSh:[2.5,0,-.2],lEl:[.5,0,0],rEl:[.4,0,0],lHip:[-.2,0,0],rHip:[.25,0,0],lKnee:[-.1,0,0],rKnee:[-.25,0,0],rod:{p:80,f:0}},
   reel:{hy:.93,sp:[.12,.05,0],hd:[-.1,0,0],lSh:[.9,0,.35],rSh:[1.15,0,-.05],lEl:[1.25,0,0],rEl:[.7,0,0],lHip:[-.15,0,0],rHip:[.2,0,0],lKnee:[-.12,0,0],rKnee:[-.2,0,0],rod:{p:42,f:0}},
 };
@@ -982,7 +983,7 @@ G.rback=()=>{st.phase='wait';st.msg='';setUI();};
 G.rsend=()=>{const el=document.getElementById('grtx'),txt=(el?.value||'').trim().slice(0,200),C=rpCloud(),a=RP.list.get(st.rtalk);if(!txt||!C||!a)return;el.value='';
   C.ff.setDoc(C.ff.doc(C.db,'gamemsgs',C.user.uid+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,6)),{from:C.user.uid,name:C.name()||'Pescatore',to:a.id,spot:SPOT.id,text:txt,t:Date.now()}).catch(e=>{st.msg='Messaggio non inviato: '+(e.code||e.message);});
   (RP.log[a.id]=RP.log[a.id]||[]).push({me:true,text:txt});say(AN,txt,6);const lg=document.getElementById('grlog');if(lg)lg.innerHTML=rpLog(a.id);};
-G._rp=RP;G._bolt=()=>strikeBolt();
+G._rp=RP;G._bolt=()=>strikeBolt();G._land=n=>{const sp=SP.find(x=>x.n===n);const r=st.rods[0];st.sel=0;r.held=true;AN.holding=0;r.bait="bibi";const w=sp.w[1]*1.6;st.fight={r,sp,w,len:lenOf(sp,w),dist:0,ten:.3,reel:false,drag:5,run:0,slack:0,t:0,pow:1};endFight(true);};G._jump=n=>{const sp=SP.find(x=>x.n===n);const r=st.rods[1];r.dist=20;r.sz=-90;const w=sp.w[2];st.fight={r,sp,w,len:lenOf(sp,w),dist:20,ten:.3,run:0,slack:0,t:0,pow:1,jump:{t:0}};st.fight.obj=makeFish3D(sp,st.fight.len/100);scene.add(st.fight.obj);};
 
 /* ---------- interfaccia ---------- */
 function mount(v){
@@ -1053,7 +1054,7 @@ function setUI(){const p=st.phase;let h='';
   else if(p==='cast')h=`<div class="gpanel"><b>🎯 Lancia · ${B[st.rods[st.sel].bait].n}</b><div class="grow">${[['mano','🎣 A mano'],['barchino','🚤 Barchino'],['drone','🛸 Drone']].map(([k,n])=>`<button class="gc ${st.castMode===k?'on':''}" onclick="GAME.mode('${k}')">${n}</button>`).join('')}</div><div class="gs">Tieni premuto per caricare, rilascia nella zona verde. ${(()=>{const w=wxAt(st.gt),hp=windHelp(w.wd);return w.ws>12?(hp>.3?'Vento da terra: ti aiuta.':hp<-.3?'Vento dal mare: lancerai più corto.':'Vento laterale.'):'';})()}</div><div class="gpow"><i id="gpw"></i><s></s></div><button class="gb big" id="gcastb">🎣 Carica e lancia</button></div>`;
   else if(p==='fight')h=`<div class="gpanel"><b id="gfti">Combattimento</b><div class="gbar"><i id="gten"></i><span>tensione</span></div><div class="gbar dist"><i id="gdis"></i><span id="gdt">distanza</span></div>
     <div class="grow"><span>Frizione</span><input type="range" min="1" max="10" value="${st.fight?.drag||5}" oninput="GAME.drag(this.value)" style="flex:1"></div><div class="gs" id="galert" style="color:#ffb547;font-weight:700;min-height:0"></div><button class="gb big" id="greel">🌀 Tieni premuto per recuperare</button></div>`;
-  else if(p==='catch'){const c=st.catchShow;h=`<div class="gpanel">${c.fish?'<div class="gfish"><canvas id="gfc" width="600" height="260"></canvas></div>':''}
+  else if(p==='catch'){const c=st.catchShow;h=`<div class="gpanel">${c.fish?'<div class="gfish"><img id="gfi" alt="" style="display:none;width:100%;max-height:22vh;object-fit:cover;border-radius:14px"><canvas id="gfc" width="600" height="260"></canvas><div id="gfcr" style="font-size:10.5px;opacity:.55;text-align:right"></div></div>':''}
     <b style="font-size:22px">${c.fish?escH(c.sp.n):c.txt}</b>${c.fish?`<div class="gs" style="font-size:17px">${c.crab?'larghezza '+c.l+' cm':c.l+' cm'} · ${c.w<1?Math.round(c.w*1000)+' g':c.w.toFixed(2).replace('.',',')+' kg'}${c.rec?' · 🏆 record!':''}</div>
     ${c.sp.legal&&c.l<c.sp.legal?`<div class="gs warn">⚠️ Sotto misura (minimo ${c.sp.legal} cm): va rilasciato.</div>`:''}${c.crab?'<div class="gs">Specie invasiva: non va rimessa in mare.</div>':''}`:`<div class="gs">${c.why||''}</div>`}
     <div class="grow" style="justify-content:center">${c.fish?(c.crab?btn('🪣 Nel secchio','keep()','big'):(c.sp.legal&&c.l<c.sp.legal?btn('💚 Rilascia','release()','big'):btn('💚 Rilascia','release()')+btn('🧺 Tieni','keep()','big'))):(c.left?btn('↩ Rimetti sul picchetto','putBack()'):'')+btn('🪝 Innesca di nuovo','rebait()','big')}</div></div>`;}
@@ -1109,7 +1110,7 @@ const seq=async f=>{if(st.busy)return;st.busy=true;try{await f();}finally{st.bus
 G.rod=i=>seq(async()=>{st.sel=i;const r=st.rods[i];st.phase='busy';st.msg=r.state==='bite'||r.state==='hooked'?'🏃 Corre alla canna!':'🚶 Va alla canna '+(i+1)+'…';setUI();
   await goToRod(i,r.state==='bite'||r.state==='hooked');st.phase='atrod';st.msg='';setUI();});
 G.back=()=>seq(async()=>{st.phase='busy';st.msg='';setUI();if(AN.holding>=0)await putRod(AN.holding);await backToChair();st.phase='wait';setUI();});
-G.rebait=()=>seq(async()=>{const r=st.rods[st.sel];st.phase='busy';st.msg=r.dist?'🌀 Recupera la lenza…':'';setUI();
+G.rebait=()=>seq(async()=>{endShowFish();const r=st.rods[st.sel];st.phase='busy';st.msg=r.dist?'🌀 Recupera la lenza…':'';setUI();
   if(!r.held)await pickRod(st.sel);
   if(r.dist>0){pose('reel');const d0=r.dist,snagAt=r.dist>20&&Math.random()<.12?rnd(.2,.8):2;for(let t=0;t<1;t+=.05){if(t>=snagAt){AN.reelSpin=0;st.snag={r,stage:'rebait',at:t};st.phase='snag';vib([120,60,120]);setUI();return;}r.dist=d0*(1-t);AN.reelSpin=1;await sleep(.07);}r.dist=0;AN.reelSpin=0;}
   afterRecover(r);});
@@ -1282,18 +1283,89 @@ function updFight(dt){const f=st.fight;if(!f||st.phase!=='fight')return;f.t+=dt;
   if(f.ten<.16)f.slack+=dt;else f.slack=Math.max(0,f.slack-dt*2);if(f.slack>2.6)return endFight(false,'Slamato: con la lenza lenta il pesce si è liberato.');
   if(hookCat(st.hook)==='piccolo'&&f.w>2.5&&f.ten>.85&&Math.random()<dt*.6)return endFight(false,'L\'amo piccolo si è aperto: pesce troppo grosso.');
   if(f.run>0&&Math.random()<dt*4)burst(new T.Vector3(r.sx*(f.dist/Math.max(1,-r.sz))+r.x*(1-f.dist/Math.max(1,-r.sz)),0,-f.dist),.4);
+  if(!f.sp.crab&&!f.jump&&(f.jumps||0)<2&&f.w>=Math.max(1.1,f.sp.w[1]*1.25)&&f.dist<32&&f.dist>7&&Math.random()<dt*.22){f.jumps=(f.jumps||0)+1;f.jump={t:0};if(!f.obj){f.obj=makeFish3D(f.sp,f.len/100);f.obj.visible=false;scene.add(f.obj);}burst(lineEnd(r,f.dist),.6);splash(.2);}
   if(f.dist<=0)return endFight(true);
   const Te=document.getElementById('gten'),D=document.getElementById('gdis'),DT=document.getElementById('gdt'),TI=document.getElementById('gfti');
   if(Te){Te.style.width=clamp(f.ten*100,0,100)+'%';Te.style.background=f.ten>.85?'#ff4d5e':f.ten>.6?'#ffb547':'#2fe0cf';}
   if(D)D.style.width=clamp(f.dist/Math.max(1,-r.sz)*100,0,100)+'%';if(DT)DT.textContent=Math.max(0,Math.round(f.dist))+' m';
   const AL=document.getElementById('galert');if(AL){const o=st.rods.filter(x=>x!==r&&(x.state==='bite'||x.state==='hooked'));AL.textContent=o.length?o.map(x=>`🔔 Canna ${x.i+1}: ${x.state==='hooked'?'pesce allamato!':'abboccata!'}`).join(' · '):'';}
   if(TI)TI.textContent=f.run>0?'💥 Il pesce scappa! Non forzare':f.dist<12?'🌊 È nella risacca: portalo a riva':'🌀 Recupera senza dare lenza lenta';}
-function endFight(ok,why){const f=st.fight;st.fight=null;AN.reelSpin=0;const r=f.r,bait=B[r.bait]?.n||'';r.state='idle';r.bait=null;r.dist=0;r.sinker.visible=false;
+function lineEnd(r,d){const k=d/Math.max(1,-r.sz);return new T.Vector3(r.sx*k+r.x*(1-k),0,-d);}
+function updJump(dt,t){const f=st.fight;if(!f?.jump||!f.obj)return;const J=f.jump;J.t+=dt;const k=J.t/1.05,p=lineEnd(f.r,f.dist),hJ=.7+f.len/120;
+  if(k>=1){f.obj.visible=false;burst(p,.7);splash(.3);f.jump=null;return;}
+  f.obj.visible=true;f.obj.scale.setScalar(1.6);f.obj.position.set(p.x,Math.sin(Math.PI*k)*hJ-.1,p.z);f.obj.rotation.set(Math.sin(t*20)*.25,.2,(.5-k)*2.4);}
+/* ---------- pesce 3D realistico per specie: corpo, pinne, occhi e livrea dipinta ---------- */
+const FISHTEX={};
+function fishTex(sp){if(FISHTEX[sp.n])return FISHTEX[sp.n];const co=sp.col||{b:'#9aa7b0',t:'#c9d2d8',belly:'#eef2f4'};
+  const t=canvasTex(1024,512,(g,W,H)=>{
+    // controombreggiatura: dorso scuro, fianchi argentati, ventre chiaro
+    const gr=g.createLinearGradient(0,0,0,H);gr.addColorStop(0,mix(co.b,'#000000',.35));gr.addColorStop(.28,co.b);gr.addColorStop(.5,co.t);gr.addColorStop(.72,co.belly);gr.addColorStop(1,co.belly);g.fillStyle=gr;g.fillRect(0,0,W,H);
+    // riflessi iridescenti
+    const ir=g.createLinearGradient(0,0,W,0);ir.addColorStop(0,'rgba(255,220,170,.06)');ir.addColorStop(.4,'rgba(160,220,255,.10)');ir.addColorStop(.8,'rgba(255,190,230,.06)');g.fillStyle=ir;g.fillRect(0,H*.25,W,H*.45);
+    // macchie e disegni tipici della specie
+    if(co.stripe){g.fillStyle=co.stripe;g.globalAlpha=.75;g.beginPath();g.moveTo(W*.06,H*.4);g.bezierCurveTo(W*.3,H*.36,W*.7,H*.39,W,H*.44);g.lineTo(W,H*.5);g.bezierCurveTo(W*.7,H*.46,W*.3,H*.44,W*.06,H*.46);g.fill();g.globalAlpha=1;}
+    if(co.bars){g.fillStyle=co.bars;for(let i=0;i<9;i++){const x=W*(.2+i*.075);const gb=g.createLinearGradient(0,0,0,H*.75);gb.addColorStop(0,'rgba(0,0,0,0)');gb.addColorStop(.15,co.bars);gb.addColorStop(1,'rgba(0,0,0,0)');g.fillStyle=gb;g.globalAlpha=i%2?.35:.55;g.fillRect(x,0,W*.035,H*.75);}g.globalAlpha=1;
+      g.fillStyle=co.spot;g.beginPath();g.ellipse(W*.93,H*.42,W*.035,H*.12,0,0,7);g.fill();}
+    if(co.vbars){for(let i=0;i<13;i++){const x=W*(.18+i*.058);g.fillStyle=co.vbars;g.globalAlpha=.45;g.fillRect(x,H*.06,W*.012,H*.68);}g.globalAlpha=1;}
+    if(co.lines){g.strokeStyle=co.lines;g.globalAlpha=.55;g.lineWidth=4;for(let i=-6;i<16;i++){g.beginPath();g.moveTo(W*(i*.07),H*.05);g.bezierCurveTo(W*(i*.07+.06),H*.25,W*(i*.07+.04),H*.45,W*(i*.07+.12),H*.7);g.stroke();}g.globalAlpha=1;}
+    if(co.lat){g.strokeStyle=co.lat;g.lineWidth=6;g.globalAlpha=.8;g.beginPath();g.moveTo(W*.18,H*.3);g.bezierCurveTo(W*.35,H*.25,W*.4,H*.55,W*.6,H*.5);g.bezierCurveTo(W*.75,H*.47,W*.85,H*.46,W,H*.46);g.stroke();g.globalAlpha=1;}
+    if(co.dots){g.fillStyle=co.dots;if(sp.n==='Dentice'){for(let i=0;i<160;i++){g.globalAlpha=.55;g.beginPath();g.arc(W*rnd(.12,.95),H*rnd(.06,.5),rnd(3,6),0,7);g.fill();}}else{for(let i=0;i<5;i++){g.globalAlpha=.85;g.beginPath();g.arc(W*(.32+i*.12),H*.4,H*.045,0,7);g.fill();}}g.globalAlpha=1;}
+    if(co.band){g.fillStyle=co.band;g.globalAlpha=.9;g.beginPath();g.ellipse(W*.06,H*.32,W*.03,H*.12,.2,0,7);g.fill();g.globalAlpha=.25;g.fillRect(0,H*.36,W,H*.012);g.globalAlpha=1;}
+    // opercolo con la sua macchia scura
+    g.strokeStyle='rgba(0,0,0,.28)';g.lineWidth=5;g.beginPath();g.moveTo(W*.18,H*.18);g.quadraticCurveTo(W*.23,H*.48,W*.17,H*.8);g.stroke();
+    if(co.spot&&!co.bars){g.fillStyle=co.spot;g.globalAlpha=.7;g.beginPath();g.ellipse(W*.19,H*.36,W*.025,H*.08,0,0,7);g.fill();g.globalAlpha=1;}
+    // squame
+    for(let r=0;r<34;r++)for(let c=0;c<70;c++){const x=W*(.2+c*.0115+(r%2)*.0058),y=H*(.04+r*.026),s=W*.009*(.6+.4*(x/W));if(x>W)continue;
+      g.strokeStyle='rgba(0,0,0,.10)';g.lineWidth=1.4;g.beginPath();g.arc(x,y,s,-.3*Math.PI,.3*Math.PI);g.stroke();g.strokeStyle='rgba(255,255,255,.13)';g.beginPath();g.arc(x-1,y-1,s,-.25*Math.PI,.05*Math.PI);g.stroke();}
+    // linea laterale
+    g.strokeStyle='rgba(30,35,40,.4)';g.lineWidth=3;g.beginPath();g.moveTo(W*.2,H*.27);g.bezierCurveTo(W*.45,H*.22,W*.7,H*.33,W,H*.42);g.stroke();
+    // bocca
+    g.strokeStyle='rgba(40,20,20,.6)';g.lineWidth=4;g.beginPath();g.moveTo(0,H*.5);g.quadraticCurveTo(W*.04,H*.53,W*.075,H*.5);g.stroke();
+    for(let i=0;i<2500;i++){g.fillStyle=`rgba(${Math.random()<.5?'0,0,0':'255,255,255'},${Math.random()*.05})`;g.fillRect(Math.random()*W,Math.random()*H,2,2);}
+  });return FISHTEX[sp.n]=t;}
+// lungo L metri, testa verso -x e coda verso +x, centrato sul baricentro
+function makeFish3D(sp,L){const g=new T.Group();if(sp.crab)return makeCrab3D(L);const co=sp.col||{b:'#9aa7b0'},sh=sp.shape||{h:.35,fork:.5},Lb=L*.8,H=L*sh.h*.5,ped=.16;
+  const N=34,M=24,pos=[],uv=[],idx=[];
+  const hh=u=>u<.3?H*(.08+.92*Math.pow(Math.sin(u/.3*Math.PI/2),.75)):H*(1-Math.pow((u-.3)/.7,1.5)*(1-ped)),y0=u=>H*.1*Math.sin(Math.PI*Math.min(1,u*1.2))-H*.05*u;
+  for(let i=0;i<=N;i++){const u=i/N,h=hh(u),wd=h*(.36+.1*(1-u));for(let j=0;j<=M;j++){const a=j/M*Math.PI*2,sy=Math.cos(a),sz=Math.sin(a);
+    pos.push(u*Lb-L*.45,y0(u)+h*sy,wd*sz);uv.push(u*.98+.01,.5+sy*.5*(h/H)*.98);}}
+  for(let i=0;i<N;i++)for(let j=0;j<M;j++){const a=i*(M+1)+j,b=a+M+1;idx.push(a,b,a+1,b,b+1,a+1);}
+  const bg=new T.BufferGeometry();bg.setAttribute('position',new T.Float32BufferAttribute(pos,3));bg.setAttribute('uv',new T.Float32BufferAttribute(uv,2));bg.setIndex(idx);bg.computeVertexNormals();
+  const body=new T.Mesh(bg,new T.MeshStandardMaterial({map:fishTex(sp),roughness:.32,metalness:.35}));g.add(body);
+  const finM=new T.MeshStandardMaterial({color:mix(co.b,'#000000',.15),roughness:.5,metalness:.1,transparent:true,opacity:.82,side:T.DoubleSide});
+  const finY=sp.n==='Leccia stella'||sp.n==='Ricciola'?new T.MeshStandardMaterial({color:co.stripe||'#c9b25a',roughness:.5,transparent:true,opacity:.8,side:T.DoubleSide}):finM;
+  const shape=(pts,m,z=0)=>{const s=new T.Shape();s.moveTo(pts[0][0],pts[0][1]);for(let k=1;k<pts.length;k++)s.lineTo(pts[k][0],pts[k][1]);const me=new T.Mesh(new T.ShapeGeometry(s),m);me.position.z=z;g.add(me);return me;};
+  const xt=Lb-L*.45,fk=sh.fork;
+  // coda
+  shape([[xt-L*.02,H*ped],[xt+L*.2,H*1.15],[xt+L*(.2-fk*.12),H*.05],[xt+L*(.2-fk*.12),-H*.05],[xt+L*.2,-H*1.1],[xt-L*.02,-H*ped]],finY);
+  // dorsale con raggi, anale, ventrali e pettorali
+  const yd=u=>y0(u)+hh(u)*.96;shape([[L*.15-L*.45+Lb*.15,yd(.3)],[L*.2-L*.45+Lb*.15,yd(.3)+H*.55],[Lb*.62-L*.45,yd(.62)+H*.3],[Lb*.72-L*.45,yd(.72)]],finM);
+  const ya=u=>y0(u)-hh(u)*.96;shape([[Lb*.6-L*.45,ya(.6)],[Lb*.66-L*.45,ya(.66)-H*.35],[Lb*.8-L*.45,ya(.8)-H*.12],[Lb*.8-L*.45,ya(.8)]],finM);
+  for(const s of[-1,1]){const pf=shape([[0,0],[L*.12,H*.18],[L*.14,-H*.05]],finY);pf.position.set(Lb*.22-L*.45,y0(.22)-H*.1,s*hh(.22)*.42);pf.rotation.y=s*.5;
+    const vf=shape([[0,0],[L*.08,-H*.25],[L*.11,-H*.05]],finM);vf.position.set(Lb*.3-L*.45,y0(.3)-hh(.3)*.85,s*hh(.3)*.2);
+    // occhio: iride chiara, pupilla nera e riflesso
+    const ex=Lb*.075-L*.45,ey=y0(.075)+hh(.075)*.28,ez=s*hh(.075)*.36;const ir=new T.Mesh(new T.SphereGeometry(H*.13,14,10),new T.MeshStandardMaterial({color:sp.n==='Orata'?'#d9b24a':'#d8dcdc',roughness:.2,metalness:.4}));ir.scale.z=.45;ir.position.set(ex,ey,ez);g.add(ir);
+    const pu=new T.Mesh(new T.SphereGeometry(H*.085,12,10),new T.MeshStandardMaterial({color:'#050608',roughness:.05,metalness:.1}));pu.scale.z=.5;pu.position.set(ex,ey,ez+s*H*.03);g.add(pu);
+    const hl=new T.Mesh(new T.SphereGeometry(H*.022,8,6),new T.MeshBasicMaterial({color:'#ffffff'}));hl.position.set(ex-H*.03,ey+H*.03,ez+s*H*.075);g.add(hl);}
+  g.traverse(o=>{if(o.isMesh)o.castShadow=true;});return g;}
+function makeCrab3D(L){const g=new T.Group(),W=L,m=new T.MeshStandardMaterial({color:'#3f6f7a',roughness:.45,metalness:.15}),cl=new T.MeshStandardMaterial({color:'#2f6fb5',roughness:.4}),tip=new T.MeshStandardMaterial({color:'#c0392b',roughness:.4});
+  const cara=new T.Mesh(new T.SphereGeometry(1,24,12),m);cara.scale.set(W*.5,W*.12,W*.28);g.add(cara);
+  for(const s of[-1,1]){const sp=new T.Mesh(new T.ConeGeometry(W*.03,W*.18,8),m);sp.rotation.z=-s*Math.PI/2;sp.position.set(s*W*.56,0,0);g.add(sp);
+    const arm=new T.Mesh(new T.CylinderGeometry(W*.035,W*.03,W*.3,8),cl);arm.rotation.z=s*1.1;arm.rotation.x=.5;arm.position.set(s*W*.32,0,-W*.3);g.add(arm);
+    const cw=new T.Mesh(new T.SphereGeometry(W*.09,12,8),cl);cw.scale.set(1.6,.7,.8);cw.position.set(s*W*.42,0,-W*.45);g.add(cw);const tp=new T.Mesh(new T.ConeGeometry(W*.03,W*.12,6),tip);tp.rotation.x=-Math.PI/2;tp.position.set(s*W*.46,0,-W*.58);g.add(tp);
+    for(let k=0;k<4;k++){const lg=new T.Mesh(new T.CylinderGeometry(W*.015,W*.01,W*.36,6),m);lg.rotation.z=s*1.25;lg.rotation.y=(k-1.5)*.25;lg.position.set(s*W*.48,-W*.04,(k-1.5)*W*.12);g.add(lg);}}
+  return g;}
+
+function endFight(ok,why){const f=st.fight;st.fight=null;AN.reelSpin=0;if(f.obj){scene.remove(f.obj);f.obj=null;}const r=f.r,bait=B[r.bait]?.n||'';r.state='idle';r.bait=null;r.dist=0;r.sinker.visible=false;
   if(!ok){pose('hold');showCatch({fish:false,txt:'Perso!',why});return;}
   splash(.5);const rec=!st.best[f.sp.n]||f.w>st.best[f.sp.n];
   // il pesce esce dall'acqua appeso alla lenza
-  fishMesh.visible=true;fishMesh.userData.body.material.color.set(f.sp.col?.b||'#b8c2c8');const s=clamp(lenOf(f.sp,f.w)/60,.25,1.6);fishMesh.scale.setScalar(s);fishMesh.userData.show=performance.now();
-  seq(async()=>{pose('strike');await sleep(1.2);fishMesh.visible=false;pose('hold');showCatch({fish:true,sp:f.sp,w:f.w,l:f.len,crab:!!f.sp.crab,rec,bait});});}
+  const model=makeFish3D(f.sp,f.len/100);fishMesh.children.forEach(c=>{if(!c.userData.real)c.visible=false;});model.userData.real=true;fishMesh.add(model);fishMesh.scale.setScalar(1);fishMesh.visible=true;fishMesh.userData.show=performance.now();
+  seq(async()=>{pose('strike');await sleep(1.2);fishMesh.visible=false;fishMesh.remove(model);
+    // il pescatore prende il pesce in mano e lo mostra
+    r.obj.visible=false;AN.holding=-1;pose('showFish');model.position.set(0,1.1,-.36);model.rotation.set(0,0,f.sp.crab?0:.08);if(f.sp.crab)model.rotation.x=-.9;AN.obj.add(model);st.showFish={model,r};vib(60);
+    await sleep(.9);showCatch({fish:true,sp:f.sp,w:f.w,l:f.len,crab:!!f.sp.crab,rec,bait});});}
+function endShowFish(){const h=st.showFish;if(!h)return;h.model.parent?.remove(h.model);h.r.obj.visible=true;if(h.r.held)AN.holding=h.r.i;pose("hold");st.showFish=null;}
 function showCatch(c){st.catchShow=c;st.phase='catch';setUI();}
 G.release=()=>{record(true);st.msg='💚 Rilasciato. Bravo!';G.rebait();};
 G.keep=()=>{record(false);st.msg='🧺 Nel carniere';G.rebait();};
@@ -1409,7 +1481,7 @@ function loop(){raf=requestAnimationFrame(loop);if(!renderer)return;const dt=Mat
     a.needsUpdate=true;r.line.visible=r.sinker.visible;}
   reelWhir(AN.reelSpin>0&&AN.holding>=0?.012:0,AN.reelSpin*7);
   pilot(dt,t);updVeh(dt,t,w);
-  updFight(dt);
+  updFight(dt);updJump(dt,t);
   // pesce appeso che esce dall'acqua
   if(fishMesh.visible&&st.fight==null){const r=st.rods[st.sel],tip=new T.Vector3();r.obj.userData.tip.getWorldPosition(tip);const k=clamp((performance.now()-fishMesh.userData.show)/900,0,1);
     fishMesh.position.set(lerp(r.x,tip.x,k),lerp(.1,tip.y-.6,k),lerp(-2,tip.z+.2,k));fishMesh.rotation.set(0,0,Math.PI/2+Math.sin(t*14)*.4);}
@@ -1499,6 +1571,8 @@ function updEnv(w,t,dt){const d=gameDate(),s0=sunPos(d,SPOT.lat,SPOT.lon),sun=su
 const CAM={p:null,l:null};
 function updCam(dt,t){let p,l;const a=AN.pos;
   if(G.camOv){camera.position.set(...G.camOv.p);camera.lookAt(...G.camOv.l);return;}
+  if(st.showFish&&AN.obj){{const J=AN.obj.userData.J,h1=new T.Vector3(),h2=new T.Vector3();J.lHand.getWorldPosition(h1);J.rHand.getWorldPosition(h2);const m=h1.add(h2).multiplyScalar(.5);m.y-=.04;AN.obj.worldToLocal(m);st.showFish.model.position.lerp(m,.5);}const a=AN.rotY,fx=-Math.sin(a),fz=-Math.cos(a),fp=new T.Vector3();st.showFish.model.getWorldPosition(fp);const tp=new T.Vector3(AN.pos.x+fx*1.45-fz*.35,AN.pos.y+1.4,AN.pos.z+fz*1.45+fx*.35);
+    camera.position.lerp(tp,Math.min(1,dt*4));camera.lookAt(fp.x,fp.y+.08,fp.z);return;}
   if(st.follow){const v=st.follow.position,boat=VEH.type==='boat';p=new T.Vector3(v.x+2,v.y+(boat?3.5:6),v.z+(boat?9:11));l=new T.Vector3(v.x,boat?0:v.y-4,v.z-8);}
   else if(st.phase==='fight'||(AN.holding>=0&&st.phase!=='wait')){p=new T.Vector3(a.x+1.5,a.y+1.9,a.z+4.6);l=new T.Vector3(a.x-.2,a.y+1.7,a.z-6);}
   else if(st.busy||st.phase==='atrod'||st.phase==='bait'||st.phase==='cast'){p=new T.Vector3(a.x+.9,a.y+2.3,a.z+5.4);l=new T.Vector3(a.x,a.y+1.2,a.z-8);}
@@ -1554,7 +1628,12 @@ G.keep=()=>{record(false);st.msg='🧺 Nel carniere';G.rebait();};
 
 function mix(a,b,t){const p=x=>[parseInt(x.slice(1,3),16),parseInt(x.slice(3,5),16),parseInt(x.slice(5,7),16)],A=p(a),Bb=p(b);return '#'+A.map((v,i)=>Math.round(lerp(v,Bb[i],clamp(t,0,1))).toString(16).padStart(2,'0')).join('');}
 /* ---------- il pesce catturato, disegnato ---------- */
-function drawFishCard(){const c=st.catchShow,el=document.getElementById('gfc');if(!el||!c?.fish)return;const g=el.getContext('2d'),Wd=600,Hd=260;g.clearRect(0,0,Wd,Hd);
+const SCI={'Orata':'Sparus aurata','Spigola':'Dicentrarchus labrax','Sarago maggiore':'Diplodus sargus','Serra':'Pomatomus saltatrix','Mormora':'Lithognathus mormyrus','Leccia stella':'Trachinotus ovatus','Ombrina':'Umbrina cirrosa','Granchio blu':'Callinectes sapidus','Leccia amia':'Lichia amia','Ricciola':'Seriola dumerili','Dentice':'Dentex dentex'},FISHPH={};
+// foto vera della specie (Wikipedia); se non arriva resta il disegno
+function fishPhoto(sp){const sci=SCI[sp.n];if(!sci)return Promise.resolve(null);if(FISHPH[sci]!==undefined)return Promise.resolve(FISHPH[sci]);
+  return fetch('https://en.wikipedia.org/api/rest_v1/page/summary/'+encodeURIComponent(sci.replace(/ /g,'_'))).then(r=>r.json()).then(j=>{const u=j.thumbnail?.source?j.thumbnail.source.replace(/\/(\d+)px-/,'/800px-'):j.originalimage?.source||null;return FISHPH[sci]=u;}).catch(()=>FISHPH[sci]=null);}
+function drawFishCard(){const c=st.catchShow,el=document.getElementById('gfc');if(!el||!c?.fish)return;
+  fishPhoto(c.sp).then(u=>{const im=document.getElementById('gfi'),cv=document.getElementById('gfc'),cr=document.getElementById('gfcr');if(!u||!im||st.catchShow!==c)return;im.onload=()=>{im.style.display='block';if(cv)cv.style.display='none';if(cr)cr.textContent='Foto: '+SCI[c.sp.n]+' · Wikipedia / Wikimedia Commons';};im.src=u;});const g=el.getContext('2d'),Wd=600,Hd=260;g.clearRect(0,0,Wd,Hd);
   const sp=c.sp,co=sp.col;if(sp.crab)return drawCrab(g,Wd,Hd,co);
   const L=Wd*.8,Hh=L*sp.shape.h,x0=(Wd-L)/2+6,y0=Hd/2+4,fk=sp.shape.fork,ped=Hh*.13;
   // sagoma: muso, profilo dorsale alto, peduncolo sottile
