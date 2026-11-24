@@ -197,12 +197,14 @@ function lvlClick(e){const b=e.target.closest('.lvl');if(!b)return;EQ.audio();co
   if(G.state==='menu'){quickRide(()=>goShowRace(l,true),'🚚 Si parte per il concorso…');return;}
   const ctx=G.courseCtx||{mode:'race',A:AR};
   if(ctx.mode==='truck'){goShowRace(l,false);return;}
+  if(ctx.mode==='truckShow'){startCourse(l,false,{mode:'race',A:W().spots.arena});return;}
   startCourse(l,false,ctx);}
 function goShowRace(l,noFade){const H=G.cur;if(H){H.setTack({pad:true,saddle:true,girth:true,bridle:true,halter:false});}
   G.afterTravel=()=>{const w=W();startCourse(l,true,{mode:'race',A:w.spots.arena});};travel('show','yard',noFade,'🚚 In viaggio verso il concorso ippico…');}
 function truckHome(){G.afterTravel=()=>{};travel('yard','show',false,'🚚 Si torna al maneggio…');}
 $('lvls').addEventListener('click',lvlClick);$('lvls2').addEventListener('click',lvlClick);
-$('courseNo').onclick=()=>{$('course').classList.remove('on');G.state=G.courseCtx&&G.courseCtx.mode==='truck'?'foot':'ride';};
+$('courseNo').onclick=()=>{$('course').classList.remove('on');const m=G.courseCtx&&G.courseCtx.mode;G.state=(m==='truck'||m==='truckShow')?'foot':'ride';};
+$('courseHome').onclick=()=>{$('course').classList.remove('on');truckHome();};
 document.querySelectorAll('.sndB').forEach(b=>b.onclick=()=>{EQ.setSound(!EQ.soundOn);renderMenu();});
 document.querySelectorAll('.qB').forEach(b=>b.onclick=()=>{EQ.hiQ=!EQ.hiQ;EQ.LS.set('hq',EQ.hiQ);EQ.resize();EQ.shadowSize();renderMenu();msg(EQ.hiQ?'Grafica alta':'Grafica veloce',1.2);});
 
@@ -258,9 +260,11 @@ function nearFence(){let best=null,bd=1.3;
 /* camion, casa e giardino */
 function placeActions(A){if(G.state!=='foot'||G.swim||G.sit)return;const w=W(),S=w.spots||{},H=G.cur;
   if(w===yard&&S.truck&&near(S.truck.ramp,4.2)){
-    if(G.leading&&H)A.push({id:'truck',icon:'🚚',label:'Carica '+H.def.name+' sul camion',fn:()=>{G.courseCtx={mode:'truck'};G.state='modal';renderMenu();$('courseT').textContent='🚚 Si va al concorso! Scegli la gara';$('course').classList.add('on');},dis:!P.ready()?'Per gareggiare servono casco e corpetto!<small>vai allo spogliatoio</small>':null});
+    if(G.leading&&H)A.push({id:'truck',icon:'🚚',label:'Carica '+H.def.name+' sul camion',fn:()=>{G.courseCtx={mode:'truck'};$('courseHome').style.display='none';G.state='modal';renderMenu();$('courseT').textContent='🚚 Si va al concorso! Scegli la gara';$('course').classList.add('on');},dis:!P.ready()?'Per gareggiare servono casco e corpetto!<small>vai allo spogliatoio</small>':null});
     else A.push({id:'truckinfo',icon:'🚚',label:'Camion per le gare',fn:()=>msg('🚚 Porta qui il tuo cavallo con la corda<small>e caricalo sul camion per andare al concorso</small>',3)});}
-  if(w.name==='show'&&S.truck&&near(S.truck.ramp,6))A.push({id:'gohome2',icon:'🚚',label:'Torna al maneggio',fn:()=>{if(G.leading&&H){H.where='ride';}truckHome();},dis:!H?'Prima prendi il tuo cavallo':null});
+  if(w.name==='show'&&S.truck&&near(S.truck.ramp,6)){
+    if(G.leading&&H)A.push({id:'truck2',icon:'🚚',label:'Carica '+H.def.name+' sul camion',fn:()=>{G.courseCtx={mode:'truckShow'};G.state='modal';renderMenu();$('courseT').textContent='🚚 '+H.def.name+' è sul camion';$('courseHome').style.display='';$('course').classList.add('on');EQ.sfx.neigh();}});
+    else A.push({id:'truckinfo2',icon:'🚚',label:'Camion',fn:()=>msg(H?'🪢 Prendi '+H.def.name+' con la corda<small>e portalo alla rampa del camion</small>':'Prima prendi il tuo cavallo',2.6)});}
   if(w.name==='home'&&H){
     if(G.leading&&S.tie&&near(S.tie,4))A.push({id:'tieh',icon:'🪢',label:'Lega '+H.def.name+' al palo',fn:()=>{const t=S.tie;G.leading=false;H.where='wait';H.tiedHome=true;H.x=t.x;H.z=t.z;H.h=t.h;H.sp=0;H.rope.visible=false;H.st={};msg('🪢 '+H.def.name+' è legato al palo',1.8);EQ.sfx.buckle();}});
     const g=S.garden;if(G.leading&&g&&F.x>g.x0&&F.x<g.x1&&F.z>g.z0&&F.z<g.z1)A.push({id:'garden',icon:'🌿',label:'Lascialo libero in giardino',fn:()=>{G.leading=false;H.where='garden';H.rope.visible=false;H.st={};H.gw=1;msg('🌿 '+H.def.name+' passeggia in giardino',1.8);}});}
@@ -380,7 +384,7 @@ function ambient(dt){G.ambT-=dt;if(G.ambT>0)return;G.ambT=4+Math.random()*9;cons
   if(n==='yard'){if(r<.35)EQ.sfx.whinnyFar();else if(r<.5)EQ.sfx.rooster();else if(r<.65)EQ.sfx.moo();else if(r<.8)EQ.sfx.bark();else EQ.sfx.bird();}
   else if(n==='city'){if(r<.3)EQ.sfx.horn(.2+Math.random()*.3);else if(r<.4)EQ.sfx.siren();else if(r<.6)EQ.sfx.bikebell();else if(r<.8)EQ.sfx.pigeons();else EQ.sfx.bark();}
   else if(n==='forest'){if(r<.3)EQ.sfx.woodpecker();else if(r<.45)EQ.sfx.owl();else if(r<.6)EQ.sfx.whinnyFar();else EQ.sfx.bird();}
-  else if(n==='show'){if(r<.5)EQ.sfx.applause();else if(r<.7)EQ.sfx.whinnyFar();else EQ.sfx.whistle();}
+  else if(n==='show'){if(r<.5)EQ.sfx.whinnyFar();else if(r<.7)EQ.sfx.whistle();}
   else if(n==='home'){if(r<.4)EQ.sfx.bird();else if(r<.6)EQ.sfx.bark();else if(r<.75)EQ.sfx.meow();else EQ.sfx.rooster();}
   else if(n==='beach'){if(r<.5)EQ.sfx.gull();else if(r<.7)EQ.sfx.kids();else if(r<.8)EQ.sfx.whistle();else EQ.sfx.whinnyFar();}}
 /* ---- erba e cadute ---- */
@@ -727,7 +731,7 @@ function courseLogic(list,scoring){
       if(isNext){
         if(!clear&&!o.faulted){o.faulted=true;C.faults+=4;}
         if(pi===o.planes.length-1){o.done=true;C.next++;
-          if(o.faulted)msg('Barriera giù! +4',1.4);else{if(W().cheer!=null){W().cheer=2.5;EQ.sfx.applause();}
+          if(o.faulted)msg('Barriera giù! +4',1.4);else{if(W().cheer!=null&&Math.random()<.45){W().cheer=2.5;EQ.sfx.applause();}
           msg(['Bravissim'+EQ.A()+'!','Perfetto!','Che salto!','Brav'+EQ.A()+' '+EQ.pname()+'!','Netto!'][Math.random()*5|0],1.1);EQ.sfx.clear();}
           if(C.next>=C.obs.length){setTimeout(()=>msg('🏁 Arrivo!',2),250);finishCourse();}}
       } else if(F_&&!o.done&&pi===o.planes.length-1){msg(`Ostacolo sbagliato!<small>salta prima il numero ${C.next+1}</small>`,1.6);EQ.sfx.wrong();}
@@ -742,7 +746,7 @@ function updateFallen(dt){
   fallen=fallen.filter(r=>r.userData.fall);
 }
 const CMODE={train:{t:'🎓 Lezione con Betta',v:'Lezione',done:'Lezione completata!',who:'Betta'},train2:{t:'🐎 Addestramento con Carlo',v:'Addestramento',done:'Addestramento completato!',who:'Carlo'},race:{t:'🏆 Gara di salto',v:'Gara',done:null}};
-function openCourse(mode,A){G.courseCtx={mode,A};G.state='modal';renderMenu();$('courseT').textContent=CMODE[mode].t;$('course').classList.add('on');}
+function openCourse(mode,A){$('courseHome').style.display='none';G.courseCtx={mode,A};G.state='modal';renderMenu();$('courseT').textContent=CMODE[mode].t;$('course').classList.add('on');}
 function startCourse(l,noFade,ctx){
   const L=LEVELS[l];ctx=ctx||G.courseCtx||{mode:'race',A:AR};const mode=ctx.mode;
   (noFade?(t,cb)=>cb():fade)(CMODE[mode].v+' · Livello '+(l+1)+' · '+L.name,()=>{
