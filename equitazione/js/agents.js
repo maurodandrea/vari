@@ -264,7 +264,7 @@ function cheapSitter(){const X=EQ.xform,T=EQ.tint,P=EQ.PCOL;const top=pick(P.TOP
 EQ.populate.show=function(W){
   const vars=[];for(let i=0;i<14;i++)vars.push(cheapSitter());
   (W.spots.standsList||[]).forEach(st=>{const L=[];const hl=st.len/2-1;
-    for(let r=0;r<st.rows;r++)for(let x=-hl;x<=hl;x+=.85){if(Math.random()<.18)continue;L.push({x:x+rnd(-.1,.1),y:.5+r*st.step-.42,z:1.4*r+.55,ry:rnd(-.15,.15)});}
+    for(let r=0;r<st.rows;r++)for(let x=-hl;x<=hl;x+=.95){if(Math.random()<.22)continue;L.push({x:x+rnd(-.1,.1),y:.5+r*st.step-.42,z:1.4*r+.55,ry:rnd(-.15,.15)});}
     const tmp=new THREE.Group();st.g.add(tmp);placeBaked({group:tmp},vars,L);tmp.traverse(o=>{if(o.isInstancedMesh)o.castShadow=false;});
     for(let i=0;i<3;i++){const e=person({});st.g.add(e.root);const r=1+i%(st.rows-1),x=-hl+4+i*(st.len-8)/3;e.root.position.set(x,.5+r*st.step-.42,1.4*r+.55);e.root.rotation.y=Math.PI;e.root.traverse(o=>{if(o.isMesh)o.castShadow=false;});const ph=rnd(0,9);let acc=0;
       W.updaters.push((dt,t,p)=>{acc+=dt;if(acc<.05)return;dt=acc;acc=0;const m=Math.sin(t*.4+ph);e.npc.pose(dt,(W.cheer>0)?(m>0?'cheer':'clap'):m>.7?'clap':'sit',{});});}});
@@ -275,8 +275,8 @@ EQ.populate.show=function(W){
   const wm=W.spots.warm;const tr=Path(ellipse(wm.x,wm.z,wm.hx-3,wm.hz-3,40),true);
   for(let i=0;i<3;i++){const fem=Math.random()<.6;const e=rider(W,fem);const a=pathAgent(W,e,tr,{speed:[2,4.5,6][i],s:i*tr.L/3,stopR:6,colR:.75,colOff:.7,two:true,far:220});a.label=label(e,EQ.randName(fem),3.15);}
   // groom e pubblico a terra
-  for(let i=0;i<8;i++){const fem=Math.random()<.5;const e=addTo(W,person({fem}));const a=wanderAgent(W,e,{x:0,z:-48,hx:24,hz:4},{speed:1.1,idle:[3,9],step:8,cols:.3});addCol(W,a,.35);}
-  for(let i=0;i<2;i++){const d=EQ.buildDog({});W.group.add(d.root);wanderAgent(W,{root:d.root,anim:(dt,sp)=>d.animate(dt,sp)},{x:0,z:-48,hx:22,hz:4},{speed:2,idle:[1,4],step:6});}
+  for(let i=0;i<8;i++){const fem=Math.random()<.5;const e=addTo(W,person({fem}));const a=wanderAgent(W,e,{x:0,z:-62,hx:24,hz:3},{speed:1.1,idle:[3,9],step:8,cols:.3});addCol(W,a,.35);}
+  for(let i=0;i<2;i++){const d=EQ.buildDog({});W.group.add(d.root);wanderAgent(W,{root:d.root,anim:(dt,sp)=>d.animate(dt,sp)},{x:0,z:-62,hx:22,hz:3},{speed:2,idle:[1,4],step:6});}
 };
 /* ======================= CASA MIA ======================= */
 EQ.populate.home=function(W){

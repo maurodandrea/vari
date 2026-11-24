@@ -690,7 +690,7 @@ function rideUpdate(dt){
   horseVoice(dt,H,R.sp,true);
   if(G.world!==yard||surfType(R.x,R.z)==='sand')G.rideDirt=(G.rideDirt||0)+dt*R.sp*.004;
   // logica
-  if(G.course&&G.course.state==='run'){G.course.time+=dt;courseLogic(G.course.obs,true);}
+  if(G.course&&G.course.state==='run'){G.course.time+=dt;if(G.course.flat)flatLogic();else courseLogic(G.course.obs,true);}
   else if(!G.course&&practice.length)courseLogic(practice.filter(p=>p.g.visible).reduce((a,p)=>a.concat(p.list),[]),false);
   if(G.trip)tripLogic(dt);
   // HUD
@@ -748,16 +748,46 @@ function updateFallen(dt){
   fallen=fallen.filter(r=>r.userData.fall);
 }
 const CMODE={train:{t:'🎓 Lezione con Betta',v:'Lezione',done:'Lezione completata!',who:'Betta'},train2:{t:'🐎 Addestramento con Carlo',v:'Addestramento',done:'Addestramento completato!',who:'Carlo'},race:{t:'🏆 Gara di salto',v:'Gara',done:null}};
-function openCourse(mode,A){$('courseHome').style.display='none';G.courseCtx={mode,A};G.state='modal';renderMenu();$('courseT').textContent=CMODE[mode].t;$('course').classList.add('on');}
+function openCourse(mode,A){$('courseHome').style.display='none';G.courseCtx={mode,A};G.state='modal';renderMenu();$('courseT').textContent=CMODE[mode].t;
+  if(mode==='train'){const sub=['passo e trotto','passo, trotto e galoppo','salti'];document.querySelectorAll('#lvls2 .lvl small').forEach((el,i)=>el.textContent=sub[i]);}
+  $('course').classList.add('on');}
+/* ---- lezioni in piano (Pony: passo e trotto, Junior: passo, trotto e galoppo) ---- */
+const GAITN={passo:['🚶','Al passo'],trotto:['🐎','Al trotto'],galoppo:['💨','Al galoppo']};
+const FLAT=[['passo','passo','trotto','trotto','trotto','passo','trotto','trotto','trotto','passo','passo'],
+            ['passo','trotto','trotto','galoppo','galoppo','galoppo','trotto','galoppo','galoppo','galoppo','trotto','passo','passo']];
+function gaitOf(sp){return sp<.3?'fermo':sp<2.6?'passo':sp<7.4?'trotto':'galoppo';}
+const coneTex={};function coneSprite(g){if(!coneTex[g])coneTex[g]=EQ.labelTex(GAITN[g][0]+' '+g.toUpperCase(),{bg:g==='passo'?'#2f6b33':g==='trotto'?'#d97706':'#c0392b',w:512,h:128,font:'bold 64px Fredoka, Trebuchet MS, sans-serif'});
+  const s=new THREE.Sprite(new THREE.SpriteMaterial({map:coneTex[g]}));s.scale.set(2.2,.55,1);return s;}
+function buildFlat(l,A){
+  if(obsGroup){if(obsGroup.parent)obsGroup.parent.remove(obsGroup);obsGroup=null;}fallen=[];practice.forEach(p=>{if(p.A===A)p.g.visible=false;});
+  const g=new THREE.Group();W().group.add(g);obsGroup=g;const plan=FLAT[l],n=plan.length;const rx=A.hx-9,rz=A.hz-9;
+  const cm=EQ.mat(0xff7a1a,.5),wm=EQ.mat(0xffffff,.5);
+  return plan.map((gait,i)=>{const a=-Math.PI/2+(i+1)/(n+1)*Math.PI*2*1.0;const x=A.cx+Math.cos(a)*rx,z=A.cz+Math.sin(a)*rz;
+    const tx2=-Math.sin(a)*rx,tz2=Math.cos(a)*rz,th=Math.atan2(tx2,tz2);const fwd=new V3(Math.sin(th),0,Math.cos(th)),right=new V3(-Math.cos(th),0,Math.sin(th));
+    for(const sd of [-1,1]){const px=x+right.x*sd*2.2,pz=z+right.z*sd*2.2;EQ.mesh(EQ.G.cone(.25,.6,12),cm,px,.3,pz,g);EQ.mesh(EQ.G.cyl(.18,.2,.08,12),wm,px,.42,pz,g);}
+    const sp=coneSprite(gait);sp.position.set(x,2.4,z);g.add(sp);
+    return {pos:new V3(x,0,z),th,fwd,right,planes:[{h:.2}],gait,flat:true,W:4.4,done:false};});
+}
+function flatLogic(){const C=G.course,o=C.obs[C.next];if(!o)return;
+  const a=(R.px-o.pos.x)*o.fwd.x+(R.pz-o.pos.z)*o.fwd.z,b=(R.x-o.pos.x)*o.fwd.x+(R.z-o.pos.z)*o.fwd.z;
+  const lx=(R.x-o.pos.x)*o.right.x+(R.z-o.pos.z)*o.right.z;
+  if(!(a<0&&b>=0)||Math.abs(lx)>3.4)return;
+  const g=gaitOf(R.sp);o.done=true;C.next++;
+  if(g===o.gait){EQ.sfx.click();msg('✓ '+GAITN[o.gait][1].replace('Al','al'),.8);}else{C.faults++;EQ.sfx.wrong();msg('🗣️ Betta: <small>'+GAITN[o.gait][1]+'! Eri '+(g==='fermo'?'fermo':'al '+g)+'</small>',1.8);}
+  const nx=C.obs[C.next];
+  if(!nx){setTimeout(()=>msg('🏁 Fine lezione!',2),300);finishCourse();return;}
+  if(nx.gait!==o.gait)setTimeout(()=>{msg('🗣️ Betta: '+GAITN[nx.gait][1]+'!',1.8);EQ.sfx.whistle();},g===o.gait?700:1900);
+}
 function startCourse(l,noFade,ctx){
   const L=LEVELS[l];ctx=ctx||G.courseCtx||{mode:'race',A:AR};const mode=ctx.mode;
   (noFade?(t,cb)=>cb():fade)(CMODE[mode].v+' · Livello '+(l+1)+' · '+L.name,()=>{
-    AR=ctx.A;const list=buildObstacles(L,AR);
+    AR=ctx.A;const flat=mode==='train'&&l<2;const list=flat?buildFlat(l,AR):buildObstacles(L,AR);
     if(mode==='race'&&W().arenaGate){W().arenaGate.visible=true;W().gateColl.off=false;}
-    const [sx,sz]=tx(L.start[0],L.start[1]);R.x=sx;R.z=sz;R.h=L.start[2]*EQ.D2R;R.sp=0;R.y=0;R.vy=0;R.grounded=true;
+    if(flat){const o=list[0];R.x=o.pos.x-o.fwd.x*14;R.z=o.pos.z-o.fwd.z*14;R.h=o.th;}
+    else{const [sx,sz]=tx(L.start[0],L.start[1]);R.x=sx;R.z=sz;R.h=L.start[2]*EQ.D2R;}R.sp=0;R.y=0;R.vy=0;R.grounded=true;
     G.cur.x=R.x;G.cur.z=R.z;G.cur.h=R.h;
     if(G.cur.where!=='ride'){G.cur.x=R.x;G.cur.z=R.z;G.cur.h=R.h;mountNow();}
-    G.course={l,obs:list,next:0,faults:0,time:0,state:'count',mode,A:AR};W().busyArena=AR;
+    G.course={l,obs:list,next:0,faults:0,time:0,state:'count',mode,A:AR,flat};if(flat)setTimeout(()=>msg('🗣️ Betta: '+GAITN[list[0].gait][1]+'!<small>passa tra i coni con l\'andatura giusta</small>',3),2600);W().busyArena=AR;
     G.state='ride';snapCam();setTouchMode('ride');hud(true);setActions([]);
     $('timer').classList.add('on');
     let c=3;const el=$('count');el.textContent=c;el.classList.add('on');EQ.sfx.beep(false);
@@ -771,7 +801,13 @@ function endCourse(silent){
   if(obsGroup){if(obsGroup.parent)obsGroup.parent.remove(obsGroup);obsGroup=null;}practice.forEach(p=>p.g.visible=true);marker.visible=chev.visible=false;
 }
 function finishCourse(){
-  const C=G.course;G.lastCtx={mode:C.mode,A:C.A};C.state='done';EQ.sfx.applause();setTimeout(()=>EQ.sfx.neigh(),900);
+  const C=G.course;G.lastCtx={mode:C.mode,A:C.A};C.state='done';
+  if(C.flat){const n=C.obs.length,ok=n-C.faults,medal=C.faults===0?'🥇':C.faults<=2?'🥈':'🥉';stat(G.cur,'happy',8);persist();
+    setTimeout(()=>msg('💬 Betta<small>'+(C.faults===0?'Perfett'+EQ.A()+'! Andature tutte giuste.':'Brav'+EQ.A()+'! Attenzione a cambiare andatura al cono giusto.')+'</small>',3),400);
+    setTimeout(()=>showResults(medal,'Lezione completata!',`Lezione · Livello ${C.l+1} · ${LEVELS[C.l].name} · ${C.l?'passo, trotto e galoppo':'passo e trotto'}`,
+      [[ok+'/'+n,'Andature giuste'],[fmt(C.time)+' s','Tempo'],[medal,'Voto']],
+      [C.l<LEVELS.length-1?['org','next','Livello successivo ➜']:null,['','again','↻ Riprova'],['alt','stay','Continua al maneggio'],['alt','menu','Menu principale']].filter(Boolean)),1300);return;}
+  EQ.sfx.applause();setTimeout(()=>EQ.sfx.neigh(),900);
   const L=LEVELS[C.l],t=C.time;let medal,title;
   if(C.faults===0&&t<=L.par){medal='🥇';title='Percorso netto!';}
   else if(C.faults<=4&&t<=L.par*1.35){medal='🥈';title=C.faults?'Ottimo giro!':'Netto, ma lent'+EQ.A()+'!';}
@@ -1299,7 +1335,7 @@ function tasksList(){const H=G.cur;return[
 let hudT=0;
 function updateHud(dt){
   hudT-=dt;if(hudT>0)return;hudT=.25;
-  if(G.course){const C=G.course;$('infoT').textContent='🏆 Livello '+(C.l+1)+' · '+LEVELS[C.l].name;$('infoS').textContent=C.next<C.obs.length?`Ostacolo ${C.next+1} di ${C.obs.length}`:'Arrivo!';$('tasks').innerHTML='';
+  if(G.course){const C=G.course;$('infoT').textContent=(C.mode==='race'?'🏆 ':C.mode==='train'?'🎓 ':'🐎 ')+CMODE[C.mode].v+' · '+LEVELS[C.l].name;const nx=C.obs[C.next];$('infoS').textContent=!nx?'Arrivo!':C.flat?`${GAITN[nx.gait][0]} ${GAITN[nx.gait][1]} · cono ${C.next+1} di ${C.obs.length} · ora: ${gaitOf(R.sp)}`:`Ostacolo ${C.next+1} di ${C.obs.length}`;$('tasks').innerHTML='';
     $('timer').textContent='⏱ '+fmt(C.time)+(C.faults?'  ❌ '+C.faults:'');}
   else if(G.trip){const t=G.trip,inf=ITEM_INFO[W().itemKind];$('infoT').textContent=PLACE[t.kind][0]+' '+PLACE[t.kind][1]+(G.cur?' · '+G.cur.def.name:'');$('infoS').innerHTML=`${inf[0]} ${inf[1]}: ${t.count} di ${t.items.length}`+(G.mission?`<br>🎯 ${G.mission.t} · ⭐${G.stars}`:'')+needsLine();$('tasks').innerHTML='';$('timer').textContent='⏱ '+fmt(t.time);}
   else{const L=tasksList();const nx=L.find(t=>!t[2]);$('infoT').textContent='🏇 '+EQ.pname()+' · '+(PLACE[G.loc]||PLACE.yard)[1];
