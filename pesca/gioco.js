@@ -1146,7 +1146,7 @@ G.shopOpt=(id,k,i)=>{(SH.sel[id]=SH.sel[id]||{})[k]=i;shopUI();};
 G.shopAdd=id=>{const it=ITEM[id],o=fullO(it,SH.sel[id]),price=Math.round(it.p(o)*100)/100;SH.cart.push({id,o,price});st.msg=`🧺 Aggiunto: ${it.n}${it.opts?' · '+optTxt(it,o):''}`;click();shopUI();};
 G.shopDel=i=>{SH.cart.splice(i,1);shopUI();};
 G.shopPay=()=>{const tot=cartTot();if(!SH.cart.length)return;if(tot>st.money+1e-6){say(SH.clerk,`Mancano ${eur(tot-st.money)}... togli qualcosa o torna dopo una pescata!`,4);st.msg='💸 Non bastano i soldi: togli qualcosa dal carrello.';shopUI();return;}
-  st.money-=tot;SH.cart.forEach(x=>giveItem(ITEM[x.id],x.o||{}));SH.cart=[];gearSave();bell(2,.18);vib(40);say(SH.clerk,`Sono ${eur(tot)}. Grazie e buona pesca!`,4);st.msg=`✅ Pagato ${eur(tot)}. Trovi tutto nello zaino.`;SH.cat='zaino';SH.go='cassa';shopUI();};
+  st.money-=tot;SH.cart.forEach(x=>giveItem(ITEM[x.id],x.o||{}));SH.cart=[];gearSave();bell(2,.18);vib(40);say(SH.clerk,`Sono ${eur(tot)}. Grazie, a presto!`,4);st.msg=`✅ Pagato ${eur(tot)}. Trovi tutto nello zaino.`;SH.cat='zaino';SH.go='cassa';shopUI();};
 G.useRod=id=>{st.gear.rod=id;gearSave();shopUI();};
 G.shopExit=()=>{cancelAnimationFrame(raf);stop();MP.skipAsk=true;mount(null);};
 
@@ -1618,7 +1618,7 @@ G.walk=(x,z)=>seq(async()=>{st.phase='busy';st.msg='';setUI();await walkTo(x,z,2
 G.rise=()=>seq(async()=>{st.phase='busy';setUI();await standUp();await walkTo(AN.pos.x+.4,AN.pos.z-1.2,1.6);AN.faceTo=0;st.phase='wait';st.msg='';setUI();});
 // due chiacchiere con i vicini
 const NPC_NAMES=['Franco','Peppe','Marco','Luigi'];
-const Q=[['come','👋 Come va?'],['nome','🙂 Come ti chiami?'],['preso','🐟 Cosa hai preso?'],['esca','🪱 Con che esca peschi?'],['mont','⚓ Che montatura usi?'],['app','📱 Usi LenzApp?'],['cons','💡 Mi dai un consiglio?'],['caffe','☕ Ti offro un caffè'],['ciao','👋 Ciao, buona pesca!']];
+const Q=[['come','👋 Come va?'],['nome','🙂 Come ti chiami?'],['preso','🐟 Cosa hai preso?'],['esca','🪱 Con che esca peschi?'],['mont','⚓ Che montatura usi?'],['app','📱 Usi LenzApp?'],['cons','💡 Mi dai un consiglio?'],['caffe','☕ Ti offro un caffè'],['ciao','👋 Ciao, a dopo!']];
 function answer(a,q){const P=a.per,w=wxAt(st.gt),per=period(gameDate()),bag=a.bag,B1=B[P.bait]?.n.toLowerCase()||P.bait,idx=w.idx;
   const tot=bag.length,best=bag.slice().sort((x,y)=>y.w-x.w)[0];
   switch(q){
@@ -1630,7 +1630,7 @@ function answer(a,q){const P=a.per,w=wxAt(st.gt),per=period(gameDate()),bag=a.ba
     case 'app':return P.app?pick([`Certo! LenzApp oggi dà indice ${idx}: ${idx>=70?'ottimo, infatti sono qui':idx>=50?'discreto':'bassino, ma ci provo'}.`,'Sì, guardo sempre la Settimana e le finestre migliori. E segno le catture nel diario.','Sì! Con la mappa vedo dove prendono gli amici.']):pick(['LenzApp? Mai sentita… è gratis? Me la scarico.','No, io guardo il mare e basta. Ma mio nipote ce l\'ha.','Ah, quella dell\'indice di pesca? Prima o poi la provo.']);
     case 'cons':return per==='notte'?'Di notte le spigole vengono sotto riva: lancia corto, a 30-40 metri, con arenicola o sarda.':per==='alba'||per==='tramonto'?'Adesso è il momento buono: tieni le cime d\'occhio e ferra solo quando piega decisa.':w.wave<.3?'Col mare piatto peschi lontano, oltre gli 80 metri, terminale lungo e amo piccolo.':w.wave>1.2?'Mare grosso: piombo pesante e pesca nella buca dopo il primo frangente.':'Prova il cannolicchio a 70-90 metri, le orate girano.';
     case 'caffe':if(a.gift){return 'Grazie, ne ho già bevuti due! Il cuore…';}a.gift=1;st.inv.granchio+=3;return `Grazie, sei un amico! Tieni, tre granchietti che ho raccolto: sono ottimi per le orate.`;
-    case 'ciao':return pick(['Ciao, in bocca al lupo!','Buona pesca, e occhio alle cime!','A dopo!']);}}
+    case 'ciao':return pick(['Ciao, in bocca al lupo!','Occhio alle cime!','A dopo!']);}}
 G.talk=i=>{const a=NPCS[i];if(!a)return;st.talk={i,txt:NPC_LINES.greet(a)};a.faceTo=Math.atan2(-(AN.pos.x-a.pos.x),-(AN.pos.z-a.pos.z));AN.faceTo=Math.atan2(-(a.pos.x-AN.pos.x),-(a.pos.z-AN.pos.z));say(a,st.talk.txt,3);st.phase='talk';setUI();};
 G.ask=q=>{const tk=st.talk,a=NPCS[tk.i];if(q==='ciao'){say(a,answer(a,q),3);st.talk=null;st.phase='wait';st.msg='';setUI();return;}tk.txt=answer(a,q);tk.q=q;say(a,tk.txt,6);setUI();};
 
