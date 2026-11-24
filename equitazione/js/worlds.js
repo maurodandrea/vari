@@ -1154,12 +1154,13 @@ EQ.buildHome=function(){
    W.seats=[{x:-6,z:-5.8,h:0,y:0}];
    addTrees(W,'oak',[{x:-19,z:14,s:.8,ry:1},{x:19,z:-8,s:.75,ry:2},{x:-19,z:-8,s:.7,ry:3}],[0x6e9a3e,0x7aa64a],.45);}
   // strada verso il maneggio e case vicine
-  {ribbon(W,[[0,17],[0,40],[0,80],[1,120]],5,TX.sand('#a88a62'),.03,5);ribbon(W,[[-200,60],[-60,60],[0,60],[60,60],[200,60]],7,TX.asphalt(),.035,6,0xffffff,.9);
+  {ribbon(W,[[0,17],[0,40],[0,80],[1,120]],5,TX.sand('#a88a62'),.03,5);ribbon(W,[[-200,60],[-60,60],[0,60],[60,60],[200,60]],7,TX.asphalt(),.035,6,0xffffff,.9);const bR=ribbon(W,[[60,60],[110,20],[150,-40],[190,-100]],4.5,TX.sand('#cdb48a'),.03,4);W.beachPath=pathIndex([bR.pts]);
    const walls=['#e8c48a','#d98e5f','#efd9b4','#c9e0ea','#f0e2c8'];
    [[-40,30],[40,30],[-70,85],[45,90],[-35,-30],[42,-28]].forEach(([x,z],i)=>{const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=z>60?Math.PI:0;grp.add(g);
      boxT(W,g,11,5.5,9,0,2.75,0,TX.window(walls[i%5],'#3f6b3a'),3);mesh(roofGeo(11.8,9.8,2.6),new THREE.MeshStandardMaterial({map:TX.tiles()}),0,5.5,0,g);W.colliders.push({x,z,hx:5.8,hz:4.8});});
-   const tr=[];for(let i=0;i<200*Q();i++){const a=rnd(0,TAU),r=rnd(55,240);const x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.abs(z-60)<8||Math.abs(x)<5)continue;tr.push({x,z,s:rnd(.8,1.3),ry:rnd(0,TAU)});}addTrees(W,'oak',tr,[0x6e9a3e,0x7aa64a,0x5f8a34],.45);}
+   const tr=[];for(let i=0;i<200*Q();i++){const a=rnd(0,TAU),r=rnd(55,240);const x=Math.cos(a)*r,z=Math.sin(a)*r;if(Math.abs(z-60)<8||Math.abs(x)<5||W.beachPath(x,z,10)<7)continue;tr.push({x,z,s:rnd(.8,1.3),ry:rnd(0,TAU)});}addTrees(W,'oak',tr,[0x6e9a3e,0x7aa64a,0x5f8a34],.45);}
   portal(W,'yard',1,118,Math.PI);
+  portal(W,'city',194,60,-Math.PI/2);portal(W,'forest',-194,60,Math.PI/2);portal(W,'beach',188,-100,-Math.PI/2-.6);
   /* ---- interno della casa (lontano dal giardino, si entra dalla porta) ---- */
   {const OX=0,OZ=-400,R=new THREE.Group();R.position.set(OX,0,OZ);grp.add(R);W.interior={ox:OX,oz:OZ,b:{x0:OX-10.6,x1:OX+10.6,z0:OZ-7.6,z1:OZ+7.6}};
    const P=(x,z)=>({x:OX+x,z:OZ+z});
