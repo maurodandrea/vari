@@ -614,10 +614,10 @@ function buildLandmarks(){const rm=new T.MeshStandardMaterial({color:'#6f6a62',r
   const c=azPos(CIRCEO.lat,CIRCEO.lon);if(c.d>2000&&c.d<70000&&c.z<1000){const k=Math.min(1,9000/c.d),m=new T.Mesh(new T.ConeGeometry(2400*k*2.2,CIRCEO.h*1.3*k*2,7,1),new T.MeshStandardMaterial({color:'#4f5a52',roughness:1}));const sc=Math.min(1,6000/c.d);m.position.set(c.x*sc,CIRCEO.h*k*.6,Math.max(c.z*sc,0)+2000*k);m.scale.set(.75,1,.4);scene.add(m);}}
 function setupRods(){st.rods.forEach(r=>{scene.remove(r.hit);scene.remove(r.obj);scene.remove(r.spike);scene.remove(r.line);scene.remove(r.sinker);});
   st.rods=Array.from({length:st.nRods},(_,i)=>{const x=rodX(i,st.nRods),spike=makeSpike(!!st.gear.bought?.spike);spike.position.set(x,ROD_Z*.035,ROD_Z);scene.add(spike);
-    const obj=makeRod();skinRod(obj);scene.add(obj);const lg=new T.BufferGeometry();lg.setAttribute('position',new T.Float32BufferAttribute(new Float32Array(40*3),3));const line=new T.Line(lg,MAT.line);line.frustumCulled=false;scene.add(line);
+    const obj=makeRod();skinRod(obj,st.gear.rod,st.gear.reel);scene.add(obj);const lg=new T.BufferGeometry();lg.setAttribute('position',new T.Float32BufferAttribute(new Float32Array(40*3),3));const line=new T.Line(lg,MAT.line);line.frustumCulled=false;scene.add(line);
     const sinker=new T.Mesh(new T.SphereGeometry(.05,8,6),MAT.lead);sinker.visible=false;scene.add(sinker);
     const hit=new T.Mesh(new T.CylinderGeometry(.6,.6,4.6,8),new T.MeshBasicMaterial({visible:false}));hit.position.set(x,2,ROD_Z-1.1);hit.rotation.x=-40*R;scene.add(hit);
-    return {lead:st.lead,hook:st.hook,rig:'lungo',broken:false,dismantled:false,i,x,spike,obj,line,sinker,hit,bait:null,dist:0,state:'idle',baitLeft:0,bend:0,bitePlan:null,held:false,sx:x,sz:-1};});}
+    return {rodId:st.gear.rod,reelId:st.gear.reel,leadT:'piramidale',hookT:'aberdeen',lead:st.lead,hook:st.hook,rig:'lungo',broken:false,dismantled:false,i,x,spike,obj,line,sinker,hit,bait:null,dist:0,state:'idle',baitLeft:0,bend:0,bitePlan:null,held:false,sx:x,sz:-1};});}
 function placeRodOnSpike(r){const by=ROD_Z*.035;r.obj.position.set(r.x,by+.12,ROD_Z);r.obj.rotation.set(-40*R,0,0,'YXZ');}
 function rodInHand(r,a=AN){const J=a.obj.userData.J,hp=new T.Vector3();J.rHand.getWorldPosition(hp);const p=a.pose.rod||{p:45,f:0,y:0};
   r.obj.rotation.set((p.p-90)*R,a.rotY+(p.y||0),0,'YXZ');const dir=new T.Vector3(0,1,0).applyEuler(r.obj.rotation);r.obj.position.copy(hp).addScaledVector(dir,-.5);}
@@ -1059,8 +1059,8 @@ function giveItem(it,o){const g=st.gear;(g.bought=g.bought||{})[it.id]=true;swit
   case 'surf420':case 'surf420s':case 'surf450':case 'surf480':if(!g.rods.includes(it.id))g.rods.push(it.id);g.rod=it.id;break;
   case 'reel':{const t=['6000','8000','10000','14000'][o.t||0],id='r'+t;if(!g.reels.includes(id))g.reels.push(id);g.reel=id;g.drag=[8,12,15,20][o.t||0];break;}
   case 'reelT':if(!g.reels.includes('rT'))g.reels.push('rT');g.reel='rT';g.drag=25;break;
-  case 'hook':{const m=[0,2,4,6,8][o.m||0];g.hooks[m]=(g.hooks[m]||0)+10;break;}
-  case 'lead':{const w=[80,100,125,150,175,200][o.g||0];if(o.t===2)g.grip[w]=(g.grip[w]||0)+3;g.leads[w]=(g.leads[w]||0)+3;break;}
+  case 'hook':{const m=[0,2,4,6,8][o.m||0];g.hooks[m]=(g.hooks[m]||0)+10;if(o.t===1){g.forged=g.forged||{};g.forged[m]=(g.forged[m]||0)+10;}break;}
+  case 'lead':{const w=[80,100,125,150,175,200][o.g||0];if(o.t===2)g.grip[w]=(g.grip[w]||0)+3;if(o.t===1){g.ogiva=g.ogiva||{};g.ogiva[w]=(g.ogiva[w]||0)+3;}g.leads[w]=(g.leads[w]||0)+3;break;}
   case 'line':g.line=[.2,.22,.25,.28,.3][o.d||0];break;
   case 'leader':g.leader+=5;break;
   case 'fluo':g.fluo=[.25,.3,.35,.4][o.d||0];break;
@@ -1074,9 +1074,10 @@ function gearQuality(){const g=st.gear,b=g.bought||{},w=wxAt(st.gt);let q=.7;
   return Math.min(1.2,q);}
 const ROD_COL={surf420:['#2b2f36','#3a4049'],surf420s:['#e8e8e4','#cfd3d6'],surf450:['#0f2f5a','#1d4f8a'],surf480:['#5a0f12','#8a1c20']},REEL_COL={r6000:'#2b2f36',r8000:'#3d4550',r10000:'#b8352a',r14000:'#c9a24a',rT:'#d9dde2'};
 // la canna e il mulinello scelti si vedono sul modello
-function skinRod(obj){const g=st.gear,rc=ROD_COL[g.rod]||ROD_COL.surf420,m1=new T.MeshStandardMaterial({color:rc[0],roughness:.3,metalness:.35}),m2=new T.MeshStandardMaterial({color:rc[1],roughness:.3,metalness:.35}),mr=new T.MeshStandardMaterial({color:REEL_COL[g.reel]||'#3d4550',roughness:.3,metalness:.75});
-  obj.traverse(o=>{if(!o.isMesh)return;if(o.material===MAT.blank)o.material=m1;else if(o.material===MAT.blank2)o.material=m2;else if(o.material===MAT.reel)o.material=mr;});
-  const big={r10000:1.08,r14000:1.16,rT:1.18,r6000:.92}[g.reel]||1;obj.userData.reel.scale.multiplyScalar(big);
+function skinRod(obj,rodId,reelId){const g=st.gear,U=obj.userData;if(!U.sk){U.sk={m1:new T.MeshStandardMaterial({roughness:.3,metalness:.35}),m2:new T.MeshStandardMaterial({roughness:.3,metalness:.35}),mr:new T.MeshStandardMaterial({roughness:.3,metalness:.75}),base:U.reel.scale.x};
+    obj.traverse(o=>{if(!o.isMesh)return;if(o.material===MAT.blank)o.material=U.sk.m1;else if(o.material===MAT.blank2)o.material=U.sk.m2;else if(o.material===MAT.reel)o.material=U.sk.mr;});}
+  const rc=ROD_COL[rodId]||ROD_COL.surf420;U.sk.m1.color.set(rc[0]);U.sk.m2.color.set(rc[1]);U.sk.mr.color.set(REEL_COL[reelId]||'#3d4550');
+  U.reel.scale.setScalar(U.sk.base*({r10000:1.08,r14000:1.16,rT:1.18,r6000:.92}[reelId]||1));
   if(g.bought?.beads){const bm=new T.MeshStandardMaterial({color:'#9dff7a',emissive:'#5aff3a',emissiveIntensity:.5});obj.userData.beads=bm;}}
 function gearChips(){const g=st.gear,b=g.bought||{},q=gearQuality(),rn=id=>id==='rT'?'Tournament 14000':id.slice(1);
   return `<div class="grow" style="flex-wrap:wrap;gap:4px"><span>Canna</span>${g.rods.map(id=>`<button class="gc ${g.rod===id?'on':''}" onclick="GAME.useRod('${id}')">${ROD[id].n}</button>`).join('')}</div>
@@ -1226,9 +1227,12 @@ function setUI(){const p=st.phase;let h='';
   else if(p==='atrod'){const r=st.rods[st.sel];h=`<div class="gpanel"><b>Canna ${st.sel+1}</b><div class="gs">${r.bait?B[r.bait].n+' a '+Math.round(r.dist)+' m · '+rodStatus(r):'Senza esca'}</div>
     ${r.state==='bite'?btn('⚡ FERRA!','strike()','big hot'):''}${r.state==='hooked'?btn('🌀 Prendi la canna e recupera','fightHooked()','big hot'):''}${r.state==='tangled'?btn('🧶 Recupera e districa','untangle()','big hot'):''}${r.dismantled?btn('🔧 Rimonta la canna','remount()','big'):(r.state==='tangled'?'':r.bait?btn('🌀 Recupera e cambia esca','rebait()'):btn('🪝 Innesca','rebait()','big'))+(r.state==='tangled'?'':btn('🔧 Montatura · '+r.lead+' g, amo '+'n. '+hookNum(r.hook)+', '+({lungo:'lungo 1,5 m',corto:'corto 75 cm','2ami':'2 ami'})[r.rig],'rigAt()'))+(r.bait?'':btn('🧰 Smonta la canna','dismantle()'))}${btn('🪑 Torna a sedere','back()')}</div>`;}
   else if(p==='rig'){const r=st.rods[st.sel],w=wxAt(st.gt);h=`<div class="gpanel"><b>🔧 Montatura della canna ${st.sel+1}</b>${r.broken?'<div class="gs warn">La lenza si è rotta: rifai il terminale (perdi piombo e amo).</div>':''}
-    <div class="grow"><span>Piombo</span>${[80,100,125,150,175,200].map(g=>`<button class="gc ${r.lead===g?'on':''}" ${st.gear.leads[g]>0||r.lead===g?'':'disabled style="opacity:.4"'} onclick="GAME.setRig('lead',${g})">${g} g <small style="opacity:.7">${st.gear.leads[g]||0}</small></button>`).join('')}${st.gear.grip[r.lead]>0?`<button class="gc ${r.grip?'on':''}" onclick="GAME.setRig('grip',${!r.grip})">🕷️ a ragno</button>`:''}</div>
+    ${st.gear.rods.length>1?`<div class="grow" style="flex-wrap:wrap;gap:4px"><span>Canna</span>${st.gear.rods.map(id=>`<button class="gc ${r.rodId===id?'on':''}" onclick="GAME.setRig('rodId','${id}')">${ROD[id].n}</button>`).join('')}</div>`:''}
+    ${st.gear.reels.length>1?`<div class="grow" style="flex-wrap:wrap;gap:4px"><span>Mulinello</span>${st.gear.reels.map(id=>`<button class="gc ${r.reelId===id?'on':''}" onclick="GAME.setRig('reelId','${id}')">${id==='rT'?'Tournament 14000':id.slice(1)}</button>`).join('')}</div>`:''}
+    <div class="grow"><span>Piombo</span>${[80,100,125,150,175,200].map(g=>`<button class="gc ${r.lead===g?'on':''}" ${st.gear.leads[g]>0||r.lead===g?'':'disabled style="opacity:.4"'} onclick="GAME.setRig('lead',${g})">${g} g <small style="opacity:.7">${st.gear.leads[g]||0}</small></button>`).join('')}</div>${(st.gear.grip[r.lead]>0||(st.gear.ogiva||{})[r.lead]>0)?`<div class="grow" style="gap:4px"><span>Forma</span>${[['piramidale','🔺 Piramidale'],['ogiva','💧 Ogiva'],['ragno','🕷️ A ragno']].filter(([k])=>leadOk(r.lead,k)).map(([k,n])=>`<button class="gc ${(r.leadT||'piramidale')===k?'on':''}" onclick="GAME.setRig('leadT','${k}')">${n}</button>`).join('')}</div>`:''}
     <div class="gs">Con mare ${seaName(w.wave)} servono almeno ${suggestLead(w.wave)} g, sennò la corrente trascina il piombo verso riva.</div>
-    <div class="grow"><span>Amo</span>${[0,2,4,6,8].map(k=>`<button class="gc ${hookNum(r.hook)===k?'on':''}" ${st.gear.hooks[k]>0||hookNum(r.hook)===k?'':'disabled style="opacity:.4"'} onclick="GAME.setRig('hook',${k})">${k} <small style="opacity:.7">${st.gear.hooks[k]||0}</small></button>`).join('')}</div>
+    <div class="grow"><span>Amo</span>${[0,2,4,6,8].map(k=>`<button class="gc ${hookNum(r.hook)===k?'on':''}" ${st.gear.hooks[k]>0||hookNum(r.hook)===k?'':'disabled style="opacity:.4"'} onclick="GAME.setRig('hook',${k})">${k} <small style="opacity:.7">${st.gear.hooks[k]||0}</small></button>`).join('')}</div>${(st.gear.forged||{})[hookNum(r.hook)]>0?`<div class="grow" style="gap:4px"><span>Tipo amo</span>${[['aberdeen','Aberdeen (filo sottile)'],['forgiato','Forgiato (robusto)']].map(([k,n])=>`<button class="gc ${(r.hookT||'aberdeen')===k?'on':''}" onclick="GAME.setRig('hookT','${k}')">${n}</button>`).join('')}</div>`:''}
+    <div class="gs">${(r.leadT==='ogiva'?'Ogiva: vola più lontano (+5%) ma rotola con la corrente. ':r.leadT==='ragno'?'A ragno: resta fermo anche con la corrente forte. ':'')+(r.hookT==='forgiato'?'Amo forgiato: non si apre con i pesci grossi, meno abboccate dei piccoli.':'')}</div>
     <div class="grow"><span>Terminale</span>${[['lungo','lungo 1,5 m'],['corto','corto 75 cm'],['2ami','trave a 2 ami']].map(([k,n])=>`<button class="gc ${r.rig===k?'on':''}" onclick="GAME.setRig('rig','${k}')">${n}</button>`).join('')}</div>
     <div class="gs">Lungo: più naturale con mare calmo (orate, mormore). Corto: lancia meglio e regge il mare mosso. Due ami: più abboccate, lancio più corto.</div>${btn(r.broken?'🔧 Rifai il terminale':'✅ Fatto','rigDone()','big')}</div>`;}
   else if(p==='snag'){const sn=st.snag;h=`<div class="gpanel"><b>${sn.kind==='scogli'?'🪨 Incagliato negli scogli!':sn.kind==='sabbia'?'⏳ Piombo insabbiato!':'⚠️ Incagliato!'}</b><div class="gs">${sn.msg||'Il piombo si è incastrato sul fondo.'}</div>${btn('💪 Tira forte','snagPull()','big')}${btn('↔️ Spostati e cambia angolo','snagMove()')}${btn('🏊 Entra in acqua e nuota fino all\'incaglio','snagSwim()')}</div>`;}
@@ -1332,9 +1336,10 @@ G.rigAt=()=>seq(async()=>{const r=st.rods[st.sel];st.phase='busy';setUI();if(r.d
 G.dismantle=()=>seq(async()=>{const r=st.rods[st.sel];st.phase='busy';st.msg='🧰 Smonta la canna e la mette nel fodero…';setUI();if(!r.held)await pickRod(st.sel);pose('bend');await sleep(1.6);r.held=false;AN.holding=-1;r.dismantled=true;r.obj.visible=false;r.line.visible=false;pose('stand');st.msg='Canna '+(r.i+1)+' smontata.';st.phase='wait';setUI();});
 G.remount=()=>seq(async()=>{const r=st.rods[st.sel];st.phase='busy';st.msg='🔧 Monta la canna…';setUI();pose('bend');await sleep(1.8);r.dismantled=false;r.obj.visible=true;placeRodOnSpike(r);pose('stand');st.msg='';st.phase='atrod';setUI();});
 G.rig=()=>{st.phase='rig';setUI();};
-G.setRig=(k,v)=>{const r=st.rods[st.sel];r[k]=v;click();setUI();};
+G.setRig=(k,v)=>{const r=st.rods[st.sel];r[k]=v;if(k==='leadT')r.grip=v==='ragno';if(k==='rodId'||k==='reelId')skinRod(r.obj,r.rodId,r.reelId);if(k==='lead'&&!leadOk(r.lead,r.leadT)){r.leadT='piramidale';r.grip=false;}if(k==='hook'&&r.hookT==='forgiato'&&!((st.gear.forged||{})[v]>0))r.hookT='aberdeen';click();setUI();};
+function leadOk(w,t){const g=st.gear;return t==='ragno'?g.grip[w]>0:t==='ogiva'?(g.ogiva||{})[w]>0:true;}
 G.rigDone=()=>seq(async()=>{const r=st.rods[st.sel],g=st.gear;if(r.broken){const h=hookNum(r.hook),miss=[!(g.leads[r.lead]>0)&&'piombo da '+r.lead+' g',!(g.hooks[h]>0)&&'amo n. '+h,!(g.swivels>0)&&'girelle',!(g.snaps>0)&&'moschettoni'].filter(Boolean);
-    if(miss.length){st.msg='🧰 Ti mancano: '+miss.join(', ')+'. Cambia misura o passa dal negozio.';setUI();return;}g.leads[r.lead]--;g.hooks[h]--;g.swivels--;g.snaps--;if(r.grip&&g.grip[r.lead]>0)g.grip[r.lead]--;gearSave();}st.phase='busy';st.msg=r.broken?'🔧 Rifà il terminale…':'🔧 Cambia la montatura…';setUI();pose('bend');await sleep(r.broken?2.2:1.4);r.broken=false;pose('hold');st.msg='';st.phase='bait';setUI();});
+    if(miss.length){st.msg='🧰 Ti mancano: '+miss.join(', ')+'. Cambia misura o passa dal negozio.';setUI();return;}g.leads[r.lead]--;g.hooks[h]--;g.swivels--;g.snaps--;if(r.leadT==='ragno'&&g.grip[r.lead]>0)g.grip[r.lead]--;if(r.leadT==='ogiva'&&g.ogiva?.[r.lead]>0)g.ogiva[r.lead]--;if(r.hookT==='forgiato'&&g.forged?.[h]>0)g.forged[h]--;if(!leadOk(r.lead,r.leadT)){r.leadT='piramidale';r.grip=false;}if(r.hookT==='forgiato'&&!(g.forged?.[h]>0))r.hookT='aberdeen';gearSave();}st.phase='busy';st.msg=r.broken?'🔧 Rifà il terminale…':'🔧 Cambia la montatura…';setUI();pose('bend');await sleep(r.broken?2.2:1.4);r.broken=false;pose('hold');st.msg='';st.phase='bait';setUI();});
 G.bait=k=>{const r=st.rods[st.sel],g=st.gear;if(B[k].lim){if(!(st.inv[k]>0))return;st.inv[k]--;}else{if(!(g.baits[k]>0))return;if(['bibi','koreano','arenicola','americano'].includes(k)&&!g.needle){st.msg='🪡 Per innescare i vermi serve l\'ago da innesco: lo trovi al negozio.';setUI();return;}g.baits[k]--;gearSave();}r.bait=k;r.baitLeft=B[k].life*(k==='cozza'&&hookCat(st.hook)==='piccolo'?1.2:1)*(g.elastic&&['cozza','bibi','arenicola','sarda','gambero'].includes(k)?1.3:1);click();pose('hold');st.phase='cast';setUI();};
 // stili di lancio a mano: zona verde, gittata massima, precisione e rischio di rottura del filo
 const CSTY={above:{n:'Above',it:'dall\'alto',g:[.76,.92],max:115,spr:2,crack:0,load:'castBack',fwd:'castFwd',d:'Dall\'alto sopra la testa: facile e preciso, fino a 115 m.'},
@@ -1369,7 +1374,7 @@ function doCast(){const c=st.cast;c.on=false;const r=st.rods[st.sel],w=wxAt(st.g
   const rnd2=Math.random(),lk=st.gear.leader>0?.3:1;if((S.crack&&p>g1+.03&&rnd2<S.crack*lk)||rnd2<(.02+((r.lead||st.lead)>175?.015:0))*lk){if(st.gear.leader>0){st.gear.leader--;gearSave();}st.cast=null;seq(async()=>{st.phase='busy';setUI();castAnimStart('fire');await sleep(.3);whoosh();st.castLead=null;await sleep(.4);st.castAnim=null;st.castCam=false;CAM.cl=null;click();vib([60,30,60]);r.broken=true;r.bait=null;r.state='idle';r.dist=0;r.sinker.visible=false;pose('hold');
     st.msg=p>g1+.03?'💥 Crack-off! Troppa forza: il filo si è rotto al lancio e il piombo è volato via. Rifai il terminale.':'💥 La lenza si è spezzata al lancio (nodo indebolito): piombo perso, rifai il terminale.';st.phase='rig';setUI();});return;}
   // zona verde: fino al massimo dello stile; con poca potenza anche solo 10 m; oltre la zona verde il lancio si sporca
-  const GR=st.gear,M=S.max*(ROD[GR.rod]?.mul||1)*(1+(.25-GR.line)*.8),base=green?M*(1-Math.abs(p-gm)*.45):p<g0?lerp(10,M*.92,Math.pow(p/g0,1.15)):lerp(M*.92,M*.4,(p-g1)/(1-g1));
+  const GR=st.gear,M=S.max*(ROD[r.rodId||GR.rod]?.mul||1)*(1+(.25-GR.line)*.8)*(r.leadT==='ogiva'?1.05:1),base=green?M*(1-Math.abs(p-gm)*.45):p<g0?lerp(10,M*.92,Math.pow(p/g0,1.15)):lerp(M*.92,M*.4,(p-g1)/(1-g1));
   const leadF=clamp(1.15-((r.lead||st.lead)-100)/400,.85,1.1)*(r.rig==='2ami'?.93:r.rig==='corto'?1.04:1),baitF=r.bait==='cefalotto'?.55:r.bait==='sarda'||r.bait==='seppia'?.85:1,wind=1+windHelp(w.wd)*clamp(w.ws/60,0,.35);
   const dist=clamp(base*leadF*baitF*wind+rnd(-3,3),8,155);st.cast=null;
   r.star=night()>.25?(st.gear.starlight>0?(st.gear.starlight--,gearSave(),true):false):r.star;
@@ -1502,7 +1507,7 @@ function updFight(dt){const f=st.fight;if(!f||st.phase!=='fight')return;f.t+=dt;
   if(f.run<=0&&Math.random()<dt*.5*f.pow){f.run=rnd(.6,2)*f.pow;vib([90+Math.round(f.pow*60),50,140+Math.round(f.pow*80)]);}f.run=Math.max(0,f.run-dt);
   // durante la fuga e con la tensione alta: piccoli strattoni
   f.vt=(f.vt||0)-dt;if(f.vt<=0&&(f.run>0||f.ten>.75)){vib(f.run>0?Math.round(35+f.pow*30):25);f.vt=f.run>0?rnd(.25,.5):rnd(.6,1.1);}
-  const pull=(f.run>0?.6:.18)*f.pow+(w.wave||0)*.08*Math.max(0,Math.sin(performance.now()/700));const dragMax=.35+f.drag*.07+((st.gear.drag||12)-12)*.012;
+  const pull=(f.run>0?.6:.18)*f.pow+(w.wave||0)*.08*Math.max(0,Math.sin(performance.now()/700));const dragMax=.35+f.drag*.07+(({r6000:8,r8000:12,r10000:15,r14000:20,rT:25}[r.reelId||st.gear.reel]||12)-12)*.012;
   let ten=(f.reel?.45:.12)+pull;if(ten>dragMax){const out=(ten-dragMax)*dt*25;f.dist+=out;ten=dragMax+(ten-dragMax)*.25;AN.reelSpin=-.6;
     // la frizione cede: crepitio tanto più fitto quanto più filo esce, e vibrazione continua
     f.dAcc=(f.dAcc||0)+out;let n=0;while(f.dAcc>.05&&n<4){f.dAcc-=.05;n++;dragTick(n*.012);}f.dv=(f.dv||0)-dt;if(f.dv<=0){f.dv=.22;vib(Math.round(40+Math.min(80,out/dt*6)));}}
@@ -1511,7 +1516,7 @@ function updFight(dt){const f=st.fight;if(!f||st.phase!=='fight')return;f.t+=dt;
   f.ten=lerp(f.ten,clamp(ten,0,1.2),.15);r.dist=Math.max(0,f.dist);
   const lim=(f.sp.teeth&&hookCat(st.hook)!=='grande'?.92:1)*Math.min(1.12,Math.pow((st.gear.line||.25)/.25,.5));if(f.ten>lim){f.over=(f.over||0)+dt;if(f.over>.35)return endFight(false,f.sp.teeth?'Il serra ha tranciato la lenza con i denti!':'Lenza rotta: troppa tensione. Apri un po\' la frizione.');}else f.over=0;
   if(f.ten<.16)f.slack+=dt;else f.slack=Math.max(0,f.slack-dt*2);if(f.slack>2.6)return endFight(false,'Slamato: con la lenza lenta il pesce si è liberato.');
-  if(hookCat(st.hook)==='piccolo'&&f.w>2.5&&f.ten>.85&&Math.random()<dt*.6)return endFight(false,'L\'amo piccolo si è aperto: pesce troppo grosso.');
+  if(hookCat(st.hook)==='piccolo'&&r.hookT!=='forgiato'&&f.w>2.5&&f.ten>.85&&Math.random()<dt*.6)return endFight(false,'L\'amo piccolo si è aperto: pesce troppo grosso.');
   if(f.run>0&&Math.random()<dt*4)burst(new T.Vector3(r.sx*(f.dist/Math.max(1,-r.sz))+r.x*(1-f.dist/Math.max(1,-r.sz)),0,-f.dist),.4);
   if(!f.sp.crab&&!f.jump&&(f.jumps||0)<2&&f.w>=Math.max(1.1,f.sp.w[1]*1.25)&&f.dist<32&&f.dist>7&&Math.random()<dt*.22){f.jumps=(f.jumps||0)+1;f.jump={t:0};if(!f.obj){f.obj=makeFish3D(f.sp,f.len/100);f.obj.visible=false;scene.add(f.obj);}burst(lineEnd(r,f.dist),.6);splash(.2);}
   if(f.dist<=0)return endFight(true);
@@ -1687,7 +1692,7 @@ function loop(){raf=requestAnimationFrame(loop);if(!renderer)return;const dt=Mat
   if(st.cast?.on){st.cast.p+=st.cast.dir*dt*1.15;if(st.cast.p>1){st.cast.p=1;st.cast.dir=-1;}if(st.cast.p<0){st.cast.p=0;st.cast.dir=1;}const el=document.getElementById('gpw');if(el)el.style.width=(st.cast.p*100)+'%';}
   // canne
   for(const r of st.rods){
-    if(r.state==='fishing'&&r.dist>8){const need=suggestLead(w.wave||0)-(r.grip?25:0);if((r.lead||st.lead)<need-20){const k=(need-(r.lead||st.lead))/100;r.dist-=gmin*k*6;r.sx+=gmin*k*Math.sin((w.wd-FACE)*R)*3;r.tgT=(r.tgT||0)-gmin;if(r.tgT<=0){r.tgT=1;if(checkTangle(r)&&st.phase==='wait')setUI();}if(!r.driftMsg){r.driftMsg=1;st.msg=`Canna ${r.i+1}: il piombo da ${r.lead} g «ara», la corrente lo trascina verso riva. Metti un piombo più pesante.`;if(st.phase==='wait')setUI();}}}
+    if(r.state==='fishing'&&r.dist>8){const need=suggestLead(w.wave||0)-(r.grip?25:0)+(r.leadT==='ogiva'?15:0);if((r.lead||st.lead)<need-20){const k=(need-(r.lead||st.lead))/100;r.dist-=gmin*k*6;r.sx+=gmin*k*Math.sin((w.wd-FACE)*R)*3;r.tgT=(r.tgT||0)-gmin;if(r.tgT<=0){r.tgT=1;if(checkTangle(r)&&st.phase==='wait')setUI();}if(!r.driftMsg){r.driftMsg=1;st.msg=`Canna ${r.i+1}: il piombo da ${r.lead} g «ara», la corrente lo trascina verso riva. Metti un piombo più pesante.`;if(st.phase==='wait')setUI();}}}
     if(r.state==='fishing'){const was=r.baitLeft;r.baitLeft-=gmin*(1+(w.wave||0)*.6);if(r.bait&&was>0&&r.baitLeft<=0){baitGone();vib([60,80,60]);st.msg=`🪝 Canna ${r.i+1}: l'esca è finita, va reinnescata.`;if(st.phase==='wait')setUI();}if(Math.random()<biteRate(r)*gmin)startBite(r);}
     if(r.state==='bite'){r.biteT+=dt;if(r.biteT>r.bitePlan.len){const pl=r.bitePlan,auto={partenza:.6,violenta:.45,decisa:.3,nervosa:.15,picchiettata:.05}[pl.kind]||0;
         if(pl.sp&&!pl.steal&&Math.random()<auto){r.state='hooked';r.hookT=0;bell(4,.3);try{navigator.vibrate?.([200,80,200]);}catch(e){}st.msg=`🐟 Canna ${r.i+1}: il pesce si è allamato da solo! Vai a recuperarlo.`;if(st.phase==='wait'||st.phase==='atrod')setUI();continue;}
@@ -1847,7 +1852,7 @@ function speciesWeights(r){const d=gameDate(),w=wxAt(st.gt),m=d.getMonth()+1,per
   return SP.map(sp=>{const b=sp.bait[r.bait]||0;if(!b)return [sp,0];
     let f=sp.ab*(sp.mo[m]||.05)*b*waveF(sp,w.wave||0)*(sp.time[per]||.5)*distF(sp,r.dist)*(SPOT.fishK?.[sp.n]||1);
     if(sp.n==='Spigola'&&temp<15)f*=1.2;if(sp.n==='Orata'&&temp<13)f*=.4;if((sp.n==='Serra'||sp.n==='Leccia stella')&&temp<18)f*=.3;
-    const hk=hookCat(r.hook??st.hook);if(hk==='piccolo'&&sp.w[1]>1)f*=.7;if(hk==='grande'&&sp.w[1]<.4)f*=.35;
+    const hk=hookCat(r.hook??st.hook);if(r.hookT==='forgiato'&&sp.w[1]<.5)f*=.85;if(hk==='piccolo'&&sp.w[1]>1)f*=.7;if(hk==='grande'&&sp.w[1]<.4)f*=.35;
     if(r.rig==='lungo'&&['Orata','Mormora','Sarago maggiore'].includes(sp.n))f*=(w.wave||0)<.7?1.2:.85;if(r.rig==='corto')f*=(w.wave||0)>=.8?1.15:.95;
     return [sp,f];});}
 function biteRate(r){// abboccate per minuto di gioco
