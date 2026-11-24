@@ -1168,13 +1168,14 @@ EQ.buildHome=function(){
    const parquet=EQ.canvasTex(256,256,(g,w,h)=>{g.fillStyle='#b98a58';g.fillRect(0,0,w,h);for(let y=0;y<h;y+=32)for(let x=(y/32%2)*48;x<w+96;x+=96){g.fillStyle=`hsl(30,${35+Math.random()*10}%,${45+Math.random()*10}%)`;g.fillRect(x-96,y+1,95,30);}g.fillStyle='rgba(0,0,0,.15)';for(let y=0;y<h;y+=32)g.fillRect(0,y,w,1);},6,4);W.tex.push(parquet);
    const tiles=EQ.canvasTex(128,128,(g,w,h)=>{g.fillStyle='#e8eef0';g.fillRect(0,0,w,h);g.strokeStyle='#b8c4c8';g.lineWidth=3;for(let i=0;i<=w;i+=32){g.beginPath();g.moveTo(i,0);g.lineTo(i,h);g.stroke();g.beginPath();g.moveTo(0,i);g.lineTo(w,i);g.stroke();}},3,3);W.tex.push(tiles);
    const fl=(x,z,w,d,t,c)=>{const m=mesh(new THREE.PlaneGeometry(w,d),new THREE.MeshStandardMaterial({map:t,roughness:.55,color:C(c||0xffffff),polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-4}),x,.03,z,R);m.rotation.x=-Math.PI/2;};
-   fl(0,0,22,16,parquet);fl(9,-4,4,8,tiles);fl(7,5,8,6,tiles,0xfff4e0);
+   fl(0,0,22,16,parquet);
+   {const tf=(x,z,w,d,c)=>{const m=mesh(new THREE.PlaneGeometry(w,d),new THREE.MeshStandardMaterial({map:tiles,roughness:.4,color:C(c||0xffffff),polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-16}),x,.07,z,R);m.rotation.x=-Math.PI/2;m.renderOrder=1;};tf(9,-4,3.9,7.9);tf(7,5,7.9,5.9,0xfff4e0);}
    const wallM=new THREE.MeshStandardMaterial({map:TX.plaster('#f3ead8'),roughness:.9});
    const wall=(x1,z1,x2,z2)=>{const L=Math.hypot(x2-x1,z2-z1),a=Math.atan2(z2-z1,x2-x1);const m=mesh(G.box(L,2.8,.15),wallM,(x1+x2)/2,1.4,(z1+z2)/2,R);m.rotation.y=-a;
      W.colliders.push({x:OX+(x1+x2)/2,z:OZ+(z1+z2)/2,hx:L/2,hz:.12,rot:a});};
    wall(-11,-8,11,-8);wall(-11,-8,-11,8);wall(11,-8,11,8);wall(-11,8,-.8,8);wall(.8,8,11,8);
    // muro tra zona giorno e zona notte con porte
-   wall(-11,0,-8.1,0);wall(-6.9,0,-1.6,0);wall(-.4,0,3.9,0);wall(5.1,0,8.4,0);wall(9.6,0,11,0);
+   wall(-11,0,-10.4,0);wall(-9.2,0,-1.6,0);wall(-.4,0,3.9,0);wall(5.1,0,8.4,0);wall(9.6,0,11,0);
    wall(-4,-8,-4,0);wall(2,-8,2,0);wall(7,-8,7,0);
    mesh(G.box(1.5,2.4,.08),mat(0x5a3418,.5),0,1.2,8.05,R);
    // SOGGIORNO
@@ -1194,7 +1195,7 @@ EQ.buildHome=function(){
    chairs.forEach(([x,z,h])=>{mesh(G.box(.45,.06,.45),wood,x,.45,z,R);mesh(G.box(.45,.5,.06),wood,x,.72,z-Math.cos(h)*.21,R);for(const [a,b] of [[-.2,-.2],[.2,-.2],[-.2,.2],[.2,.2]])mesh(G.box(.04,.45,.04),wood,x+a,.22,z+b,R);W.seats.push({x:OX+x,z:OZ+z,h,y:0});});
    // fruttiera e piante
    mesh(G.cyl(.25,.15,.12,12),mat(0xffffff,.3),-1.5,.88,5.4,R);for(let i=0;i<4;i++)mesh(G.sph(.07,8,6),mat([0xc2262d,0xf1c40f,0x6cc04a,0xf07b16][i],.4),-1.6+i*.07,.97,5.4+(i%2)*.05,R);
-   for(const [x,z] of [[-10.4,7.4],[-10.4,.7]]){mesh(G.cyl(.25,.2,.45,12),mat(0xc0603a,.7),x,.22,z,R);mesh(G.sph(.45,10,8),mat(0x3f8a2c,.8),x,.85,z,R);}
+   for(const [x,z] of [[-10.4,7.4],[-10.4,4.6]]){mesh(G.cyl(.25,.2,.45,12),mat(0xc0603a,.7),x,.22,z,R);mesh(G.sph(.45,10,8),mat(0x3f8a2c,.8),x,.85,z,R);}
    // CUCINA
    const cab=mat(0xf4f1ea,.5),top=mat(0x4a4a4a,.3,.2);
    mesh(G.box(6,.9,.65),cab,7.8,.45,7.6,R);mesh(G.box(6.05,.05,.7),top,7.8,.92,7.6,R);col(7.8,7.6,3.05,.36,.95);
@@ -1233,7 +1234,9 @@ EQ.buildHome=function(){
      {id:'cook',icon:'🍳',label:'Cucina qualcosa',p:P(8.2,6.85),h:0,pose:'brush',dur:5,snd:'cook',msg:'🍳 Che profumino! Pasta al pomodoro pronta'},
      {id:'fridge',icon:'🧃',label:'Prendi un succo',p:P(9.6,2.2),h:Math.PI/2,pose:'feed',dur:2.5,msg:'🧃 Che buono il succo di frutta!'},
      {id:'wash',icon:'🍽️',label:'Lava i piatti',p:P(6,6.85),h:0,pose:'spray',dur:4,snd:'water',msg:'🍽️ Piatti puliti!'},
-     {id:'bed',icon:'🛏️',label:'Fai un pisolino',p:P(-7.5,-5.5),h:0,lie:true,dur:5,msg:'😴 Zzz… che bella dormita!',sleep:true},
+     {id:'bed',icon:'🛏️',label:'Fai un pisolino',p:P(-7.5,-5.5),h:0,lie:true,ly:.86,dur:5,msg:'😴 Zzz… che bella dormita!',sleep:true},
+     {id:'lie1',icon:'🛌',label:'Stenditi sul letto',p:P(-6.6,-5.5),h:0,lie:true,ly:.86,dur:9999},
+     {id:'lie2',icon:'🛌',label:'Stenditi sul lettino',p:P(-3.3,-5.75),h:0,lie:true,ly:.72,dur:9999},
      {id:'kbed',icon:'🧸',label:'Gioca con i peluche',p:P(-1.2,-2.2),h:Math.PI,pose:'play',dur:4,snd:'kids',msg:'🧸 Che divertimento in cameretta!'},
      {id:'pc',icon:'💻',label:'Usa il computer',p:P(4.5,-6.45),h:Math.PI,pose:'drive',dur:8,pc:true},
      {id:'read',icon:'📚',label:'Leggi un libro sui cavalli',p:P(5.9,-4.2),h:Math.PI/2,pose:'feed',dur:4,msg:'📚 Hai imparato tutto sul galoppo!'},
