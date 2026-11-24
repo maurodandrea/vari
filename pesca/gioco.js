@@ -110,6 +110,7 @@ function reelWhir(level,rate){const c=AU.on&&level>0?ac():null;if(!c){if(AU.whir
   if(!AU.whir){const o=c.createOscillator();o.type='sawtooth';const f=c.createBiquadFilter();f.type='lowpass';f.frequency.value=900;const v=c.createGain();v.gain.value=0;o.connect(f).connect(v).connect(c.destination);o.start();AU.whir={o,v};}
   AU.whir.o.frequency.setTargetAtTime(90+rate*25,c.currentTime,.05);AU.whir.v.gain.setTargetAtTime(level,c.currentTime,.05);}
 function vib(p){try{if(LSG('vib',true))navigator.vibrate?.(p);}catch(e){}}
+function baitGone(){const c=ac();if(!c)return;[0,.28].forEach((d,k)=>{const o=c.createOscillator(),v=c.createGain(),t=c.currentTime+d;o.type='triangle';o.frequency.setValueAtTime(k?330:440,t);o.frequency.exponentialRampToValueAtTime(k?220:300,t+.22);v.gain.setValueAtTime(0,t);v.gain.linearRampToValueAtTime(.12,t+.02);v.gain.exponentialRampToValueAtTime(.001,t+.25);o.connect(v).connect(c.destination);o.start(t);o.stop(t+.3);});}
 function click(){const c=ac();if(!c)return;const o=c.createOscillator(),v=c.createGain();o.type='square';o.frequency.value=1800;v.gain.setValueAtTime(.04,c.currentTime);v.gain.exponentialRampToValueAtTime(.0001,c.currentTime+.03);o.connect(v).connect(c.destination);o.start();o.stop(c.currentTime+.04);}
 function whoosh(){const c=ac();if(!c)return;const s=c.createBufferSource();s.buffer=noiseBuf(c);const f=c.createBiquadFilter();f.type='highpass';f.frequency.setValueAtTime(400,c.currentTime);f.frequency.linearRampToValueAtTime(2500,c.currentTime+.5);const v=c.createGain();v.gain.setValueAtTime(.0001,c.currentTime);v.gain.linearRampToValueAtTime(.25,c.currentTime+.12);v.gain.exponentialRampToValueAtTime(.001,c.currentTime+.8);s.connect(f).connect(v).connect(c.destination);s.start();s.stop(c.currentTime+.9);}
 // onda che si rompe a riva: rumore filtrato con attacco morbido e coda lunga
@@ -277,6 +278,13 @@ const POSES={
   castGround:{hy:.8,sp:[.3,1.3,0],hd:[-.15,-.95,0],lSh:[1.0,0,.65],rSh:[1.2,0,-1.05],lEl:[.25,0,0],rEl:[.15,0,0],lHip:[.55,0,0],rHip:[-.2,0,0],lKnee:[-.8,0,0],rKnee:[-.45,0,0],rod:{p:166,f:0,y:.95}},
   castPendUp:{hy:.95,sp:[-.05,0,0],hd:[-.25,0,0],lSh:[2.2,0,.2],rSh:[2.5,0,-.2],lEl:[.4,0,0],rEl:[.3,0,0],lHip:[0,0,0],rHip:[0,0,0],lKnee:[0,0,0],rKnee:[0,0,0],rod:{p:68,f:0,y:0}},
   castPend:{hy:.86,sp:[.2,1.15,0],hd:[-.1,-.85,0],lSh:[1.3,0,.55],rSh:[1.6,0,-.95],lEl:[.3,0,0],rEl:[.2,0,0],lHip:[.4,0,0],rHip:[-.25,0,0],lKnee:[-.5,0,0],rKnee:[-.35,0,0],rod:{p:150,f:0,y:1.05}},
+  castOverTop:{hy:.95,sp:[-.05,.15,0],hd:[-.2,-.1,0],lSh:[2.4,0,.25],rSh:[2.9,0,-.2],lEl:[.9,0,0],rEl:[.35,0,0],lHip:[-.05,0,0],rHip:[.05,0,0],lKnee:[-.05,0,0],rKnee:[-.15,0,0],rod:{p:95,f:0,y:.1}},
+  castFollow:{hy:.93,sp:[-.35,-.2,0],hd:[-.2,.1,0],lSh:[1.0,0,.15],rSh:[1.65,0,-.05],lEl:[.6,0,0],rEl:[.05,0,0],lHip:[-.35,0,0],rHip:[.35,0,0],lKnee:[-.35,0,0],rKnee:[-.05,0,0],rod:{p:22,f:0,y:-.05}},
+  sideSweep:{hy:.9,sp:[0,.45,0],hd:[-.05,-.2,0],lSh:[1.3,0,.45],rSh:[1.55,0,-.7],lEl:[.35,0,0],rEl:[.2,0,0],lHip:[0,0,0],rHip:[-.1,0,0],lKnee:[-.2,0,0],rKnee:[-.2,0,0],rod:{p:135,f:0,y:.75}},
+  otgAddress:{hy:.8,sp:[.35,1.5,0],hd:[-.25,-1.1,0],lSh:[.9,0,.6],rSh:[1.1,0,-1.0],lEl:[.25,0,0],rEl:[.15,0,0],lHip:[.6,0,0],rHip:[-.2,0,0],lKnee:[-.85,0,0],rKnee:[-.45,0,0],rod:{p:172,f:0,y:1.1}},
+  otgTurn:{hy:.86,sp:[.15,.8,0],hd:[-.15,-.4,0],lSh:[1.4,0,.5],rSh:[1.8,0,-.8],lEl:[.3,0,0],rEl:[.2,0,0],lHip:[.25,0,0],rHip:[-.1,0,0],lKnee:[-.45,0,0],rKnee:[-.3,0,0],rod:{p:140,f:0,y:.7}},
+  pendStart:{hy:.95,sp:[-.05,0,0],hd:[-.25,0,0],lSh:[1.6,0,.2],rSh:[1.9,0,-.2],lEl:[.6,0,0],rEl:[.4,0,0],lHip:[0,0,0],rHip:[0,0,0],lKnee:[0,0,0],rKnee:[0,0,0],rod:{p:85,f:0,y:0}},
+  pendOut:{hy:.95,sp:[-.12,0,0],hd:[-.3,0,0],lSh:[1.8,0,.2],rSh:[2.1,0,-.2],lEl:[.5,0,0],rEl:[.35,0,0],lHip:[-.05,0,0],rHip:[.05,0,0],lKnee:[0,0,0],rKnee:[-.05,0,0],rod:{p:70,f:0,y:0}},
   castFwd:{hy:.92,sp:[-.3,-.3,0],hd:[-.15,.2,0],lSh:[1.1,0,.2],rSh:[1.5,0,-.1],lEl:[.3,0,0],rEl:[.2,0,0],lHip:[-.3,0,0],rHip:[.25,0,0],lKnee:[-.3,0,0],rKnee:[-.05,0,0],rod:{p:25,f:0,y:-.1}},
   showFish:{hy:.95,sp:[.04,0,0],hd:[.25,0,0],lSh:[.45,0,.42],rSh:[.45,0,-.42],lEl:[1.05,0,0],rEl:[1.05,0,0],lHip:[0,0,0],rHip:[0,0,0],lKnee:[0,0,0],rKnee:[0,0,0],rod:null},
   strike:{hy:.96,sp:[.3,.1,0],hd:[-.25,0,0],lSh:[2.4,0,.3],rSh:[2.5,0,-.2],lEl:[.5,0,0],rEl:[.4,0,0],lHip:[-.2,0,0],rHip:[.25,0,0],lKnee:[-.1,0,0],rKnee:[-.25,0,0],rod:{p:80,f:0}},
@@ -286,6 +294,10 @@ const AN={faceTo:null,obj:null,pose:JSON.parse(JSON.stringify(POSES.sit)),target
 function lerpPose(dt,k=6,a=AN){const tp=POSES[a.target],p=a.pose,f=1-Math.exp(-k*dt);p.hy=lerp(p.hy,tp.hy,f);
   for(const j of['sp','hd','lSh','rSh','lEl','rEl','lHip','rHip','lKnee','rKnee'])for(let i=0;i<3;i++)p[j][i]=lerp(p[j][i],tp[j][i],f);
   if(tp.rod){if(!p.rod)p.rod={...tp.rod};p.rod.p=lerp(p.rod.p,tp.rod.p,f);p.rod.f=lerp(p.rod.f||0,tp.rod.f||0,f);p.rod.y=lerp(p.rod.y||0,tp.rod.y||0,f);}}
+function reelIK(){const r=st.rods[AN.holding];if(!r||!r.held||!AN.obj)return;const J=AN.obj.userData.J,knob=r.obj.userData.crank.children[1];if(!knob)return;
+  const tg=new T.Vector3();r.obj.updateMatrixWorld(true);knob.getWorldPosition(tg);const hp=new T.Vector3(),P=[[J.lSh.rotation,'x'],[J.lSh.rotation,'z'],[J.lSh.rotation,'y'],[J.lEl.rotation,'x']];
+  const err=()=>{J.lSh.updateMatrixWorld(true);J.lHand.getWorldPosition(hp);return hp.distanceTo(tg);};let e=err(),st0=.12;
+  for(let it=0;it<7;it++){for(const [o,k] of P){const v=o[k];o[k]=v+st0;let e1=err();if(e1<e){e=e1;continue;}o[k]=v-st0;e1=err();if(e1<e){e=e1;continue;}o[k]=v;}st0*=.6;}}
 function applyPose(t,a=AN){const J=a.obj.userData.J,p=a.pose,set=(o,v)=>o.rotation.set(v[0],v[1],v[2]);
   const mv=a.moving&&!a.swim,spd=a.speed||1.4,run=mv&&spd>3.2,A1=mv?clamp(spd/1.5,.55,1.5):0,ph=a.walk,s1=Math.sin(ph),c1=Math.cos(ph);
   // bacino: sale e scende, ruota e oscilla; il busto compensa e la testa resta stabile
@@ -988,7 +1000,7 @@ G.rback=()=>{st.phase='wait';st.msg='';setUI();};
 G.rsend=()=>{const el=document.getElementById('grtx'),txt=(el?.value||'').trim().slice(0,200),C=rpCloud(),a=RP.list.get(st.rtalk);if(!txt||!C||!a)return;el.value='';
   C.ff.setDoc(C.ff.doc(C.db,'gamemsgs',C.user.uid+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,6)),{from:C.user.uid,name:C.name()||'Pescatore',to:a.id,spot:SPOT.id,text:txt,t:Date.now()}).catch(e=>{st.msg='Messaggio non inviato: '+(e.code||e.message);});
   (RP.log[a.id]=RP.log[a.id]||[]).push({me:true,text:txt});say(AN,txt,6);const lg=document.getElementById('grlog');if(lg)lg.innerHTML=rpLog(a.id);};
-G._rp=RP;G._cast=(style,pw)=>{st.castStyle=style;const r=st.rods[st.sel];st.cast={p:pw,dir:1,on:true};AN.target=CSTY[style].load;setTimeout(()=>doCast(),1200);};G._bolt=()=>strikeBolt();G._land=n=>{const sp=SP.find(x=>x.n===n);const r=st.rods[0];st.sel=0;r.held=true;AN.holding=0;r.bait="bibi";const w=sp.w[1]*1.6;st.fight={r,sp,w,len:lenOf(sp,w),dist:0,ten:.3,reel:false,drag:5,run:0,slack:0,t:0,pow:1};endFight(true);};G._jump=n=>{const sp=SP.find(x=>x.n===n);const r=st.rods[1];r.dist=20;r.sz=-90;const w=sp.w[2];st.fight={r,sp,w,len:lenOf(sp,w),dist:20,ten:.3,run:0,slack:0,t:0,pow:1,jump:{t:0}};st.fight.obj=makeFish3D(sp,st.fight.len/100);scene.add(st.fight.obj);};
+G._rp=RP;G._cast=(style,pw,ms=1600)=>{st.castStyle=style;st.cast={p:pw,dir:0,on:true};castAnimStart('load');setTimeout(()=>doCast(),ms);};G._bolt=()=>strikeBolt();G._land=n=>{const sp=SP.find(x=>x.n===n);const r=st.rods[0];st.sel=0;r.held=true;AN.holding=0;r.bait="bibi";const w=sp.w[1]*1.6;st.fight={r,sp,w,len:lenOf(sp,w),dist:0,ten:.3,reel:false,drag:5,run:0,slack:0,t:0,pow:1};endFight(true);};G._jump=n=>{const sp=SP.find(x=>x.n===n);const r=st.rods[1];r.dist=20;r.sz=-90;const w=sp.w[2];st.fight={r,sp,w,len:lenOf(sp,w),dist:20,ten:.3,run:0,slack:0,t:0,pow:1,jump:{t:0}};st.fight.obj=makeFish3D(sp,st.fight.len/100);scene.add(st.fight.obj);};
 
 /* ---------- interfaccia ---------- */
 function mount(v){
@@ -1015,7 +1027,7 @@ G.arrive=async i=>{cancelAnimationFrame(MP.raf);motor(false);dispose3D();removeE
     st.phase='setup';setUI();raf=requestAnimationFrame(loop);rpStart();}
   catch(e){ui.innerHTML=`<div class="gpanel"><b>Il gioco 3D non si è caricato</b><div class="gs">${escH(e.message||e)}</div>${btn('↻ Riprova','mount()','big')}</div>`;}};
 G.toMap=()=>{stop();mount(null);};
-function stop(){rpStop();st.bolt=null;cancelAnimationFrame(MP.raf);dispose3D();removeEventListener('resize',sizeMap);windSound(0);motor(false);reelWhir(0);cancelAnimationFrame(raf);raf=0;removeEventListener('resize',size);try{renderer?.dispose();renderer?.forceContextLoss?.();}catch(e){}renderer=null;foams=[];clouds=[];st.rods=[];NPCS=[];MYG=[];CRABS=[];LANTERNS=[];CAM.p=null;document.getElementById('gamebox')?.remove();document.body.classList.remove('gaming');seaSound(0);}
+function stop(){rpStop();st.bolt=null;st.castAnim=null;st.castLead=null;cancelAnimationFrame(MP.raf);dispose3D();removeEventListener('resize',sizeMap);windSound(0);motor(false);reelWhir(0);cancelAnimationFrame(raf);raf=0;removeEventListener('resize',size);try{renderer?.dispose();renderer?.forceContextLoss?.();}catch(e){}renderer=null;foams=[];clouds=[];st.rods=[];NPCS=[];MYG=[];CRABS=[];LANTERNS=[];CAM.p=null;document.getElementById('gamebox')?.remove();document.body.classList.remove('gaming');seaSound(0);}
 addEventListener('hashchange',()=>{if(location.hash!=='#gioco'&&document.getElementById('gamebox'))stop();});
 G.mount=mount;G.exit=()=>{if(st.phase!=='map'&&st.phase!=='parking'&&renderer&&SPOT){MP.from=String(SPOT.id||'').replace(/^g_/,'');stop();mount(null);return;}MP.from=null;stop();if(window.go)go('home');};
 function size(){if(!renderer)return;const w=root.clientWidth,h=root.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.fov=w<h?68:50;camera.updateProjectionMatrix();}
@@ -1037,7 +1049,7 @@ function setUI(){const p=st.phase;let h='';
     <div class="gbar dist" style="height:8px"><i style="width:${st.stepI/S2.length*100}%"></i></div>
     <div class="gs">${st.busy?'⏳ '+cur.e+' '+cur.t+'…':st.stepI<S2.length?'Prossimo: '+cur.e+' '+cur.t:''}${st.stepI+1<S2.length?`<br><small style="opacity:.7">poi: ${S2[st.stepI+1].t}</small>`:''}</div>
 </div>`;}
-  else if(p==='wait'){h=`<div class="gpanel slim"><div class="grods">${st.rods.map((r,i)=>`<button class="gr ${r.state==='bite'||r.state==='hooked'||r.state==='tangled'?'alert':''}" onclick="GAME.rod(${i})" ${st.busy?'disabled':''}><b>Canna ${i+1}</b><small>${r.bait?B[r.bait].n:'senza esca'}${r.dist?' · '+Math.round(r.dist)+' m':''}</small><small>${rodStatus(r)}</small></button>`).join('')}</div>
+  else if(p==='wait'){h=`<div class="gpanel slim"><div class="grods">${st.rods.map((r,i)=>`<button class="gr ${r.state==='bite'||r.state==='hooked'||r.state==='tangled'?'alert':r.bait&&r.state==='fishing'&&r.baitLeft<=0?'empty':''}" onclick="GAME.rod(${i})" ${st.busy?'disabled':''}><b>Canna ${i+1}</b><small>${r.bait?B[r.bait].n:'senza esca'}${r.dist?' · '+Math.round(r.dist)+' m':''}</small><small>${rodStatus(r)}</small></button>`).join('')}</div>
     ${st.busy?'':`<div class="grow" style="justify-content:center;flex-wrap:nowrap;gap:5px;overflow-x:auto"><button class="gc" onclick="GAME.bagView()">🧺 ${st.bag.length}</button>${skipUp()?'<button class="gc" onclick="GAME.skip(1)">🌅 Alba</button>':'<button class="gc" onclick="GAME.skip(0)">🌇 Tramonto</button>'}${(()=>{const ni=NPCS.findIndex(a=>a.pos.distanceTo(AN.pos)<3.2);return ni>=0?`<button class="gc" style="background:#2fe0cf;color:#03282a" onclick="GAME.talk(${ni})">💬 Parla con ${NPCS[ni].per.name}</button>`:'';})()}${nearCrab()?'<button class="gc" style="background:#ffb547;color:#3a2400" onclick="GAME.crab()">🦀 Prendi il granchio</button>':''}<button class="gc" onclick="GAME.toMap()">🚗 Spot</button><button class="gc" onclick="GAME.center()" title="Guarda le canne">🎯</button>${AN.target!=='sit'?'<button class="gc" onclick="GAME.sit()">🪑 Siediti</button>':'<button class="gc" onclick="GAME.rise()">🚶 Alzati</button>'}</div>`}${st.msg?`<div class="gs" style="text-align:center">${st.msg}</div>`:''}</div>`;}
   else if(p==='atrod'){const r=st.rods[st.sel];h=`<div class="gpanel"><b>Canna ${st.sel+1}</b><div class="gs">${r.bait?B[r.bait].n+' a '+Math.round(r.dist)+' m · '+rodStatus(r):'Senza esca'}</div>
     ${r.state==='bite'?btn('⚡ FERRA!','strike()','big hot'):''}${r.state==='hooked'?btn('🌀 Prendi la canna e recupera','fightHooked()','big hot'):''}${r.state==='tangled'?btn('🧶 Recupera e districa','untangle()','big hot'):''}${r.dismantled?btn('🔧 Rimonta la canna','remount()','big'):(r.state==='tangled'?'':r.bait?btn('🌀 Recupera e cambia esca','rebait()'):btn('🪝 Innesca','rebait()','big'))+(r.state==='tangled'?'':btn('🔧 Montatura · '+r.lead+' g, amo '+'n. '+hookNum(r.hook)+', '+({lungo:'lungo 1,5 m',corto:'corto 75 cm','2ami':'2 ami'})[r.rig],'rigAt()'))+(r.bait?'':btn('🧰 Smonta la canna','dismantle()'))}${btn('🪑 Torna a sedere','back()')}</div>`;}
@@ -1047,7 +1059,7 @@ function setUI(){const p=st.phase;let h='';
     <div class="grow"><span>Amo</span>${[0,2,4,6,8].map(k=>`<button class="gc ${hookNum(r.hook)===k?'on':''}" onclick="GAME.setRig('hook',${k})">${k}</button>`).join('')}</div>
     <div class="grow"><span>Terminale</span>${[['lungo','lungo 1,5 m'],['corto','corto 75 cm'],['2ami','trave a 2 ami']].map(([k,n])=>`<button class="gc ${r.rig===k?'on':''}" onclick="GAME.setRig('rig','${k}')">${n}</button>`).join('')}</div>
     <div class="gs">Lungo: più naturale con mare calmo (orate, mormore). Corto: lancia meglio e regge il mare mosso. Due ami: più abboccate, lancio più corto.</div>${btn(r.broken?'🔧 Rifai il terminale':'✅ Fatto','rigDone()','big')}</div>`;}
-  else if(p==='snag'){const sn=st.snag;h=`<div class="gpanel"><b>⚠️ Incagliato!</b><div class="gs">${sn.msg||'Il piombo si è incastrato sul fondo.'}</div>${btn('💪 Tira forte','snagPull()','big')}${btn('↔️ Spostati e cambia angolo','snagMove()')}${btn('🏊 Entra in acqua e nuota fino all\'incaglio','snagSwim()')}</div>`;}
+  else if(p==='snag'){const sn=st.snag;h=`<div class="gpanel"><b>${sn.kind==='scogli'?'🪨 Incagliato negli scogli!':sn.kind==='sabbia'?'⏳ Piombo insabbiato!':'⚠️ Incagliato!'}</b><div class="gs">${sn.msg||'Il piombo si è incastrato sul fondo.'}</div>${btn('💪 Tira forte','snagPull()','big')}${btn('↔️ Spostati e cambia angolo','snagMove()')}${btn('🏊 Entra in acqua e nuota fino all\'incaglio','snagSwim()')}</div>`;}
   else if(p==='talk'){const tk=st.talk,a=NPCS[tk.i];h=`<div class="gpanel"><b>💬 ${a.per.name} · ${a.per.age} anni, ${a.per.town}</b><div class="gs" style="font-size:15.5px;background:rgba(255,255,255,.08);border-radius:12px;padding:8px 10px">«${escH(tk.txt)}»</div>
     <div class="gtalk">${Q.map(([k,n])=>`<button class="gc" onclick="GAME.ask('${k}')">${n}</button>`).join('')}</div></div>`;}
   else if(p==='pilot'){const v=VEH.obj,r=st.rods[st.sel];h=`<div class="gpanel slim"><div class="grow" style="justify-content:space-between"><b>${VEH.type==='drone'?'🛸 Guida il drone':'🚤 Guida il barchino'}</b><b id="gvd">—</b></div>
@@ -1069,7 +1081,7 @@ function setUI(){const p=st.phase;let h='';
   else if(p==='rtalk')h=rtalkHtml();
   else if(p==='busy')h=st.msg?`<div class="gpanel slim"><div class="gs" style="text-align:center">${st.msg}</div></div>`:'';
   ui.innerHTML=h;
-  const cb=document.getElementById('gcastb');if(cb){cb.onpointerdown=e=>{e.preventDefault();ac();st.cast={p:0,dir:1,on:true};const S=cSty();if(st.castStyle==='pendulum'){AN.target='castPendUp';setTimeout(()=>{if(st.cast?.on)AN.target='castPend';},500);}else AN.target=S.load;};const rel=()=>{if(st.cast?.on)doCast();};cb.onpointerup=rel;cb.onpointerleave=rel;}
+  const cb=document.getElementById('gcastb');if(cb){cb.onpointerdown=e=>{e.preventDefault();ac();st.cast={p:0,dir:1,on:true};castAnimStart('load');};const rel=()=>{if(st.cast?.on)doCast();};cb.onpointerup=rel;cb.onpointerleave=rel;}
   const rb=document.getElementById('greel');if(rb){const on=e=>{e.preventDefault();if(st.fight)st.fight.reel=true;},off=()=>{if(st.fight)st.fight.reel=false;};rb.onpointerdown=on;rb.onpointerup=off;rb.onpointerleave=off;rb.onpointercancel=off;}
   if(p==='catch')setTimeout(drawFishCard,0);
   const jb=root?.querySelector('#gjoy');if(jb&&!(p==='wait'&&!st.busy)&&p!=='pilot')jb.style.display='none';
@@ -1117,11 +1129,16 @@ G.rod=i=>seq(async()=>{st.sel=i;const r=st.rods[i];st.phase='busy';st.msg=r.stat
 G.back=()=>seq(async()=>{st.phase='busy';st.msg='';setUI();if(AN.holding>=0)await putRod(AN.holding);await backToChair();st.phase='wait';setUI();});
 G.rebait=()=>seq(async()=>{endShowFish();const r=st.rods[st.sel];st.phase='busy';st.msg=r.dist?'🌀 Recupera la lenza…':'';setUI();
   if(!r.held)await pickRod(st.sel);
-  if(r.dist>0){pose('reel');const d0=r.dist,snagAt=r.dist>20&&Math.random()<.12?rnd(.2,.8):2;for(let t=0;t<1;t+=.05){if(t>=snagAt){AN.reelSpin=0;st.snag={r,stage:'rebait',at:t};st.phase='snag';vib([120,60,120]);setUI();return;}r.dist=d0*(1-t);AN.reelSpin=1;await sleep(.07);}r.dist=0;AN.reelSpin=0;}
+  if(r.dist>0){pose('reel');const d0=r.dist,K=riskOf(),u0=Math.random(),far=r.dist>20;
+    const kind=!far?null:u0<K.snag?(K.rocks>.3?'scogli':'fondo'):u0<K.snag+K.sand?'sabbia':u0<K.snag+K.sand+K.brk?'rottura':u0<K.snag+K.sand+K.brk+K.weed?'alghe':null,snagAt=kind?rnd(.2,.8):2;
+    for(let t=0;t<1;t+=.05){if(t>=snagAt){AN.reelSpin=0;
+      if(kind==='rottura'){vib([80,40,200]);click();r.broken=true;r.bait=null;r.dist=0;r.sinker.visible=false;r.state='idle';pose('hold');st.msg=K.rocks>.3?'💥 La lenza ha sfregato sugli scogli e si è spezzata: piombo perso, rifai il terminale.':'💥 Con le onde la lenza si è spezzata durante il recupero: rifai il terminale.';st.phase='rig';setUI();return;}
+      if(kind==='alghe'){st.msg='🌿 Hai raccolto un ciuffo di alghe sulla lenza: il recupero è pesante.';setUI();for(let k=0;k<1;k+=.04){r.dist=Math.max(0,r.dist-d0*.03);AN.reelSpin=.5;await sleep(.12);}r.dist=0;AN.reelSpin=0;st.msg='🌿 Lenza ripulita dalle alghe.';afterRecover(r);return;}
+      st.snag={r,stage:'rebait',at:t,kind,msg:kind==='scogli'?'Il piombo si è infilato tra gli scogli.':kind==='sabbia'?'Il piombo si è insabbiato: le onde lo hanno coperto di sabbia.':'Il piombo si è incastrato sul fondo.'};st.phase='snag';vib([120,60,120]);setUI();return;}r.dist=d0*(1-t);AN.reelSpin=1;await sleep(.07);}r.dist=0;AN.reelSpin=0;}
   afterRecover(r);});
 function afterRecover(r){r.bait=null;r.state='idle';r.bitePlan=null;r.sinker.visible=false;r.dist=0;r.driftMsg=0;pose('bend');st.phase=r.broken?'rig':'bait';setUI();}
 G.snagPull=()=>seq(async()=>{const sn=st.snag;if(!sn)return;st.phase='busy';setUI();pose('strike');AN.reelSpin=1;vib([200]);await sleep(1);AN.reelSpin=0;
-  const u=Math.random();if(u<.45){st.snag=null;st.msg='Liberato! Il piombo si è sbloccato.';if(sn.stage==='fight'){st.fight.snag=false;st.phase='fight';pose('reel');setUI();return;}pose('reel');for(let t=0;t<1;t+=.08){sn.r.dist*=.9;AN.reelSpin=1;await sleep(.06);}AN.reelSpin=0;afterRecover(sn.r);return;}
+  const u=Math.random()*(sn.kind==='scogli'?1.35:sn.kind==='sabbia'?.75:1);if(u<.45){st.snag=null;st.msg=sn.kind==='sabbia'?'Tirando forte il piombo è uscito dalla sabbia.':'Liberato! Il piombo si è sbloccato.';if(sn.stage==='fight'){st.fight.snag=false;st.phase='fight';pose('reel');setUI();return;}pose('reel');for(let t=0;t<1;t+=.08){sn.r.dist*=.9;AN.reelSpin=1;await sleep(.06);}AN.reelSpin=0;afterRecover(sn.r);return;}
   if(u<.8){splash(.2);st.snag=null;sn.r.broken=true;sn.r.bait=null;sn.r.dist=0;sn.r.sinker.visible=false;AN.reelSpin=0;pose('hold');
     if(sn.stage==='fight'){const f=st.fight;st.fight=null;sn.r.state='idle';showCatch({fish:false,txt:'Lenza rotta!',why:'Incagliato con il pesce attaccato: la lenza ha ceduto. Rifai il terminale.'});return;}
     st.msg='💥 La lenza si è rotta: hai perso piombo e amo.';st.phase='rig';setUI();return;}
@@ -1151,23 +1168,43 @@ const CSTY={above:{n:'Above',it:'dall\'alto',g:[.76,.92],max:115,spr:2,crack:0,l
   ground:{n:'Ground',it:'da terra',g:[.81,.91],max:140,spr:4,crack:.25,load:'castGround',fwd:'castFwd',d:'Off the ground: piombo appoggiato a terra dietro, busto girato. Fino a 140 m, zona verde più stretta.'},
   pendulum:{n:'Pendulum',it:'pendolare',g:[.84,.9],max:150,spr:4,crack:.5,load:'castPend',fwd:'castFwd',d:'Pendolare: il piombo oscilla e parte dall\'alto. Il più lungo, fino a 150 m, ma difficile: se esageri rischi il crack-off.'}};
 const cSty=()=>CSTY[st.castStyle]||CSTY.above;
+// fasi di ogni lancio: caricamento (mentre tieni premuto) e uscita (dopo il rilascio); hit = momento in cui parte il piombo
+const CSEQ={above:{drop:1.2,load:[['castBack',.5]],fire:[['castOverTop',.13],['castFwd',.11],['castFollow',.7]],hit:.2},
+  side:{drop:1.6,load:[['castSide',.6]],fire:[['sideSweep',.13],['castOverTop',.11],['castFwd',.1],['castFollow',.7]],hit:.3},
+  ground:{drop:2,load:[['otgAddress',.7]],fire:[['otgTurn',.16],['castOverTop',.12],['castFwd',.1],['castFollow',.7]],hit:.34},
+  pendulum:{drop:1.5,load:[['pendStart',.45],['pendOut',.45],['castPend',.5]],fire:[['otgTurn',.13],['castOverTop',.11],['castFwd',.1],['castFollow',.7]],hit:.3}};
+function castAnimStart(phase){const q=CSEQ[st.castStyle]||CSEQ.above;st.castAnim={q,phase,i:0,t:0};AN.target=q[phase][0][0];
+  const r=st.rods[st.sel];if(phase==='load'&&r){const tip=new T.Vector3();r.obj.userData.tip.getWorldPosition(tip);const p=tip.clone();p.y-=q.drop;
+    if(st.castStyle==='ground'){const back=new T.Vector3(Math.sin(AN.rotY)*1.6+1.2,0,Math.cos(AN.rotY)*1.6);p.set(tip.x+back.x,.05,tip.z+back.z);}
+    st.castLead={r,p,q:p.clone(),drop:q.drop};r.sinker.visible=true;r.sinker.position.copy(p);}}
+function updCastAnim(dt){const A=st.castAnim;if(A){const seq=A.q[A.phase];A.t+=dt;while(A.i<seq.length-1&&A.t>=seq[A.i][1]){A.t-=seq[A.i][1];A.i++;AN.target=seq[A.i][0];
+    if(A.phase==='load'&&seq[A.i][0]==='pendOut'&&st.castLead){st.castLead.q.z+=.09;}}
+    if(A.phase==='fire'&&A.i===seq.length-1&&A.t>=seq[A.i][1])st.castAnim=null;}
+  // piombo: pendolo appeso alla cima, che si appoggia sulla sabbia
+  const L=st.castLead;if(!L)return;const r=L.r,tip=new T.Vector3();r.obj.userData.tip.getWorldPosition(tip);const h=Math.min(dt,.033);
+  const v=L.p.clone().sub(L.q).multiplyScalar(.985);L.q.copy(L.p);L.p.add(v);L.p.y-=9.8*h*h;
+  const d=L.p.clone().sub(tip);if(d.length()>L.drop)L.p.copy(tip).add(d.setLength(L.drop));
+  const gy=sandY(L.p.z)+.04;if(L.p.y<gy){L.p.y=gy;L.q.x=lerp(L.q.x,L.p.x,.3);L.q.z=lerp(L.q.z,L.p.z,.3);}
+  r.sinker.position.copy(L.p);}
 G.cstyle=k=>{st.castStyle=k;LSS('cstyle',k);setUI();};
+// probabilità degli imprevisti: scogli, sabbia smossa dalle onde, alghe, lenza che si spezza
+function riskOf(){const w=wxAt(st.gt),rk=SPOT.rocks||0,wv=w.wave||0;return {rocks:rk,wave:wv,snag:.05+.1*rk+.035*wv,weed:.05+(wv>1?.06:0)+(SPOT.veg||0)*.02,brk:.015+.04*rk+(wv>1.5?.04:0),sand:wv>.8?.05+.03*wv:.02};}
 function doCast(){const c=st.cast;c.on=false;const r=st.rods[st.sel],w=wxAt(st.gt),S=cSty();
   const p=c.p,[g0,g1]=S.g,gm=(g0+g1)/2,green=p>=g0&&p<=g1,q=green?1:p<g0?p/g0*.9:.7;
   // troppa forza con ground e pendulum: il filo si rompe al lancio (crack-off) e il piombo vola via
-  if(S.crack&&p>g1+.03&&Math.random()<S.crack){st.cast=null;seq(async()=>{st.phase='busy';setUI();pose(S.fwd);whoosh();await sleep(.25);click();vib([60,30,60]);r.broken=true;r.bait=null;r.state='idle';r.dist=0;r.sinker.visible=false;pose('hold');
-    st.msg='💥 Crack-off! Troppa forza: il filo si è rotto al lancio e il piombo è volato via. Rifai il terminale.';st.phase='rig';setUI();});return;}
+  const rnd2=Math.random();if((S.crack&&p>g1+.03&&rnd2<S.crack)||rnd2<.02+((r.lead||st.lead)>175?.015:0)){st.cast=null;seq(async()=>{st.phase='busy';setUI();castAnimStart('fire');await sleep(.3);whoosh();st.castLead=null;await sleep(.4);st.castAnim=null;click();vib([60,30,60]);r.broken=true;r.bait=null;r.state='idle';r.dist=0;r.sinker.visible=false;pose('hold');
+    st.msg=p>g1+.03?'💥 Crack-off! Troppa forza: il filo si è rotto al lancio e il piombo è volato via. Rifai il terminale.':'💥 La lenza si è spezzata al lancio (nodo indebolito): piombo perso, rifai il terminale.';st.phase='rig';setUI();});return;}
   // zona verde: fino al massimo dello stile; con poca potenza anche solo 10 m; oltre la zona verde il lancio si sporca
   const M=S.max,base=green?M*(1-Math.abs(p-gm)*.45):p<g0?lerp(10,M*.92,Math.pow(p/g0,1.15)):lerp(M*.92,M*.4,(p-g1)/(1-g1));
   const leadF=clamp(1.15-((r.lead||st.lead)-100)/400,.85,1.1)*(r.rig==='2ami'?.93:r.rig==='corto'?1.04:1),baitF=r.bait==='cefalotto'?.55:r.bait==='sarda'||r.bait==='seppia'?.85:1,wind=1+windHelp(w.wd)*clamp(w.ws/60,0,.35);
   const dist=clamp(base*leadF*baitF*wind+rnd(-3,3),8,155);st.cast=null;
-  seq(async()=>{st.phase='busy';st.msg='';setUI();pose(S.fwd);whoosh();await sleep(st.castStyle==='side'?.14:.18);
+  seq(async()=>{st.phase='busy';st.msg='';setUI();castAnimStart('fire');const H=(CSEQ[st.castStyle]||CSEQ.above).hit;await sleep(H*.6);whoosh();await sleep(H*.4);const L0=st.castLead;st.castLead=null;
     // il piombo vola: parabola dalla cima al punto d'arrivo
-    const tip=new T.Vector3();r.obj.userData.tip.getWorldPosition(tip);const drift=(Math.sin((w.wd-FACE)*R))*w.ws/40*3;const end=new T.Vector3(r.x+drift+rnd(-S.spr,S.spr)+(st.castStyle==='side'?S.spr*.5:0),0,-dist);
+    const tip=new T.Vector3();r.obj.userData.tip.getWorldPosition(tip);if(L0)tip.copy(L0.p);const drift=(Math.sin((w.wd-FACE)*R))*w.ws/40*3;const end=new T.Vector3(r.x+drift+rnd(-S.spr,S.spr)+(st.castStyle==='side'?S.spr*.5:0),0,-dist);
     r.flight={a:tip.clone(),b:end,t:0,dur:1.1+dist/120,low:st.castStyle==='side'};r.sinker.visible=true;r.dist=0.01;r.state='flying';
     await sleep(r.flight.dur);splash();burst(end,1);r.flight=null;r.dist=dist;r.sx=end.x;r.sz=end.z;r.state='fishing';r.landT=st.gt;
     st.msg=(q>=1?`Lancio ${S.n} perfetto: ${Math.round(dist)} m!`:q>.8?`Buon lancio ${S.n}: ${Math.round(dist)} m`:`Lancio ${S.n} corto: ${Math.round(dist)} m`);checkTangle(r);setUI();
-    pose('hold');await sleep(.6);await putRod(st.sel);await stepBack(st.sel);st.phase='wait';if(r.state!=='tangled')st.msg='Tocca la sedia per sederti, o un\'altra canna per andarci.';setUI();});}
+    st.castAnim=null;pose('hold');await sleep(.6);await putRod(st.sel);await stepBack(st.sel);st.phase='wait';if(r.state!=='tangled')st.msg='Tocca la sedia per sederti, o un\'altra canna per andarci.';setUI();});}
 
 /* ---------- barchino elettrico e drone ---------- */
 G.mode=k=>{st.castMode=k;setUI();};G.cdist=v=>{st.castDist=+v;LSS('cdist',st.castDist);const e=document.getElementById('gcdv');if(e)e.textContent=v+' m';};
@@ -1285,6 +1322,7 @@ G.strike=()=>seq(async()=>{const r=st.rods[st.sel];if(r.state!=='bite')return;co
   const sp=p.sp,w=sizeOf(sp);st.fight={r,sp,w,len:lenOf(sp,w),dist:r.dist,ten:.3,reel:false,drag:5,run:0,slack:0,t:0,pow:sp.pow*(0.6+Math.min(1.6,w/sp.w[1])*.45)};
   r.state='fight';pose('reel');st.phase='fight';vib([160,60,90]);setUI();});
 function updFight(dt){const f=st.fight;if(!f||st.phase!=='fight')return;f.t+=dt;const r=f.r,w=wxAt(st.gt);
+  {const K=riskOf();if(f.dist<14&&(K.wave>1.2||K.rocks>.3)&&f.ten>.7&&Math.random()<dt*(.004*K.wave+.01*K.rocks))return endFight(false,K.rocks>.3?'La lenza ha toccato gli scogli e si è spezzata!':'Nei frangenti la lenza ha preso un colpo d\'onda e si è spezzata!');}
   if(!f.snag&&f.dist>15&&Math.random()<dt*.005){f.snag=true;f.reel=false;AN.reelSpin=0;st.snag={r,stage:'fight',msg:'Il pesce si è infilato tra i detriti sul fondo e la lenza si è incagliata.'};st.phase='snag';vib([150,60,150]);setUI();return;}
   if(f.run<=0&&Math.random()<dt*.5*f.pow){f.run=rnd(.6,2)*f.pow;vib([90+Math.round(f.pow*60),50,140+Math.round(f.pow*80)]);}f.run=Math.max(0,f.run-dt);
   // durante la fuga e con la tensione alta: piccoli strattoni
@@ -1467,13 +1505,13 @@ G.center=()=>{LOOK.yaw=0;LOOK.pitch=0;};
 function loop(){raf=requestAnimationFrame(loop);if(!renderer)return;const dt=Math.min(.05,clock.getDelta()),t=clock.elapsedTime;
   const gmul=(st.phase==='wait'&&!st.busy)?st.speed:1;st.gmul=gmul;st.gt+=dt*1000*gmul;const gmin=dt*gmul/60;const w=wxAt(st.gt);
   // pescatore e vicini di spiaggia
-  joyMove(dt,t);moveActor(AN,dt);lerpPose(dt,/Fwd$|^strike$/.test(AN.target)?14:6);applyPose(t);updCrabs(dt,t);nearUI(t);
+  joyMove(dt,t);moveActor(AN,dt);lerpPose(dt,st.castAnim?(st.castAnim.phase==='fire'?16:7):/Fwd$|^strike$/.test(AN.target)?14:6);applyPose(t);if(AN.holding>=0&&(st.phase==='fight'||AN.reelSpin!==0||AN.target==='reel'))reelIK();updCrabs(dt,t);nearUI(t);
   updNpcs(dt,t);rpUpd(dt,t);
   if(st.cast?.on){st.cast.p+=st.cast.dir*dt*1.15;if(st.cast.p>1){st.cast.p=1;st.cast.dir=-1;}if(st.cast.p<0){st.cast.p=0;st.cast.dir=1;}const el=document.getElementById('gpw');if(el)el.style.width=(st.cast.p*100)+'%';}
   // canne
   for(const r of st.rods){
     if(r.state==='fishing'&&r.dist>8){const need=suggestLead(w.wave||0);if((r.lead||st.lead)<need-20){const k=(need-(r.lead||st.lead))/100;r.dist-=gmin*k*6;r.sx+=gmin*k*Math.sin((w.wd-FACE)*R)*3;r.tgT=(r.tgT||0)-gmin;if(r.tgT<=0){r.tgT=1;if(checkTangle(r)&&st.phase==='wait')setUI();}if(!r.driftMsg){r.driftMsg=1;st.msg=`Canna ${r.i+1}: il piombo da ${r.lead} g «ara», la corrente lo trascina verso riva. Metti un piombo più pesante.`;if(st.phase==='wait')setUI();}}}
-    if(r.state==='fishing'){r.baitLeft-=gmin*(1+(w.wave||0)*.6);if(Math.random()<biteRate(r)*gmin)startBite(r);}
+    if(r.state==='fishing'){const was=r.baitLeft;r.baitLeft-=gmin*(1+(w.wave||0)*.6);if(r.bait&&was>0&&r.baitLeft<=0){baitGone();vib([60,80,60]);st.msg=`🪝 Canna ${r.i+1}: l'esca è finita, va reinnescata.`;if(st.phase==='wait')setUI();}if(Math.random()<biteRate(r)*gmin)startBite(r);}
     if(r.state==='bite'){r.biteT+=dt;if(r.biteT>r.bitePlan.len){const pl=r.bitePlan,auto={partenza:.6,violenta:.45,decisa:.3,nervosa:.15,picchiettata:.05}[pl.kind]||0;
         if(pl.sp&&!pl.steal&&Math.random()<auto){r.state='hooked';r.hookT=0;bell(4,.3);try{navigator.vibrate?.([200,80,200]);}catch(e){}st.msg=`🐟 Canna ${r.i+1}: il pesce si è allamato da solo! Vai a recuperarlo.`;if(st.phase==='wait'||st.phase==='atrod')setUI();continue;}
         r.state='fishing';r.baitLeft-=pl.steal?999:10;st.msg=`Canna ${r.i+1}: ha smesso di battere${pl.steal?' (forse ti hanno rubato l\'esca)':''}.`;if(st.phase==='wait'||st.phase==='atrod')setUI();}}
@@ -1489,6 +1527,7 @@ function loop(){raf=requestAnimationFrame(loop);if(!renderer)return;const dt=Mat
     // lenza
     const tip=new T.Vector3();r.obj.userData.tip.getWorldPosition(tip);const a=r.line.geometry.attributes.position;
     if(r.ride){r.sinker.position.copy(r.ride.position);if(VEH.type==='drone')r.sinker.position.y-=2.55;}
+    else if(st.castLead&&st.castLead.r===r){}
     else if(r.flight){const f=r.flight;f.t+=dt/f.dur;const k=clamp(f.t,0,1),pnt=new T.Vector3().lerpVectors(f.a,f.b,k);pnt.y+=Math.sin(k*Math.PI)*(12+f.b.distanceTo(f.a)*.12)*(f.low?.6:1);r.sinker.position.copy(pnt);}
     else if(r.dist>0){const fd=st.fight?.r===r?Math.max(0,st.fight.dist):r.dist,kk=fd/Math.max(1,-r.sz);r.sinker.position.set(lerp(r.x,r.sx,kk),.0,-fd);}
     const end=r.sinker.visible?r.sinker.position:tip;const tens=st.fight?.r===r?st.fight.ten:.2+r.bend*.4;
@@ -1496,7 +1535,7 @@ function loop(){raf=requestAnimationFrame(loop);if(!renderer)return;const dt=Mat
     a.needsUpdate=true;r.line.visible=r.sinker.visible;}
   reelWhir(AN.reelSpin>0&&AN.holding>=0?.012:0,AN.reelSpin*7);
   pilot(dt,t);updVeh(dt,t,w);
-  updFight(dt);updJump(dt,t);
+  updFight(dt);updJump(dt,t);updCastAnim(dt);
   // pesce appeso che esce dall'acqua
   if(fishMesh.visible&&st.fight==null){const r=st.rods[st.sel],tip=new T.Vector3();r.obj.userData.tip.getWorldPosition(tip);const k=clamp((performance.now()-fishMesh.userData.show)/900,0,1);
     fishMesh.position.set(lerp(r.x,tip.x,k),lerp(.1,tip.y-.6,k),lerp(-2,tip.z+.2,k));fishMesh.rotation.set(0,0,Math.PI/2+Math.sin(t*14)*.4);}
@@ -1645,10 +1684,12 @@ function mix(a,b,t){const p=x=>[parseInt(x.slice(1,3),16),parseInt(x.slice(3,5),
 /* ---------- il pesce catturato, disegnato ---------- */
 const SCI={'Orata':'Sparus aurata','Spigola':'Dicentrarchus labrax','Sarago maggiore':'Diplodus sargus','Serra':'Pomatomus saltatrix','Mormora':'Lithognathus mormyrus','Leccia stella':'Trachinotus ovatus','Ombrina':'Umbrina cirrosa','Granchio blu':'Callinectes sapidus','Leccia amia':'Lichia amia','Ricciola':'Seriola dumerili','Dentice':'Dentex dentex'},FISHPH={};
 // foto vera della specie (Wikipedia); se non arriva resta il disegno
-function fishPhoto(sp){const sci=SCI[sp.n];if(!sci)return Promise.resolve(null);if(FISHPH[sci]!==undefined)return Promise.resolve(FISHPH[sci]);
+const FISHLOC={"Orata": {"f": "img/fish/orata.jpg", "by": "(c) Julien Renoult, some rights reserved (CC BY), uploaded by Julien Renoult"}, "Spigola": {"f": "img/fish/spigola.jpg", "by": "(c) Julien Renoult, some rights reserved (CC BY), uploaded by Julien Renoult"}, "Sarago maggiore": {"f": "img/fish/sarago-maggiore.jpg", "by": "(c) Roberto Pillon, some rights reserved (CC BY)"}, "Serra": {"f": "img/fish/serra.jpg", "by": "(c) Susanne Spindler, some rights reserved (CC BY-NC-ND), uploaded by Susanne Spindler"}, "Mormora": {"f": "img/fish/mormora.jpg", "by": "(c) Luis P. B., some rights reserved (CC BY-NC), uploaded by Luis P. B."}, "Leccia stella": {"f": "img/fish/leccia-stella.jpg", "by": "(c) Dennis Rabeling, some rights reserved (CC BY-NC-ND), uploaded by Dennis Rabeling"}, "Ombrina": {"f": "img/fish/ombrina.jpg", "by": "(c) Julien Renoult, some rights reserved (CC BY), uploaded by Julien Renoult"}, "Granchio blu": {"f": "img/fish/granchio-blu.jpg", "by": "(c) Le Gallais, some rights reserved (CC BY-NC), uploaded by Le Gallais"}, "Leccia amia": {"f": "img/fish/leccia-amia.jpg", "by": "(c) NasserHalaweh, some rights reserved (CC BY-SA)"}, "Ricciola": {"f": "img/fish/ricciola.jpg", "by": "(c) Luis P. B., some rights reserved (CC BY-NC), uploaded by Luis P. B."}, "Dentice": {"f": "img/fish/dentice.jpg", "by": "(c) Hectonichus, some rights reserved (CC BY-SA)"}};
+const GBASE=(document.currentScript&&document.currentScript.src)?document.currentScript.src.replace(/gioco\.js.*$/,''):'';
+function fishPhoto(sp){if(FISHLOC[sp.n])return Promise.resolve(GBASE+FISHLOC[sp.n].f);const sci=SCI[sp.n];if(!sci)return Promise.resolve(null);if(FISHPH[sci]!==undefined)return Promise.resolve(FISHPH[sci]);
   return fetch('https://en.wikipedia.org/api/rest_v1/page/summary/'+encodeURIComponent(sci.replace(/ /g,'_'))).then(r=>r.json()).then(j=>{const u=j.thumbnail?.source?j.thumbnail.source.replace(/\/(\d+)px-/,'/800px-'):j.originalimage?.source||null;return FISHPH[sci]=u;}).catch(()=>FISHPH[sci]=null);}
 function drawFishCard(){const c=st.catchShow,el=document.getElementById('gfc');if(!el||!c?.fish)return;
-  fishPhoto(c.sp).then(u=>{const im=document.getElementById('gfi'),cv=document.getElementById('gfc'),cr=document.getElementById('gfcr');if(!u||!im||st.catchShow!==c)return;im.onload=()=>{im.style.display='block';if(cv)cv.style.display='none';if(cr)cr.textContent='Foto: '+SCI[c.sp.n]+' · Wikipedia / Wikimedia Commons';};im.src=u;});const g=el.getContext('2d'),Wd=600,Hd=260;g.clearRect(0,0,Wd,Hd);
+  fishPhoto(c.sp).then(u=>{const im=document.getElementById('gfi'),cv=document.getElementById('gfc'),cr=document.getElementById('gfcr');if(!u||!im||st.catchShow!==c)return;im.onload=()=>{im.style.display='block';if(cv)cv.style.display='none';if(cr)cr.textContent=FISHLOC[c.sp.n]?'Foto: '+FISHLOC[c.sp.n].by+' · iNaturalist':'Foto: '+SCI[c.sp.n]+' · Wikipedia / Wikimedia Commons';};im.src=u;});const g=el.getContext('2d'),Wd=600,Hd=260;g.clearRect(0,0,Wd,Hd);
   const sp=c.sp,co=sp.col;if(sp.crab)return drawCrab(g,Wd,Hd,co);
   const L=Wd*.8,Hh=L*sp.shape.h,x0=(Wd-L)/2+6,y0=Hd/2+4,fk=sp.shape.fork,ped=Hh*.13;
   // sagoma: muso, profilo dorsale alto, peduncolo sottile
@@ -1716,7 +1757,7 @@ body.gaming{overflow:hidden}
 #glamp.off{opacity:.45;filter:grayscale(1)}#gspd{position:absolute;top:calc(env(safe-area-inset-top) + 56px);right:8px;height:36px;padding:0 12px;border-radius:12px;border:0;background:rgba(4,14,26,.7);color:#fff;font:700 14px Outfit,sans-serif;cursor:pointer}
 #gui{position:absolute;left:0;right:0;bottom:0;padding:10px 10px calc(env(safe-area-inset-bottom) + 10px);pointer-events:none}
 .gpanel{pointer-events:auto;max-width:620px;margin:0 auto;background:rgba(4,14,26,.72);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:12px 14px;color:#fff;font:500 15px Outfit,sans-serif;max-height:62vh;overflow:auto}
-.gpanel.slim{padding:8px 10px}
+.gpanel.slim{padding:8px 10px}.gr.empty{background:rgba(200,40,55,.55);border-color:#ff4d5e}
 .gpanel>b{display:block;font-size:17px;margin-bottom:4px}
 .gs{font-size:14px;opacity:.9;margin:4px 0}.gs.warn{color:#ffb547}
 .gb{display:block;width:100%;margin-top:8px;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;font:700 16px Outfit,sans-serif;cursor:pointer;touch-action:none}
