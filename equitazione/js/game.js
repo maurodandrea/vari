@@ -258,7 +258,41 @@ function nearFence(){let best=null,bd=1.3;
     if(Math.abs(lx)>c.hx-.15)continue;const d=Math.abs(lz)-c.hz;if(d<bd){bd=d;best={c,lx,lz,cs,sn};}}
   return best;}
 /* camion, casa e giardino */
+/* ---- dentro casa ---- */
+function enterHouse(){fade('🏠 Entri in casa…',()=>{const w=W();G.inside=true;w.outB=w.bounds;w.bounds=w.interior.b;F.x=w.interior.ox;F.z=w.interior.oz+6.4;F.h=Math.PI;F.camYaw=Math.PI;F.sp=0;snapCam();
+  setTimeout(()=>msg('🏠 Benvenut'+EQ.A()+' a casa!<small>soggiorno, cucina, camere, bagno e studio</small>',2.8),300);});}
+function exitHouse(){fade('',()=>{const w=W();G.inside=false;G.hact=null;if(w.outB)w.bounds=w.outB;F.x=0;F.z=-11.2;F.h=0;F.camYaw=0;F.sp=0;snapCam();});}
+function insideCam(dt){camGo(F.x,EQ.portrait?9.5:7.5,F.z+(EQ.portrait?5:5.5),F.x,.5,F.z-1.4,dt,5);}
+function homeActions(A){const w=W();if(!G.inside||!w.homeSpots)return;
+  for(const sp of w.homeSpots){if(Math.hypot(sp.p.x-F.x,sp.p.z-F.z)>1.7)continue;
+    if(sp.exit){A.push({id:'hexit',icon:sp.icon,label:sp.label,fn:exitHouse});continue;}
+    A.push({id:'h'+sp.id,icon:sp.icon,label:sp.label,fn:()=>{G.hact={sp,t:0};if(sp.sleep)EQ.sfx.click();}});}}
+let tvT=0;
+function drawScreen(scr,kind,t){const g=scr.g,W2=scr.c.width,H2=scr.c.height;
+  if(kind==='off'){g.fillStyle='#0a0a0e';g.fillRect(0,0,W2,H2);scr.t.needsUpdate=true;return;}
+  if(kind==='tv'){const gr=g.createLinearGradient(0,0,0,H2);gr.addColorStop(0,'#5fb4f0');gr.addColorStop(1,'#cfe9ff');g.fillStyle=gr;g.fillRect(0,0,W2,H2);
+    g.fillStyle='#5d9b3b';g.fillRect(0,H2*.68,W2,H2);g.fillStyle='#f6f2e0';for(let i=0;i<6;i++)g.fillRect(((i*60-t*40)%300+300)%300-30,H2*.62,6,22);
+    g.font='48px serif';g.fillText('🐎',((t*70)%(W2+80))-60,H2*.8);g.font='30px serif';g.fillText('☀️',W2-48,36);
+    g.fillStyle='rgba(0,0,0,.55)';g.fillRect(0,0,W2,24);g.fillStyle='#fff';g.font='bold 16px sans-serif';g.fillText('EquitApp TV · Gran Premio',8,17);}
+  else{g.fillStyle='#e8edf2';g.fillRect(0,0,W2,H2);g.fillStyle='#2f6b33';g.fillRect(0,0,W2,26);g.fillStyle='#fff';g.font='bold 16px sans-serif';g.fillText('🐴 EquitApp · Il mio cavallo',8,18);
+    g.fillStyle='#333';g.font='13px sans-serif';const L=['Diario di '+EQ.pname()+':','- lezione con Betta: ok','- doccia al cavallo','- prossima gara: Junior'];const n=Math.min(L.length,Math.floor(t/1.2)+1);for(let i=0;i<n;i++)g.fillText(L[i].slice(0,i===n-1?Math.floor((t%1.2)/1.2*30)+4:99),10,48+i*22);
+    g.font='40px serif';g.fillText('🏆',W2-60,H2-20);}
+  scr.t.needsUpdate=true;}
+function hactUpdate(dt){const a=G.hact,sp=a.sp,w=W();a.t+=dt;
+  const dx=sp.p.x-F.x,dz=sp.p.z-F.z;F.x+=dx*Math.min(1,dt*6);F.z+=dz*Math.min(1,dt*6);F.h+=U.wrapA(sp.h-F.h)*Math.min(1,dt*8);
+  if(sp.lie){P.root.position.set(F.x,.86,F.z);P.root.rotation.set(-Math.PI/2,0,0,'YXZ');P.root.rotation.y=sp.h;P.pose(dt,'stand',{});}
+  else{P.root.position.set(F.x,0,F.z);P.root.rotation.set(0,F.h,0);P.pose(dt,sp.pose,{speed:0,steer:sp.pc?Math.sin(a.t*12)*.3:0});}
+  tvT+=dt;if(sp.tv&&w.tv&&tvT>.08){tvT=0;drawScreen(w.tv,'tv',a.t);}
+  if(sp.pc&&w.pc&&tvT>.08){tvT=0;drawScreen(w.pc,'pc',a.t);if(Math.random()<.6)EQ.sfx.click();}
+  a.sndT=(a.sndT||0)-dt;if(a.sndT<=0){a.sndT=sp.snd==='water'?.35:1.2;if(sp.snd==='water')EQ.sfx.splash(.06);else if(sp.snd==='cook')EQ.sfx.brush();else if(sp.snd==='kids')EQ.sfx.kids();}
+  if(sp.shower&&Math.random()<dt*30)FX.water.emit(F.x+rnd(-.3,.3),2.1,F.z+rnd(-.3,.3),rnd(-.2,.2),-1,rnd(-.2,.2),.8);
+  insideCam(dt);
+  setActions([{id:'hstop',icon:'⬆️',label:sp.lie?'Alzati':'Basta',fn:()=>{a.t=sp.dur;}}]);
+  if(a.t>=sp.dur){G.hact=null;P.root.rotation.set(0,F.h,0);P.root.rotation.order='XYZ';if(sp.tv&&w.tv)drawScreen(w.tv,'off');if(sp.msg)msg(sp.msg,2.4);
+    if(sp.sleep&&G.cur&&G.cur.stats)stat(G.cur,'happy',5);F.x=sp.p.x+(sp.lie?1.4:0);}}
 function placeActions(A){if(G.state!=='foot'||G.swim||G.sit)return;const w=W(),S=w.spots||{},H=G.cur;
+  if(w.name==='home'){if(G.inside){homeActions(A);return;}
+    if(near({x:0,z:-12.2},2.8))A.push({id:'enterh',icon:'🏠',label:'Entra in casa',fn:enterHouse,dis:G.leading?'Prima lega il cavallo<small>al palo o lascialo libero in giardino</small>':null});}
   if(w===yard&&S.truck&&near(S.truck.ramp,4.2)){
     if(G.leading&&H)A.push({id:'truck',icon:'🚚',label:'Carica '+H.def.name+' sul camion',fn:()=>{G.courseCtx={mode:'truck'};$('courseHome').style.display='none';G.state='modal';renderMenu();$('courseT').textContent='🚚 Si va al concorso! Scegli la gara';$('course').classList.add('on');},dis:!P.ready()?'Per gareggiare servono casco e corpetto!<small>vai allo spogliatoio</small>':null});
     else A.push({id:'truckinfo',icon:'🚚',label:'Camion per le gare',fn:()=>msg('🚚 Porta qui il tuo cavallo con la corda<small>e caricalo sul camion per andare al concorso</small>',3)});}
@@ -282,6 +316,7 @@ function climbUpdate(dt){const c=G.climb;c.t+=dt/1.3;const t=Math.min(1,c.t),e=t
   followCam(F.x,gy,F.z,F.camYaw,EQ.portrait?5.6:4.6,EQ.portrait?2.6:2.1,1.2,1.15,dt,5);setActions([]);
   if(t>=1){G.climb=null;F.camYaw=F.h;}}
 function footUpdate(dt){
+  if(G.hact){hactUpdate(dt);return;}
   if(G.climb){climbUpdate(dt);return;}
   if(G.sit||G.ia){socialFoot(dt);return;}
   const inp=G.busy?{x:0,y:0}:EQ.readInput();const m=Math.min(1,Math.hypot(inp.x,inp.y));
@@ -310,6 +345,7 @@ function footUpdate(dt){
   if(F.sp>.3)F.camYaw+=U.wrapA(F.h-F.camYaw)*Math.min(1,dt*1.3);
   const por=EQ.portrait;
   if(G.leading){const H=G.cur;const mx=(F.x+H.x)/2,mz=(F.z+H.z)/2;followCam(mx,W().height(mx,mz),mz,F.camYaw,por?7.4:6,por?3.2:2.6,1.2,1.2,dt,5);}
+  else if(G.inside)insideCam(dt);
   else followCam(F.x,W().height(F.x,F.z),F.z,F.camYaw,por?5.6:4.6,por?2.6:2.1,1.2,1.15,dt,5);
   if(!G.busy)setActions(yardActions());
 }
@@ -495,7 +531,7 @@ function socialFoot(dt){
   if(G.sit){const st=G.sit;F.x=st.x;F.z=st.z;F.h=st.h;F.sp=0;
     P.root.position.set(st.x,st.y,st.z);P.root.rotation.y=st.h;P.pose(dt,'sit',{talk:Math.sin(T*.7)>.6});
     F.camYaw+=U.wrapA(st.h-F.camYaw)*Math.min(1,dt*1.5);
-    followCam(st.x,st.y,st.z,F.camYaw,EQ.portrait?4.6:3.8,EQ.portrait?2.3:1.9,.8,.9,dt,4);
+    if(G.inside)insideCam(dt);else followCam(st.x,st.y,st.z,F.camYaw,EQ.portrait?4.6:3.8,EQ.portrait?2.3:1.9,.8,.9,dt,4);
     const inp=EQ.readInput();
     if(!G.busy)setActions([{id:'up',icon:'⬆️',label:'Alzati',fn:()=>{G.sit=null;F.x=st.x-Math.sin(st.h)*.9;F.z=st.z-Math.cos(st.h)*.9;}}]);return;}
   const ia=G.ia;ia.t-=dt;
@@ -1032,6 +1068,7 @@ function driveUpdate(dt){
     setActions(A);}
 }
 function travel(to,from,noFade,text){
+  G.inside=false;G.hact=null;
   $('trip').classList.remove('on');['pause','results'].forEach(k=>$(k).classList.remove('on'));
   const txt=text||(to==='yard'?'Si torna al maneggio…':PLACE[to][2]);
   (noFade?(t,cb)=>cb():fade)(txt,()=>{
