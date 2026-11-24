@@ -982,12 +982,12 @@ G.rback=()=>{st.phase='wait';st.msg='';setUI();};
 G.rsend=()=>{const el=document.getElementById('grtx'),txt=(el?.value||'').trim().slice(0,200),C=rpCloud(),a=RP.list.get(st.rtalk);if(!txt||!C||!a)return;el.value='';
   C.ff.setDoc(C.ff.doc(C.db,'gamemsgs',C.user.uid+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,6)),{from:C.user.uid,name:C.name()||'Pescatore',to:a.id,spot:SPOT.id,text:txt,t:Date.now()}).catch(e=>{st.msg='Messaggio non inviato: '+(e.code||e.message);});
   (RP.log[a.id]=RP.log[a.id]||[]).push({me:true,text:txt});say(AN,txt,6);const lg=document.getElementById('grlog');if(lg)lg.innerHTML=rpLog(a.id);};
-G._rp=RP;
+G._rp=RP;G._bolt=()=>strikeBolt();
 
 /* ---------- interfaccia ---------- */
 function mount(v){
   stop();root=document.createElement('div');root.id='gamebox';
-  root.innerHTML=`<div id="g3"></div><div id="ghud"></div><div id="gui"></div><button id="gx" aria-label="Esci">✕</button><button id="gau" aria-label="Audio">${AU.on?'🔊':'🔇'}</button><button id="glamp" aria-label="Torcia" class="${st.lamp?'':'off'}">🔦</button><button id="gspd" aria-label="Velocità del tempo">⏩ ${st.speed}x</button><div id="gjoy"><i></i></div>`;
+  root.innerHTML=`<div id="g3"></div><div id="ghud"></div><div id="gui"></div><button id="gx" aria-label="Esci">✕</button><button id="gau" aria-label="Audio">${AU.on?'🔊':'🔇'}</button><button id="glamp" aria-label="Torcia" class="${st.lamp?'':'off'}">🔦</button><button id="gspd" aria-label="Velocità del tempo">⏩ ${st.speed}x</button><div id="gjoy"><i></i></div><div id="gflash" style="position:absolute;inset:0;background:#eef4ff;opacity:0;pointer-events:none;mix-blend-mode:screen"></div>`;
   document.body.appendChild(root);document.body.classList.add('gaming');ui=root.querySelector('#gui');hud=root.querySelector('#ghud');
   root.querySelector('#gx').onclick=()=>G.exit();
   root.querySelector('#gspd').onclick=()=>{const L=[1,2,4,8,16,32];G.setSpeed(L[(L.indexOf(st.speed)+1)%L.length]);};
@@ -1009,7 +1009,7 @@ G.arrive=async i=>{cancelAnimationFrame(MP.raf);motor(false);dispose3D();removeE
     st.phase='setup';setUI();raf=requestAnimationFrame(loop);rpStart();}
   catch(e){ui.innerHTML=`<div class="gpanel"><b>Il gioco 3D non si è caricato</b><div class="gs">${escH(e.message||e)}</div>${btn('↻ Riprova','mount()','big')}</div>`;}};
 G.toMap=()=>{stop();mount(null);};
-function stop(){rpStop();cancelAnimationFrame(MP.raf);dispose3D();removeEventListener('resize',sizeMap);windSound(0);motor(false);reelWhir(0);cancelAnimationFrame(raf);raf=0;removeEventListener('resize',size);try{renderer?.dispose();renderer?.forceContextLoss?.();}catch(e){}renderer=null;foams=[];clouds=[];st.rods=[];NPCS=[];MYG=[];CRABS=[];LANTERNS=[];CAM.p=null;document.getElementById('gamebox')?.remove();document.body.classList.remove('gaming');seaSound(0);}
+function stop(){rpStop();st.bolt=null;cancelAnimationFrame(MP.raf);dispose3D();removeEventListener('resize',sizeMap);windSound(0);motor(false);reelWhir(0);cancelAnimationFrame(raf);raf=0;removeEventListener('resize',size);try{renderer?.dispose();renderer?.forceContextLoss?.();}catch(e){}renderer=null;foams=[];clouds=[];st.rods=[];NPCS=[];MYG=[];CRABS=[];LANTERNS=[];CAM.p=null;document.getElementById('gamebox')?.remove();document.body.classList.remove('gaming');seaSound(0);}
 addEventListener('hashchange',()=>{if(location.hash!=='#gioco'&&document.getElementById('gamebox'))stop();});
 G.mount=mount;G.exit=()=>{if(st.phase!=='map'&&st.phase!=='parking'&&renderer&&SPOT){MP.from=String(SPOT.id||'').replace(/^g_/,'');stop();mount(null);return;}MP.from=null;stop();if(window.go)go('home');};
 function size(){if(!renderer)return;const w=root.clientWidth,h=root.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.fov=w<h?68:50;camera.updateProjectionMatrix();}
@@ -1297,6 +1297,16 @@ function endFight(ok,why){const f=st.fight;st.fight=null;AN.reelSpin=0;const r=f
 function showCatch(c){st.catchShow=c;st.phase='catch';setUI();}
 G.release=()=>{record(true);st.msg='💚 Rilasciato. Bravo!';G.rebait();};
 G.keep=()=>{record(false);st.msg='🧺 Nel carniere';G.rebait();};
+function strikeBolt(){const ang=rnd(-1.1,1.1),d=rnd(1600,4200),x=Math.sin(ang)*d,z=-Math.cos(ang)*d,top=rnd(700,1000),g=new T.Group();
+  const mat=new T.LineBasicMaterial({color:0xeef4ff,transparent:true,opacity:1,fog:false}),glow=new T.LineBasicMaterial({color:0x9fb8ff,transparent:true,opacity:.5,fog:false,blending:T.AdditiveBlending});
+  const zig=(x0,y0,z0,y1,spread,n)=>{const p=[new T.Vector3(x0,y0,z0)];let cx=x0,cz=z0;for(let i=1;i<=n;i++){cx+=rnd(-spread,spread);cz+=rnd(-spread,spread)*.4;p.push(new T.Vector3(cx,lerp(y0,y1,i/n),cz));}return p;};
+  const main=zig(x,top,z,0,60,26);[mat,glow].forEach((m,k)=>{const l=new T.Line(new T.BufferGeometry().setFromPoints(main.map(v=>v.clone().add(new T.Vector3(k*4,0,0)))),m);g.add(l);});
+  for(let k=0;k<3;k++){const s0=main[Math.floor(rnd(4,16))],br=zig(s0.x,s0.y,s0.z,s0.y-rnd(150,350),45,8);g.add(new T.Line(new T.BufferGeometry().setFromPoints(br),mat));}
+  scene.add(g);st.bolt={obj:g,t:0,k:clamp(2600/d,.45,1)};thunder(d);}
+function thunder(d){const c=AU.on?ac():null;if(!c)return;setTimeout(()=>{if(!AU.on||!AU.ctx)return;const t=c.currentTime,src=c.createBufferSource();src.buffer=noiseBuf(c);src.loop=true;
+  const lp=c.createBiquadFilter();lp.type='lowpass';lp.frequency.setValueAtTime(900,t);lp.frequency.exponentialRampToValueAtTime(120,t+2.5);const v=c.createGain(),k=clamp(2600/d,.3,1);
+  v.gain.setValueAtTime(0,t);v.gain.linearRampToValueAtTime(.5*k,t+.08);v.gain.linearRampToValueAtTime(.25*k,t+.6);v.gain.linearRampToValueAtTime(.35*k,t+1);v.gain.exponentialRampToValueAtTime(.001,t+3.6);
+  src.connect(lp).connect(v).connect(c.destination);src.start(t);src.stop(t+3.8);},Math.min(9000,d/343*1000*.6));}
 function burst(p,k){const s=splashP.userData;s.t=1;s.o=p.clone();s.v.forEach(v=>v.set(rnd(-1,1)*k,rnd(1.5,3.5)*k,rnd(-1,1)*k));const a=splashP.geometry.attributes.position;for(let i=0;i<60;i++)a.setXYZ(i,p.x,p.y,p.z);a.needsUpdate=true;}
 // seduto: trascinando ti giri e guardi attorno; solo toccando una canna il pescatore si alza e ci va
 const LOOK={yaw:0,pitch:0,zoom:1};const JOY={x:0,y:0,on:false};
@@ -1476,7 +1486,11 @@ function updEnv(w,t,dt){const d=gameDate(),s0=sunPos(d,SPOT.lat,SPOT.lon),sun=su
   const sw=(Math.sin(t*2*Math.PI/per)*.5+.5);swash.position.set(0,.02+sw*.03,-.4-wh*.5+sw*(1.2+wh*2.2));swash.material.opacity=(.25+wh*.3)*(1-sw*.5)*(NIGHT>.6?.35:1);
   // pioggia
   const rainOn=w.pr>.05||(w.code>=51&&w.code<=99);rain.material.opacity=rainOn?clamp(.25+w.pr*.15,0,.6):0;if(rainOn){rain.position.copy(camera.position);rain.position.y=0;const a=rain.geometry.attributes.position;for(let i=0;i<a.count;i+=2){let y=a.getY(i)-dt*14;if(y<0)y+=25;a.setY(i,y);a.setY(i+1,y-.45);}a.needsUpdate=true;}
-  if(w.code>=95&&Math.random()<dt*.06)st.lightning=1;st.lightning=Math.max(0,st.lightning-dt*3);if(st.lightning>0)hemi.intensity+=st.lightning*2;
+  // temporale: saette sul mare, lampo e tuono (che arriva dopo, secondo la distanza)
+  if(w.code>=95&&!st.bolt&&Math.random()<dt*.07)strikeBolt();
+  if(st.bolt){const b=st.bolt;b.t+=dt;const fl=b.t<.08||(b.t>.16&&b.t<.24)||(b.t>.34&&b.t<.4)?1:0;b.obj.visible=fl>0;st.lightning=Math.max(st.lightning,fl*b.k);if(b.t>.55){scene.remove(b.obj);b.obj.traverse(o=>{o.geometry?.dispose();});st.bolt=null;}}
+  st.lightning=Math.max(0,st.lightning-dt*4);if(st.lightning>0){hemi.intensity+=st.lightning*2.2;if(overcast)overcast.material.color.offsetHSL(0,0,st.lightning*.35);}
+  {const fl=document.getElementById('gflash');if(fl)fl.style.opacity=(st.lightning*.45).toFixed(2);}
   // ammofila mossa dal vento
   grass.rotation.z=Math.sin(t*1.5)*w.ws*.0006;
   // mare: fruscio continuo come prima, ma solo con mare mosso; vento: appena percettibile e solo con vento vero
