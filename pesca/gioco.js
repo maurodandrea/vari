@@ -1108,9 +1108,9 @@ const CAT=[
     {id:'rm_rLC',reel:'rLC',n:'Mulinello Long Cast 12000',d:'Bobina conica da 30 mm a passo corto: il filo esce senza attriti (+4% distanza), 18 kg.',p:()=>159},
     {id:'rm_rMult',reel:'rMult',n:'Moltiplicatore da lancio',d:'Il mulinello rotante dei campioni di distanza (+6%): frizione a stella 22 kg.',p:()=>229},
     {id:'reelT',n:'Mulinello Tournament 14000 SA',d:'Corpo in alluminio, 7+1 cuscinetti, frizione 25 kg in carbonio.',p:()=>299}]},
-  {k:'esche',n:'🪱 Esche',items:BAITS.filter(b=>!b.lim).map(b=>({id:'b_'+b.k,n:b.n+' '+b.e,d:b.d,bait:b.k,pk:{koreano:12,bibi:8,arenicola:8,americano:10,cannolicchio:10,cozza:15,sarda:10,seppia:8,gambero:10,cefalotto:3}[b.k],p:()=>({koreano:4.5,bibi:7,arenicola:6.5,americano:5,cannolicchio:5,cozza:3,sarda:3.5,seppia:4,gambero:4,cefalotto:6})[b.k]}))},
+  {k:'esche',n:'🪱 Esche',items:BAITS.filter(b=>!b.lim).map(b=>({id:'b_'+b.k,n:b.n+' '+b.e,d:b.d,bait:b.k,pk:{koreano:15,bibi:6,arenicola:7,americano:3,cannolicchio:10,cozza:15,sarda:10,seppia:3,gambero:10,cefalotto:5}[b.k],p:()=>({koreano:5,bibi:7,arenicola:7.5,americano:7.5,cannolicchio:2,cozza:3,sarda:3,seppia:5,gambero:5,cefalotto:10})[b.k]}))},
   {k:'ami',n:'🪝 Ami',items:[{id:'hook',n:'Ami da surfcasting · busta da 10',d:'Aberdeen a filo sottile per vermi e bibi, oppure forgiati per esche dure e pesci grossi.',opts:[{k:'m',n:'Misura',v:['0','2','4','6','8']},{k:'t',n:'Tipo',v:['Aberdeen','Forgiato']}],p:()=>4.5}]},
-  {k:'piombi',n:'⚓ Piombi',items:[{id:'lead',n:'Piombi da surfcasting · confezione da 3',d:'Piramidale tiene sulla sabbia, ogiva vola più lontano, a ragno (grip) resta fermo anche con la corrente.',opts:[{k:'g',n:'Peso',v:['80 g','100 g','125 g','150 g','175 g','200 g']},{k:'t',n:'Forma',v:['Piramidale','Ogiva','A ragno']}],p:o=>[3.2,3.6,4.2,4.8,5.4,6][o.g]*(o.t===2?1.6:1)}]},
+  {k:'piombi',n:'⚓ Piombi',items:[{id:'lead',n:'Piombi da surfcasting · confezione da 2',d:'Piramidale tiene sulla sabbia, ogiva vola più lontano, a ragno (grip) resta fermo anche con la corrente.',opts:[{k:'g',n:'Peso',v:['80 g','100 g','125 g','150 g','175 g','200 g']},{k:'t',n:'Forma',v:['Piramidale','Ogiva','A ragno']}],p:()=>5}]},
   {k:'fili',n:'🧵 Fili',items:[
     {id:'line',n:'Filo madre nylon · bobina 300 m',d:'Più sottile = lanci più lunghi ma meno resistenza.',opts:[{k:'d',n:'Diametro',v:['0,20 mm','0,22 mm','0,25 mm','0,28 mm','0,30 mm']}],p:o=>[9.9,9.9,10.9,11.9,12.9][o.d]},
     {id:'leader',n:'Shock leader conico 0,26→0,57 · 5 pezzi',d:'Il tratto che regge la forza del lancio: niente più crack-off.',p:()=>8.9},
@@ -1168,7 +1168,7 @@ function giveItem(it,o){const g=st.gear;(g.bought=g.bought||{})[it.id]=true;swit
   case 'reel':{const t=['6000','8000','10000','14000'][o.t||0],id='r'+t;if(!g.reels.includes(id))g.reels.push(id);g.reel=id;g.drag=[8,12,15,20][o.t||0];break;}
   case 'reelT':if(!g.reels.includes('rT'))g.reels.push('rT');g.reel='rT';g.drag=25;break;
   case 'hook':{const m=[0,2,4,6,8][o.m||0];g.hooks[m]=(g.hooks[m]||0)+10;if(o.t===1){g.forged=g.forged||{};g.forged[m]=(g.forged[m]||0)+10;}break;}
-  case 'lead':{const w=[80,100,125,150,175,200][o.g||0];if(o.t===2)g.grip[w]=(g.grip[w]||0)+3;if(o.t===1){g.ogiva=g.ogiva||{};g.ogiva[w]=(g.ogiva[w]||0)+3;}g.leads[w]=(g.leads[w]||0)+3;break;}
+  case 'lead':{const w=[80,100,125,150,175,200][o.g||0];if(o.t===2)g.grip[w]=(g.grip[w]||0)+2;if(o.t===1){g.ogiva=g.ogiva||{};g.ogiva[w]=(g.ogiva[w]||0)+2;}g.leads[w]=(g.leads[w]||0)+2;break;}
   case 'line':g.line=[.2,.22,.25,.28,.3][o.d||0];break;
   case 'leader':g.leader+=5;break;
   case 'fluo':g.fluo=[.25,.3,.35,.4][o.d||0];break;
