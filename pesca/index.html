@@ -2052,7 +2052,7 @@ function drawStart(){
 function beginLive(){
   if(LIVEDRAFT.spot==='__here'){hereSpot(s=>{LIVEDRAFT.spot=s.id;S.active=s.id;LS.set('active',s.id);S.wx=null;loadWeather();beginLive();});return;}
   S.live={...LIVEDRAFT,start:Date.now(),catches:[]};LS.set('live',S.live);LIVEQ={sp:'',w:'',l:'',rel:false,photo:null};
-  closeSheet();toast('Buona pesca! 🎣');go('live');
+  closeSheet();toast('Sessione iniziata 🎣');go('live');
 }
 function vLive(v){
   if(!S.live){v.innerHTML='<div class="empty"><div>🎣</div>Nessuna sessione in corso.<br><br><button class="btn" onclick="startLive()">Inizia a pescare</button></div>';return;}
