@@ -37,7 +37,7 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.physicallyCorrectLights = false;
 const scene = EQ.scene = new THREE.Scene();
-const camera = EQ.camera = new THREE.PerspectiveCamera(60,1,0.1,1500);
+const camera = EQ.camera = new THREE.PerspectiveCamera(60,1,0.22,1500);
 EQ.portrait = false;
 function resize(){
   const w=innerWidth,h=innerHeight;

@@ -165,7 +165,10 @@ EQ.populate.yard=function(W){
   // cavalieri nel campo
   const track=Path(ellipse(A.cx,A.cz,A.hx-3.2,A.hz-3.2,56),true);
   [[2,1],[3.5,1],[4.6,-1]].forEach(([sp,dir],i)=>{const fem=Math.random()<.65;const e=rider(W,fem);const a=pathAgent(W,e,track,{speed:sp,dir,s:i*track.L/3,stopR:6,colR:.75,colOff:.7,two:true,far:200});
-    a.lesson=true;a.label=label(e,'Allievo · '+EQ.randName(fem),3.15);e.name=e.name.replace('Allievo · ','');});
+    a.lesson=true;a.label=label(e,'Allievo · '+EQ.randName(fem),3.15);e.name=e.name.replace('Allievo · ','');
+    // durante la lezione del giocatore gli allievi si fermano in fila lungo la staccionata
+    const u=a.update,sx=A.cx-12+i*12,sz=A.cz+A.hz-2.6;a.update=(dt,t,p,d)=>{if(W.busyArena===A){a.x+=(sx-a.x)*Math.min(1,dt*1.5);a.z+=(sz-a.z)*Math.min(1,dt*1.5);a.h+=U.wrapA(Math.PI-a.h)*Math.min(1,dt*2);
+      e.root.position.set(a.x,0,a.z);e.root.rotation.y=a.h;e.anim(dt,Math.min(2,Math.hypot(sx-a.x,sz-a.z)),a,t);if(a.col)a.col.off=true;if(a.col2)a.col2.off=true;return;}u(dt,t,p,d);};});
   // Betta, istruttrice (45 anni, capelli lunghi raccolti in una coda) al centro del campo con gli allievi
   {const e=addTo(W,person({fem:true,s:1.0,skin:0xe8b896,hair:0x5a3418,hairStyle:'pony',top:0x2f6b33,pants:0xd9c7a5,boots:0x141414,sleeves:'long',glasses:false}));
    const a=staticAgent(W,e,A.cx+2,A.cz+1,0,(dt,t,a,p)=>{const r=W.agents.find(x=>x.ent.horse&&x.lesson);if(r){const h=Math.atan2(r.x-a.x,r.z-a.z);a.h+=U.wrapA(h-a.h)*Math.min(1,dt*2);e.root.rotation.y=a.h;}
