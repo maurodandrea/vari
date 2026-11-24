@@ -1131,7 +1131,7 @@ const CAT=[
     {id:'chairArm',chair:1,n:'Poltrona imbottita con braccioli',d:'Imbottita, con portacanna e portabicchiere: per le nottate lunghe.',p:()=>79}]},
   {k:'borsoni',n:'👜 Borsoni',items:[
     {id:'bagTackle',n:'Borsa portaminuteria con 4 scatole',d:'Ami, girelle e piombi sempre in ordine.',p:()=>29},
-    {id:'bagRod',n:'Fodero porta canne 1,60 m',d:'Porta 3 canne montate con i mulinelli.',p:()=>35},
+    {id:'bagRod',n:'Fodero porta canne 1,70 m',d:'Porta 3 canne montate con i mulinelli.',p:()=>50},
     {id:'bagBack',n:'Zaino da surfcasting 45 l',d:'Mani libere per portare tutto in spiaggia.',p:()=>49},
     {id:'cart',n:'Carrello da spiaggia con ruote larghe',d:'Porta tutta l\'attrezzatura senza fatica sulla sabbia.',p:()=>89}]},
   {k:'abbigliamento',n:'🧥 Abbigliamento',items:[
