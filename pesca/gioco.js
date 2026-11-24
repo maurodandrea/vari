@@ -332,12 +332,14 @@ function makeSpike(){const g=new T.Group(),p=new T.Mesh(new T.CylinderGeometry(.
   const v=new T.Mesh(new T.TorusGeometry(.04,.006,6,12,Math.PI),MAT.alu);v.position.y=1.32;v.rotation.z=Math.PI;g.add(v);g.traverse(o=>{if(o.isMesh)o.castShadow=true;});return g;}
 
 /* ---------- mondo ---------- */
-let SAND=null,CHAIRG=null,MYG=[],CHAIRHIT=null,NPCS=[],foams=[],swash,clouds=[],stars,moon,rain,cityL,grass,lineObjs=[],sinkers=[],splashP,fishMesh,bushes;
+let overcast=null,SAND=null,CHAIRG=null,MYG=[],CHAIRHIT=null,NPCS=[],foams=[],swash,clouds=[],stars,moon,rain,cityL,grass,lineObjs=[],sinkers=[],splashP,fishMesh,bushes;
 function buildWorld(){
   scene=new T.Scene();camera=new T.PerspectiveCamera(55,1,.1,20000);
   renderer.toneMapping=T.ACESFilmicToneMapping;renderer.outputEncoding=T.sRGBEncoding;renderer.shadowMap.enabled=true;renderer.shadowMap.type=T.PCFSoftShadowMap;
   mats();
   sky=new T.Sky();sky.scale.setScalar(15000);scene.add(sky);
+  // coltre grigia del cielo coperto (pioggia, nuvolosità alta)
+  overcast=new T.Mesh(new T.SphereGeometry(9000,32,12,0,Math.PI*2,0,Math.PI/2),new T.MeshBasicMaterial({color:0x9aa3ab,side:T.BackSide,transparent:true,opacity:0,fog:false,depthWrite:false}));overcast.renderOrder=-1;scene.add(overcast);
   sunLight=new T.DirectionalLight(0xffffff,1);sunLight.castShadow=true;sunLight.shadow.mapSize.set(1024,1024);Object.assign(sunLight.shadow.camera,{left:-18,right:18,top:18,bottom:-18,near:1,far:120});scene.add(sunLight);scene.add(sunLight.target);
   hemi=new T.HemisphereLight(0xbfd8ff,0xc9a878,.6);scene.add(hemi);
   moonLight=new T.DirectionalLight(0x9fb4ff,0);scene.add(moonLight);
@@ -1433,7 +1435,8 @@ let NIGHT=0;const night=()=>NIGHT;
 function updEnv(w,t,dt){const d=gameDate(),s0=sunPos(d,SPOT.lat,SPOT.lon),sun=sunPos(new Date(d.getTime()+30*60e3*clamp((180-s0.az)/30,-1,1)),SPOT.lat,SPOT.lon),// luce: mezz'ora in più di chiaro all'alba e al tramonto
   mo=moonPosG(d,SPOT.lat,SPOT.lon);
   const dir=(alt,az)=>{const a=(az-FACE)*R,e=alt*R;return new T.Vector3(Math.sin(a)*Math.cos(e),Math.sin(e),-Math.cos(a)*Math.cos(e));};
-  const sd=dir(sun.alt,sun.az),md=dir(mo.alt,mo.az),cc=clamp(w.cc/100,0,1);NIGHT=clamp((-sun.alt+2)/10,0,1);
+  const sd=dir(sun.alt,sun.az),md=dir(mo.alt,mo.az),cc0=clamp(w.cc/100,0,1),rainy=w.pr>.05||(w.code>=51&&w.code<=99),cc=rainy?Math.max(cc0,w.code>=63||w.pr>1?1:.85):cc0;// se piove il cielo è coperto anche se il dato delle nuvole è basso
+  NIGHT=clamp((-sun.alt+2)/10,0,1);
   const u=sky.material.uniforms;u.sunPosition.value.copy(sd);u.turbidity.value=2+cc*9;u.rayleigh.value=lerp(1.2,3,clamp(1-sun.alt/25,0,1))*(1-cc*.6);u.mieCoefficient.value=.004+cc*.01;u.mieDirectionalG.value=.8;
   const day=clamp((sun.alt+3)/12,0,1);sunLight.position.copy(AN.pos).addScaledVector(sd,60);sunLight.target.position.copy(AN.pos);sunLight.intensity=day*(1.6-cc*1.1);
   sunLight.color.setHSL(.09,clamp(1-sun.alt/25,0,1)*.7,lerp(.55,.95,clamp(sun.alt/30,0,1)));
@@ -1447,12 +1450,13 @@ function updEnv(w,t,dt){const d=gameDate(),s0=sunPos(d,SPOT.lat,SPOT.lon),sun=su
   scene.fog=scene.fog||new T.FogExp2(0xffffff,.0004);scene.fog.color.copy(fogCol);scene.fog.density=.00015+(w.code===45||w.code===48?.006:0)+(w.pr>.1?.0015:0)+cc*.0002;
   stars.material.opacity=NIGHT*(1-cc)*.9;cityL.material.opacity=NIGHT*.85;
   moon.position.copy(md).multiplyScalar(8000);moon.visible=mo.alt>-3;moon.material.opacity=clamp(.25+NIGHT,0,1)*(1-cc*.6);moon.userData.halo.material.opacity=.3*NIGHT*mo.illum*(1-cc*.7);if(moon.userData.ph==null||Math.abs(moon.userData.ph-mo.ph)>6){moon.material.map=moonTex(mo.ph);moon.material.needsUpdate=true;moon.userData.ph=mo.ph;}
-  const n=Math.round(cc*clouds.length),tint=new T.Color().setHSL(.07,sun.alt<10&&sun.alt>-6?.5:.05,lerp(.12,.92,day));
+  if(overcast){overcast.position.set(camera.position.x,0,camera.position.z);overcast.material.opacity=clamp((cc-.5)/.5,0,1)*(rainy?.86:.75);overcast.material.color.setHSL(.58,.06,lerp(.05,.6,day)*(rainy?.85:1));overcast.visible=overcast.material.opacity>.01;}
+  const n=Math.round(cc*clouds.length),tint=new T.Color().setHSL(.07,sun.alt<10&&sun.alt>-6&&!rainy?.5:.05,lerp(.12,.92,day)*(rainy?.5:1));
   // le nuvole vanno dove spira il vento (in quota un po' più forte) e vivono: nascono, crescono, si sfaldano e svaniscono
   const gm=st.gmul||1,wa=(w.wd+180-FACE)*R,vx=Math.sin(wa)*(w.ws/3.6)*1.6,vz=-Math.cos(wa)*(w.ws/3.6)*1.6;
   clouds.forEach((c,i)=>{const u=c.userData;u.life+=dt*gm/u.dur;if(u.life>=1||Math.hypot(c.position.x,c.position.z)>3600){respawnCloud(c,false);}
     c.position.x+=vx*dt*gm;c.position.z+=vz*dt*gm;
-    const env=Math.sin(Math.min(1,u.life)*Math.PI),want=i<n?1:0;u.vis=lerp(u.vis,want,1-Math.exp(-dt*gm/40));
+    const env=Math.sin(Math.min(1,u.life)*Math.PI),want=i<n?1:0;u.vis=lerp(u.vis,want,1-Math.exp(-dt*gm/(rainy?6:40)));
     const grow=.75+.35*u.life+.06*Math.sin(u.ph+st.gt/9e5);c.scale.set(u.w*grow,u.h*(.85+.3*env),1);
     c.material.color.copy(tint);c.material.opacity=clamp(.55+cc*.4,0,1)*Math.pow(env,.6)*u.vis;c.visible=c.material.opacity>.01;});
   for(const L of LANTERNS){L.userData.glass.material.emissiveIntensity=NIGHT>.4?1.6:0;if(L.userData.pl)L.userData.pl.intensity=NIGHT>.4?1.1:0;}
