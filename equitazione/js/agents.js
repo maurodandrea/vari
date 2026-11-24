@@ -283,10 +283,12 @@ EQ.populate.home=function(W){
   const g=W.spots.garden;
   const c=EQ.buildCat();W.group.add(c.root);wanderAgent(W,{root:c.root,anim:(dt,sp)=>c.animate(dt,sp)},{x:0,z:-8,hx:18,hz:3},{speed:.8,run:3,idle:[3,10],step:6,far:90});
   const d=EQ.buildDog({col:0xc8a060});W.group.add(d.root);wanderAgent(W,{root:d.root,anim:(dt,sp)=>d.animate(dt,sp)},{x:0,z:3,hx:18,hz:12},{speed:2.3,run:5,idle:[1,4],step:8,far:120});
-  // famiglia
-  const mom=addTo(W,person({fem:true,hairStyle:'bun',top:0xe86aa6,pants:0x2c3e66}));const a=staticAgent(W,mom,-3,-11.5,0,(dt,t,a,p)=>{if(p){a.h+=U.wrapA(Math.atan2(p.x-a.x,p.z-a.z)-a.h)*Math.min(1,dt*2);mom.root.rotation.y=a.h;}mom.npc.pose(dt,Math.sin(t*.4)>.75?'wave':'stand',{});});
-  a.label=label(mom,'Mamma',2.15);mom.name='Mamma';mom.lines=['Ciao tesoro! Hai portato il cavallo a casa?','Ricordati di dargli acqua fresca.','Il palo per legarlo è vicino al garage.','Che bello vederti a cavallo!','Merenda pronta tra poco!'];
-  const kid=addTo(W,person({kid:true,fem:Math.random()<.5}));const ka=wanderAgent(W,kid,{x:-8,z:4,hx:10,hz:8},{speed:2.6,idle:[.5,2],step:6});kid.anim=(dt,sp)=>kid.npc.pose(dt,sp>.2?'run':'play',{speed:sp});ka.label=label(kid,'Fratellino',1.55);kid.name='Fratellino';
+  // cugini e cugine che giocano in giardino
+  const cz=[['Cugina',true],['Cugino',false],['Cugina',true],['Cugino',false]];
+  cz.forEach(([t,fem],k)=>{const nm=EQ.randName(fem);const kid=addTo(W,person({kid:true,fem,backpack:null}));
+    const ka=wanderAgent(W,kid,{x:-6+k*3,z:4,hx:12,hz:9},{speed:2.6,idle:[.5,2.5],step:7});kid.anim=(dt,sp)=>kid.npc.pose(dt,sp>.2?'run':'play',{speed:sp});
+    ka.label=label(kid,t+' '+nm,1.55);kid.name=t+' '+nm;
+    kid.lines=['Giochiamo a nascondino?','Mi fai salire sul cavallo?','Il tuo cavallo è bellissimo!','Facciamo una gara di corsa!','Dopo guardiamo la TV insieme?','In cameretta ci sono i peluche!','Io da grande avrò un pony!'];});
 };
 EQ.populate.beach=function(W){
   const sh=W.shore,H=W.height,S=W.spots;
