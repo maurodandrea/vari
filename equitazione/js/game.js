@@ -534,6 +534,7 @@ function nearPet(r){let b=null,bd=r;
 function adopt(fh){
   parkCurrent();
   fh.world=W();
+  if(fh.rope)fh.rope.visible=false;if(fh.owner&&!fh.rider)setTimeout(()=>msg('👨 '+fh.owner+': <small>Vai pure, ma con calma: sta ancora imparando!</small>',2.6),900);
   if(fh.rider){const a=fh.agent,e=a.ent,n=e.npc;fh.owner=e.name||fh.owner;scene.updateMatrixWorld();
     W().group.attach(n.root);const lx=Math.cos(a.h),lz=-Math.sin(a.h);n.root.position.set(a.x+lx*1.3,W().height(a.x+lx*1.3,a.z+lz*1.3),a.z+lz*1.3);n.root.rotation.set(0,a.h-Math.PI/2,0);n.pose(1,'stand',{snap:true});
     if(a.label){n.root.add(a.label);a.label.position.set(0,2.15,0);}if(a.col)a.col.off=true;if(a.col2)a.col2.off=true;G.standers.push(n);
@@ -555,7 +556,7 @@ function releaseGuest(){
   H.setTack({pad:false,saddle:false,girth:false,bridle:false,halter:false,wraps:false});
   H.root.position.set(fh.home.x,0,fh.home.z);(fh.world||yard).group.attach(H.root);
   if(fh.agent){const a=fh.agent;a.disabled=false;a.x=a.tx=fh.home.x;a.z=a.tz=fh.home.z;}
-  if(fh.col)fh.col.off=false;
+  if(fh.col)fh.col.off=false;if(fh.rope)fh.rope.visible=true;
   if(fh.pad){H.x=H.tx=fh.home.x;H.z=H.tz=fh.home.z;H.wait=2;}
   G.cur=null;G.leading=false;
 }

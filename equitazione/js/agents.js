@@ -184,7 +184,8 @@ EQ.populate.yard=function(W){
      e.root.rotation.y=Math.atan2(hx-cx,hz-cz);e.npc.pose(dt,'lead',{speed:0});
      if(d<70){h.root.updateMatrixWorld();e.root.updateMatrixWorld();e.npc.handR.getWorldPosition(tv);h.chin.getWorldPosition(tv2);rp.set(tv,tv2);}},{far:200});
    a.extra=[h.root,rp.l];a.label=label(e,'Carlo · addestratore',2.25);e.name='Carlo';
-   for(let i=0;i<2;i++){const hh=horseOnly(W,{halter:true});wanderAgent(W,{root:hh.root,anim:(dt,sp,a,t)=>hh.animate(dt,{speed:sp,eat:sp<.2?1:0,graze:1})},{x:A2.cx-A2.hx+4,z:A2.cz,hx:2.5,hz:A2.hz-4},{speed:1,idle:[4,12],step:6,far:170});}
+   (W.freeHorses=W.freeHorses||[]).push({h,agent:a,home:{x:cx,z:cz},name:'Puledro di Carlo',rope:rp.l,owner:'Carlo'});
+   for(let i=0;i<2;i++){const hh=horseOnly(W,{halter:true});const ha=wanderAgent(W,{root:hh.root,anim:(dt,sp,a,t)=>hh.animate(dt,{speed:sp,eat:sp<.2?1:0,graze:1})},{x:A2.cx-A2.hx+4,z:A2.cz,hx:2.5,hz:A2.hz-4},{speed:1,idle:[4,12],step:6,far:170});W.freeHorses.push({h:hh,agent:ha,home:{x:A2.cx-A2.hx+4,z:A2.cz},name:EQ.pick(EQ.HORSE_NAMES)+' (di Carlo)',owner:'Carlo'});}
    e.lines=['Questo puledro sta imparando a girare alla corda.','Con i cavalli ci vuole pazienza e voce calma.','Guarda come allunga il trotto, bravo!','Prima la fiducia, poi la sella.','Se vuoi ti insegno a lavorare il cavallo da terra.','Ogni cavallo ha il suo carattere.'];
    W.colliders.push({x:cx,z:cz,r:.6});}
   // cavalieri sulle strade (vanno e tornano dalle altre località)
