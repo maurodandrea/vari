@@ -128,7 +128,7 @@ function ground(W,size,tex,rep,y,col){
 }
 function patch(W,x,z,w,d,tex,rep,y,rough){
   const t=tex.clone(); t.needsUpdate=true; t.repeat.set(w/rep,d/rep); W.tex.push(t);
-  const m=new THREE.Mesh(new THREE.PlaneGeometry(w,d),new THREE.MeshStandardMaterial({map:t,roughness:rough==null?1:rough}));
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(w,d),new THREE.MeshStandardMaterial({map:t,roughness:rough==null?1:rough,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-4}));
   m.rotation.x=-Math.PI/2; m.position.set(x,y||.01,z); m.receiveShadow=true; W.group.add(m); return m;
 }
 function boxT(W,parent,w,h,d,x,y,z,tex,rep,col,rough){ // box con texture scalata
@@ -205,7 +205,7 @@ const fieldTex={
   alfalfa:()=>TXc.alf||(TXc.alf=EQ.canvasTex(256,256,(g,w,h)=>{g.fillStyle='#5f8f35';g.fillRect(0,0,w,h);for(let y=0;y<h;y+=16){g.fillStyle='rgba(30,60,20,.35)';g.fillRect(0,y,w,6);}for(let i=0;i<4000;i++){g.fillStyle=`hsla(${80+Math.random()*30},50%,${30+Math.random()*20}%,.7)`;g.fillRect(Math.random()*w,Math.random()*h,2,3);}})),
 };
 function field(W,x,z,w,d,kind,ry){const t=fieldTex[kind]().clone();t.needsUpdate=true;t.repeat.set(w/10,d/10);W.tex.push(t);
-  const m=new THREE.Mesh(new THREE.PlaneGeometry(w,d),new THREE.MeshStandardMaterial({map:t,roughness:1}));m.rotation.x=-Math.PI/2;m.rotation.z=ry||0;m.position.set(x,.025,z);m.receiveShadow=true;W.group.add(m);return m;}
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(w,d),new THREE.MeshStandardMaterial({map:t,roughness:1,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-4}));m.rotation.x=-Math.PI/2;m.rotation.z=ry||0;m.position.set(x,.025,z);m.receiveShadow=true;W.group.add(m);return m;}
 EQ.field=field;
 /* portale verso un'altra località: cartello ai bordi */
 const PNAME={yard:'🏠 MANEGGIO',beach:'🏖️ SPIAGGIA',city:'🏙️ CITTÀ',forest:'🌲 BOSCO'};

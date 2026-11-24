@@ -698,6 +698,7 @@ function rideUpdate(dt){
   const por=EQ.portrait;
   followCam(R.x,gy+R.y*.5,R.z,R.h,(por?8.4:7)+R.sp*.08,por?3.8:3.1,4.5,1.5,dt,7);
   if(!G.busy){const A=[];
+    if(G.course&&R.sp<1&&R.grounded)A.push({id:'quitc',icon:'⬇️',label:'Scendi (esci dal percorso)',fn:()=>{endCourse(true);msg('Percorso interrotto',1.4);dismount();}});
     if(!G.course){
       if(R.sp<2)A.push({id:'down',icon:'⬇️',label:'Scendi',fn:dismount});
       const S=W().spots||{},inA=a=>a&&Math.abs(R.x-a.cx)<a.hx&&Math.abs(R.z-a.cz)<a.hz;
@@ -755,7 +756,7 @@ function startCourse(l,noFade,ctx){
     const [sx,sz]=tx(L.start[0],L.start[1]);R.x=sx;R.z=sz;R.h=L.start[2]*EQ.D2R;R.sp=0;R.y=0;R.vy=0;R.grounded=true;
     G.cur.x=R.x;G.cur.z=R.z;G.cur.h=R.h;
     if(G.cur.where!=='ride'){G.cur.x=R.x;G.cur.z=R.z;G.cur.h=R.h;mountNow();}
-    G.course={l,obs:list,next:0,faults:0,time:0,state:'count',mode,A:AR};
+    G.course={l,obs:list,next:0,faults:0,time:0,state:'count',mode,A:AR};W().busyArena=AR;
     G.state='ride';snapCam();setTouchMode('ride');hud(true);setActions([]);
     $('timer').classList.add('on');
     let c=3;const el=$('count');el.textContent=c;el.classList.add('on');EQ.sfx.beep(false);
@@ -765,7 +766,7 @@ function startCourse(l,noFade,ctx){
 function endCourse(silent){
   if(!G.course&&!silent)return;
   clearInterval(G.cdI);$('count').classList.remove('on');
-  G.course=null;if(W().arenaGate){W().arenaGate.visible=false;W().gateColl.off=true;}$('timer').classList.remove('on');
+  G.course=null;W().busyArena=null;if(W().arenaGate){W().arenaGate.visible=false;W().gateColl.off=true;}$('timer').classList.remove('on');
   if(obsGroup){if(obsGroup.parent)obsGroup.parent.remove(obsGroup);obsGroup=null;}practice.forEach(p=>p.g.visible=true);marker.visible=chev.visible=false;
 }
 function finishCourse(){
