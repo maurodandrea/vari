@@ -176,10 +176,10 @@ function mats(){const S=(c,r=.8,m=0)=>new T.MeshStandardMaterial({color:c,roughn
     chair:S('#2a5d8a',.8),chairF:S('#9aa3ad',.4,.7),bag:S('#4a5a32',.9),bucket:S('#e8e8e8',.6),lead:S('#666a70',.4,.6),line:new T.LineBasicMaterial({color:0xd6e0e6,transparent:true,opacity:.2,depthWrite:false})});}
 
 /* ---------- il pescatore: corpo articolato ---------- */
-function limb(len,r1,r2,mat){// segmento che pende verso il basso dal suo perno: profilo con il ventre del muscolo e articolazione arrotondata
-  const pts=[];for(let i=0;i<=12;i++){const t=i/12,r=lerp(r1,r2,t)*(1+.13*Math.sin(Math.PI*Math.min(1,t*1.35)))*(t>.92?1-(t-.92)*1.2:1);pts.push(new T.Vector2(Math.max(.001,r),len/2-t*len));}
+function limb(len,r1,r2,mat,jk=.88){// segmento che pende verso il basso dal suo perno: profilo con il ventre del muscolo e articolazione arrotondata
+  const pts=[];for(let i=12;i>=0;i--){const t=i/12,r=lerp(r1,r2,t)*(1+.13*Math.sin(Math.PI*Math.min(1,t*1.35)))*(t>.92?1-(t-.92)*1.2:1);pts.push(new T.Vector2(Math.max(.001,r),len/2-t*len));}
   const g=new T.Group(),m=new T.Mesh(new T.LatheGeometry(pts,18),mat);m.position.y=-len/2;m.castShadow=true;g.add(m);
-  const j=new T.Mesh(new T.SphereGeometry(r1*1.02,12,10),mat);j.castShadow=true;g.add(j);g.userData.len=len;return g;}
+  const j=new T.Mesh(new T.SphereGeometry(r1*jk,14,10),mat);j.scale.y=.8;j.castShadow=true;g.add(j);g.userData.len=len;return g;}
 // pescatore con abbigliamento e aspetto a scelta:
 // o={j,j2,c,p: colori; hat:'cap'|'beanie'|'bucket'|'none'; beard:'stubble'|'full'|'mustache'|'none'; beardCol; glasses; suit:'jacket'|'waders'|'tracksuit'|'wetsuit'; boots:'boots'|'tall'|'shoes'; skin; hair}
 // trama del tessuto (giacca, pantaloni) e grana della gomma
@@ -224,7 +224,7 @@ function makeAngler(o={}){
   const legM=suit==='waders'?rubber:pants;
   const A=new T.Group(),J={};A.userData.J=J;
   const hips=new T.Group();hips.position.y=.95;A.add(hips);J.hips=hips;
-  const pelvis=new T.Mesh(new T.SphereGeometry(.17,18,14),legM);pelvis.scale.set(1.12,.72,.82);hips.add(pelvis);
+  const pelvis=new T.Mesh(new T.SphereGeometry(.17,18,14),legM);pelvis.scale.set(1.18,.78,.86);hips.add(pelvis);
   const spine=new T.Group();spine.position.y=.05;hips.add(spine);J.spine=spine;
   // busto modellato: vita stretta, petto, spalle
   const prof=[[.001,0],[.155,0],[.15,.08],[.158,.2],[.18,.34],[.2,.44],[.205,.5],[.17,.57],[.08,.62],[.001,.63]].map(([x,y])=>new T.Vector2(x,y));
@@ -236,8 +236,9 @@ function makeAngler(o={}){
   if(suit==='tracksuit'){for(const s of[-1,1]){const st1=new T.Mesh(new T.BoxGeometry(.012,.5,.01),S('#f2f2f2'));st1.position.set(s*.06,.3,-.148);spine.add(st1);}}
   if(suit==='waders'){// salopette di gomma fino al petto, con bretelle
     const bib=new T.Mesh(new T.LatheGeometry(prof.slice(0,6).map(v=>new T.Vector2(v.x*1.05+.004,v.y)),22),rubber);bib.scale.z=.74;spine.add(bib);
-    for(const s of[-1,1]){const br=new T.Mesh(new T.BoxGeometry(.03,.3,.012),S('#1f2620'));br.position.set(s*.09,.48,-.135);br.rotation.z=s*.12;spine.add(br);
-      const br2=br.clone();br2.position.z=.135;spine.add(br2);}}
+    const strapM=S('#1f2620',.8);for(const s of[-1,1]){const cv=new T.CatmullRomCurve3([[.085,.33,-.142],[.095,.47,-.14],[.115,.565,-.1],[.125,.615,0],[.115,.565,.1],[.095,.47,.14],[.085,.33,.142]].map(([x,y,z])=>new T.Vector3(s*x,y,z)));
+      const br=new T.Mesh(new T.TubeGeometry(cv,40,.011,6,false),strapM);br.scale.set(1,1,1);spine.add(br);
+      for(const z of[-.142,.142]){const bk=new T.Mesh(new T.BoxGeometry(.03,.022,.008),S('#9aa3ad',.4,.7));bk.position.set(s*.085,.34,z*1.02);spine.add(bk);}}}
   if(suit==='wetsuit'){const st2=new T.Mesh(new T.BoxGeometry(.3,.04,.21),S('#2f6fb5',.5));st2.position.y=.42;spine.add(st2);}
   const neck=new T.Group();neck.position.y=.62;spine.add(neck);J.neck=neck;
   const nk=new T.Mesh(new T.CylinderGeometry(.054,.064,.11,16),suit==='wetsuit'?jacket:skin);nk.position.y=.035;neck.add(nk);
@@ -291,8 +292,8 @@ function makeAngler(o={}){
       const p2=new T.Mesh(new T.CylinderGeometry(.006,.0066,L1*.85,8),hm);p2.position.y=-L1*.42;k2.add(p2);const tp=new T.Mesh(new T.SphereGeometry(.006,8,6),hm);tp.position.y=-L1*.85;k2.add(tp);}
     const th=new T.Mesh(new T.CylinderGeometry(.0085,.0095,.04,8),hm);th.position.set(-s*.026,-.035,-.016);th.rotation.set(-.6,0,s*.75);hand.add(th);
     const hp=new T.Group();hp.position.set(s*.1,-.02,0);hips.add(hp);J[k+'Hip']=hp;
-    const thg=limb(.44,.088,.066,legM);hp.add(thg);const kn=new T.Group();kn.position.y=-.44;thg.add(kn);J[k+'Knee']=kn;
-    const sn=limb(.42,.064,.05,legM);kn.add(sn);
+    const thg=limb(.44,.088,.066,legM,.78);hp.add(thg);const kn=new T.Group();kn.position.y=-.44;thg.add(kn);J[k+'Knee']=kn;
+    const sn=limb(.42,.06,.05,legM,.86);kn.add(sn);
     if(stripe){const l1=new T.Mesh(new T.BoxGeometry(.012,.42,.012),stripe);l1.position.set(s*.085,-.22,0);thg.add(l1);}
     const bt=o.boots||(suit==='waders'?'tall':'boots');
     if(bt==='tall'&&suit!=='waders'){const tb=new T.Mesh(new T.CylinderGeometry(.068,.062,.3,12),bootM);tb.position.y=-.28;sn.add(tb);}
@@ -339,20 +340,22 @@ function reelIK(){const r=st.rods[AN.holding];if(!r||!r.held||!AN.obj)return;con
   const err=()=>{J.lSh.updateMatrixWorld(true);J.lHand.getWorldPosition(hp);return hp.distanceTo(tg);};let e=err(),st0=.12;
   for(let it=0;it<7;it++){for(const [o,k] of P){const v=o[k];o[k]=v+st0;let e1=err();if(e1<e){e=e1;continue;}o[k]=v-st0;e1=err();if(e1<e){e=e1;continue;}o[k]=v;}st0*=.6;}}
 function applyPose(t,a=AN){const J=a.obj.userData.J,p=a.pose,set=(o,v)=>o.rotation.set(v[0],v[1],v[2]);
-  const mv=a.moving&&!a.swim,spd=a.speed||1.4,run=mv&&spd>3.2,A1=mv?clamp(spd/1.5,.55,1.5):0,ph=a.walk,s1=Math.sin(ph),c1=Math.cos(ph);
+  const dtp=a.lt!=null?clamp(t-a.lt,0,.1):0;a.lt=t;const mv0=a.moving&&!a.swim,spd=a.speed||1.4,run=mv0&&spd>3.2;a.gA=lerp(a.gA||0,mv0?clamp(spd/1.5,.55,1.5):0,1-Math.exp(-dtp*7));const A1=a.gA,mv=A1>.02,ph=a.walk,s1=Math.sin(ph),c1=Math.cos(ph);
   // bacino: sale e scende, ruota e oscilla; il busto compensa e la testa resta stabile
-  J.hips.position.y=p.hy+(mv?Math.abs(c1)*.045*A1-.035*A1:Math.sin(t*1.3)*.004);J.hips.rotation.set(0,mv?s1*.11*A1:0,mv?Math.sin(2*ph)*.035*A1:0);
-  set(J.spine,[p.sp[0]+(mv?.04+(run?.2:0):0),p.sp[1]-(mv?s1*.17*A1:0),p.sp[2]]);
+  J.hips.position.y=p.hy+(mv?Math.abs(c1)*.045*A1-.035*A1:Math.sin(t*1.3)*.004);J.hips.rotation.set(0,mv?s1*.09*A1:0,mv?Math.sin(2*ph)*.03*A1:0);
+  set(J.spine,[p.sp[0]+(mv?(.05+(run?.2:0))*Math.min(1,A1)+Math.abs(c1)*.015*A1:0),p.sp[1]-(mv?s1*.12*A1:0),p.sp[2]-(mv?Math.sin(2*ph)*.02*A1:0)]);
   set(J.head,[p.hd[0]-(run?.15:0),p.hd[1]+(mv?s1*.07*A1:0),p.hd[2]]);
-  const arms=a.holding<0&&mv,aA=.38*A1;
-  set(J.lSh,[p.lSh[0]-(arms?s1*aA:0),p.lSh[1],p.lSh[2]]);set(J.rSh,[p.rSh[0]+(arms?s1*aA:0),p.rSh[1],p.rSh[2]]);
-  set(J.lEl,[p.lEl[0]+(arms?.25+(run?.9:0)+Math.max(0,-s1)*.3*A1:0),0,0]);set(J.rEl,[p.rEl[0]+(arms?.25+(run?.9:0)+Math.max(0,s1)*.3*A1:0),0,0]);
+  const arms=a.holding<0&&mv,aA=.32*A1,sa=Math.sin(ph-.35);
+  set(J.lSh,[p.lSh[0]-(arms?sa*aA:0),p.lSh[1],p.lSh[2]+(arms?.05:0)]);set(J.rSh,[p.rSh[0]+(arms?sa*aA:0),p.rSh[1],p.rSh[2]-(arms?.05:0)]);
+  set(J.lEl,[p.lEl[0]+(arms?(.22+(run?.9:0))*Math.min(1,A1)+Math.max(0,-Math.sin(ph-.6))*.32*A1:0),0,0]);set(J.rEl,[p.rEl[0]+(arms?(.22+(run?.9:0))*Math.min(1,A1)+Math.max(0,Math.sin(ph-.6))*.32*A1:0),0,0]);
   // recupero: la mano sinistra gira la manovella
   if(a.reelSpin>0&&a.holding>=0){const c=a.crank;J.lSh.rotation.x+=Math.sin(c)*.14;J.lSh.rotation.z+=Math.cos(c)*.09;J.lEl.rotation.x+=Math.sin(c)*.18;}
   // gambe: la gamba che avanza piega il ginocchio, quella d'appoggio resta quasi tesa; il piede rulla
   const tA=.45*A1;set(J.lHip,[p.lHip[0]+(mv?s1*tA:0),p.lHip[1],p.lHip[2]]);set(J.rHip,[p.rHip[0]-(mv?s1*tA:0),p.rHip[1],p.rHip[2]]);
-  set(J.lKnee,[p.lKnee[0]-(mv?Math.max(0,c1)*1.05*A1+.06*A1:0),0,0]);set(J.rKnee,[p.rKnee[0]-(mv?Math.max(0,-c1)*1.05*A1+.06*A1:0),0,0]);
-  if(J.lFoot){J.lFoot.rotation.x=mv?-s1*.22*A1+Math.max(0,c1)*.25*A1:0;J.rFoot.rotation.x=mv?s1*.22*A1+Math.max(0,-c1)*.25*A1:0;}
+  const kn=x=>(.92*Math.pow(Math.max(0,Math.cos(x+.55)),2)+.14*Math.pow(Math.max(0,Math.sin(x+.3)),2)+.05)*A1;// piega in oscillazione e ammortizza l'appoggio
+  set(J.lKnee,[p.lKnee[0]-(mv?kn(ph):0),0,0]);set(J.rKnee,[p.rKnee[0]-(mv?kn(ph+Math.PI):0),0,0]);
+  const an=x=>(-.2*Math.sin(x)+.28*Math.pow(Math.max(0,Math.cos(x+.9)),3)-.1*Math.pow(Math.max(0,-Math.cos(x-.4)),4))*A1;
+  if(J.lFoot){J.lFoot.rotation.x=mv?an(ph):0;J.rFoot.rotation.x=mv?an(ph+Math.PI):0;}
   a.obj.position.copy(a.pos);
   if(a.swim){// a stile libero: corpo orizzontale, bracciate alternate, gambe a forbice, testa alta
     a.obj.rotation.set(-1.35,a.rotY,0,'YXZ');J.hips.position.y=.1;J.hips.rotation.set(0,Math.sin(ph)*.25,0);const sw=a.moving?ph:t*1.2;
