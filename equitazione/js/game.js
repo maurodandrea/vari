@@ -283,7 +283,7 @@ function drawScreen(scr,kind,t){const g=scr.g,W2=scr.c.width,H2=scr.c.height;
   scr.t.needsUpdate=true;}
 function hactUpdate(dt){const a=G.hact,sp=a.sp,w=W();a.t+=dt;
   const dx=sp.p.x-F.x,dz=sp.p.z-F.z;F.x+=dx*Math.min(1,dt*6);F.z+=dz*Math.min(1,dt*6);F.h+=U.wrapA(sp.h-F.h)*Math.min(1,dt*8);
-  if(sp.lie){P.root.position.set(F.x,.86,F.z);P.root.rotation.set(-Math.PI/2,0,0,'YXZ');P.root.rotation.y=sp.h;P.pose(dt,'stand',{});}
+  if(sp.lie){P.root.position.set(F.x,sp.ly||.86,F.z);P.root.rotation.set(-Math.PI/2,0,0,'YXZ');P.root.rotation.y=sp.h;P.pose(dt,'stand',{});}
   else{P.root.position.set(F.x,0,F.z);P.root.rotation.set(0,F.h,0);P.pose(dt,sp.pose,{speed:0,steer:sp.pc?Math.sin(a.t*12)*.3:0});}
   tvT+=dt;if(sp.tv&&w.tv&&tvT>.08){tvT=0;drawScreen(w.tv,'tv',a.t);}
   if(sp.pc&&w.pc&&tvT>.08){tvT=0;drawScreen(w.pc,'pc',a.t);if(Math.random()<.6)EQ.sfx.click();}
