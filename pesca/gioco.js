@@ -621,6 +621,9 @@ const MP={zoom:42};
 const LAT0=41.75,LON0=12.4,KX=111.32*Math.cos(41.75*R),KY=110.57;
 const PJ=(lat,lon)=>[(lon-LON0)*KX,(lat-LAT0)*KY];
 async function startMap(){st.phase='map';
+  if(!MP.skipAsk&&!MP.from){const ch=await new Promise(res=>{G.startChoice=res;ui.innerHTML=`<div class="gpanel"><b>🚗 Dove andiamo?</b><div class="gs">💶 Nel portafoglio: <b>${eur(st.money)}</b></div><div class="grow"><button class="gb big" style="flex:1" onclick="GAME.startChoice('pesca')">🎣 A pesca</button><button class="gb big" style="flex:1;background:#7a5a2a" onclick="GAME.startChoice('negozio')">🛒 Al negozio di pesca</button></div></div>`;});
+    if(ch==='negozio'){openShop();return;}}
+  MP.skipAsk=false;
   ['#gspd','#glamp','#gjoy'].forEach(q=>{const e=root.querySelector(q);if(e)e.style.display='none';});hud.innerHTML='';
   const c=document.createElement('canvas');c.id='gmapc';root.insertBefore(c,root.firstChild);MP.c=c;MP.g=c.getContext('2d');
   ui.innerHTML='<div class="gpanel"><b>🚗 Lazio</b><div class="gs">Carico la costa…</div></div>';
@@ -1004,6 +1007,149 @@ G.rsend=()=>{const el=document.getElementById('grtx'),txt=(el?.value||'').trim()
   (RP.log[a.id]=RP.log[a.id]||[]).push({me:true,text:txt});say(AN,txt,6);const lg=document.getElementById('grlog');if(lg)lg.innerHTML=rpLog(a.id);};
 G._rp=RP;G._cast=(style,pw,ms=1600)=>{st.castStyle=style;st.cast={p:pw,dir:0,on:true};castAnimStart('load');setTimeout(()=>doCast(),ms);};G._bolt=()=>strikeBolt();G._land=n=>{const sp=SP.find(x=>x.n===n);const r=st.rods[0];st.sel=0;r.held=true;AN.holding=0;r.bait="bibi";const w=sp.w[1]*1.6;st.fight={r,sp,w,len:lenOf(sp,w),dist:0,ten:.3,reel:false,drag:5,run:0,slack:0,t:0,pow:1};endFight(true);};G._jump=n=>{const sp=SP.find(x=>x.n===n);const r=st.rods[1];r.dist=20;r.sz=-90;const w=sp.w[2];st.fight={r,sp,w,len:lenOf(sp,w),dist:20,ten:.3,run:0,slack:0,t:0,pow:1,jump:{t:0}};st.fight.obj=makeFish3D(sp,st.fight.len/100);scene.add(st.fight.obj);};
 
+/* ============ negozio di pesca: portafoglio, zaino e catalogo da surfcasting ============ */
+const today=()=>new Date().toISOString().slice(0,10);
+const GEAR0={rod:'surf420',rods:['surf420'],reel:'r8000',reels:['r8000'],drag:12,line:.25,leader:2,fluo:.30,baits:{koreano:10,bibi:6,arenicola:6,americano:6,cannolicchio:6,cozza:8,sarda:6,seppia:4,gambero:6,cefalotto:2},
+  hooks:{0:5,2:10,4:10,6:10,8:5},leads:{80:2,100:3,125:4,150:6,175:4,200:2},grip:{},starlight:6,swivels:10,snaps:10,needle:true,elastic:false,lamp:false,own:{}};
+function gearLoad(){const g=LSG('gear',null);const G0=JSON.parse(JSON.stringify(GEAR0));if(!g)return G0;for(const k in G0)if(g[k]===undefined)g[k]=G0[k];return g;}
+st.gear=gearLoad();st.money=LSG('money',150);
+const gearSave=()=>{LSS('gear',st.gear);LSS('money',Math.round(st.money*100)/100);};
+const eur=v=>'€ '+v.toFixed(2).replace('.',',');
+const ROD={surf420:{n:'Surf 4,20 m',mul:1},surf420s:{n:'Spiaggia 4,20 m leggera',mul:1.02},surf450:{n:'Surf 4,50 m carbonio',mul:1.06},surf480:{n:'Tournament 4,80 m',mul:1.12}};
+// prezzi e confezioni realistici; o = opzioni scelte
+const CAT=[
+  {k:'canne',n:'🎣 Canne',items:[
+    {id:'surf420',n:'Canna surfcasting 4,20 m',d:'Vetro-carbonio, lancio 100-200 g, tre pezzi. Robusta, ideale per iniziare.',p:()=>69},
+    {id:'surf420s',n:'Canna Spiaggia 4,20 m leggera',d:'Carbonio, 50-150 g, vetta in fibra piena sensibile: mormore e orate con mare calmo.',p:()=>89},
+    {id:'surf450',n:'Canna surfcasting 4,50 m',d:'Carbonio, 100-250 g, azione di punta: più distanza (+6%).',p:()=>139},
+    {id:'surf480',n:'Canna Tournament 4,80 m',d:'Carbonio alto modulo, 150-250 g, per i lanci lunghi (+12%). Da veri agonisti.',p:()=>279}]},
+  {k:'mulinelli',n:'⚙️ Mulinelli',items:[
+    {id:'reel',n:'Mulinello surfcasting bobina lunga',d:'Bobina conica in alluminio, frizione anteriore. Più grande = frizione più potente.',opts:[{k:'t',n:'Taglia',v:['6000','8000','10000','14000']}],p:o=>[45,69,119,189][o.t]},
+    {id:'reelT',n:'Mulinello Tournament 14000 SA',d:'Corpo in alluminio, 7+1 cuscinetti, frizione 25 kg in carbonio.',p:()=>299}]},
+  {k:'esche',n:'🪱 Esche',items:BAITS.filter(b=>!b.lim).map(b=>({id:'b_'+b.k,n:b.n+' '+b.e,d:b.d,bait:b.k,pk:{koreano:12,bibi:8,arenicola:8,americano:10,cannolicchio:10,cozza:15,sarda:10,seppia:8,gambero:10,cefalotto:3}[b.k],p:()=>({koreano:4.5,bibi:7,arenicola:6.5,americano:5,cannolicchio:5,cozza:3,sarda:3.5,seppia:4,gambero:4,cefalotto:6})[b.k]}))},
+  {k:'ami',n:'🪝 Ami',items:[{id:'hook',n:'Ami da surfcasting · busta da 10',d:'Aberdeen a filo sottile per vermi e bibi, oppure forgiati per esche dure e pesci grossi.',opts:[{k:'m',n:'Misura',v:['0','2','4','6','8']},{k:'t',n:'Tipo',v:['Aberdeen','Forgiato']}],p:o=>o.t?3.9:2.9}]},
+  {k:'piombi',n:'⚓ Piombi',items:[{id:'lead',n:'Piombi da surfcasting · confezione da 3',d:'Piramidale tiene sulla sabbia, ogiva vola più lontano, a ragno (grip) resta fermo anche con la corrente.',opts:[{k:'g',n:'Peso',v:['80 g','100 g','125 g','150 g','175 g','200 g']},{k:'t',n:'Forma',v:['Piramidale','Ogiva','A ragno']}],p:o=>[3.2,3.6,4.2,4.8,5.4,6][o.g]*(o.t===2?1.6:1)}]},
+  {k:'fili',n:'🧵 Fili',items:[
+    {id:'line',n:'Filo madre nylon · bobina 300 m',d:'Più sottile = lanci più lunghi ma meno resistenza.',opts:[{k:'d',n:'Diametro',v:['0,20 mm','0,22 mm','0,25 mm','0,28 mm','0,30 mm']}],p:o=>[9.9,9.9,10.9,11.9,12.9][o.d]},
+    {id:'leader',n:'Shock leader conico 0,26→0,57 · 5 pezzi',d:'Il tratto che regge la forza del lancio: niente più crack-off.',p:()=>8.9},
+    {id:'fluo',n:'Terminale fluorocarbon · 50 m',d:'Invisibile in acqua: più sottile, più abboccate.',opts:[{k:'d',n:'Diametro',v:['0,25 mm','0,30 mm','0,35 mm','0,40 mm']}],p:o=>[7.5,7.9,8.5,8.9][o.d]}]},
+  {k:'accessori',n:'🧰 Accessori',items:[
+    {id:'star',n:'Starlight 4,5 mm · busta da 10',d:'Luce chimica sulla vetta: di notte vedi le tocche.',p:()=>3.9},
+    {id:'swiv',n:'Girelle a barilotto n. 8 · busta da 15',d:'Tolgono le torsioni al filo; servono per rifare il terminale.',p:()=>2.9},
+    {id:'snap',n:'Moschettoni rapidi · busta da 15',d:'Per agganciare il piombo al volo; servono per rifare il terminale.',p:()=>2.9},
+    {id:'needle',n:'Aghi da innesco · set da 3',d:'Indispensabili per innescare bibi, coreani e arenicole.',p:()=>4.5},
+    {id:'elastic',n:'Filo elastico per esche · bobina',d:'Avvolto sull\'esca morbida la fa durare il 30% in più.',p:()=>3.9},
+    {id:'lampF',n:'Lampada frontale LED 500 lumen',d:'Luce più forte e più lunga per pescare di notte.',p:()=>24.9},
+    {id:'spike',n:'Picchetto portacanna in alluminio 1,5 m',d:'Ben piantato nella sabbia, la canna non cade con il vento.',p:()=>14.9},
+    {id:'beads',n:'Perline fosforescenti e salvanodo',d:'Proteggono i nodi e attirano il pesce di notte.',p:()=>2},
+    {id:'box',n:'Cassetta portaminuteria',d:'Tutto in ordine: ami, girelle, moschettoni, starlight.',p:()=>12.9},
+    {id:'bucket',n:'Secchio portaesche con coperchio',d:'Tiene vive e fresche le esche.',p:()=>9.9},
+    {id:'scis',n:'Forbici per trecciato',d:'Taglio netto anche del multifibra.',p:()=>8.9}]}];
+const ITEM=Object.fromEntries(CAT.flatMap(c=>c.items.map(i=>[i.id,{...i,cat:c.k}])));
+const fullO=(it,o)=>{const r={};(it.opts||[]).forEach(op=>r[op.k]=o?.[op.k]||0);return r;};
+const optTxt=(it,o)=>(it.opts||[]).map(op=>op.v[o[op.k]||0]).join(' · ');
+// effetti sull'attrezzatura
+function giveItem(it,o){const g=st.gear;switch(it.id){
+  case 'surf420':case 'surf420s':case 'surf450':case 'surf480':if(!g.rods.includes(it.id))g.rods.push(it.id);g.rod=it.id;break;
+  case 'reel':{const t=['6000','8000','10000','14000'][o.t||0],id='r'+t;if(!g.reels.includes(id))g.reels.push(id);g.reel=id;g.drag=[8,12,15,20][o.t||0];break;}
+  case 'reelT':if(!g.reels.includes('rT'))g.reels.push('rT');g.reel='rT';g.drag=25;break;
+  case 'hook':{const m=[0,2,4,6,8][o.m||0];g.hooks[m]=(g.hooks[m]||0)+10;break;}
+  case 'lead':{const w=[80,100,125,150,175,200][o.g||0];if(o.t===2)g.grip[w]=(g.grip[w]||0)+3;g.leads[w]=(g.leads[w]||0)+3;break;}
+  case 'line':g.line=[.2,.22,.25,.28,.3][o.d||0];break;
+  case 'leader':g.leader+=5;break;
+  case 'fluo':g.fluo=[.25,.3,.35,.4][o.d||0];break;
+  case 'star':g.starlight+=10;break;case 'swiv':g.swivels+=15;break;case 'snap':g.snaps+=15;break;
+  case 'needle':g.needle=true;break;case 'elastic':g.elastic=true;break;case 'lampF':g.lamp=true;break;
+  default:if(it.bait){g.baits[it.bait]=(g.baits[it.bait]||0)+it.pk;}else g.own[it.id]=(g.own[it.id]||0)+1;}}
+// premi: un bonus al giorno e un compenso per ogni cattura
+function dailyBonus(){if(LSG('bonusDay','')!==today()){LSS('bonusDay',today());st.money+=20;gearSave();return true;}return false;}
+
+/* ---------- la scena del negozio ---------- */
+const SH={cart:[],cat:'canne',sel:{},cam:{p:null,l:null},hits:[]};
+const SHCAM={ingresso:[[0,1.7,1.2],[0,1.3,-5]],canne:[[-2.1,1.6,-3.6],[-4.9,1.5,-4.2]],mulinelli:[[1.4,1.6,-1.4],[3.6,1.05,-2.4]],esche:[[2,1.6,-5],[3.9,1.2,-7.4]],ami:[[-2.4,1.6,-5],[-2.6,1.4,-7.9]],piombi:[[-2.4,1.6,-5],[-2.6,1.2,-7.9]],fili:[[-.4,1.6,-5],[-.4,1.4,-7.9]],accessori:[[1.3,1.6,-5.2],[1.4,1.4,-7.9]],cassa:[[1.6,1.7,-3],[4.2,1.4,-4.1]]};
+function shopTex(txt,o={}){return canvasTex(o.w||512,o.h||128,(g,W,H)=>{g.fillStyle=o.bg||'#12324a';g.fillRect(0,0,W,H);if(o.border){g.strokeStyle=o.border;g.lineWidth=8;g.strokeRect(6,6,W-12,H-12);}g.fillStyle=o.col||'#fff';g.textAlign='center';g.textBaseline='middle';let fs=o.fs||64;g.font=`800 ${fs}px Outfit,sans-serif`;while(g.measureText(txt).width>W-40&&fs>20){fs-=4;g.font=`800 ${fs}px Outfit,sans-serif`;}g.fillText(txt,W/2,H/2+3);});}
+function buildShop(){scene=new T.Scene();scene.background=new T.Color('#1a1612');camera=new T.PerspectiveCamera(60,1,.05,80);
+  renderer.toneMapping=T.ACESFilmicToneMapping;renderer.outputEncoding=T.sRGBEncoding;renderer.toneMappingExposure=.95;renderer.shadowMap.enabled=false;
+  const M=(c,o={})=>new T.MeshStandardMaterial({color:c,roughness:.8,...o}),box=(w,h,d,m,x,y,z,par=scene)=>{const b=new T.Mesh(new T.BoxGeometry(w,h,d),m);b.position.set(x,y,z);par.add(b);return b;};
+  scene.add(new T.HemisphereLight(0xfff4e0,0x6b5a45,.55));
+  for(const [x,z] of [[-2.5,-2],[2.5,-2],[-2.5,-6],[2.5,-6]]){const l=new T.PointLight(0xfff1d6,.9,9,1.6);l.position.set(x,2.85,z);scene.add(l);box(1.2,.04,.5,M('#ffffff',{emissive:'#fff5e0',emissiveIntensity:1.2}),x,2.98,z);}
+  // pavimento in parquet, pareti e soffitto
+  const fl=canvasTex(512,512,(g,W,H)=>{for(let i=0;i<8;i++)for(let j=0;j<3;j++){const c=`hsl(${28+Math.random()*6},${38+Math.random()*10}%,${32+Math.random()*12}%)`;g.fillStyle=c;const off=(i%2)*85;g.fillRect(j*170-off,i*64,170,64);g.fillRect(j*170-off+510,i*64,170,64);g.strokeStyle='rgba(0,0,0,.35)';g.strokeRect(j*170-off,i*64,170,64);
+    for(let k=0;k<6;k++){g.strokeStyle='rgba(60,30,10,.18)';g.beginPath();g.moveTo(j*170-off,i*64+8+k*9);g.bezierCurveTo(j*170-off+60,i*64+4+k*9,j*170-off+110,i*64+14+k*9,j*170-off+170,i*64+8+k*9);g.stroke();}}},[4,4]);
+  const flm=new T.Mesh(new T.PlaneGeometry(10,9),new T.MeshStandardMaterial({map:fl,roughness:.55}));flm.rotation.x=-Math.PI/2;flm.position.set(0,0,-4);scene.add(flm);
+  const wallM=M('#e9e1d2',{roughness:.95}),wall=(w,h,x,y,z,ry)=>{const p=new T.Mesh(new T.PlaneGeometry(w,h),wallM);p.position.set(x,y,z);p.rotation.y=ry;scene.add(p);return p;};
+  wall(10,3,0,1.5,-8.5,0);wall(9,3,-5,1.5,-4,Math.PI/2);wall(9,3,5,1.5,-4,-Math.PI/2);const ce=new T.Mesh(new T.PlaneGeometry(10,9),M('#f4f1ea'));ce.rotation.x=Math.PI/2;ce.position.set(0,3,-4);scene.add(ce);
+  box(10,.5,.05,M('#1d5f8a'),0,2.65,-8.47);box(.05,.5,9,M('#1d5f8a'),-4.97,2.65,-4);
+  // ingresso con vetrina luminosa
+  const fw=new T.Mesh(new T.PlaneGeometry(10,3),M('#cfd8dc',{transparent:true,opacity:.25,emissive:'#bfe3ff',emissiveIntensity:.6}));fw.position.set(0,1.5,.45);fw.rotation.y=Math.PI;scene.add(fw);
+  // insegna
+  const sg=new T.Mesh(new T.PlaneGeometry(3.4,.6),new T.MeshBasicMaterial({map:shopTex('PESCA SPORT · LAZIO',{bg:'#0f3b57',col:'#ffd76a',border:'#ffd76a',w:1024,h:180,fs:90})}));sg.position.set(-.4,2.62,-8.44);sg.scale.set(.8,.8,1);scene.add(sg);
+  const lab=(t,x,y,z,ry=0)=>{const p=new T.Mesh(new T.PlaneGeometry(1.6,.36),new T.MeshBasicMaterial({map:shopTex(t,{bg:'#1d5f8a',fs:70})}));p.position.set(x,y,z);p.rotation.y=ry;scene.add(p);};
+  // rastrelliera delle canne sulla parete sinistra
+  lab('CANNE',-4.95,2.4,-4.2,Math.PI/2);box(.08,.08,5.6,M('#6b4a32'),-4.85,.35,-4.2);box(.08,.08,5.6,M('#6b4a32'),-4.85,1.9,-4.2);
+  const blanks=['#1b1b1b','#0f2f5a','#5a0f12','#1b3d22','#e3e3e3','#26303a','#3a1f5c'];for(let i=0;i<15;i++){const z=-6.8+i*.37,h=rnd(2.1,2.45),g=new T.Group();
+    const bl=new T.Mesh(new T.CylinderGeometry(.006,.016,h,8),M(blanks[i%7],{roughness:.3,metalness:.3}));bl.position.y=h/2;g.add(bl);
+    const cork=new T.Mesh(new T.CylinderGeometry(.019,.019,.45,10),M('#b98d58'));cork.position.y=.35;g.add(cork);for(let k=1;k<6;k++){const ri=new T.Mesh(new T.TorusGeometry(.012+.02*(1-k/6),.003,6,12),M('#c0c4c8',{metalness:.9,roughness:.2}));ri.rotation.y=Math.PI/2;ri.position.set(.03,.6+k*.3,0);g.add(ri);}
+    g.position.set(-4.82,.05,z);g.rotation.z=-.08;scene.add(g);}
+  // scaffali sulla parete di fondo con le confezioni
+  const shelf=(x,title)=>{lab(title,x,2.14,-8.4);const fr=M('#7a5a3a');box(.05,2,.45,fr,x-.95,1,-8.2);box(.05,2,.45,fr,x+.95,1,-8.2);box(1.95,2,.03,M('#d8cdb8'),x,1,-8.42);
+    for(let k=0;k<5;k++){const y=.15+k*.42;box(1.9,.03,.45,fr,x,y,-8.2);for(let i=0;i<8;i++){const w=rnd(.12,.2),h=rnd(.16,.32),c=new T.Color().setHSL(Math.random(),.55,.5);const pk=box(w,h,rnd(.05,.12),M(c,{roughness:.6}),x-.82+i*.235,y+.015+h/2,-8.16+rnd(-.05,.05));
+      const lb=box(w*.8,h*.3,.002,M('#ffffff',{roughness:.4}),0,h*.12,0,pk);lb.position.z=pk.geometry.parameters.depth/2+.001;}}};
+  shelf(-2.6,'AMI · PIOMBI');shelf(-.4,'FILI · TERMINALI');shelf(1.8,'ACCESSORI');
+  // frigo delle esche vive
+  lab('ESCHE VIVE',3.9,2.45,-7.6,-Math.PI/4);const fr=box(1.1,2.1,.8,M('#dfe6ea',{metalness:.4,roughness:.3}),3.9,1.05,-7.7);fr.rotation.y=-Math.PI/4;
+  const gl=new T.Mesh(new T.PlaneGeometry(.95,1.7),new T.MeshStandardMaterial({color:'#bfe9ff',emissive:'#9fe0ff',emissiveIntensity:.8,transparent:true,opacity:.55}));gl.position.set(3.9+Math.sin(-Math.PI/4)*.41,1.15,-7.7+Math.cos(-Math.PI/4)*.41);gl.rotation.y=-Math.PI/4;scene.add(gl);
+  // bancone di vetro con i mulinelli, cassa e commesso
+  lab('MULINELLI',3.6,1.6,-1.6,-Math.PI/2);box(.9,.9,3,M('#6b4a32'),3.8,.45,-2.6);const glass=new T.Mesh(new T.BoxGeometry(.9,.3,3),new T.MeshStandardMaterial({color:'#e8f6ff',transparent:true,opacity:.25,roughness:.05,metalness:.2}));glass.position.set(3.8,1.05,-2.6);scene.add(glass);
+  for(let i=0;i<5;i++){const g=new T.Group(),bd=new T.Mesh(new T.CylinderGeometry(.06,.06,.08,16),M(['#2b2f36','#c0392b','#c9c9c9','#1d5f8a','#d4a017'][i],{metalness:.7,roughness:.3}));bd.rotation.z=Math.PI/2;g.add(bd);
+    const sp=new T.Mesh(new T.CylinderGeometry(.045,.055,.07,16),M('#d0d4d8',{metalness:.9,roughness:.2}));sp.rotation.z=Math.PI/2;sp.position.x=-.07;g.add(sp);const ft=box(.02,.08,.02,M('#2b2f36'),.0,-.07,0,g);
+    g.position.set(3.8,.98,-1.5-i*.55);g.rotation.y=Math.PI/2;scene.add(g);}
+  box(.35,.25,.3,M('#2b2f36'),3.9,1.33,-4.0);box(.3,.12,.02,M('#5ee08a',{emissive:'#1f7a3a',emissiveIntensity:.8}),3.75,1.5,-3.95);
+  // poster delle specie con le foto vere
+  ['Orata','Spigola','Sarago maggiore'].forEach((n,i)=>{if(!FISHLOC[n])return;const tx=new T.TextureLoader().load(GBASE+FISHLOC[n].f);tx.encoding=T.sRGBEncoding;const p=new T.Mesh(new T.PlaneGeometry(.9,.6),new T.MeshBasicMaterial({map:tx}));p.position.set(4.97,1.9,-5.2-i*1.05);p.rotation.y=-Math.PI/2;scene.add(p);
+    const t=new T.Mesh(new T.PlaneGeometry(.9,.16),new T.MeshBasicMaterial({map:shopTex(n.toUpperCase(),{bg:'#0f3b57',fs:60})}));t.position.set(4.97,1.52,-5.2-i*1.05);t.rotation.y=-Math.PI/2;scene.add(t);});
+  // il commesso
+  const so=makeAngler({suit:'jacket',j:'#7a3b2e',j2:'#5e2c22',hat:'none',beard:'full',beardCol:'#8a8a84',hair:'#8a8a84',glasses:true,skin:'#d8a588',p:'#3a3a3a'});
+  SH.clerk={obj:so,pose:JSON.parse(JSON.stringify(POSES.stand)),target:'stand',walk:0,moving:false,speed:1,pos:new T.Vector3(4.45,0,-3.6),rotY:Math.PI/2,holding:-1,reelSpin:0,crank:0,faceTo:null};scene.add(so);
+  // zone toccabili
+  SH.hits=[['canne',-4.8,1.3,-4.2,.6,2.6,5.6],['mulinelli',3.8,.9,-2.6,1,.9,3],['esche',3.9,1,-7.7,1.2,2.1,1.2],['ami',-2.6,1,-8.2,2,2,.6],['fili',-.4,1,-8.2,2,2,.6],['accessori',1.8,1,-8.2,2,2,.6],['cassa',4.4,1,-3.8,.8,2,1]].map(([k,x,y,z,w,h,d])=>{const m=new T.Mesh(new T.BoxGeometry(w,h,d),new T.MeshBasicMaterial({visible:false}));m.position.set(x,y,z);m.userData.k=k;scene.add(m);return m;});
+  SH.cam.p=new T.Vector3(0,1.7,2.4);SH.cam.l=new T.Vector3(0,1.3,-5);SH.go='ingresso';}
+async function openShop(){st.phase='shop';stop();root=null;mountShell();try{T=await (MP.three||loadThree());}catch(e){ui.innerHTML='<div class="gpanel">Negozio non disponibile</div>';return;}
+  renderer=new T.WebGLRenderer({antialias:true});renderer.setPixelRatio(Math.min(1.6,devicePixelRatio||1));cvs=renderer.domElement;root.querySelector('#g3').appendChild(cvs);
+  buildShop();size();addEventListener('resize',size);clock=new T.Clock();SH.cart=[];
+  const name=window.GP_NAME||(window.CLOUD?.name?.()||'').split(/[ .]/)[0]||'';const bonus=dailyBonus();
+  setTimeout(()=>say(SH.clerk,`Buongiorno${name?' '+name:''}! Cosa ti serve oggi?`,4),900);if(bonus)st.msg='🎁 Bonus del giorno: +€ 20';
+  cvs.addEventListener('pointerup',e=>{const r=cvs.getBoundingClientRect(),m=new T.Vector2((e.clientX-r.left)/r.width*2-1,-(e.clientY-r.top)/r.height*2+1),rc=new T.Raycaster();rc.setFromCamera(m,camera);const h=rc.intersectObjects(SH.hits,false)[0];if(h)G.shopCat(h.object.userData.k==='cassa'?'cassa':h.object.userData.k);});
+  shopUI();const lp=()=>{raf=requestAnimationFrame(lp);if(!renderer||st.phase!=='shop')return;const dt=Math.min(.05,clock.getDelta()),t=clock.elapsedTime;
+    const C=SHCAM[SH.go]||SHCAM.ingresso;SH.cam.p.lerp(new T.Vector3(...C[0]),1-Math.exp(-dt*2.5));SH.cam.l.lerp(new T.Vector3(...C[1]),1-Math.exp(-dt*3));camera.position.copy(SH.cam.p);camera.position.y+=Math.sin(t*.8)*.01;camera.lookAt(SH.cam.l);
+    const k=SH.clerk;if(k.bub){k.bubT-=dt;if(k.bubT<=0){k.obj.remove(k.bub);k.bub=null;}}const tr=new T.Vector3(SH.cam.p.x,0,SH.cam.p.z);k.rotY=lerpAng(k.rotY,Math.atan2(-(tr.x-k.pos.x),-(tr.z-k.pos.z)),1-Math.exp(-dt*3));lerpPose(dt,5,k);applyPose(t,k);
+    renderer.render(scene,camera);};lp();}
+function mountShell(){root=document.createElement('div');root.id='gamebox';root.innerHTML=`<div id="g3"></div><div id="ghud"></div><div id="gui"></div><button id="gx" aria-label="Esci">✕</button><button id="gau" aria-label="Audio">${AU.on?'🔊':'🔇'}</button>`;document.body.appendChild(root);document.body.classList.add('gaming');ui=root.querySelector('#gui');hud=root.querySelector('#ghud');root.querySelector('#gx').onclick=()=>G.shopExit();root.querySelector('#gau').onclick=e=>{AU.on=!AU.on;LSS('audio',AU.on);e.target.textContent=AU.on?'🔊':'🔇';};}
+const cartTot=()=>SH.cart.reduce((a,c)=>a+c.price,0);
+function shopUI(){const c=CAT.find(x=>x.k===SH.cat),tot=cartTot();hud.innerHTML=`<div>🛒 Pesca Sport</div><div>💶 <b>${eur(st.money)}</b></div>${SH.cart.length?`<div>🧺 ${SH.cart.length} · ${eur(tot)}</div>`:''}`;
+  if(SH.cat==='zaino'){const g=st.gear;ui.innerHTML=`<div class="gpanel"><div class="grow" style="justify-content:space-between"><b>🎒 Il tuo zaino</b>${btn('↩ Negozio',"shopCat('canne')")}</div>
+    <div class="gs">Canna: <b>${ROD[g.rod].n}</b>${g.rods.length>1?' · '+g.rods.map(id=>`<u style="cursor:pointer" onclick="GAME.useRod('${id}')">${ROD[id].n}</u>`).join(' · '):''}</div>
+    <div class="gs">Mulinello: <b>${g.reel==='rT'?'Tournament 14000':g.reel.slice(1)}</b> (frizione ${g.drag} kg) · filo madre ${String(g.line).replace('.',',')} mm · terminale ${String(g.fluo).replace('.',',')} mm · shock leader ${g.leader}</div>
+    <div class="gs">Esche: ${BAITS.filter(b=>!b.lim).map(b=>`${b.n} ${g.baits[b.k]||0}`).join(' · ')}</div>
+    <div class="gs">Ami: ${[0,2,4,6,8].map(m=>`n.${m}: ${g.hooks[m]||0}`).join(' · ')}</div>
+    <div class="gs">Piombi: ${[80,100,125,150,175,200].map(w=>`${w} g: ${g.leads[w]||0}${g.grip[w]?' ('+g.grip[w]+' a ragno)':''}`).join(' · ')}</div>
+    <div class="gs">Starlight ${g.starlight} · girelle ${g.swivels} · moschettoni ${g.snaps} · aghi ${g.needle?'sì':'no'} · elastico ${g.elastic?'sì':'no'} · frontale ${g.lamp?'LED 500 lm':'base'}${Object.keys(g.own).length?' · '+Object.keys(g.own).map(k=>ITEM[k]?.n.split(' ')[0]).join(', '):''}</div></div>`;return;}
+  const items=SH.cat==='cassa'?null:c.items;
+  ui.innerHTML=`<div class="gpanel" style="max-height:56vh"><div class="grow" style="flex-wrap:nowrap;overflow-x:auto;gap:5px;scrollbar-width:none">${CAT.map(x=>`<button class="gc ${SH.cat===x.k?'on':''}" style="flex:none" onclick="GAME.shopCat('${x.k}')">${x.n}</button>`).join('')}<button class="gc" style="flex:none" onclick="GAME.shopCat('zaino')">🎒 Zaino</button></div>
+    ${items?items.map(it=>{const o=SH.sel[it.id]||(SH.sel[it.id]={});const own=(it.id.startsWith('surf')&&st.gear.rods.includes(it.id));return `<div class="gitem"><div style="flex:1;min-width:0"><b>${it.n}</b><div class="gs" style="margin:2px 0">${it.d}${it.pk?` · confezione da ${it.pk} innesci (ne hai ${st.gear.baits[it.bait]||0})`:''}</div>
+      ${(it.opts||[]).map(op=>`<div class="grow" style="gap:4px;margin:3px 0;flex-wrap:wrap"><span style="font-size:12.5px;opacity:.8">${op.n}</span>${op.v.map((v,i)=>`<button class="gc ${(o[op.k]||0)===i?'on':''}" style="padding:4px 9px;font-size:12.5px" onclick="GAME.shopOpt('${it.id}','${op.k}',${i})">${v}</button>`).join('')}</div>`).join('')}</div>
+      <div style="text-align:right;flex:none"><b style="color:#ffd76a">${eur(it.p(fullO(it,o)))}</b><br>${own?'<span class="gs">già tua</span>':`<button class="gb" style="margin:4px 0 0;padding:8px 12px" onclick="GAME.shopAdd('${it.id}')">＋ Carrello</button>`}</div></div>`;}).join('')
+    :`<b>🧾 Alla cassa</b>${SH.cart.length?SH.cart.map((x,i)=>`<div class="grow" style="justify-content:space-between;margin:3px 0"><span class="gs" style="margin:0">${ITEM[x.id].n}${x.o&&ITEM[x.id].opts?' · '+optTxt(ITEM[x.id],x.o):''}</span><span>${eur(x.price)} <u style="cursor:pointer" onclick="GAME.shopDel(${i})">✕</u></span></div>`).join(''):'<div class="gs">Il carrello è vuoto.</div>'}`}
+    <div class="grow" style="margin-top:8px">${SH.cart.length?`<button class="gb ${SH.cat==='cassa'?'big':''}" style="flex:2" onclick="GAME.${SH.cat==='cassa'?'shopPay':"shopCat('cassa')"}()">💳 ${SH.cat==='cassa'?'Paga':'Vai alla cassa'} ${eur(tot)}</button>`:''}<button class="gb" style="flex:1;background:#33404d" onclick="GAME.shopExit()">🚪 Esci</button></div>${st.msg?`<div class="gs" style="text-align:center">${st.msg}</div>`:''}</div>`;}
+G.shopCat=k=>{SH.cat=k;SH.go=k==='zaino'?'ingresso':k;st.msg='';click();shopUI();const L={canne:'Queste sono le canne: più lunghe lanciano più lontano.',mulinelli:'I mulinelli sono nel bancone: con la bobina lunga il filo esce meglio.',esche:'Esche vive, appena arrivate!',ami:'Ami di tutte le misure: più è alto il numero, più è piccolo.',piombi:'Il piombo a ragno tiene anche con la corrente.',fili:'Lo shock leader ti salva dal crack-off.',accessori:'Le starlight non devono mai mancare di notte!',cassa:'Vieni pure alla cassa.'};if(L[k])say(SH.clerk,L[k],3.5);};
+G.shopOpt=(id,k,i)=>{(SH.sel[id]=SH.sel[id]||{})[k]=i;shopUI();};
+G.shopAdd=id=>{const it=ITEM[id],o=fullO(it,SH.sel[id]),price=Math.round(it.p(o)*100)/100;SH.cart.push({id,o,price});st.msg=`🧺 Aggiunto: ${it.n}${it.opts?' · '+optTxt(it,o):''}`;click();shopUI();};
+G.shopDel=i=>{SH.cart.splice(i,1);shopUI();};
+G.shopPay=()=>{const tot=cartTot();if(!SH.cart.length)return;if(tot>st.money+1e-6){say(SH.clerk,`Mancano ${eur(tot-st.money)}... togli qualcosa o torna dopo una pescata!`,4);st.msg='💸 Non bastano i soldi: togli qualcosa dal carrello.';shopUI();return;}
+  st.money-=tot;SH.cart.forEach(x=>giveItem(ITEM[x.id],x.o||{}));SH.cart=[];gearSave();bell(2,.18);vib(40);say(SH.clerk,`Sono ${eur(tot)}. Grazie e buona pesca!`,4);st.msg=`✅ Pagato ${eur(tot)}. Trovi tutto nello zaino.`;SH.cat='zaino';SH.go='cassa';shopUI();};
+G.useRod=id=>{st.gear.rod=id;gearSave();shopUI();};
+G.shopExit=()=>{cancelAnimationFrame(raf);stop();MP.skipAsk=true;mount(null);};
+
 /* ---------- interfaccia ---------- */
 function mount(v){
   stop();root=document.createElement('div');root.id='gamebox';
@@ -1056,9 +1202,9 @@ function setUI(){const p=st.phase;let h='';
   else if(p==='atrod'){const r=st.rods[st.sel];h=`<div class="gpanel"><b>Canna ${st.sel+1}</b><div class="gs">${r.bait?B[r.bait].n+' a '+Math.round(r.dist)+' m · '+rodStatus(r):'Senza esca'}</div>
     ${r.state==='bite'?btn('⚡ FERRA!','strike()','big hot'):''}${r.state==='hooked'?btn('🌀 Prendi la canna e recupera','fightHooked()','big hot'):''}${r.state==='tangled'?btn('🧶 Recupera e districa','untangle()','big hot'):''}${r.dismantled?btn('🔧 Rimonta la canna','remount()','big'):(r.state==='tangled'?'':r.bait?btn('🌀 Recupera e cambia esca','rebait()'):btn('🪝 Innesca','rebait()','big'))+(r.state==='tangled'?'':btn('🔧 Montatura · '+r.lead+' g, amo '+'n. '+hookNum(r.hook)+', '+({lungo:'lungo 1,5 m',corto:'corto 75 cm','2ami':'2 ami'})[r.rig],'rigAt()'))+(r.bait?'':btn('🧰 Smonta la canna','dismantle()'))}${btn('🪑 Torna a sedere','back()')}</div>`;}
   else if(p==='rig'){const r=st.rods[st.sel],w=wxAt(st.gt);h=`<div class="gpanel"><b>🔧 Montatura della canna ${st.sel+1}</b>${r.broken?'<div class="gs warn">La lenza si è rotta: rifai il terminale (perdi piombo e amo).</div>':''}
-    <div class="grow"><span>Piombo</span>${[80,100,125,150,175,200].map(g=>`<button class="gc ${r.lead===g?'on':''}" onclick="GAME.setRig('lead',${g})">${g} g</button>`).join('')}</div>
+    <div class="grow"><span>Piombo</span>${[80,100,125,150,175,200].map(g=>`<button class="gc ${r.lead===g?'on':''}" ${st.gear.leads[g]>0||r.lead===g?'':'disabled style="opacity:.4"'} onclick="GAME.setRig('lead',${g})">${g} g <small style="opacity:.7">${st.gear.leads[g]||0}</small></button>`).join('')}${st.gear.grip[r.lead]>0?`<button class="gc ${r.grip?'on':''}" onclick="GAME.setRig('grip',${!r.grip})">🕷️ a ragno</button>`:''}</div>
     <div class="gs">Con mare ${seaName(w.wave)} servono almeno ${suggestLead(w.wave)} g, sennò la corrente trascina il piombo verso riva.</div>
-    <div class="grow"><span>Amo</span>${[0,2,4,6,8].map(k=>`<button class="gc ${hookNum(r.hook)===k?'on':''}" onclick="GAME.setRig('hook',${k})">${k}</button>`).join('')}</div>
+    <div class="grow"><span>Amo</span>${[0,2,4,6,8].map(k=>`<button class="gc ${hookNum(r.hook)===k?'on':''}" ${st.gear.hooks[k]>0||hookNum(r.hook)===k?'':'disabled style="opacity:.4"'} onclick="GAME.setRig('hook',${k})">${k} <small style="opacity:.7">${st.gear.hooks[k]||0}</small></button>`).join('')}</div>
     <div class="grow"><span>Terminale</span>${[['lungo','lungo 1,5 m'],['corto','corto 75 cm'],['2ami','trave a 2 ami']].map(([k,n])=>`<button class="gc ${r.rig===k?'on':''}" onclick="GAME.setRig('rig','${k}')">${n}</button>`).join('')}</div>
     <div class="gs">Lungo: più naturale con mare calmo (orate, mormore). Corto: lancia meglio e regge il mare mosso. Due ami: più abboccate, lancio più corto.</div>${btn(r.broken?'🔧 Rifai il terminale':'✅ Fatto','rigDone()','big')}</div>`;}
   else if(p==='snag'){const sn=st.snag;h=`<div class="gpanel"><b>${sn.kind==='scogli'?'🪨 Incagliato negli scogli!':sn.kind==='sabbia'?'⏳ Piombo insabbiato!':'⚠️ Incagliato!'}</b><div class="gs">${sn.msg||'Il piombo si è incastrato sul fondo.'}</div>${btn('💪 Tira forte','snagPull()','big')}${btn('↔️ Spostati e cambia angolo','snagMove()')}${btn('🏊 Entra in acqua e nuota fino all\'incaglio','snagSwim()')}</div>`;}
@@ -1066,7 +1212,7 @@ function setUI(){const p=st.phase;let h='';
     <div class="gtalk">${Q.map(([k,n])=>`<button class="gc" onclick="GAME.ask('${k}')">${n}</button>`).join('')}</div></div>`;}
   else if(p==='pilot'){const v=VEH.obj,r=st.rods[st.sel];h=`<div class="gpanel slim"><div class="grow" style="justify-content:space-between"><b>${VEH.type==='drone'?'🛸 Guida il drone':'🚤 Guida il barchino'}</b><b id="gvd">—</b></div>
     <div class="gs">Joystick: su verso il largo, giù verso riva, destra e sinistra lungo la costa. Fermati sul punto e sgancia.</div><button class="gb big" id="gdrop" onclick="GAME.drop()" disabled>🎯 Fermati per sganciare</button></div>`;}
-  else if(p==='bait')h=`<div class="gpanel"><b>🪝 Innesca la canna ${st.sel+1}</b><div class="gbaits">${BAITS.filter(b=>!b.lim||st.inv[b.k]>0).map(b=>`<button class="gbt" onclick="GAME.bait('${b.k}')"><span>${b.e}</span><b>${b.n}${b.lim?' ('+st.inv[b.k]+')':''}</b><small>${b.d}</small></button>`).join('')}</div>${btn('🔧 Cambia montatura prima','rig()')}</div>`;
+  else if(p==='bait')h=`<div class="gpanel"><b>🪝 Innesca la canna ${st.sel+1}</b><div class="gbaits">${BAITS.filter(b=>!b.lim||st.inv[b.k]>0).map(b=>{const n=b.lim?st.inv[b.k]:(st.gear.baits[b.k]||0);return `<button class="gbt" ${n>0?'':'disabled style="opacity:.45"'} onclick="GAME.bait('${b.k}')"><span>${b.e}</span><b>${b.n} (${n})</b><small>${n>0?b.d:'Finita: comprala al negozio'}</small></button>`;}).join('')}</div>${btn('🔧 Cambia montatura prima','rig()')}</div>`;
   else if(p==='cast'&&st.castMode!=='mano'){const mx=st.castMode==='drone'?400:300;st.castDist=Math.min(st.castDist,mx);h=`<div class="gpanel"><b>${st.castMode==='drone'?'🛸 Drone':'🚤 Barchino elettrico'} · ${B[st.rods[st.sel].bait].n}</b>
     <div class="grow">${[['mano','🎣 A mano'],['barchino','🚤 Barchino'],['drone','🛸 Drone']].map(([k,n])=>`<button class="gc ${st.castMode===k?'on':''}" onclick="GAME.mode('${k}')">${n}</button>`).join('')}</div>
     <div class="gs">${st.castMode==='drone'?'Lo guidi tu con il joystick (su = verso il largo) fino a 400 m, ti fermi sul punto e sganci esca e piombo. Poi torna da solo.':'Lo guidi tu con il joystick (su = verso il largo) fino a 300 m, ti fermi sul punto e sganci dalla tramoggia. Poi torna da solo. Con mare molto mosso rischia di ribaltarsi nei frangenti.'}</div>${btn('🚀 Parti','deliver()','big')}</div>`;}
@@ -1162,8 +1308,9 @@ G.dismantle=()=>seq(async()=>{const r=st.rods[st.sel];st.phase='busy';st.msg='�
 G.remount=()=>seq(async()=>{const r=st.rods[st.sel];st.phase='busy';st.msg='🔧 Monta la canna…';setUI();pose('bend');await sleep(1.8);r.dismantled=false;r.obj.visible=true;placeRodOnSpike(r);pose('stand');st.msg='';st.phase='atrod';setUI();});
 G.rig=()=>{st.phase='rig';setUI();};
 G.setRig=(k,v)=>{const r=st.rods[st.sel];r[k]=v;click();setUI();};
-G.rigDone=()=>seq(async()=>{const r=st.rods[st.sel];st.phase='busy';st.msg=r.broken?'🔧 Rifà il terminale…':'🔧 Cambia la montatura…';setUI();pose('bend');await sleep(r.broken?2.2:1.4);r.broken=false;pose('hold');st.msg='';st.phase='bait';setUI();});
-G.bait=k=>{const r=st.rods[st.sel];if(B[k].lim){if(!(st.inv[k]>0))return;st.inv[k]--;}r.bait=k;r.baitLeft=B[k].life*(k==='cozza'&&hookCat(st.hook)==='piccolo'?1.2:1);click();pose('hold');st.phase='cast';setUI();};
+G.rigDone=()=>seq(async()=>{const r=st.rods[st.sel],g=st.gear;if(r.broken){const h=hookNum(r.hook),miss=[!(g.leads[r.lead]>0)&&'piombo da '+r.lead+' g',!(g.hooks[h]>0)&&'amo n. '+h,!(g.swivels>0)&&'girelle',!(g.snaps>0)&&'moschettoni'].filter(Boolean);
+    if(miss.length){st.msg='🧰 Ti mancano: '+miss.join(', ')+'. Cambia misura o passa dal negozio.';setUI();return;}g.leads[r.lead]--;g.hooks[h]--;g.swivels--;g.snaps--;if(r.grip&&g.grip[r.lead]>0)g.grip[r.lead]--;gearSave();}st.phase='busy';st.msg=r.broken?'🔧 Rifà il terminale…':'🔧 Cambia la montatura…';setUI();pose('bend');await sleep(r.broken?2.2:1.4);r.broken=false;pose('hold');st.msg='';st.phase='bait';setUI();});
+G.bait=k=>{const r=st.rods[st.sel],g=st.gear;if(B[k].lim){if(!(st.inv[k]>0))return;st.inv[k]--;}else{if(!(g.baits[k]>0))return;if(['bibi','koreano','arenicola','americano'].includes(k)&&!g.needle){st.msg='🪡 Per innescare i vermi serve l\'ago da innesco: lo trovi al negozio.';setUI();return;}g.baits[k]--;gearSave();}r.bait=k;r.baitLeft=B[k].life*(k==='cozza'&&hookCat(st.hook)==='piccolo'?1.2:1)*(g.elastic&&['cozza','bibi','arenicola','sarda','gambero'].includes(k)?1.3:1);click();pose('hold');st.phase='cast';setUI();};
 // stili di lancio a mano: zona verde, gittata massima, precisione e rischio di rottura del filo
 const CSTY={above:{n:'Above',it:'dall\'alto',g:[.76,.92],max:115,spr:2,crack:0,load:'castBack',fwd:'castFwd',d:'Dall\'alto sopra la testa: facile e preciso, fino a 115 m.'},
   side:{n:'Side',it:'laterale',g:[.79,.92],max:125,spr:7,crack:0,load:'castSide',fwd:'castSideFwd',d:'Laterale, canna di fianco: più lungo ma meno preciso, fino a 125 m.'},
@@ -1194,12 +1341,13 @@ function riskOf(){const w=wxAt(st.gt),rk=SPOT.rocks||0,wv=w.wave||0;return {rock
 function doCast(){const c=st.cast;c.on=false;const r=st.rods[st.sel],w=wxAt(st.gt),S=cSty();
   const p=c.p,[g0,g1]=S.g,gm=(g0+g1)/2,green=p>=g0&&p<=g1,q=green?1:p<g0?p/g0*.9:.7;
   // troppa forza con ground e pendulum: il filo si rompe al lancio (crack-off) e il piombo vola via
-  const rnd2=Math.random();if((S.crack&&p>g1+.03&&rnd2<S.crack)||rnd2<.02+((r.lead||st.lead)>175?.015:0)){st.cast=null;seq(async()=>{st.phase='busy';setUI();castAnimStart('fire');await sleep(.3);whoosh();st.castLead=null;await sleep(.4);st.castAnim=null;click();vib([60,30,60]);r.broken=true;r.bait=null;r.state='idle';r.dist=0;r.sinker.visible=false;pose('hold');
+  const rnd2=Math.random(),lk=st.gear.leader>0?.3:1;if((S.crack&&p>g1+.03&&rnd2<S.crack*lk)||rnd2<(.02+((r.lead||st.lead)>175?.015:0))*lk){if(st.gear.leader>0){st.gear.leader--;gearSave();}st.cast=null;seq(async()=>{st.phase='busy';setUI();castAnimStart('fire');await sleep(.3);whoosh();st.castLead=null;await sleep(.4);st.castAnim=null;click();vib([60,30,60]);r.broken=true;r.bait=null;r.state='idle';r.dist=0;r.sinker.visible=false;pose('hold');
     st.msg=p>g1+.03?'💥 Crack-off! Troppa forza: il filo si è rotto al lancio e il piombo è volato via. Rifai il terminale.':'💥 La lenza si è spezzata al lancio (nodo indebolito): piombo perso, rifai il terminale.';st.phase='rig';setUI();});return;}
   // zona verde: fino al massimo dello stile; con poca potenza anche solo 10 m; oltre la zona verde il lancio si sporca
-  const M=S.max,base=green?M*(1-Math.abs(p-gm)*.45):p<g0?lerp(10,M*.92,Math.pow(p/g0,1.15)):lerp(M*.92,M*.4,(p-g1)/(1-g1));
+  const GR=st.gear,M=S.max*(ROD[GR.rod]?.mul||1)*(1+(.25-GR.line)*.8),base=green?M*(1-Math.abs(p-gm)*.45):p<g0?lerp(10,M*.92,Math.pow(p/g0,1.15)):lerp(M*.92,M*.4,(p-g1)/(1-g1));
   const leadF=clamp(1.15-((r.lead||st.lead)-100)/400,.85,1.1)*(r.rig==='2ami'?.93:r.rig==='corto'?1.04:1),baitF=r.bait==='cefalotto'?.55:r.bait==='sarda'||r.bait==='seppia'?.85:1,wind=1+windHelp(w.wd)*clamp(w.ws/60,0,.35);
   const dist=clamp(base*leadF*baitF*wind+rnd(-3,3),8,155);st.cast=null;
+  r.star=night()>.25?(st.gear.starlight>0?(st.gear.starlight--,gearSave(),true):false):r.star;
   seq(async()=>{st.phase='busy';st.msg='';setUI();castAnimStart('fire');const H=(CSEQ[st.castStyle]||CSEQ.above).hit;await sleep(H*.6);whoosh();await sleep(H*.4);const L0=st.castLead;st.castLead=null;
     // il piombo vola: parabola dalla cima al punto d'arrivo
     const tip=new T.Vector3();r.obj.userData.tip.getWorldPosition(tip);if(L0)tip.copy(L0.p);const drift=(Math.sin((w.wd-FACE)*R))*w.ws/40*3;const end=new T.Vector3(r.x+drift+rnd(-S.spr,S.spr)+(st.castStyle==='side'?S.spr*.5:0),0,-dist);
@@ -1329,14 +1477,14 @@ function updFight(dt){const f=st.fight;if(!f||st.phase!=='fight')return;f.t+=dt;
   if(f.run<=0&&Math.random()<dt*.5*f.pow){f.run=rnd(.6,2)*f.pow;vib([90+Math.round(f.pow*60),50,140+Math.round(f.pow*80)]);}f.run=Math.max(0,f.run-dt);
   // durante la fuga e con la tensione alta: piccoli strattoni
   f.vt=(f.vt||0)-dt;if(f.vt<=0&&(f.run>0||f.ten>.75)){vib(f.run>0?Math.round(35+f.pow*30):25);f.vt=f.run>0?rnd(.25,.5):rnd(.6,1.1);}
-  const pull=(f.run>0?.6:.18)*f.pow+(w.wave||0)*.08*Math.max(0,Math.sin(performance.now()/700));const dragMax=.35+f.drag*.07;
+  const pull=(f.run>0?.6:.18)*f.pow+(w.wave||0)*.08*Math.max(0,Math.sin(performance.now()/700));const dragMax=.35+f.drag*.07+((st.gear.drag||12)-12)*.012;
   let ten=(f.reel?.45:.12)+pull;if(ten>dragMax){const out=(ten-dragMax)*dt*25;f.dist+=out;ten=dragMax+(ten-dragMax)*.25;AN.reelSpin=-.6;
     // la frizione cede: crepitio tanto più fitto quanto più filo esce, e vibrazione continua
     f.dAcc=(f.dAcc||0)+out;let n=0;while(f.dAcc>.05&&n<4){f.dAcc-=.05;n++;dragTick(n*.012);}f.dv=(f.dv||0)-dt;if(f.dv<=0){f.dv=.22;vib(Math.round(40+Math.min(80,out/dt*6)));}}
   else AN.reelSpin=f.reel?1:0;
   if(f.reel&&f.run<=0)f.dist-=dt*(7-f.pow*1.5)*(1.15-f.drag*.02);else if(f.reel)f.dist-=dt*1.2;
   f.ten=lerp(f.ten,clamp(ten,0,1.2),.15);r.dist=Math.max(0,f.dist);
-  const lim=f.sp.teeth&&hookCat(st.hook)!=='grande'?.92:1;if(f.ten>lim){f.over=(f.over||0)+dt;if(f.over>.35)return endFight(false,f.sp.teeth?'Il serra ha tranciato la lenza con i denti!':'Lenza rotta: troppa tensione. Apri un po\' la frizione.');}else f.over=0;
+  const lim=(f.sp.teeth&&hookCat(st.hook)!=='grande'?.92:1)*Math.min(1.12,Math.pow((st.gear.line||.25)/.25,.5));if(f.ten>lim){f.over=(f.over||0)+dt;if(f.over>.35)return endFight(false,f.sp.teeth?'Il serra ha tranciato la lenza con i denti!':'Lenza rotta: troppa tensione. Apri un po\' la frizione.');}else f.over=0;
   if(f.ten<.16)f.slack+=dt;else f.slack=Math.max(0,f.slack-dt*2);if(f.slack>2.6)return endFight(false,'Slamato: con la lenza lenta il pesce si è liberato.');
   if(hookCat(st.hook)==='piccolo'&&f.w>2.5&&f.ten>.85&&Math.random()<dt*.6)return endFight(false,'L\'amo piccolo si è aperto: pesce troppo grosso.');
   if(f.run>0&&Math.random()<dt*4)burst(new T.Vector3(r.sx*(f.dist/Math.max(1,-r.sz))+r.x*(1-f.dist/Math.max(1,-r.sz)),0,-f.dist),.4);
@@ -1514,7 +1662,7 @@ function loop(){raf=requestAnimationFrame(loop);if(!renderer)return;const dt=Mat
   if(st.cast?.on){st.cast.p+=st.cast.dir*dt*1.15;if(st.cast.p>1){st.cast.p=1;st.cast.dir=-1;}if(st.cast.p<0){st.cast.p=0;st.cast.dir=1;}const el=document.getElementById('gpw');if(el)el.style.width=(st.cast.p*100)+'%';}
   // canne
   for(const r of st.rods){
-    if(r.state==='fishing'&&r.dist>8){const need=suggestLead(w.wave||0);if((r.lead||st.lead)<need-20){const k=(need-(r.lead||st.lead))/100;r.dist-=gmin*k*6;r.sx+=gmin*k*Math.sin((w.wd-FACE)*R)*3;r.tgT=(r.tgT||0)-gmin;if(r.tgT<=0){r.tgT=1;if(checkTangle(r)&&st.phase==='wait')setUI();}if(!r.driftMsg){r.driftMsg=1;st.msg=`Canna ${r.i+1}: il piombo da ${r.lead} g «ara», la corrente lo trascina verso riva. Metti un piombo più pesante.`;if(st.phase==='wait')setUI();}}}
+    if(r.state==='fishing'&&r.dist>8){const need=suggestLead(w.wave||0)-(r.grip?25:0);if((r.lead||st.lead)<need-20){const k=(need-(r.lead||st.lead))/100;r.dist-=gmin*k*6;r.sx+=gmin*k*Math.sin((w.wd-FACE)*R)*3;r.tgT=(r.tgT||0)-gmin;if(r.tgT<=0){r.tgT=1;if(checkTangle(r)&&st.phase==='wait')setUI();}if(!r.driftMsg){r.driftMsg=1;st.msg=`Canna ${r.i+1}: il piombo da ${r.lead} g «ara», la corrente lo trascina verso riva. Metti un piombo più pesante.`;if(st.phase==='wait')setUI();}}}
     if(r.state==='fishing'){const was=r.baitLeft;r.baitLeft-=gmin*(1+(w.wave||0)*.6);if(r.bait&&was>0&&r.baitLeft<=0){baitGone();vib([60,80,60]);st.msg=`🪝 Canna ${r.i+1}: l'esca è finita, va reinnescata.`;if(st.phase==='wait')setUI();}if(Math.random()<biteRate(r)*gmin)startBite(r);}
     if(r.state==='bite'){r.biteT+=dt;if(r.biteT>r.bitePlan.len){const pl=r.bitePlan,auto={partenza:.6,violenta:.45,decisa:.3,nervosa:.15,picchiettata:.05}[pl.kind]||0;
         if(pl.sp&&!pl.steal&&Math.random()<auto){r.state='hooked';r.hookT=0;bell(4,.3);try{navigator.vibrate?.([200,80,200]);}catch(e){}st.msg=`🐟 Canna ${r.i+1}: il pesce si è allamato da solo! Vai a recuperarlo.`;if(st.phase==='wait'||st.phase==='atrod')setUI();continue;}
@@ -1527,7 +1675,7 @@ function loop(){raf=requestAnimationFrame(loop);if(!renderer)return;const dt=Mat
     // mulinello: rotore e manovella girano quando si recupera
     if(r.held&&AN.holding===r.i&&AN.reelSpin>0){AN.tick=(AN.tick||0)+dt*AN.reelSpin*7;while(AN.tick>.75){AN.tick-=.75;reelTick();}}
     if(r.held&&AN.holding===r.i){const U=r.obj.userData;U.rotor.rotation.y+=dt*AN.reelSpin*22;U.lineOn.rotation.y+=dt*AN.reelSpin*22;U.crank.rotation.x+=dt*AN.reelSpin*7;AN.crank+=dt*AN.reelSpin*7;U.lineOn.position.y=.115+Math.sin(AN.crank*.5)*.008*(AN.reelSpin?1:0);}
-    r.obj.userData.glow.visible=night()>.25;r.obj.userData.glow.material.opacity=r.state==='bite'?(.6+.4*Math.sin(t*20)):.9;
+    r.obj.userData.glow.visible=night()>.25&&r.star!==false;r.obj.userData.glow.material.opacity=r.state==='bite'?(.6+.4*Math.sin(t*20)):.9;
     // lenza
     const tip=new T.Vector3();r.obj.userData.tip.getWorldPosition(tip);const a=r.line.geometry.attributes.position;
     if(r.ride){r.sinker.position.copy(r.ride.position);if(VEH.type==='drone')r.sinker.position.y-=2.55;}
@@ -1602,7 +1750,7 @@ function updEnv(w,t,dt){const d=gameDate(),s0=sunPos(d,SPOT.lat,SPOT.lon),sun=su
     const grow=.75+.35*u.life+.06*Math.sin(u.ph+st.gt/9e5);c.scale.set(u.w*grow,u.h*(.85+.3*env),1);
     c.material.color.copy(tint);c.material.opacity=clamp(.55+cc*.4,0,1)*Math.pow(env,.6)*u.vis;c.visible=c.material.opacity>.01;});
   for(const L of LANTERNS){L.userData.glass.material.emissiveIntensity=NIGHT>.4?1.6:0;if(L.userData.pl)L.userData.pl.intensity=NIGHT>.4?1.1:0;}
-  const lampOn=NIGHT>.5&&st.lamp;headLamp.intensity=lampOn?1.6:0;AN.obj.userData.J.lamp.material.emissiveIntensity=lampOn?2:0;
+  const lampOn=NIGHT>.5&&st.lamp;headLamp.intensity=lampOn?(st.gear.lamp?2.6:1.6):0;AN.obj.userData.J.lamp.material.emissiveIntensity=lampOn?2:0;
   // frangenti e risacca: più numerosi e alti con mare grosso
   const per=Math.max(3,w.wper||5),wh=w.wave||.3,nb=wh<.2?1:wh<.6?2:wh<1.2?3:4;
   const nf=Math.min(foams.length,2+Math.round(wh*4));
@@ -1679,7 +1827,7 @@ function biteRate(r){// abboccate per minuto di gioco
 
 function sizeOf(sp){const [a,t,b]=sp.w;let x=Math.exp(Math.log(t)+(Math.random()+Math.random()+Math.random()-1.5)*.55);if(Math.random()<.04)x*=1.6;return clamp(x,a,b);}
 function lenOf(sp,w){const [a,b]=sp.lw;return Math.round(Math.pow(w*1000/a,1/b)*(sp.crab?.1:1)*10)/10||Math.round(Math.pow(w*1000/a,1/b));}
-function record(rel){const c=st.catchShow,r=st.rods[st.sel];const e={n:c.sp.n,w:Math.round(c.w*100)/100,l:c.l,t:st.gt,rel,bait:c.bait||''};st.bag.push(e);LSS('bag',st.bag.slice(-200));
+function record(rel){const c=st.catchShow,r=st.rods[st.sel];{const gain=Math.round((3+c.w*2+(rel?2:0))*100)/100;st.money+=gain;gearSave();setTimeout(()=>{st.msg=(st.msg?st.msg+' · ':'')+'💶 +'+eur(gain);},0);}const e={n:c.sp.n,w:Math.round(c.w*100)/100,l:c.l,t:st.gt,rel,bait:c.bait||''};st.bag.push(e);LSS('bag',st.bag.slice(-200));
   if(c.rec){st.best[c.sp.n]=e.w;LSS('best',st.best);}st.total.n++;st.total.kg+=e.w;st.total.pts+=Math.round(e.w*100)+(rel?50:0)+(c.sp.ab<.1?300:0);LSS('total',st.total);}
 G.release=()=>{record(true);st.msg='💚 Rilasciato. Bravo!';G.rebait();};
 G.keep=()=>{record(false);st.msg='🧺 Nel carniere';G.rebait();};
@@ -1761,7 +1909,7 @@ body.gaming{overflow:hidden}
 #glamp.off{opacity:.45;filter:grayscale(1)}#gspd{position:absolute;top:calc(env(safe-area-inset-top) + 56px);right:8px;height:36px;padding:0 12px;border-radius:12px;border:0;background:rgba(4,14,26,.7);color:#fff;font:700 14px Outfit,sans-serif;cursor:pointer}
 #gui{position:absolute;left:0;right:0;bottom:0;padding:10px 10px calc(env(safe-area-inset-bottom) + 10px);pointer-events:none}
 .gpanel{pointer-events:auto;max-width:620px;margin:0 auto;background:rgba(4,14,26,.72);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.12);border-radius:20px;padding:12px 14px;color:#fff;font:500 15px Outfit,sans-serif;max-height:62vh;overflow:auto}
-.gpanel.slim{padding:8px 10px}.gr.empty{background:rgba(200,40,55,.55);border-color:#ff4d5e}
+.gpanel.slim{padding:8px 10px}.gitem{display:flex;gap:10px;align-items:flex-start;padding:9px 2px;border-bottom:1px solid rgba(255,255,255,.08)}.gitem:last-of-type{border-bottom:0}.gr.empty{background:rgba(200,40,55,.55);border-color:#ff4d5e}
 .gpanel>b{display:block;font-size:17px;margin-bottom:4px}
 .gs{font-size:14px;opacity:.9;margin:4px 0}.gs.warn{color:#ffb547}
 .gb{display:block;width:100%;margin-top:8px;padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.08);color:#fff;font:700 16px Outfit,sans-serif;cursor:pointer;touch-action:none}
