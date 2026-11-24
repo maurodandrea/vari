@@ -57,6 +57,10 @@
   #knob{position:absolute;left:50%;top:50%;width:58px;height:58px;margin:-29px 0 0 -29px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff,#ffe08a 45%,#e3a72f);box-shadow:0 4px 12px rgba(0,0,0,.35)}
   #jumpBtn{position:absolute;right:calc(22px + env(safe-area-inset-right));bottom:calc(34px + env(safe-area-inset-bottom));width:106px;height:106px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ffd98a,#ff9f1c 55%,#d9730b);border:4px solid rgba(255,255,255,.85);display:none;flex-direction:column;align-items:center;justify-content:center;color:#5a2b00;font-weight:700;font-size:18px;box-shadow:0 8px 20px rgba(0,0,0,.35);pointer-events:none}
   #touch.ride #jumpBtn{display:flex}
+  #runBtn{position:absolute;left:50%;margin-left:-38px;bottom:calc(18px + env(safe-area-inset-bottom));width:76px;height:76px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#d6f5c8,#6cc04a 55%,#3a8a2a);border:4px solid rgba(255,255,255,.85);display:flex;flex-direction:column;align-items:center;justify-content:center;color:#163d10;font-weight:700;font-size:13px;box-shadow:0 6px 16px rgba(0,0,0,.35);z-index:6;touch-action:none}
+  #runBtn span{font-size:26px;line-height:1}
+  #runBtn.on{background:radial-gradient(circle at 35% 30%,#ffe6b0,#ff9f1c 55%,#d9730b);color:#5a2b00;transform:scale(1.08)}
+  #touch.ride #runBtn,#touch.nofoot #runBtn{display:none}
   #jumpBtn span{font-size:32px;line-height:1}
   #jumpBtn.press{transform:scale(.9)}
   #actions{position:fixed;right:calc(14px + env(safe-area-inset-right));bottom:calc(24px + env(safe-area-inset-bottom));z-index:7;display:flex;flex-direction:column-reverse;gap:10px;align-items:flex-end}
@@ -184,6 +188,7 @@
   <div id="tr"></div>
   <div id="joy" class="idle"><div id="knob"></div></div>
   <div id="jumpBtn"><span>⤴</span>SALTA</div>
+  <div id="runBtn"><span>🏃</span>CORRI</div>
 </div>
 <div id="actions"></div>
 <div id="panel"></div>
@@ -267,11 +272,11 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/objects/Sky.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/BufferGeometryUtils.js"></script>
 <script>if(!window.THREE){document.getElementById('loadTx').innerHTML='Impossibile caricare il motore 3D.<br>Controlla la connessione e ricarica la pagina.';}</script>
-<script src="js/core.js?v=19"></script>
-<script src="js/models.js?v=19"></script>
-<script src="js/npc.js?v=19"></script>
-<script src="js/worlds.js?v=19"></script>
-<script src="js/agents.js?v=19"></script>
-<script src="js/game.js?v=19"></script>
+<script src="js/core.js?v=20"></script>
+<script src="js/models.js?v=20"></script>
+<script src="js/npc.js?v=20"></script>
+<script src="js/worlds.js?v=20"></script>
+<script src="js/agents.js?v=20"></script>
+<script src="js/game.js?v=20"></script>
 </body>
 </html>

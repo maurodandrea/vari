@@ -115,7 +115,9 @@ function statsHtml(s){const row=(l,v,c)=>`<div>${l} <b>${v|0}</b><div class="b">
   return `<div class="stats">${row('🌾 Sazietà',s.hunger,'#f0a830')}${row('🫧 Pulizia',s.clean,'#3fa9d8')}${row('💛 Felicità',s.happy,'#ff6fa8')}${row('⚡ Energia',s.energy,'#6cc04a')}${row('💧 Acqua',s.thirst==null?80:s.thirst,'#2a8bd8')}</div>`;}
 function stat(H,k,d){H.stats[k]=U.clamp(H.stats[k]+d,0,100);}
 function hud(on){$('hud').classList.toggle('on',on);$('touch').classList.toggle('on',on);if(on)EQ.joyRest();}
-function setTouchMode(m){const t=$('touch');t.classList.toggle('ride',m==='ride');$('actions').classList.toggle('ride',m==='ride');$('gait').classList.toggle('on',m==='ride');}
+function setRun(v){G.run=v;$('runBtn').classList.toggle('on',!!v);$('runBtn').lastChild.textContent=v?'CORRO':'CORRI';}
+$('runBtn').addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();EQ.audio();EQ.sfx.click();setRun(!G.run);});
+function setTouchMode(m){const t=$('touch');t.classList.toggle('ride',m==='ride');t.classList.toggle('nofoot',m!=='foot');if(m!=='foot')setRun(false);$('actions').classList.toggle('ride',m==='ride');$('gait').classList.toggle('on',m==='ride');}
 $('info').addEventListener('pointerdown',e=>{e.stopPropagation();$('info').classList.toggle('open');});
 function fmt(t){return t.toFixed(1).replace('.',',');}
 
@@ -321,7 +323,7 @@ function footUpdate(dt){
   if(G.sit||G.ia){socialFoot(dt);return;}
   const inp=G.busy?{x:0,y:0}:EQ.readInput();const m=Math.min(1,Math.hypot(inp.x,inp.y));
   let tsp=0;
-  if(m>.15){const want=F.camYaw-Math.atan2(inp.x,-inp.y);F.h+=U.wrapA(want-F.h)*Math.min(1,dt*9);tsp=m>.8?3.8:1.6;}
+  if(m>.15){const want=F.camYaw-Math.atan2(inp.x,-inp.y);F.h+=U.wrapA(want-F.h)*Math.min(1,dt*9);tsp=G.run?(m>.4?6.2:3.8):(m>.8?3.8:1.6);}
   F.sp=U.lerp(F.sp,tsp,Math.min(1,dt*6));
   const px=F.x,pz=F.z;
   F.x+=Math.sin(F.h)*F.sp*dt;F.z+=Math.cos(F.h)*F.sp*dt;
@@ -356,7 +358,7 @@ function leadUpdate(dt){
   let dx=sx-H.x,dz=sz-H.z,d=Math.hypot(dx,dz);
   if(d>7){H.x=sx-Math.sin(F.h)*1.5;H.z=sz-Math.cos(F.h)*1.5;H.h=F.h;dx=sx-H.x;dz=sz-H.z;d=Math.hypot(dx,dz);}
   if(d>1.65)H.h+=U.wrapA(Math.atan2(dx,dz)-H.h)*Math.min(1,dt*3.2);
-  const v=U.clamp((d-1.6)*2.6,0,4.2);
+  const v=U.clamp((d-1.6)*2.6,0,G.run?6.5:4.2);
   H.sp=U.lerp(H.sp,v,Math.min(1,dt*5));
   const ox=H.x,oz=H.z;
   H.x+=Math.sin(H.h)*H.sp*dt;H.z+=Math.cos(H.h)*H.sp*dt;
@@ -1372,6 +1374,7 @@ function tasksList(){const H=G.cur;return[
 let hudT=0;
 function updateHud(dt){
   hudT-=dt;if(hudT>0)return;hudT=.25;
+  {const show=G.state==='foot'&&!G.sit&&!G.hact&&!G.ia&&!G.climb;$('runBtn').style.display=show?'':'none';if(!show&&G.run&&G.state!=='foot')setRun(false);}
   if(G.course){const C=G.course;$('infoT').textContent=(C.mode==='race'?'🏆 ':C.mode==='train'?'🎓 ':'🐎 ')+CMODE[C.mode].v+' · '+LEVELS[C.l].name;const nx=C.obs[C.next];$('infoS').textContent=!nx?'Arrivo!':C.flat?`${GAITN[nx.gait][0]} ${GAITN[nx.gait][1]} · cono ${C.next+1} di ${C.obs.length} · ora: ${gaitOf(R.sp)}`:`Ostacolo ${C.next+1} di ${C.obs.length}`;$('tasks').innerHTML='';
     $('timer').textContent='⏱ '+fmt(C.time)+(C.faults?'  ❌ '+C.faults:'');}
   else if(G.trip){const t=G.trip,inf=ITEM_INFO[W().itemKind];$('infoT').textContent=PLACE[t.kind][0]+' '+PLACE[t.kind][1]+(G.cur?' · '+G.cur.def.name:'');$('infoS').innerHTML=`${inf[0]} ${inf[1]}: ${t.count} di ${t.items.length}`+(G.mission?`<br>🎯 ${G.mission.t} · ⭐${G.stars}`:'')+needsLine();$('tasks').innerHTML='';$('timer').textContent='⏱ '+fmt(t.time);}
