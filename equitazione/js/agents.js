@@ -255,13 +255,19 @@ EQ.populate.yard=function(W){
 
 /* ======================= SPIAGGIA ======================= */
 /* ======================= CONCORSO ======================= */
+/* spettatore seduto leggero (poche centinaia di vertici) per le folle */
+function cheapSitter(){const X=EQ.xform,T=EQ.tint,P=EQ.PCOL;const top=pick(P.TOPS),pants=pick(P.PANTS),skin=pick(P.SKINS),hair=pick(P.HAIRS);
+  const g=[T(X(G.box(.34,.5,.22),0,.75,0),top),T(X(new THREE.SphereGeometry(.11,8,6),0,1.13,0),skin),T(X(new THREE.SphereGeometry(.118,8,4,0,Math.PI*2,0,1.3),0,1.15,-.01),hair),
+    T(X(G.box(.3,.14,.44),0,.5,.16),pants),T(X(G.box(.26,.42,.12),0,.26,.36),pants),T(X(G.box(.26,.06,.2),0,.04,.42),pick(P.SHOES))];
+  for(const sd of [1,-1])g.push(T(X(G.box(.08,.42,.1),sd*.21,.68,.07,-.35,0,0),Math.random()<.5?top:skin));
+  const m=EQ.merge(g);m.rotateY(Math.PI);return m;}
 EQ.populate.show=function(W){
-  const vars=bakedVariants(12,'sit',()=>({}),(g)=>{g.rotateY(Math.PI);return g;});
+  const vars=[];for(let i=0;i<14;i++)vars.push(cheapSitter());
   (W.spots.standsList||[]).forEach(st=>{const L=[];const hl=st.len/2-1;
     for(let r=0;r<st.rows;r++)for(let x=-hl;x<=hl;x+=.85){if(Math.random()<.18)continue;L.push({x:x+rnd(-.1,.1),y:.5+r*st.step-.42,z:1.4*r+.55,ry:rnd(-.15,.15)});}
-    const tmp=new THREE.Group();st.g.add(tmp);placeBaked({group:tmp},vars,L);
-    for(let i=0;i<10;i++){const e=person({});st.g.add(e.root);const r=i%st.rows,x=-hl+2+i*(st.len-4)/10;e.root.position.set(x,.5+r*st.step-.42,1.4*r+.55);e.root.rotation.y=Math.PI;const ph=rnd(0,9);
-      W.updaters.push((dt,t,p)=>{const m=Math.sin(t*.4+ph);e.npc.pose(dt,(W.cheer>0)?(m>0?'cheer':'clap'):m>.7?'clap':'sit',{});});}});
+    const tmp=new THREE.Group();st.g.add(tmp);placeBaked({group:tmp},vars,L);tmp.traverse(o=>{if(o.isInstancedMesh)o.castShadow=false;});
+    for(let i=0;i<3;i++){const e=person({});st.g.add(e.root);const r=1+i%(st.rows-1),x=-hl+4+i*(st.len-8)/3;e.root.position.set(x,.5+r*st.step-.42,1.4*r+.55);e.root.rotation.y=Math.PI;e.root.traverse(o=>{if(o.isMesh)o.castShadow=false;});const ph=rnd(0,9);let acc=0;
+      W.updaters.push((dt,t,p)=>{acc+=dt;if(acc<.05)return;dt=acc;acc=0;const m=Math.sin(t*.4+ph);e.npc.pose(dt,(W.cheer>0)?(m>0?'cheer':'clap'):m>.7?'clap':'sit',{});});}});
   W.cheer=0;W.updaters.push((dt)=>{if(W.cheer>0)W.cheer-=dt;});
   // giudici nella torre
   const j=W.spots.judges;for(let i=0;i<2;i++){const e=person({fem:i===1,top:0x1f3b7a,pants:0x2a2a2e,sleeves:'long',glasses:true});W.group.add(e.root);e.npc.pose(1,'sit',{snap:true});e.root.position.set(j.x-.7+i*1.4,j.y-.05,j.z+.4);}
