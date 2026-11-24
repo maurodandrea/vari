@@ -78,8 +78,9 @@ function makeObs(L,A,parent,prac){const g=new THREE.Group();parent.add(g);
 function buildPractice(w){
   practice.forEach(p=>{if(p.g.parent)p.g.parent.remove(p.g);p.g.traverse(o=>{if(o.geometry)o.geometry.dispose();});});practice=[];
   const S=w.spots||{};
-  if(S.arena)practice.push(makeObs(LEVELS[0],S.arena,w.group,true));
+  if(S.arena)practice.push(makeObs(w===yard?LEVELS[2]:LEVELS[0],S.arena,w.group,true));
   if(S.arena2)practice.push(makeObs(LEVELS[1],S.arena2,w.group,true));
+  if(S.free)practice.push(makeObs({obs:[[-20,-12,0,'v',.6],[-2,16,90,'o',.7],[20,4,180,'v',.8],[0,-16,270,'v',.7]]},S.free,w.group,true));
   obstacles=practice.reduce((a,p)=>a.concat(p.list),[]);
 }
 function buildObstacles(L,A){
