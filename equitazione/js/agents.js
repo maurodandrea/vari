@@ -265,8 +265,8 @@ EQ.populate.show=function(W){
   const wm=W.spots.warm;const tr=Path(ellipse(wm.x,wm.z,wm.hx-3,wm.hz-3,40),true);
   for(let i=0;i<3;i++){const fem=Math.random()<.6;const e=rider(W,fem);const a=pathAgent(W,e,tr,{speed:[2,4.5,6][i],s:i*tr.L/3,stopR:6,colR:.75,colOff:.7,two:true,far:220});a.label=label(e,EQ.randName(fem),3.15);}
   // groom e pubblico a terra
-  for(let i=0;i<8;i++){const fem=Math.random()<.5;const e=addTo(W,person({fem}));const a=wanderAgent(W,e,{x:0,z:-40,hx:20,hz:5},{speed:1.1,idle:[3,9],step:8,cols:.3});addCol(W,a,.35);}
-  for(let i=0;i<2;i++){const d=EQ.buildDog({});W.group.add(d.root);wanderAgent(W,{root:d.root,anim:(dt,sp)=>d.animate(dt,sp)},{x:0,z:-40,hx:18,hz:5},{speed:2,idle:[1,4],step:6});}
+  for(let i=0;i<8;i++){const fem=Math.random()<.5;const e=addTo(W,person({fem}));const a=wanderAgent(W,e,{x:0,z:-48,hx:24,hz:4},{speed:1.1,idle:[3,9],step:8,cols:.3});addCol(W,a,.35);}
+  for(let i=0;i<2;i++){const d=EQ.buildDog({});W.group.add(d.root);wanderAgent(W,{root:d.root,anim:(dt,sp)=>d.animate(dt,sp)},{x:0,z:-48,hx:22,hz:4},{speed:2,idle:[1,4],step:6});}
 };
 /* ======================= CASA MIA ======================= */
 EQ.populate.home=function(W){
