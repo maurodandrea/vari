@@ -342,7 +342,7 @@ function footUpdate(dt){
   P.pose(dt,swim?'swim':G.leading?'lead':'walk',{speed:Math.min(F.sp,realSp+.2)});
   const s=Math.sin(P.phase);if(F.sp>.4&&((F.lastS>0)!==(s>0)))EQ.sfx.step(W().surface(F.x,F.z));F.lastS=s;
   if(G.leading)leadUpdate(dt);
-  if(F.sp>.3)F.camYaw+=U.wrapA(F.h-F.camYaw)*Math.min(1,dt*1.3);
+  if(G.inside)F.camYaw=Math.PI;else if(F.sp>.3)F.camYaw+=U.wrapA(F.h-F.camYaw)*Math.min(1,dt*1.3);
   const por=EQ.portrait;
   if(G.leading){const H=G.cur;const mx=(F.x+H.x)/2,mz=(F.z+H.z)/2;followCam(mx,W().height(mx,mz),mz,F.camYaw,por?7.4:6,por?3.2:2.6,1.2,1.2,dt,5);}
   else if(G.inside)insideCam(dt);
