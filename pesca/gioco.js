@@ -130,7 +130,7 @@ function seaSound(level){const c=AU.on?ac():null;
 const G={};window.GAME=G;
 let T=null,renderer,scene,camera,sky,water,sunLight,hemi,moonLight,headLamp,clock,raf=0,root,ui,hud,cvs;
 const st={phase:'load',gt:Date.now(),speed:[1,2,4,8,16,32].includes(LSG('speed',8))?LSG('speed',8):8,lamp:LSG('lamp',true),X:null,sim:false,rods:[],sel:0,msg:'',fight:null,cast:null,catchShow:null,
-  bag:LSG('bag',[]),inv:{granchio:0},best:LSG('best',{}),total:LSG('total',{n:0,kg:0,pts:0}),lead:LSG('lead',150),outfit:(o=>o==='wetsuit'?'waders':o)(LSG('outfit','waders')),castMode:'mano',castDist:LSG('cdist',120),hook:hookNum(LSG('hook',2)),nRods:LSG('nrods',3),busy:false,lightning:0};
+  bag:LSG('bag',[]),inv:{granchio:0},best:LSG('best',{}),total:LSG('total',{n:0,kg:0,pts:0}),lead:LSG('lead',150),outfit:(o=>o==='wetsuit'?'waders':o)(LSG('outfit','waders')),castMode:'mano',castStyle:LSG('cstyle','above'),castDist:LSG('cdist',120),hook:hookNum(LSG('hook',2)),nRods:LSG('nrods',3),busy:false,lightning:0};
 const gameDate=()=>new Date(st.gt);
 G._st=st;
 const CHAIR={x:-1.5,z:14};const ROD_Z=1.6;
@@ -272,6 +272,11 @@ const POSES={
   bend:{hy:.82,sp:[-.75,0,0],hd:[.3,0,0],lSh:[.9,0,.1],rSh:[1.2,0,-.1],lEl:[.3,0,0],rEl:[.2,0,0],lHip:[.55,0,0],rHip:[.55,0,0],lKnee:[-.5,0,0],rKnee:[-.5,0,0],rod:{p:20,f:.5}},
   hold:{hy:.95,sp:[-.05,0,0],hd:[-.05,0,0],lSh:[.75,0,.25],rSh:[.85,0,-.05],lEl:[1.1,0,0],rEl:[.85,0,0],lHip:[.05,0,0],rHip:[-.1,0,0],lKnee:[-.05,0,0],rKnee:[-.1,0,0],rod:{p:45,f:0}},
   castBack:{hy:.93,sp:[.2,.55,0],hd:[-.1,-.3,0],lSh:[2.5,0,.3],rSh:[2.8,0,-.3],lEl:[.6,0,0],rEl:[.4,0,0],lHip:[.15,0,0],rHip:[-.35,0,0],lKnee:[-.1,0,0],rKnee:[-.25,0,0],rod:{p:128,f:0,y:.35}},
+  castSide:{hy:.9,sp:[.05,.95,0],hd:[-.05,-.7,0],lSh:[1.35,0,.55],rSh:[1.5,0,-.95],lEl:[.35,0,0],rEl:[.2,0,0],lHip:[.15,0,0],rHip:[-.3,0,0],lKnee:[-.15,0,0],rKnee:[-.3,0,0],rod:{p:158,f:0,y:1.35}},
+  castSideFwd:{hy:.92,sp:[-.15,-.85,0],hd:[-.1,.4,0],lSh:[1.2,0,.4],rSh:[1.45,0,-.5],lEl:[.25,0,0],rEl:[.15,0,0],lHip:[-.25,0,0],rHip:[.2,0,0],lKnee:[-.25,0,0],rKnee:[-.05,0,0],rod:{p:40,f:0,y:-.7}},
+  castGround:{hy:.8,sp:[.3,1.3,0],hd:[-.15,-.95,0],lSh:[1.0,0,.65],rSh:[1.2,0,-1.05],lEl:[.25,0,0],rEl:[.15,0,0],lHip:[.55,0,0],rHip:[-.2,0,0],lKnee:[-.8,0,0],rKnee:[-.45,0,0],rod:{p:166,f:0,y:.95}},
+  castPendUp:{hy:.95,sp:[-.05,0,0],hd:[-.25,0,0],lSh:[2.2,0,.2],rSh:[2.5,0,-.2],lEl:[.4,0,0],rEl:[.3,0,0],lHip:[0,0,0],rHip:[0,0,0],lKnee:[0,0,0],rKnee:[0,0,0],rod:{p:68,f:0,y:0}},
+  castPend:{hy:.86,sp:[.2,1.15,0],hd:[-.1,-.85,0],lSh:[1.3,0,.55],rSh:[1.6,0,-.95],lEl:[.3,0,0],rEl:[.2,0,0],lHip:[.4,0,0],rHip:[-.25,0,0],lKnee:[-.5,0,0],rKnee:[-.35,0,0],rod:{p:150,f:0,y:1.05}},
   castFwd:{hy:.92,sp:[-.3,-.3,0],hd:[-.15,.2,0],lSh:[1.1,0,.2],rSh:[1.5,0,-.1],lEl:[.3,0,0],rEl:[.2,0,0],lHip:[-.3,0,0],rHip:[.25,0,0],lKnee:[-.3,0,0],rKnee:[-.05,0,0],rod:{p:25,f:0,y:-.1}},
   showFish:{hy:.95,sp:[.04,0,0],hd:[.25,0,0],lSh:[.45,0,.42],rSh:[.45,0,-.42],lEl:[1.05,0,0],rEl:[1.05,0,0],lHip:[0,0,0],rHip:[0,0,0],lKnee:[0,0,0],rKnee:[0,0,0],rod:null},
   strike:{hy:.96,sp:[.3,.1,0],hd:[-.25,0,0],lSh:[2.4,0,.3],rSh:[2.5,0,-.2],lEl:[.5,0,0],rEl:[.4,0,0],lHip:[-.2,0,0],rHip:[.25,0,0],lKnee:[-.1,0,0],rKnee:[-.25,0,0],rod:{p:80,f:0}},
@@ -983,7 +988,7 @@ G.rback=()=>{st.phase='wait';st.msg='';setUI();};
 G.rsend=()=>{const el=document.getElementById('grtx'),txt=(el?.value||'').trim().slice(0,200),C=rpCloud(),a=RP.list.get(st.rtalk);if(!txt||!C||!a)return;el.value='';
   C.ff.setDoc(C.ff.doc(C.db,'gamemsgs',C.user.uid+'_'+Date.now()+'_'+Math.random().toString(36).slice(2,6)),{from:C.user.uid,name:C.name()||'Pescatore',to:a.id,spot:SPOT.id,text:txt,t:Date.now()}).catch(e=>{st.msg='Messaggio non inviato: '+(e.code||e.message);});
   (RP.log[a.id]=RP.log[a.id]||[]).push({me:true,text:txt});say(AN,txt,6);const lg=document.getElementById('grlog');if(lg)lg.innerHTML=rpLog(a.id);};
-G._rp=RP;G._bolt=()=>strikeBolt();G._land=n=>{const sp=SP.find(x=>x.n===n);const r=st.rods[0];st.sel=0;r.held=true;AN.holding=0;r.bait="bibi";const w=sp.w[1]*1.6;st.fight={r,sp,w,len:lenOf(sp,w),dist:0,ten:.3,reel:false,drag:5,run:0,slack:0,t:0,pow:1};endFight(true);};G._jump=n=>{const sp=SP.find(x=>x.n===n);const r=st.rods[1];r.dist=20;r.sz=-90;const w=sp.w[2];st.fight={r,sp,w,len:lenOf(sp,w),dist:20,ten:.3,run:0,slack:0,t:0,pow:1,jump:{t:0}};st.fight.obj=makeFish3D(sp,st.fight.len/100);scene.add(st.fight.obj);};
+G._rp=RP;G._cast=(style,pw)=>{st.castStyle=style;const r=st.rods[st.sel];st.cast={p:pw,dir:1,on:true};AN.target=CSTY[style].load;setTimeout(()=>doCast(),1200);};G._bolt=()=>strikeBolt();G._land=n=>{const sp=SP.find(x=>x.n===n);const r=st.rods[0];st.sel=0;r.held=true;AN.holding=0;r.bait="bibi";const w=sp.w[1]*1.6;st.fight={r,sp,w,len:lenOf(sp,w),dist:0,ten:.3,reel:false,drag:5,run:0,slack:0,t:0,pow:1};endFight(true);};G._jump=n=>{const sp=SP.find(x=>x.n===n);const r=st.rods[1];r.dist=20;r.sz=-90;const w=sp.w[2];st.fight={r,sp,w,len:lenOf(sp,w),dist:20,ten:.3,run:0,slack:0,t:0,pow:1,jump:{t:0}};st.fight.obj=makeFish3D(sp,st.fight.len/100);scene.add(st.fight.obj);};
 
 /* ---------- interfaccia ---------- */
 function mount(v){
@@ -1051,7 +1056,7 @@ function setUI(){const p=st.phase;let h='';
   else if(p==='cast'&&st.castMode!=='mano'){const mx=st.castMode==='drone'?400:300;st.castDist=Math.min(st.castDist,mx);h=`<div class="gpanel"><b>${st.castMode==='drone'?'🛸 Drone':'🚤 Barchino elettrico'} · ${B[st.rods[st.sel].bait].n}</b>
     <div class="grow">${[['mano','🎣 A mano'],['barchino','🚤 Barchino'],['drone','🛸 Drone']].map(([k,n])=>`<button class="gc ${st.castMode===k?'on':''}" onclick="GAME.mode('${k}')">${n}</button>`).join('')}</div>
     <div class="gs">${st.castMode==='drone'?'Lo guidi tu con il joystick (su = verso il largo) fino a 400 m, ti fermi sul punto e sganci esca e piombo. Poi torna da solo.':'Lo guidi tu con il joystick (su = verso il largo) fino a 300 m, ti fermi sul punto e sganci dalla tramoggia. Poi torna da solo. Con mare molto mosso rischia di ribaltarsi nei frangenti.'}</div>${btn('🚀 Parti','deliver()','big')}</div>`;}
-  else if(p==='cast')h=`<div class="gpanel"><b>🎯 Lancia · ${B[st.rods[st.sel].bait].n}</b><div class="grow">${[['mano','🎣 A mano'],['barchino','🚤 Barchino'],['drone','🛸 Drone']].map(([k,n])=>`<button class="gc ${st.castMode===k?'on':''}" onclick="GAME.mode('${k}')">${n}</button>`).join('')}</div><div class="gs">Tieni premuto per caricare, rilascia nella zona verde. ${(()=>{const w=wxAt(st.gt),hp=windHelp(w.wd);return w.ws>12?(hp>.3?'Vento da terra: ti aiuta.':hp<-.3?'Vento dal mare: lancerai più corto.':'Vento laterale.'):'';})()}</div><div class="gpow"><i id="gpw"></i><s></s></div><button class="gb big" id="gcastb">🎣 Carica e lancia</button></div>`;
+  else if(p==='cast')h=`<div class="gpanel"><b>🎯 Lancia · ${B[st.rods[st.sel].bait].n}</b><div class="grow">${[['mano','🎣 A mano'],['barchino','🚤 Barchino'],['drone','🛸 Drone']].map(([k,n])=>`<button class="gc ${st.castMode===k?'on':''}" onclick="GAME.mode('${k}')">${n}</button>`).join('')}</div><div class="grow" style="flex-wrap:nowrap;gap:5px">${Object.entries(CSTY).map(([k,v])=>`<button class="gc ${st.castStyle===k?'on':''}" onclick="GAME.cstyle('${k}')">${v.n}</button>`).join('')}</div><div class="gs">${cSty().d}</div><div class="gs">Tieni premuto per caricare, rilascia nella zona verde. ${(()=>{const w=wxAt(st.gt),hp=windHelp(w.wd);return w.ws>12?(hp>.3?'Vento da terra: ti aiuta.':hp<-.3?'Vento dal mare: lancerai più corto.':'Vento laterale.'):'';})()}</div><div class="gpow"><i id="gpw"></i><s style="left:${cSty().g[0]*100}%;width:${(cSty().g[1]-cSty().g[0])*100}%"></s></div><button class="gb big" id="gcastb">🎣 Carica e lancia · ${cSty().n}</button></div>`;
   else if(p==='fight')h=`<div class="gpanel"><b id="gfti">Combattimento</b><div class="gbar"><i id="gten"></i><span>tensione</span></div><div class="gbar dist"><i id="gdis"></i><span id="gdt">distanza</span></div>
     <div class="grow"><span>Frizione</span><input type="range" min="1" max="10" value="${st.fight?.drag||5}" oninput="GAME.drag(this.value)" style="flex:1"></div><div class="gs" id="galert" style="color:#ffb547;font-weight:700;min-height:0"></div><button class="gb big" id="greel">🌀 Tieni premuto per recuperare</button></div>`;
   else if(p==='catch'){const c=st.catchShow;h=`<div class="gpanel">${c.fish?'<div class="gfish"><img id="gfi" alt="" style="display:none;width:100%;max-height:22vh;object-fit:cover;border-radius:14px"><canvas id="gfc" width="600" height="260"></canvas><div id="gfcr" style="font-size:10.5px;opacity:.55;text-align:right"></div></div>':''}
@@ -1064,7 +1069,7 @@ function setUI(){const p=st.phase;let h='';
   else if(p==='rtalk')h=rtalkHtml();
   else if(p==='busy')h=st.msg?`<div class="gpanel slim"><div class="gs" style="text-align:center">${st.msg}</div></div>`:'';
   ui.innerHTML=h;
-  const cb=document.getElementById('gcastb');if(cb){cb.onpointerdown=e=>{e.preventDefault();ac();st.cast={p:0,dir:1,on:true};AN.target='castBack';};const rel=()=>{if(st.cast?.on)doCast();};cb.onpointerup=rel;cb.onpointerleave=rel;}
+  const cb=document.getElementById('gcastb');if(cb){cb.onpointerdown=e=>{e.preventDefault();ac();st.cast={p:0,dir:1,on:true};const S=cSty();if(st.castStyle==='pendulum'){AN.target='castPendUp';setTimeout(()=>{if(st.cast?.on)AN.target='castPend';},500);}else AN.target=S.load;};const rel=()=>{if(st.cast?.on)doCast();};cb.onpointerup=rel;cb.onpointerleave=rel;}
   const rb=document.getElementById('greel');if(rb){const on=e=>{e.preventDefault();if(st.fight)st.fight.reel=true;},off=()=>{if(st.fight)st.fight.reel=false;};rb.onpointerdown=on;rb.onpointerup=off;rb.onpointerleave=off;rb.onpointercancel=off;}
   if(p==='catch')setTimeout(drawFishCard,0);
   const jb=root?.querySelector('#gjoy');if(jb&&!(p==='wait'&&!st.busy)&&p!=='pilot')jb.style.display='none';
@@ -1140,18 +1145,28 @@ G.rig=()=>{st.phase='rig';setUI();};
 G.setRig=(k,v)=>{const r=st.rods[st.sel];r[k]=v;click();setUI();};
 G.rigDone=()=>seq(async()=>{const r=st.rods[st.sel];st.phase='busy';st.msg=r.broken?'🔧 Rifà il terminale…':'🔧 Cambia la montatura…';setUI();pose('bend');await sleep(r.broken?2.2:1.4);r.broken=false;pose('hold');st.msg='';st.phase='bait';setUI();});
 G.bait=k=>{const r=st.rods[st.sel];if(B[k].lim){if(!(st.inv[k]>0))return;st.inv[k]--;}r.bait=k;r.baitLeft=B[k].life*(k==='cozza'&&hookCat(st.hook)==='piccolo'?1.2:1);click();pose('hold');st.phase='cast';setUI();};
-function doCast(){const c=st.cast;c.on=false;const r=st.rods[st.sel],w=wxAt(st.gt);
-  const p=c.p,green=p>=.78&&p<=.92,q=green?1:p<.78?p/.78*.9:.7;
-  // zona verde: fino a 150 m; con poca potenza anche solo 10 m; oltre la zona verde il lancio si sporca
-  const base=green?150*(1-Math.abs(p-.85)*.45):p<.78?lerp(10,138,Math.pow(p/.78,1.15)):lerp(138,60,(p-.92)/.08);
+// stili di lancio a mano: zona verde, gittata massima, precisione e rischio di rottura del filo
+const CSTY={above:{n:'Above',it:'dall\'alto',g:[.76,.92],max:115,spr:2,crack:0,load:'castBack',fwd:'castFwd',d:'Dall\'alto sopra la testa: facile e preciso, fino a 115 m.'},
+  side:{n:'Side',it:'laterale',g:[.79,.92],max:125,spr:7,crack:0,load:'castSide',fwd:'castSideFwd',d:'Laterale, canna di fianco: più lungo ma meno preciso, fino a 125 m.'},
+  ground:{n:'Ground',it:'da terra',g:[.81,.91],max:140,spr:4,crack:.25,load:'castGround',fwd:'castFwd',d:'Off the ground: piombo appoggiato a terra dietro, busto girato. Fino a 140 m, zona verde più stretta.'},
+  pendulum:{n:'Pendulum',it:'pendolare',g:[.84,.9],max:150,spr:4,crack:.5,load:'castPend',fwd:'castFwd',d:'Pendolare: il piombo oscilla e parte dall\'alto. Il più lungo, fino a 150 m, ma difficile: se esageri rischi il crack-off.'}};
+const cSty=()=>CSTY[st.castStyle]||CSTY.above;
+G.cstyle=k=>{st.castStyle=k;LSS('cstyle',k);setUI();};
+function doCast(){const c=st.cast;c.on=false;const r=st.rods[st.sel],w=wxAt(st.gt),S=cSty();
+  const p=c.p,[g0,g1]=S.g,gm=(g0+g1)/2,green=p>=g0&&p<=g1,q=green?1:p<g0?p/g0*.9:.7;
+  // troppa forza con ground e pendulum: il filo si rompe al lancio (crack-off) e il piombo vola via
+  if(S.crack&&p>g1+.03&&Math.random()<S.crack){st.cast=null;seq(async()=>{st.phase='busy';setUI();pose(S.fwd);whoosh();await sleep(.25);click();vib([60,30,60]);r.broken=true;r.bait=null;r.state='idle';r.dist=0;r.sinker.visible=false;pose('hold');
+    st.msg='💥 Crack-off! Troppa forza: il filo si è rotto al lancio e il piombo è volato via. Rifai il terminale.';st.phase='rig';setUI();});return;}
+  // zona verde: fino al massimo dello stile; con poca potenza anche solo 10 m; oltre la zona verde il lancio si sporca
+  const M=S.max,base=green?M*(1-Math.abs(p-gm)*.45):p<g0?lerp(10,M*.92,Math.pow(p/g0,1.15)):lerp(M*.92,M*.4,(p-g1)/(1-g1));
   const leadF=clamp(1.15-((r.lead||st.lead)-100)/400,.85,1.1)*(r.rig==='2ami'?.93:r.rig==='corto'?1.04:1),baitF=r.bait==='cefalotto'?.55:r.bait==='sarda'||r.bait==='seppia'?.85:1,wind=1+windHelp(w.wd)*clamp(w.ws/60,0,.35);
-  const dist=clamp(base*leadF*baitF*wind+rnd(-3,3),8,150);st.cast=null;
-  seq(async()=>{st.phase='busy';st.msg='';setUI();pose('castFwd');whoosh();await sleep(.18);
+  const dist=clamp(base*leadF*baitF*wind+rnd(-3,3),8,155);st.cast=null;
+  seq(async()=>{st.phase='busy';st.msg='';setUI();pose(S.fwd);whoosh();await sleep(st.castStyle==='side'?.14:.18);
     // il piombo vola: parabola dalla cima al punto d'arrivo
-    const tip=new T.Vector3();r.obj.userData.tip.getWorldPosition(tip);const drift=(Math.sin((w.wd-FACE)*R))*w.ws/40*3;const end=new T.Vector3(r.x+drift+rnd(-2,2),0,-dist);
-    r.flight={a:tip.clone(),b:end,t:0,dur:1.1+dist/120};r.sinker.visible=true;r.dist=0.01;r.state='flying';
+    const tip=new T.Vector3();r.obj.userData.tip.getWorldPosition(tip);const drift=(Math.sin((w.wd-FACE)*R))*w.ws/40*3;const end=new T.Vector3(r.x+drift+rnd(-S.spr,S.spr)+(st.castStyle==='side'?S.spr*.5:0),0,-dist);
+    r.flight={a:tip.clone(),b:end,t:0,dur:1.1+dist/120,low:st.castStyle==='side'};r.sinker.visible=true;r.dist=0.01;r.state='flying';
     await sleep(r.flight.dur);splash();burst(end,1);r.flight=null;r.dist=dist;r.sx=end.x;r.sz=end.z;r.state='fishing';r.landT=st.gt;
-    st.msg=q>=1?`Lancio perfetto: ${Math.round(dist)} m!`:q>.8?`Buon lancio: ${Math.round(dist)} m`:`Lancio corto: ${Math.round(dist)} m`;checkTangle(r);setUI();
+    st.msg=(q>=1?`Lancio ${S.n} perfetto: ${Math.round(dist)} m!`:q>.8?`Buon lancio ${S.n}: ${Math.round(dist)} m`:`Lancio ${S.n} corto: ${Math.round(dist)} m`);checkTangle(r);setUI();
     pose('hold');await sleep(.6);await putRod(st.sel);await stepBack(st.sel);st.phase='wait';if(r.state!=='tangled')st.msg='Tocca la sedia per sederti, o un\'altra canna per andarci.';setUI();});}
 
 /* ---------- barchino elettrico e drone ---------- */
@@ -1452,7 +1467,7 @@ G.center=()=>{LOOK.yaw=0;LOOK.pitch=0;};
 function loop(){raf=requestAnimationFrame(loop);if(!renderer)return;const dt=Math.min(.05,clock.getDelta()),t=clock.elapsedTime;
   const gmul=(st.phase==='wait'&&!st.busy)?st.speed:1;st.gmul=gmul;st.gt+=dt*1000*gmul;const gmin=dt*gmul/60;const w=wxAt(st.gt);
   // pescatore e vicini di spiaggia
-  joyMove(dt,t);moveActor(AN,dt);lerpPose(dt,AN.target==='castFwd'||AN.target==='strike'?14:6);applyPose(t);updCrabs(dt,t);nearUI(t);
+  joyMove(dt,t);moveActor(AN,dt);lerpPose(dt,/Fwd$|^strike$/.test(AN.target)?14:6);applyPose(t);updCrabs(dt,t);nearUI(t);
   updNpcs(dt,t);rpUpd(dt,t);
   if(st.cast?.on){st.cast.p+=st.cast.dir*dt*1.15;if(st.cast.p>1){st.cast.p=1;st.cast.dir=-1;}if(st.cast.p<0){st.cast.p=0;st.cast.dir=1;}const el=document.getElementById('gpw');if(el)el.style.width=(st.cast.p*100)+'%';}
   // canne
@@ -1474,7 +1489,7 @@ function loop(){raf=requestAnimationFrame(loop);if(!renderer)return;const dt=Mat
     // lenza
     const tip=new T.Vector3();r.obj.userData.tip.getWorldPosition(tip);const a=r.line.geometry.attributes.position;
     if(r.ride){r.sinker.position.copy(r.ride.position);if(VEH.type==='drone')r.sinker.position.y-=2.55;}
-    else if(r.flight){const f=r.flight;f.t+=dt/f.dur;const k=clamp(f.t,0,1),pnt=new T.Vector3().lerpVectors(f.a,f.b,k);pnt.y+=Math.sin(k*Math.PI)*(12+f.b.distanceTo(f.a)*.12);r.sinker.position.copy(pnt);}
+    else if(r.flight){const f=r.flight;f.t+=dt/f.dur;const k=clamp(f.t,0,1),pnt=new T.Vector3().lerpVectors(f.a,f.b,k);pnt.y+=Math.sin(k*Math.PI)*(12+f.b.distanceTo(f.a)*.12)*(f.low?.6:1);r.sinker.position.copy(pnt);}
     else if(r.dist>0){const fd=st.fight?.r===r?Math.max(0,st.fight.dist):r.dist,kk=fd/Math.max(1,-r.sz);r.sinker.position.set(lerp(r.x,r.sx,kk),.0,-fd);}
     const end=r.sinker.visible?r.sinker.position:tip;const tens=st.fight?.r===r?st.fight.ten:.2+r.bend*.4;
     for(let i=0;i<40;i++){const u=i/39,x=lerp(tip.x,end.x,u),z=lerp(tip.z,end.z,u),y=lerp(tip.y,end.y,u)-Math.sin(u*Math.PI)*(r.flight?0:(1-tens)*Math.min(3,tip.distanceTo(end)*.05));a.setXYZ(i,x,Math.max(y,end===tip?y:-.02),z);}
