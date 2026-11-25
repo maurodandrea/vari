@@ -1268,6 +1268,11 @@ const CAT=[
   {k:'veicoli',n:'🚤 Barchino e drone',items:[
     {id:'boat',n:'Barchino elettrico portaesche',d:'Lo guidi tu e porti esca e piombo fino a 300 m.',p:()=>500},
     {id:'drone',n:'Drone da pesca',d:'Vola fino a 500 m e sgancia esca e piombo: per tonnetti e lecce amie al largo.',p:()=>1000}]}];
+(()=>{const C=k=>CAT.find(x=>x.k===k),del=k=>CAT.splice(CAT.indexOf(C(k)),1),mi=C('accessori'),mv=['box','bucket','cooler'],moved=mi.items.filter(i=>mv.includes(i.id));
+  mi.items=mi.items.filter(i=>!mv.includes(i.id));
+  const am=C('ami');am.n='🪝 Ami e piombi';am.items=am.items.concat(C('piombi').items);del('piombi');
+  const se=C('sedie');se.n='🪑 Sedie e ombrelloni';se.items=se.items.concat(C('ombrelloni').items);del('ombrelloni');
+  const bo=C('borsoni');bo.n='🎒 Accessori';bo.items=moved.concat(bo.items,C('picchetti').items);del('picchetti');})();
 const ITEM0=0;const ITEM=Object.fromEntries(CAT.flatMap(c=>c.items.map(i=>[i.id,{...i,cat:c.k}])));
 const fullO=(it,o)=>{const r={};(it.opts||[]).forEach(op=>r[op.k]=o?.[op.k]||0);return r;};
 const optTxt=(it,o)=>(it.opts||[]).map(op=>op.v[o[op.k]||0]).join(' · ');
