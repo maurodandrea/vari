@@ -472,6 +472,9 @@ function buildWorld(){
     it.position.set(-.18+i*.088,.218,j?.05:-.05);box.add(it);}
   const lid=new T.Group();lid.position.set(0,.2,.13);box.add(lid);const lm=new T.Mesh(new T.BoxGeometry(.46,.04,.26),bl);lm.position.set(0,.02,-.13);lid.add(lm);lid.rotation.x=1.9;
   const hdl=new T.Mesh(new T.TorusGeometry(.06,.01,6,12,Math.PI),new T.MeshStandardMaterial({color:'#222'}));hdl.position.set(0,.04,-.13);lid.add(hdl);
+  if(!st.gear.bought?.box){box.clear();const bm=new T.MeshStandardMaterial({color:'#eef2f4',roughness:.35,transparent:true,opacity:.78,side:T.DoubleSide}),bg=new T.SphereGeometry(.13,14,10);const P=bg.attributes.position;for(let i=0;i<P.count;i++){const y=P.getY(i);P.setY(i,Math.max(-.02,y)*.9+Math.sin(P.getX(i)*40)*.008);P.setX(i,P.getX(i)*(1.2+Math.sin(P.getZ(i)*30)*.05));}bg.computeVertexNormals();
+    const bag=new T.Mesh(bg,bm);bag.position.y=.02;box.add(bag);for(const [x,c] of [[-.05,'#c0392b'],[.03,'#d9b24a'],[.07,'#2f6fb5']]){const it=new T.Mesh(new T.BoxGeometry(.04,.02,.03),new T.MeshStandardMaterial({color:c}));it.position.set(x,.03,0);box.add(it);}
+    for(const sx of[-1,1]){const h=new T.Mesh(new T.TorusGeometry(.035,.006,6,12,Math.PI),bm);h.position.set(sx*.06,.12,0);box.add(h);}}
   box.position.set(CHAIR.x+.62,CHAIR.z*.035,CHAIR.z-.25);box.rotation.y=-.4;box.traverse(o=>{if(o.isMesh)o.castShadow=true;});scene.add(box);
   const eb=new T.Group(),ebm=new T.Mesh(new T.BoxGeometry(.16,.06,.11),new T.MeshStandardMaterial({color:'#e8e2d0',roughness:.7}));ebm.position.y=.03;eb.add(ebm);
   for(let i=0;i<7;i++){const w=new T.Mesh(new T.TorusGeometry(.018,.005,5,10,rnd(2,4)),new T.MeshStandardMaterial({color:i%2?'#b8434e':'#d9705a',roughness:.6}));w.position.set(rnd(-.05,.05),.065,rnd(-.03,.03));w.rotation.set(Math.PI/2,0,rnd(0,6));eb.add(w);}
@@ -596,7 +599,7 @@ function buildGear(){LANTERNS=[];const y=CHAIR.z,gb=st.gear.bought||{};if(gb.coo
   // porta-esche e telo per l'attrezzatura
   const telo=new T.Mesh(new T.PlaneGeometry(1.6,1.1),new T.MeshStandardMaterial({color:'#6b5a3a',roughness:1}));telo.rotation.x=-Math.PI/2;telo.position.set(CHAIR.x+.4,y*.035+.01,y+.2);telo.receiveShadow=true;scene.add(telo);MYG.push(telo);
   {const o=st.gear.own||{},b=st.gear.bought||{},Y=y*.035;
-    if(b.box){const bx=new T.Mesh(new T.BoxGeometry(.42,.14,.26),new T.MeshStandardMaterial({color:'#2f6fb5',roughness:.5}));bx.position.set(CHAIR.x+.2,Y+.08,y+.05);bx.castShadow=true;scene.add(bx);MYG.push(bx);const lid=new T.Mesh(new T.BoxGeometry(.43,.02,.27),new T.MeshStandardMaterial({color:'#e9eef2',transparent:true,opacity:.6}));lid.position.set(CHAIR.x+.2,Y+.16,y+.05);scene.add(lid);MYG.push(lid);}
+    if(false&&b.box){const bx=new T.Mesh(new T.BoxGeometry(.42,.14,.26),new T.MeshStandardMaterial({color:'#2f6fb5',roughness:.5}));bx.position.set(CHAIR.x+.2,Y+.08,y+.05);bx.castShadow=true;scene.add(bx);MYG.push(bx);const lid=new T.Mesh(new T.BoxGeometry(.43,.02,.27),new T.MeshStandardMaterial({color:'#e9eef2',transparent:true,opacity:.6}));lid.position.set(CHAIR.x+.2,Y+.16,y+.05);scene.add(lid);MYG.push(lid);}
     if(b.bucket){const bu=new T.Mesh(new T.CylinderGeometry(.16,.13,.3,16),new T.MeshStandardMaterial({color:'#e8e2d0',roughness:.6}));bu.position.set(CHAIR.x+.85,Y+.15,y+.45);bu.castShadow=true;scene.add(bu);MYG.push(bu);const lc=new T.Mesh(new T.CylinderGeometry(.165,.165,.03,16),new T.MeshStandardMaterial({color:'#2f8a5a'}));lc.position.set(CHAIR.x+.85,Y+.31,y+.45);scene.add(lc);MYG.push(lc);}
     if(b.scis){const sc=new T.Mesh(new T.BoxGeometry(.14,.01,.04),new T.MeshStandardMaterial({color:'#c0392b'}));sc.position.set(CHAIR.x+.6,Y+.02,y-.05);sc.rotation.y=.6;scene.add(sc);MYG.push(sc);}
     if(b.star){for(let k=0;k<3;k++){const s2=new T.Mesh(new T.CylinderGeometry(.006,.006,.05,6),new T.MeshStandardMaterial({color:'#9dff7a',emissive:'#5aff3a',emissiveIntensity:.6}));s2.rotation.z=Math.PI/2;s2.position.set(CHAIR.x-.05+k*.03,Y+.02,y+.3);scene.add(s2);MYG.push(s2);}}}
@@ -740,14 +743,32 @@ function paintBeach(c){const g=c.getContext('2d'),W=c.width,H=c.height;let gr=g.
   for(let k=0;k<4;k++){const y=H*(.66+k*.022);g.strokeStyle='rgba(255,255,255,.55)';g.lineWidth=3;g.beginPath();for(let x=0;x<=W;x+=12)g.lineTo(x,y+Math.sin(x/30+k)*3);g.stroke();}
   gr=g.createLinearGradient(0,H*.72,0,H);gr.addColorStop(0,'#c9a876');gr.addColorStop(1,'#a8865a');g.fillStyle=gr;g.beginPath();g.moveTo(0,H*.74);for(let x=0;x<=W;x+=20)g.lineTo(x,H*.73+Math.sin(x/60)*6);g.lineTo(W,H);g.lineTo(0,H);g.fill();
   for(let i=0;i<900;i++){g.fillStyle=`rgba(${Math.random()<.5?'90,70,40':'240,220,180'},.25)`;g.fillRect(rnd(0,W),rnd(H*.74,H),2,2);}
-  // canne sul picchetto e pescatore in controluce
-  g.strokeStyle='#14181c';g.lineCap='round';for(const [x,a] of [[W*.22,-1.2],[W*.34,-1.35],[W*.82,-1.75]]){g.lineWidth=4;g.beginPath();g.moveTo(x,H*.88);g.lineTo(x,H*.8);g.stroke();g.lineWidth=3;g.beginPath();g.moveTo(x,H*.86);g.lineTo(x+Math.cos(a)*260,H*.86+Math.sin(a)*260);g.stroke();
-    g.strokeStyle='rgba(20,24,28,.4)';g.lineWidth=1;g.beginPath();g.moveTo(x+Math.cos(a)*260,H*.86+Math.sin(a)*260);g.quadraticCurveTo(W*.5,H*.55,W*.45,H*.6);g.stroke();g.strokeStyle='#14181c';}
-  g.fillStyle='#14181c';g.beginPath();g.arc(W*.58,H*.705,11,0,7);g.fill();g.fillRect(W*.58-12,H*.715,24,48);g.fillRect(W*.58-10,H*.76,8,46);g.fillRect(W*.58+2,H*.76,8,46);g.fillRect(W*.58-22,H*.725,10,34);g.fillRect(W*.58+12,H*.725,10,34);}
+  // pescatore in controluce che piega la canna e tira un pesce che salta fuori dall'acqua
+  const k=Math.min(W/200,H/620*1.6),X=v=>W*v,Y=v=>H*v,S='#121619';g.lineCap='round';g.lineJoin='round';g.strokeStyle=S;g.fillStyle=S;
+  const fx=X(.26),fy=Y(.885),hip=[fx+4*k,fy-62*k],sho=[fx-6*k,fy-112*k],hd=[fx-8*k,fy-128*k];
+  g.lineWidth=13*k;g.beginPath();g.moveTo(hip[0],hip[1]);g.lineTo(fx+22*k,fy-30*k);g.lineTo(fx+30*k,fy);g.stroke();// gamba avanti
+  g.beginPath();g.moveTo(hip[0],hip[1]);g.lineTo(fx-10*k,fy-30*k);g.lineTo(fx-16*k,fy);g.stroke();// gamba dietro, piegata all'indietro
+  g.lineWidth=7*k;g.beginPath();g.moveTo(fx+26*k,fy);g.lineTo(fx+40*k,fy);g.moveTo(fx-20*k,fy);g.lineTo(fx-6*k,fy);g.stroke();
+  g.lineWidth=24*k;g.beginPath();g.moveTo(hip[0],hip[1]);g.lineTo(sho[0],sho[1]);g.stroke();// busto inclinato all'indietro
+  g.beginPath();g.arc(hd[0],hd[1],10*k,0,7);g.fill();g.lineWidth=4*k;g.beginPath();g.moveTo(hd[0]-4*k,hd[1]-8*k);g.lineTo(hd[0]+14*k,hd[1]-7*k);g.stroke();// testa e visiera
+  const hand1=[fx+30*k,fy-96*k],hand2=[fx+12*k,fy-74*k];g.lineWidth=8*k;g.beginPath();g.moveTo(sho[0],sho[1]);g.lineTo(fx+18*k,fy-104*k);g.lineTo(hand1[0],hand1[1]);g.stroke();
+  g.beginPath();g.moveTo(sho[0]+2*k,sho[1]+6*k);g.lineTo(fx+2*k,fy-84*k);g.lineTo(hand2[0],hand2[1]);g.stroke();
+  // canna piegata ad arco e mulinello
+  const tip=[X(.86),Y(.43)],cp=[X(.66),Y(.37)];g.lineWidth=4.5*k;g.beginPath();g.moveTo(hand2[0]-10*k,hand2[1]+14*k);g.lineTo(hand1[0],hand1[1]);g.quadraticCurveTo(cp[0],cp[1],tip[0],tip[1]);g.stroke();
+  g.lineWidth=2.5*k;g.beginPath();g.moveTo(hand1[0],hand1[1]);g.quadraticCurveTo(cp[0],cp[1],tip[0],tip[1]);g.stroke();g.beginPath();g.arc(hand2[0]+4*k,hand2[1]+2*k,6*k,0,7);g.fill();
+  // lenza tesa fino al pesce
+  const fish=[X(.74),Y(.61)];g.strokeStyle='rgba(255,240,220,.85)';g.lineWidth=1.2;g.beginPath();g.moveTo(tip[0],tip[1]);g.lineTo(fish[0]+12*k,fish[1]-6*k);g.stroke();
+  // spruzzi e cerchi d'acqua
+  g.strokeStyle='rgba(255,255,255,.75)';g.lineWidth=2;for(const r of[14,24,34]){g.beginPath();g.ellipse(fish[0],Y(.66),r*k,r*k*.25,0,0,7);g.stroke();}
+  g.fillStyle='rgba(255,255,255,.9)';for(let i=0;i<22;i++){const a=rnd(-2.8,-.3),d=rnd(8,32)*k;g.beginPath();g.arc(fish[0]+Math.cos(a)*d,Y(.655)+Math.sin(a)*d*1.2,rnd(1,2.6)*k,0,7);g.fill();}
+  // il pesce che salta, argentato e inarcato
+  g.save();g.translate(fish[0],fish[1]);g.rotate(-.6);const L=34*k;let fg=g.createLinearGradient(0,-L*.3,0,L*.3);fg.addColorStop(0,'#3a4a58');fg.addColorStop(.5,'#c9d2d8');fg.addColorStop(1,'#f4f6f7');g.fillStyle=fg;
+  g.beginPath();g.moveTo(L*.55,0);g.quadraticCurveTo(L*.2,-L*.32,-L*.35,-L*.08);g.lineTo(-L*.55,-L*.26);g.lineTo(-L*.5,0);g.lineTo(-L*.55,L*.26);g.lineTo(-L*.35,L*.08);g.quadraticCurveTo(L*.2,L*.32,L*.55,0);g.fill();
+  g.fillStyle='#0b0d10';g.beginPath();g.arc(L*.38,-L*.05,L*.05,0,7);g.fill();g.restore();}
 function paintShop(c){const g=c.getContext('2d'),W=c.width,H=c.height;g.fillStyle='#e9e1d2';g.fillRect(0,0,W,H);
   for(let i=0;i<14;i++)for(let j=0;j<24;j++){g.fillStyle=`rgba(150,120,90,${.08+Math.random()*.08})`;g.fillRect(i*32+(j%2)*16,j*28,30,26);}
   // insegna e tenda a strisce
-  g.fillStyle='#0f3b57';g.fillRect(16,30,W-32,74);g.strokeStyle='#ffd76a';g.lineWidth=4;g.strokeRect(22,36,W-44,62);g.fillStyle='#ffd76a';g.font=`800 ${Math.round(W*.13)}px Outfit,sans-serif`;g.textAlign='center';g.textBaseline='middle';g.fillText('PESCA SPORT',W/2,68);
+  g.fillStyle='#0f3b57';g.fillRect(16,30,W-32,74);g.strokeStyle='#ffd76a';g.lineWidth=4;g.strokeRect(22,36,W-44,62);g.fillStyle='#ffd76a';g.font=`800 ${Math.round(W*.105)}px Outfit,sans-serif`;g.textAlign="center";g.textBaseline="middle";g.fillText("PESCA SPORT",W/2,68);
   {const sw=(W-20)/6;for(let i=0;i<6;i++){g.fillStyle=i%2?'#f4f1ea':'#1d5f8a';g.beginPath();g.moveTo(10+i*sw,112);g.lineTo(10+(i+1)*sw,112);g.lineTo(10+(i+1)*sw,150);g.quadraticCurveTo(10+(i+.5)*sw,166,10+i*sw,150);g.fill();}}
   // vetrina illuminata con canne, mulinelli, esche e la giacca
   const x0=22,y0=170,w=W-68,h=H*.62;let gr=g.createLinearGradient(0,y0,0,y0+h);gr.addColorStop(0,'#fff6dc');gr.addColorStop(1,'#d9c9a0');g.fillStyle=gr;g.fillRect(x0,y0,w,h);
@@ -1110,8 +1131,8 @@ const today=()=>new Date().toISOString().slice(0,10);
 // kit di partenza: il minimo indispensabile. Tutto il resto si compra al negozio
 const GEAR0={v:2,rod:'beach390',rods:['beach390'],rodCnt:{beach390:1},reel:'r5000',reels:['r5000'],reelCnt:{r5000:1},drag:7,line:.25,leader:5,fluo:.30,term:10,
   baits:{koreano:15},hooks:{4:10},leads:{80:1,100:1,125:1},grip:{},ogiva:{},forged:{},starlight:0,swivels:15,snaps:15,needle:true,elastic:false,lamp:false,torch:0,spikes:1,spikeT:'pvc',
-  chair:'',chairs:[],hat:'none',hats:['none'],outfits:[],shelters:[],shelter:'',boots:false,own:{},bought:{box:true,scis:true}};
-function gearLoad(){let g=LSG('gear',null);const G0=JSON.parse(JSON.stringify(GEAR0));if(!g||g.v!==2){LSS('outfit','jeans');LSS('nrods',1);return G0;}for(const k in G0)if(g[k]===undefined)g[k]=G0[k];return g;}
+  chair:'',chairs:[],hat:'none',hats:['none'],outfits:[],shelters:[],shelter:'',boots:false,own:{},bought:{scis:true}};
+function gearLoad(){let g=LSG('gear',null);const G0=JSON.parse(JSON.stringify(GEAR0));if(!g||g.v!==2){LSS('outfit','jeans');LSS('nrods',1);return G0;}if(!g.boxFix){g.boxFix=true;if(g.bought)delete g.bought.box;}for(const k in G0)if(g[k]===undefined)g[k]=G0[k];return g;}
 st.gear=gearLoad();st.money=LSG('money',300);if(!LSG('eco3',0)){st.money=Math.max(st.money,300);LSS('eco3',1);LSS('money',st.money);}
 // guadagni: tempo di pesca nel gioco, catture e uso dell'app (con un tetto al giorno)
 const EARN={fish:.5,fishMax:15};function earnDay(){const e=LSG('earn',{});if(e.d!==today())return {d:today(),fish:0,app:0};return e;}
@@ -1241,7 +1262,7 @@ function skinRod(obj,rodId,reelId){const g=st.gear,U=obj.userData;if(!U.sk){U.sk
 function gearChips(){const g=st.gear,b=g.bought||{},q=gearQuality(),rn=id=>id==='rT'?'Tournament 14000':id.slice(1);
   return `<div class="grow" style="flex-wrap:wrap;gap:4px"><span>Canna</span>${g.rods.map(id=>`<button class="gc ${g.rod===id?'on':''}" onclick="GAME.useRod('${id}')">${ROD[id].n}</button>`).join('')}</div>
     <div class="grow" style="flex-wrap:wrap;gap:4px"><span>Mulinello</span>${g.reels.map(id=>`<button class="gc ${g.reel===id?'on':''}" onclick="GAME.useReel('${id}')">${reelN(id)}</button>`).join('')}</div>
-    <div class="gs">🎒 Filo ${String(g.line).replace('.',',')} mm${b.leader||g.leader?` · shock leader ${g.leader}`:''}${b.fluo?` · fluorocarbon ${String(g.fluo).replace('.',',')}`:''} · starlight ${g.starlight}${b.beads?' · perline':''}${b.elastic?' · elastico':''}${b.lamp||b.lampF?' · frontale LED':''}${b.spike?' · picchetti in alluminio':''}${b.box?' · cassetta':''}${b.bucket?' · secchio esche':''}</div>
+    <div class="gs">🎒 Filo ${String(g.line).replace('.',',')} mm${b.leader||g.leader?` · shock leader ${g.leader}`:''}${b.fluo?` · fluorocarbon ${String(g.fluo).replace('.',',')}`:''} · starlight ${g.starlight}${b.beads?' · perline':''}${b.elastic?' · elastico':''}${b.lamp||b.lampF?' · frontale LED':''}${b.spike?' · picchetti in alluminio':''}${b.box?' · cassetta':' · busta per la minuteria'}${b.bucket?' · secchio esche':''}</div>
     <div class="gs" style="color:${q<.8?'#ffb547':'#5ee08a'}">${q<.8?'⚠️ Attrezzatura di base: pescherai meno. Al negozio trovi di meglio.':'✅ Attrezzatura buona: '+Math.round(q*100)+'% di efficacia.'}</div>`;}
 G.useReel=id=>{const g=st.gear;g.reel=id;g.drag=reelDrag(id);gearSave();if(st.phase==='shop')shopUI();else setUI();};
 G.gearView=()=>{st.phaseBack=st.phase;st.phase='gear';setUI();};G.gearBack=()=>{st.phase=st.phaseBack||'wait';setUI();};
