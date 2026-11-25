@@ -1166,24 +1166,28 @@ function appCredit(){try{const v=+JSON.parse(localStorage.getItem('lenza.gioco.p
 function earnTick(dt){if(document.hidden||!['wait','atrod','fight','cast','bait','rig','busy','catch','snag','talk','rtalk','pilot','gear','bag'].includes(st.phase))return;st.fishSec=(st.fishSec||0)+dt;if(st.fishSec>=60){st.fishSec-=60;earn('fish',EARN.fish,'un minuto di pesca');}}
 const gearSave=()=>{LSS('gear',st.gear);LSS('money',Math.round(st.money*100)/100);};
 const eur=v=>'€ '+v.toFixed(2).replace('.',',');
-const ROD={surf420:{n:'Surf 4,20 m',mul:1},beach390:{n:'Beach 3,90 m',mul:.9},tele420:{n:'Telescopica 4,20 m',mul:.92},surf420s:{n:'Spiaggia 4,20 m leggera',mul:1.02},surf420c:{n:'Surf 4,20 m carbonio',mul:1.04},surf450:{n:'Surf 4,50 m carbonio',mul:1.06},surf450h:{n:'Surf 4,50 m ibrida',mul:1.08},surf470:{n:'Surf 4,70 m parabolica',mul:1.1},surf480:{n:'Tournament 4,80 m',mul:1.12},surf500:{n:'Long Cast 5,00 m',mul:1.16}};
+const ROD={surf420:{n:'Surf 4,20 m 3 pz',mul:1},beach390:{n:'Beach 3,90 m 3 pz',mul:.9},tele420:{n:'Telescopica 4,20 m',mul:.92},surf420s:{n:'Spiaggia 4,20 m leggera 3 pz',mul:1.02},surf420c:{n:'Surf 4,20 m carbonio 3 pz',mul:1.04},surf420c2:{n:'Surf 4,20 m carbonio 2 pz',mul:1.06},surf450:{n:'Surf 4,50 m carbonio 3 pz',mul:1.06},surf450_2:{n:'Surf 4,50 m carbonio 2 pz',mul:1.08},surf450h:{n:'Surf 4,50 m ibrida 3 pz',mul:1.08},surf470:{n:'Surf 4,70 m parabolica 3 pz',mul:1.1},surf480:{n:'Tournament 4,80 m 3 pz',mul:1.12},surf480_2:{n:'Tournament 4,80 m 2 pz',mul:1.14},surf500:{n:'Long Cast 5,00 m 3 pz',mul:1.16},surf500_2:{n:'Long Cast 5,00 m 2 pz',mul:1.18}};
 const REELS={r5000:{n:'5000 leggero',drag:7,cast:1},r6000:{n:'6000',drag:8,cast:1},r8000:{n:'8000',drag:12,cast:1},r10000:{n:'10000',drag:15,cast:1},r14000:{n:'14000',drag:20,cast:1.01},rRear:{n:'7000 frizione posteriore',drag:10,cast:1},rLC:{n:'Long Cast 12000',drag:18,cast:1.04},rMult:{n:'Mulinello rotante',drag:22,cast:1.06},rT:{n:'Tournament 14000',drag:25,cast:1.03}};
 const reelN=id=>REELS[id]?.n||id,reelDrag=id=>REELS[id]?.drag||12;
 // livello dell'attrezzatura montata su una canna: 0 = di base, 1 = il top (canna Long Cast + Tournament)
-function gearTier(r){const g=st.gear,rt=clamp(((ROD[r?.rodId||g.rod]?.mul||1)-.9)/.26,0,1),RL=REELS[r?.reelId||g.reel]||REELS.r8000,lt=clamp((RL.drag-7)/18*.7+(RL.cast-1)/.06*.3,0,1);return {rod:rt,reel:lt,all:(rt+lt)/2};}
+function gearTier(r){const g=st.gear,rt=clamp(((ROD[r?.rodId||g.rod]?.mul||1)-.9)/.28,0,1),RL=REELS[r?.reelId||g.reel]||REELS.r8000,lt=clamp((RL.drag-7)/18*.7+(RL.cast-1)/.06*.3,0,1);return {rod:rt,reel:lt,all:(rt+lt)/2};}
 // prezzi e confezioni realistici; o = opzioni scelte
 const CAT=[
   {k:'canne',n:'🎣 Canne',items:[
-    {id:'beach390',rod:1,n:'Canna Beach 3,90 m',d:'Vetro pieno, 80-150 g: indistruttibile, perfetta per la pesca sotto riva (-10% distanza).',p:()=>39},
-    {id:'tele420',rod:1,n:'Canna telescopica 4,20 m da viaggio',d:'Si chiude in 1,2 m, sta nel bagagliaio. Lancia un po\' meno (-8%).',p:()=>45},
-    {id:'surf420',rod:1,n:'Canna surfcasting 4,20 m',d:'Vetro-carbonio, lancio 100-200 g, tre pezzi. Robusta, ideale per iniziare.',p:()=>69},
-    {id:'surf420s',rod:1,n:'Canna Spiaggia 4,20 m leggera',d:'Carbonio, 50-150 g, vetta in fibra piena sensibile: mormore e orate con mare calmo.',p:()=>89},
-    {id:'surf420c',rod:1,n:'Canna surfcasting 4,20 m carbonio 3 pezzi',d:'Carbonio 30 t, 100-200 g, anelli SiC: leggera e reattiva (+4%).',p:()=>119},
-    {id:'surf450',rod:1,n:'Canna surfcasting 4,50 m',d:'Carbonio, 100-250 g, azione di punta: più distanza (+6%).',p:()=>139},
-    {id:'surf450h',rod:1,n:'Canna surfcasting 4,50 m ibrida',d:'Fusto tubolare e vetta in carbonio pieno: lancia lontano (+8%) e segnala le tocche delicate.',p:()=>169},
-    {id:'surf470',rod:1,n:'Canna surfcasting 4,70 m parabolica',d:'Azione progressiva, 120-250 g: perdona gli errori nel lancio pendolare (+10%).',p:()=>199},
-    {id:'surf480',rod:1,n:'Canna Tournament 4,80 m',d:'Carbonio alto modulo, 150-250 g, per i lanci lunghi (+12%). Da veri agonisti.',p:()=>279},
-    {id:'surf500',rod:1,n:'Canna Long Cast 5,00 m',d:'Carbonio 46 t, 175-275 g, anelli Low Rider: la regina della distanza (+16%).',p:()=>389}]},
+    {id:'beach390',rod:1,n:'Canna Beach 3,90 m · 3 pezzi',d:'Vetro pieno, 80-150 g: indistruttibile, perfetta per la pesca sotto riva (-10% distanza).',p:()=>39},
+    {id:'tele420',rod:1,n:'Canna telescopica 4,20 m · da viaggio',d:'Si chiude in 1,2 m, sta nel bagagliaio. Lancia un po\' meno (-8%).',p:()=>45},
+    {id:'surf420',rod:1,n:'Canna surfcasting 4,20 m · 3 pezzi',d:'Vetro-carbonio, lancio 100-200 g. Robusta, ideale per iniziare.',p:()=>69},
+    {id:'surf420s',rod:1,n:'Canna Spiaggia 4,20 m leggera · 3 pezzi',d:'Carbonio, 50-150 g, vetta in fibra piena sensibile: mormore e orate con mare calmo.',p:()=>89},
+    {id:'surf420c',rod:1,n:'Canna surfcasting 4,20 m carbonio · 3 pezzi',d:'Carbonio 30 t, 100-200 g, anelli SiC: leggera e reattiva (+4%).',p:()=>119},
+    {id:'surf420c2',rod:1,n:'Canna surfcasting 4,20 m carbonio · 2 pezzi',d:'Un solo innesto: azione più continua e sensibile (+6%). Si trasporta lunga 2,15 m.',p:()=>149},
+    {id:'surf450',rod:1,n:'Canna surfcasting 4,50 m carbonio · 3 pezzi',d:'Carbonio, 100-250 g, azione di punta: più distanza (+6%).',p:()=>139},
+    {id:'surf450_2',rod:1,n:'Canna surfcasting 4,50 m carbonio · 2 pezzi',d:'Carbonio 36 t, 100-250 g, un solo innesto: più potenza nel lancio (+8%).',p:()=>189},
+    {id:'surf450h',rod:1,n:'Canna surfcasting 4,50 m ibrida · 3 pezzi',d:'Fusto tubolare e vetta in carbonio pieno: lancia lontano (+8%) e segnala le tocche delicate.',p:()=>169},
+    {id:'surf470',rod:1,n:'Canna surfcasting 4,70 m parabolica · 3 pezzi',d:'Azione progressiva, 120-250 g: perdona gli errori nel lancio pendolare (+10%).',p:()=>199},
+    {id:'surf480',rod:1,n:'Canna Tournament 4,80 m · 3 pezzi',d:'Carbonio alto modulo, 150-250 g, per i lanci lunghi (+12%). Da veri agonisti.',p:()=>279},
+    {id:'surf480_2',rod:1,n:'Canna Tournament 4,80 m · 2 pezzi',d:'Carbonio alto modulo, 150-250 g, un solo innesto: la scelta dei campioni (+14%).',p:()=>339},
+    {id:'surf500',rod:1,n:'Canna Long Cast 5,00 m · 3 pezzi',d:'Carbonio 46 t, 175-275 g, anelli Low Rider: la regina della distanza (+16%).',p:()=>389},
+    {id:'surf500_2',rod:1,n:'Canna Long Cast 5,00 m · 2 pezzi',d:'Carbonio 46 t, 175-275 g, un solo innesto da 2,55 m: il massimo della distanza (+18%).',p:()=>459}]},
   {k:'mulinelli',n:'⚙️ Mulinelli',items:[
     {id:'reel',n:'Mulinello surfcasting bobina lunga',d:'Bobina conica in alluminio, frizione anteriore. Più grande = frizione più potente.',opts:[{k:'t',n:'Taglia',v:['6000','8000','10000','14000']}],p:o=>[45,69,119,189][o.t]},
     {id:'reelBase',reel:'r6000',n:'Mulinello 6000 base',d:'Semplice e robusto, frizione 8 kg.',p:()=>29},
@@ -1278,7 +1282,7 @@ function gearQuality(){const g=st.gear,b=g.bought||{},w=wxAt(st.gt);let q=.7;
   q+={surf420:0,surf420s:(w.wave||0)<.6?.12:.04,surf450:.1,surf480:.14}[g.rod]||0;q+={r6000:.02,r8000:0,r10000:.05,r14000:.06,rT:.09}[g.reel]||0;
   if(b.fluo)q+=g.fluo<=.25?.07:g.fluo<=.3?.05:.03;if(b.line)q+=.02;if(b.hook)q+=.03;if(b.beads&&night()>.3)q+=.05;if(g.red&&night()>.3)q+=.04;if(b.bucket)q+=.03;if(Object.keys(b).some(k=>k.startsWith('b_')))q+=.04;
   return Math.min(1.2,q);}
-const ROD_COL={surf420:['#2b2f36','#3a4049'],beach390:['#d9b24a','#c9a24a'],tele420:['#1b1b1b','#2b2b2b'],surf420s:['#e8e8e4','#cfd3d6'],surf420c:['#1b3d22','#2b5d32'],surf450:['#0f2f5a','#1d4f8a'],surf450h:['#3a1f5c','#5a3a8a'],surf470:['#7a5a2a','#9a7a3a'],surf480:['#5a0f12','#8a1c20'],surf500:['#101010','#c9a24a']},REEL_COL={r5000:'#6b7480',r6000:'#2b2f36',r8000:'#3d4550',r10000:'#b8352a',r14000:'#c9a24a',rRear:'#2f6fb5',rLC:'#d4d8dc',rMult:'#8a1c20',rT:'#d9dde2'};
+const ROD_COL={surf420:['#2b2f36','#3a4049'],beach390:['#d9b24a','#c9a24a'],tele420:['#1b1b1b','#2b2b2b'],surf420s:['#e8e8e4','#cfd3d6'],surf420c:['#1b3d22','#2b5d32'],surf450:['#0f2f5a','#1d4f8a'],surf450h:['#3a1f5c','#5a3a8a'],surf470:['#7a5a2a','#9a7a3a'],surf480:['#5a0f12','#8a1c20'],surf500:['#101010','#c9a24a'],surf420c2:['#14301a','#c9a24a'],surf450_2:['#0a2240','#c9a24a'],surf480_2:['#3a0a0c','#c9a24a'],surf500_2:['#050505','#d9dde2']},REEL_COL={r5000:'#6b7480',r6000:'#2b2f36',r8000:'#3d4550',r10000:'#b8352a',r14000:'#c9a24a',rRear:'#2f6fb5',rLC:'#d4d8dc',rMult:'#8a1c20',rT:'#d9dde2'};
 // la canna e il mulinello scelti si vedono sul modello
 function skinRod(obj,rodId,reelId){const g=st.gear,U=obj.userData;if(!U.sk){U.sk={m1:new T.MeshStandardMaterial({roughness:.3,metalness:.35}),m2:new T.MeshStandardMaterial({roughness:.3,metalness:.35}),mr:new T.MeshStandardMaterial({roughness:.3,metalness:.75}),base:U.reel.scale.x};
     obj.traverse(o=>{if(!o.isMesh)return;if(o.material===MAT.blank)o.material=U.sk.m1;else if(o.material===MAT.blank2)o.material=U.sk.m2;else if(o.material===MAT.reel)o.material=U.sk.mr;});}
