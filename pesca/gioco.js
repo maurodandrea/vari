@@ -472,6 +472,9 @@ function buildWorld(){
     it.position.set(-.18+i*.088,.218,j?.05:-.05);box.add(it);}
   const lid=new T.Group();lid.position.set(0,.2,.13);box.add(lid);const lm=new T.Mesh(new T.BoxGeometry(.46,.04,.26),bl);lm.position.set(0,.02,-.13);lid.add(lm);lid.rotation.x=1.9;
   const hdl=new T.Mesh(new T.TorusGeometry(.06,.01,6,12,Math.PI),new T.MeshStandardMaterial({color:'#222'}));hdl.position.set(0,.04,-.13);lid.add(hdl);
+  if(!st.gear.bought?.box){box.clear();const bm=new T.MeshStandardMaterial({color:'#eef2f4',roughness:.35,transparent:true,opacity:.78,side:T.DoubleSide}),bg=new T.SphereGeometry(.13,14,10);const P=bg.attributes.position;for(let i=0;i<P.count;i++){const y=P.getY(i);P.setY(i,Math.max(-.02,y)*.9+Math.sin(P.getX(i)*40)*.008);P.setX(i,P.getX(i)*(1.2+Math.sin(P.getZ(i)*30)*.05));}bg.computeVertexNormals();
+    const bag=new T.Mesh(bg,bm);bag.position.y=.02;box.add(bag);for(const [x,c] of [[-.05,'#c0392b'],[.03,'#d9b24a'],[.07,'#2f6fb5']]){const it=new T.Mesh(new T.BoxGeometry(.04,.02,.03),new T.MeshStandardMaterial({color:c}));it.position.set(x,.03,0);box.add(it);}
+    for(const sx of[-1,1]){const h=new T.Mesh(new T.TorusGeometry(.035,.006,6,12,Math.PI),bm);h.position.set(sx*.06,.12,0);box.add(h);}}
   box.position.set(CHAIR.x+.62,CHAIR.z*.035,CHAIR.z-.25);box.rotation.y=-.4;box.traverse(o=>{if(o.isMesh)o.castShadow=true;});scene.add(box);
   const eb=new T.Group(),ebm=new T.Mesh(new T.BoxGeometry(.16,.06,.11),new T.MeshStandardMaterial({color:'#e8e2d0',roughness:.7}));ebm.position.y=.03;eb.add(ebm);
   for(let i=0;i<7;i++){const w=new T.Mesh(new T.TorusGeometry(.018,.005,5,10,rnd(2,4)),new T.MeshStandardMaterial({color:i%2?'#b8434e':'#d9705a',roughness:.6}));w.position.set(rnd(-.05,.05),.065,rnd(-.03,.03));w.rotation.set(Math.PI/2,0,rnd(0,6));eb.add(w);}
@@ -596,7 +599,7 @@ function buildGear(){LANTERNS=[];const y=CHAIR.z,gb=st.gear.bought||{};if(gb.coo
   // porta-esche e telo per l'attrezzatura
   const telo=new T.Mesh(new T.PlaneGeometry(1.6,1.1),new T.MeshStandardMaterial({color:'#6b5a3a',roughness:1}));telo.rotation.x=-Math.PI/2;telo.position.set(CHAIR.x+.4,y*.035+.01,y+.2);telo.receiveShadow=true;scene.add(telo);MYG.push(telo);
   {const o=st.gear.own||{},b=st.gear.bought||{},Y=y*.035;
-    if(b.box){const bx=new T.Mesh(new T.BoxGeometry(.42,.14,.26),new T.MeshStandardMaterial({color:'#2f6fb5',roughness:.5}));bx.position.set(CHAIR.x+.2,Y+.08,y+.05);bx.castShadow=true;scene.add(bx);MYG.push(bx);const lid=new T.Mesh(new T.BoxGeometry(.43,.02,.27),new T.MeshStandardMaterial({color:'#e9eef2',transparent:true,opacity:.6}));lid.position.set(CHAIR.x+.2,Y+.16,y+.05);scene.add(lid);MYG.push(lid);}
+    if(false&&b.box){const bx=new T.Mesh(new T.BoxGeometry(.42,.14,.26),new T.MeshStandardMaterial({color:'#2f6fb5',roughness:.5}));bx.position.set(CHAIR.x+.2,Y+.08,y+.05);bx.castShadow=true;scene.add(bx);MYG.push(bx);const lid=new T.Mesh(new T.BoxGeometry(.43,.02,.27),new T.MeshStandardMaterial({color:'#e9eef2',transparent:true,opacity:.6}));lid.position.set(CHAIR.x+.2,Y+.16,y+.05);scene.add(lid);MYG.push(lid);}
     if(b.bucket){const bu=new T.Mesh(new T.CylinderGeometry(.16,.13,.3,16),new T.MeshStandardMaterial({color:'#e8e2d0',roughness:.6}));bu.position.set(CHAIR.x+.85,Y+.15,y+.45);bu.castShadow=true;scene.add(bu);MYG.push(bu);const lc=new T.Mesh(new T.CylinderGeometry(.165,.165,.03,16),new T.MeshStandardMaterial({color:'#2f8a5a'}));lc.position.set(CHAIR.x+.85,Y+.31,y+.45);scene.add(lc);MYG.push(lc);}
     if(b.scis){const sc=new T.Mesh(new T.BoxGeometry(.14,.01,.04),new T.MeshStandardMaterial({color:'#c0392b'}));sc.position.set(CHAIR.x+.6,Y+.02,y-.05);sc.rotation.y=.6;scene.add(sc);MYG.push(sc);}
     if(b.star){for(let k=0;k<3;k++){const s2=new T.Mesh(new T.CylinderGeometry(.006,.006,.05,6),new T.MeshStandardMaterial({color:'#9dff7a',emissive:'#5aff3a',emissiveIntensity:.6}));s2.rotation.z=Math.PI/2;s2.position.set(CHAIR.x-.05+k*.03,Y+.02,y+.3);scene.add(s2);MYG.push(s2);}}}
@@ -1110,8 +1113,8 @@ const today=()=>new Date().toISOString().slice(0,10);
 // kit di partenza: il minimo indispensabile. Tutto il resto si compra al negozio
 const GEAR0={v:2,rod:'beach390',rods:['beach390'],rodCnt:{beach390:1},reel:'r5000',reels:['r5000'],reelCnt:{r5000:1},drag:7,line:.25,leader:5,fluo:.30,term:10,
   baits:{koreano:15},hooks:{4:10},leads:{80:1,100:1,125:1},grip:{},ogiva:{},forged:{},starlight:0,swivels:15,snaps:15,needle:true,elastic:false,lamp:false,torch:0,spikes:1,spikeT:'pvc',
-  chair:'',chairs:[],hat:'none',hats:['none'],outfits:[],shelters:[],shelter:'',boots:false,own:{},bought:{box:true,scis:true}};
-function gearLoad(){let g=LSG('gear',null);const G0=JSON.parse(JSON.stringify(GEAR0));if(!g||g.v!==2){LSS('outfit','jeans');LSS('nrods',1);return G0;}for(const k in G0)if(g[k]===undefined)g[k]=G0[k];return g;}
+  chair:'',chairs:[],hat:'none',hats:['none'],outfits:[],shelters:[],shelter:'',boots:false,own:{},bought:{scis:true}};
+function gearLoad(){let g=LSG('gear',null);const G0=JSON.parse(JSON.stringify(GEAR0));if(!g||g.v!==2){LSS('outfit','jeans');LSS('nrods',1);return G0;}if(!g.boxFix){g.boxFix=true;if(g.bought)delete g.bought.box;}for(const k in G0)if(g[k]===undefined)g[k]=G0[k];return g;}
 st.gear=gearLoad();st.money=LSG('money',300);if(!LSG('eco3',0)){st.money=Math.max(st.money,300);LSS('eco3',1);LSS('money',st.money);}
 // guadagni: tempo di pesca nel gioco, catture e uso dell'app (con un tetto al giorno)
 const EARN={fish:.5,fishMax:15};function earnDay(){const e=LSG('earn',{});if(e.d!==today())return {d:today(),fish:0,app:0};return e;}
@@ -1241,7 +1244,7 @@ function skinRod(obj,rodId,reelId){const g=st.gear,U=obj.userData;if(!U.sk){U.sk
 function gearChips(){const g=st.gear,b=g.bought||{},q=gearQuality(),rn=id=>id==='rT'?'Tournament 14000':id.slice(1);
   return `<div class="grow" style="flex-wrap:wrap;gap:4px"><span>Canna</span>${g.rods.map(id=>`<button class="gc ${g.rod===id?'on':''}" onclick="GAME.useRod('${id}')">${ROD[id].n}</button>`).join('')}</div>
     <div class="grow" style="flex-wrap:wrap;gap:4px"><span>Mulinello</span>${g.reels.map(id=>`<button class="gc ${g.reel===id?'on':''}" onclick="GAME.useReel('${id}')">${reelN(id)}</button>`).join('')}</div>
-    <div class="gs">🎒 Filo ${String(g.line).replace('.',',')} mm${b.leader||g.leader?` · shock leader ${g.leader}`:''}${b.fluo?` · fluorocarbon ${String(g.fluo).replace('.',',')}`:''} · starlight ${g.starlight}${b.beads?' · perline':''}${b.elastic?' · elastico':''}${b.lamp||b.lampF?' · frontale LED':''}${b.spike?' · picchetti in alluminio':''}${b.box?' · cassetta':''}${b.bucket?' · secchio esche':''}</div>
+    <div class="gs">🎒 Filo ${String(g.line).replace('.',',')} mm${b.leader||g.leader?` · shock leader ${g.leader}`:''}${b.fluo?` · fluorocarbon ${String(g.fluo).replace('.',',')}`:''} · starlight ${g.starlight}${b.beads?' · perline':''}${b.elastic?' · elastico':''}${b.lamp||b.lampF?' · frontale LED':''}${b.spike?' · picchetti in alluminio':''}${b.box?' · cassetta':' · busta per la minuteria'}${b.bucket?' · secchio esche':''}</div>
     <div class="gs" style="color:${q<.8?'#ffb547':'#5ee08a'}">${q<.8?'⚠️ Attrezzatura di base: pescherai meno. Al negozio trovi di meglio.':'✅ Attrezzatura buona: '+Math.round(q*100)+'% di efficacia.'}</div>`;}
 G.useReel=id=>{const g=st.gear;g.reel=id;g.drag=reelDrag(id);gearSave();if(st.phase==='shop')shopUI();else setUI();};
 G.gearView=()=>{st.phaseBack=st.phase;st.phase='gear';setUI();};G.gearBack=()=>{st.phase=st.phaseBack||'wait';setUI();};
