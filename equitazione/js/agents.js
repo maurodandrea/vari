@@ -292,11 +292,11 @@ EQ.populate.home=function(W){
     const ka=wanderAgent(W,kid,{x:-6+k*3,z:4,hx:12,hz:9},{speed:2.6,idle:[.5,2.5],step:7});kid.anim=(dt,sp)=>kid.npc.pose(dt,sp>.2?'run':'play',{speed:sp});
     ka.label=label(kid,t+' '+nm,1.55);kid.name=t+' '+nm;
     kid.lines=['Giochiamo a nascondino?','Mi fai salire sul cavallo?','Il tuo cavallo è bellissimo!','Facciamo una gara di corsa!','Dopo guardiamo la TV insieme?','In cameretta ci sono i peluche!','Io da grande avrò un pony!'];});
-  // SCUOLA: maestra, compagni di classe, prof di ginnastica, cuoca
+  // SCUOLA MEDIA: professoressa, compagni di classe, prof di ginnastica, cuoca
   const S=W.school;if(S){const ox=S.ox,oz=S.oz;
     const sitK=(x,z,h,fem)=>{const e=addTo(W,person({kid:true,fem,backpack:null}));staticAgent(W,e,ox+x,oz+z,h,(dt,t,a)=>{e.npc.pose(dt,Math.sin(t*.6+x)>.85?'wave':'sit',{});},{far:200});return e;};
     S.desksK=[[-12.4,-5.0],[-9,-5.0],[-5.6,-5.0],[-12.4,-2.2],[-5.6,-2.2]].map(([x,z],i)=>sitK(x,z,Math.PI,i%2===0));
-    const t=addTo(W,person({fem:true,hair:0x6b3a1a,hairStyle:'bun',top:0xc0392b,pants:0x2a2a40,sleeves:'long',glasses:true}));staticAgent(W,t,ox-10.6,oz-7.5,0,(dt)=>t.npc.pose(dt,'talk',{}),{far:200});label(t,'Maestra Rosa',2.05);
+    const t=addTo(W,person({fem:true,hair:0x6b3a1a,hairStyle:'bun',top:0xc0392b,pants:0x2a2a40,sleeves:'long',glasses:true}));staticAgent(W,t,ox-10.6,oz-7.5,0,(dt)=>t.npc.pose(dt,'talk',{}),{far:200});label(t,'Prof.ssa Rosa',2.05);
     const c=addTo(W,person({fem:false,top:0x2a58c8,pants:0x2a58c8,sleeves:'long',hairStyle:'short'}));staticAgent(W,c,ox+0,oz-1.2,Math.PI,(dt,tt)=>c.npc.pose(dt,Math.sin(tt*.8)>.6?'cheer':'stand',{}),{far:200});label(c,'Prof. Marco',2.05);
     const k=addTo(W,person({fem:true,top:0xffffff,pants:0xffffff,sleeves:'long',hairStyle:'bun'}));staticAgent(W,k,ox-14.4,oz+5,Math.PI/2,(dt)=>k.npc.pose(dt,'brush',{}),{far:200});label(k,'Signora Pina',2.05);
     [[-7.6,4.25,Math.PI,true],[-11.2,4.25,Math.PI,false],[-8.8,6.35,0,true],[-10,8.05,Math.PI,false]].forEach(([x,z,h,f])=>{const e=addTo(W,person({kid:true,fem:f,backpack:null}));staticAgent(W,e,ox+x,oz+z,h,(dt,tt)=>e.npc.pose(dt,Math.sin(tt*1.3+x)>.3?'sit':'talk',{}),{far:200});});
