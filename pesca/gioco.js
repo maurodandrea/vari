@@ -585,7 +585,31 @@ const Y0=()=>CHAIR.z*.035;let CAMPX=[];function styleCamp(){const g=st.gear,ch=C
   if(g.bought?.bagRod){const t=new T.Mesh(new T.CylinderGeometry(.07,.07,1.6,10),M('#2b2f36'));t.rotation.z=Math.PI/2;t.position.set(CHAIR.x+1.1,Y+.07,CHAIR.z+.9);add(t);}
   if(g.bought?.bagBack){const z=new T.Mesh(new T.BoxGeometry(.32,.48,.2),M('#3a5a2a'));z.position.set(CHAIR.x-.75,Y+.24,CHAIR.z+.75);z.rotation.y=.4;add(z);}
   if(g.bought?.bagTackle){const z=new T.Mesh(new T.BoxGeometry(.38,.22,.26),M('#2f6fb5'));z.position.set(CHAIR.x+.55,Y+.11,CHAIR.z+.95);add(z);}
-  if(g.bought?.cart){const cg=new T.Group(),bd=new T.Mesh(new T.BoxGeometry(.9,.3,.55),M('#5a6470',{metalness:.5}));bd.position.y=.35;cg.add(bd);for(const sx of[-1,1]){const w=new T.Mesh(new T.CylinderGeometry(.16,.16,.14,16),M('#1b1b1b'));w.rotation.x=Math.PI/2;w.position.set(sx*.3,.16,.32);cg.add(w);}cg.position.set(CHAIR.x-1.5,Y,CHAIR.z+.4);add(cg);}}
+  if(g.bought?.cart){const cg=new T.Group(),bd=new T.Mesh(new T.BoxGeometry(.9,.3,.55),M('#5a6470',{metalness:.5}));bd.position.y=.35;cg.add(bd);for(const sx of[-1,1]){const w=new T.Mesh(new T.CylinderGeometry(.16,.16,.14,16),M('#1b1b1b'));w.rotation.x=Math.PI/2;w.position.set(sx*.3,.16,.32);cg.add(w);}cg.position.set(CHAIR.x-1.5,Y,CHAIR.z+.4);add(cg);}
+  // tutto quello che hai nello zaino, in bella vista sul telo
+  const T0=[CHAIR.x+.4,CHAIR.z+.2],put=(o,x,z,ry=0)=>{o.position.set(T0[0]+x,Y+.012,T0[1]+z);o.rotation.y=ry;return add(o);},box3=(w,h,d,cl,o={})=>{const m=new T.Mesh(new T.BoxGeometry(w,h,d),M(cl,o));m.position.y=h/2;const gg=new T.Group();gg.add(m);return gg;};
+  const BC={koreano:'#c0392b',bibi:'#8e44ad',arenicola:'#6b3e26',americano:'#d35400',cannolicchio:'#d9cfb0',cozza:'#2c3e50',sarda:'#7f8c8d',seppia:'#ecf0f1',gambero:'#e67e22',cefalotto:'#3498db'};
+  // scatole delle esche
+  Object.entries(g.baits||{}).filter(([,n])=>n>0).forEach(([k,n],i)=>{const bx=box3(.11,.05,.08,BC[k]||'#888');const lid=new T.Mesh(new T.BoxGeometry(.112,.008,.082),M('#f4f4f0'));lid.position.y=.054;bx.add(lid);put(bx,-.65+(i%5)*.13,.42-Math.floor(i/5)*.11,rnd(-.3,.3));});
+  // piombi (fino a 8)
+  {let i=0;for(const [w,n] of Object.entries(g.leads||{}))for(let k=0;k<n&&i<8;k++,i++){const sz=.018+(+w-80)/120*.012,pb=new T.Mesh(new T.ConeGeometry(sz,sz*1.6,4),M('#6b7480',{metalness:.6,roughness:.4}));pb.position.y=sz*.8;const gg=new T.Group();gg.add(pb);put(gg,-.1+(i%4)*.06,.45-Math.floor(i/4)*.06,i);}}
+  // bustine di ami, girelle, moschettoni, starlight
+  const card=(cl,lab,x,z)=>{const c=new T.Mesh(new T.BoxGeometry(.07,.004,.1),M(cl));c.position.y=.003;const gg=new T.Group();gg.add(c);const w=new T.Mesh(new T.BoxGeometry(.055,.002,.04),M('#ffffff'));w.position.set(0,.006,.02);gg.add(w);put(gg,x,z,rnd(-.4,.4));};
+  Object.entries(g.hooks||{}).filter(([,n])=>n>0).forEach(([m],i)=>card('#c9a24a','',.18+i*.075,.42));
+  if(g.swivels>0)card('#2f6fb5','',.18,.3);if(g.snaps>0)card('#3a8a5a','',.26,.3);if(g.starlight>0)card('#7dff5a','',.34,.3);
+  // bobine: filo o trecciato, terminali, shock leader
+  const spool=(cl,r,x,z)=>{const sp=new T.Group(),c=new T.Mesh(new T.CylinderGeometry(r,r,.03,16),M(cl,{roughness:.4}));c.position.y=.015;sp.add(c);const rim=new T.Mesh(new T.CylinderGeometry(r*1.15,r*1.15,.006,16),M('#222'));rim.position.y=.031;sp.add(rim);put(sp,x,z);};
+  spool(g.braid?'#2ecc71':'#e8e8e8',.035,.48,.42);if(g.term>0)spool('#9fd3f0',.025,.57,.42);if(g.leader>0)spool('#e74c3c',.022,.64,.42);
+  // ago, elastico, perline, forbici
+  if(g.needle){const nd=new T.Mesh(new T.CylinderGeometry(.002,.002,.14,6),M('#d0d4d8',{metalness:.8,roughness:.2}));nd.rotation.z=Math.PI/2;nd.position.y=.004;const gg=new T.Group();gg.add(nd);put(gg,.5,.3,.3);}
+  if(g.elastic)spool('#f39c12',.016,.62,.3);
+  if(g.bought?.beads){for(let k=0;k<6;k++){const bd=new T.Mesh(new T.SphereGeometry(.006,8,6),new T.MeshStandardMaterial({color:'#9dff7a',emissive:'#5aff3a',emissiveIntensity:.4}));bd.position.y=.006;const gg=new T.Group();gg.add(bd);put(gg,.7+k*.015,.32);}}
+  // mulinelli e canne di scorta (quelli che non sono montati), picchetti in più piantati nella sabbia
+  const used=st.rods?.length||st.nRods||1,spareR=Math.max(0,Object.values(g.reelCnt||{}).reduce((a,b)=>a+b,0)-used),spareC=Math.max(0,Object.values(g.rodCnt||{}).reduce((a,b)=>a+b,0)-used),spareS=Math.max(0,(g.spikes||0)-used-(g.spikeT==='tripod'?2:0));
+  for(let k=0;k<Math.min(3,spareR);k++){const rl=new T.Group(),b=new T.Mesh(new T.CylinderGeometry(.045,.05,.07,14),M('#3d4550',{metalness:.6}));b.rotation.z=Math.PI/2;b.position.y=.05;rl.add(b);const sp=new T.Mesh(new T.CylinderGeometry(.04,.04,.05,14),M('#c9a24a',{metalness:.7}));sp.rotation.z=Math.PI/2;sp.position.set(-.06,.05,0);rl.add(sp);put(rl,.85,.2+k*.13,.5);}
+  for(let k=0;k<Math.min(3,spareC);k++){const rd=new T.Mesh(new T.CylinderGeometry(.006,.014,3.6,8),M('#2b2f36',{roughness:.3}));rd.rotation.z=Math.PI/2;rd.position.y=.015;const gg=new T.Group();gg.add(rd);put(gg,.2,.75+k*.06,.05);}
+  for(let k=0;k<Math.min(3,spareS);k++){const pk=new T.Mesh(new T.CylinderGeometry(.012,.006,1.2,8),MAT.alu);pk.position.y=.45;const gg=new T.Group();gg.add(pk);put(gg,-1.1-k*.25,.6);}
+}
 function cooler(x,z,ry,c1='#2f6fb5'){const g=new T.Group(),b=new T.Mesh(new T.BoxGeometry(.5,.32,.32),new T.MeshStandardMaterial({color:c1,roughness:.5}));b.position.y=.16;g.add(b);
   const lid=new T.Mesh(new T.BoxGeometry(.52,.06,.34),new T.MeshStandardMaterial({color:'#f2f2f2',roughness:.5}));lid.position.y=.34;g.add(lid);const h=new T.Mesh(new T.TorusGeometry(.12,.012,6,12,Math.PI),MAT.chairF);h.position.y=.37;g.add(h);
   g.position.set(x,Math.max(0,z*.035),z);g.rotation.y=ry;g.traverse(o=>{if(o.isMesh)o.castShadow=true;});scene.add(g);return g;}
@@ -1400,7 +1424,7 @@ function size(){if(!renderer)return;const w=root.clientWidth,h=root.clientHeight
 const btn=(t,f,cls='')=>`<button class="gb ${cls}" onclick="GAME.${f}">${t}</button>`;
 const suggestLead=w=>w<.3?100:w<.6?125:w<1?150:w<1.6?175:200;
 function rodStatus(r){if(r.state==='tangled')return '🧶 lenza incrociata';if(r.dismantled)return 'smontata';if(r.broken)return 'terminale rotto';if(r.held)return 'in mano';if(r.state==='hooked')return '🐟 PESCE ALLAMATO!';if(!r.bait)return 'da innescare';if(r.state==='bite')return '🔔 ABBOCCATA!';if(r.baitLeft<=0)return 'esca finita?';return r.baitLeft>20?'in pesca':'esca consumata';}
-function setUI(){const p=st.phase;let h='';
+function setUI(){const p=st.phase;let h='';if(p==='wait'&&CHAIRG&&scene){const g=st.gear,k=JSON.stringify([g.baits,g.leads,g.hooks,g.swivels>0,g.snaps>0,g.starlight>0,g.term>0,g.leader>0]);if(k!==st.campKey){st.campKey=k;styleCamp();}}
   if(p==='setup'){const w=wxAt(st.gt),sug=suggestLead(w.wave),G9=st.gear;if(!(G9.leads[st.lead]>0)){const l=[sug,125,100,150,80,175,200].find(x=>G9.leads[x]>0);if(l)st.lead=l;}if(!(G9.hooks[st.hook]>0)){const h=[4,2,6,0,8].find(x=>G9.hooks[x]>0);if(h!=null)st.hook=h;}st.nRods=Math.max(1,Math.min(st.nRods,maxRods()||1));
     h=`<div class="gpanel"><b>🎣 ${SPOT.name} · ${gameDate().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</b>
       <div class="gs">Mare ${seaName(w.wave)} (${w.wave.toFixed(1).replace('.',',')} m), vento ${Math.round(w.ws)} km/h da ${windName(w.wd)}, acqua ${Math.round(w.sst)}°</div>
