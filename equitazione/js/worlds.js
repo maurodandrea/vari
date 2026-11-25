@@ -73,9 +73,9 @@ function inst1(geo,material,arr,cast){
   w.boundingSphere=new THREE.Sphere(cen,r+gr*ms);
   m.count=arr.length; m.castShadow=cast!==false; m.receiveShadow=true; return m;
 }
-function inst(geo,material,arr,cast){
+function inst(geo,material,arr,cast,cell){
   if(arr.length<40)return inst1(geo,material,arr,cast);
-  const cs=80,gs={};arr.forEach(a=>{const k=Math.floor(a.x/cs)+'_'+Math.floor(a.z/cs);(gs[k]=gs[k]||[]).push(a);});
+  const cs=cell||80,gs={};arr.forEach(a=>{const k=Math.floor(a.x/cs)+'_'+Math.floor(a.z/cs);(gs[k]=gs[k]||[]).push(a);});
   const g=new THREE.Group();for(const k in gs)g.add(inst1(geo,material,gs[k],cast));return g;
 }
 EQ.inst=inst;
@@ -108,10 +108,19 @@ function treeKit(){
   KIT={fol,bark,oak:[oakT,oakC],spruce:[sprT,sprC],umbrella:[umbT,umbC],poplar:[popT,popC]};
   return KIT;
 }
-function addTrees(W,type,list,colors,collR){
-  const K=treeKit();
-  const t=inst(K[type][0],K.bark,list.map(a=>({x:a.x,y:a.y||0,z:a.z,ry:a.ry,s:a.s})));
-  const c=inst(K[type][1],K.fol,list.map((a,i)=>({x:a.x,y:a.y||0,z:a.z,ry:a.ry,s:a.s,col:colors[i%colors.length],cm:.75+Math.random()*.4})));
+let KITL=null;
+function treeKitLow(){if(KITL)return KITL;const K=treeKit();
+  const ico=(r,x,y,z,sx,sy,sz)=>EQ.xform(new THREE.IcosahedronGeometry(r,0),x,y,z,0,0,0,sx,sy,sz);
+  KITL={fol:K.fol,bark:K.bark,
+    oak:[EQ.xform(G.cyl(.25,.38,5.6,5),0,2.8,0),EQ.merge([ico(2.6,0,6.6,0,1.2,1,1.2),ico(1.9,.8,7.6,.5,1,1,1)])],
+    spruce:[EQ.xform(G.cyl(.15,.3,4,5),0,2,0),EQ.xform(G.cone(2.6,9,6),0,7,0)],
+    umbrella:[EQ.loft([[0,0,0,.3],[1,5,.1,.22],[1.9,9.6,.3,.14]],5,1),EQ.merge([ico(2.8,1.9,10.2,.3,1.6,.45,1.6)])],
+    poplar:[EQ.xform(G.cyl(.15,.28,8,5),0,4,0),ico(1.6,0,8,0,1,3.2,1)]};
+  return KITL;}
+function addTrees(W,type,list,colors,collR,cell,low){
+  const K=low?treeKitLow():treeKit();
+  const t=inst(K[type][0],K.bark,list.map(a=>({x:a.x,y:a.y||0,z:a.z,ry:a.ry,s:a.s})),true,cell);
+  const c=inst(K[type][1],K.fol,list.map((a,i)=>({x:a.x,y:a.y||0,z:a.z,ry:a.ry,s:a.s,col:colors[i%colors.length],cm:.75+Math.random()*.4})),true,cell);
   W.group.add(t,c);
   if(collR)list.forEach(a=>W.colliders.push({x:a.x,z:a.z,r:collR*(a.s||1)}));
 }
@@ -208,7 +217,7 @@ function field(W,x,z,w,d,kind,ry){const t=fieldTex[kind]().clone();t.needsUpdate
   const m=new THREE.Mesh(new THREE.PlaneGeometry(w,d),new THREE.MeshStandardMaterial({map:t,roughness:1,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-4}));m.rotation.x=-Math.PI/2;m.rotation.z=ry||0;m.position.set(x,.025,z);m.receiveShadow=true;W.group.add(m);return m;}
 EQ.field=field;
 /* portale verso un'altra località: cartello ai bordi */
-const PNAME={yard:'🏠 MANEGGIO',beach:'🏖️ SPIAGGIA',city:'🏙️ CITTÀ',forest:'🌲 BOSCO'};
+const PNAME={home:'🏡 CASA MIA',show:'🏆 CONCORSO',yard:'🏠 MANEGGIO',beach:'🏖️ SPIAGGIA',city:'🏙️ CITTÀ',forest:'🌲 BOSCO'};
 function portal(W,to,x,z,inH){
   W.portals=W.portals||[];W.portals.push({to,x,z,inH});
   const y=W.height(x,z);const g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=inH;W.group.add(g);
@@ -230,6 +239,16 @@ function newWorld(name){
   return W;
 }
 EQ.addTrees=addTrees;
+/* periferia: tanti alberi sparsi (a gruppi) e qualche campo oltre la zona di gioco */
+function outskirts(W,o){o=Object.assign({r0:500,r1:2900,n:1800,type:'oak',cols:[0x6e9a3e,0x7aa64a,0x5f8a34,0x8ab456],fields:14,ok:null,y:null,clump:true},o||{});
+  const L=[],rr=U.rng(77);let k=0;
+  while(L.length<o.n*Q()&&k<o.n*8){k++;const a=rr()*TAU,r=o.r0+Math.sqrt(rr())*(o.r1-o.r0);let x=Math.cos(a)*r,z=Math.sin(a)*r;
+    if(o.ok&&!o.ok(x,z))continue;const m=o.clump?1+(rr()*4|0):1;
+    for(let j=0;j<m;j++){const xx=x+(rr()-.5)*24,zz=z+(rr()-.5)*24;if(o.ok&&!o.ok(xx,zz))continue;L.push({x:xx,z:zz,y:o.y?o.y(xx,zz)-.2:0,s:.8+rr()*.6,ry:rr()*TAU});}}
+  addTrees(W,o.type,L,o.cols,.45,450,true);
+  if(o.fields){const kinds=['wheat','plowed','alfalfa'];for(let i=0;i<o.fields;i++){const a=rr()*TAU,r=o.r0+120+rr()*(o.r1-o.r0-300);const x=Math.cos(a)*r,z=Math.sin(a)*r;if(o.ok&&!o.ok(x,z))continue;field(W,x,z,80+rr()*90,60+rr()*80,kinds[i%3],rr()*.6-.3);}}
+}
+EQ.outskirts=outskirts;
 
 /* ======================= ACQUA (shader) ======================= */
 EQ.shoreX=z=>30+4*Math.sin(z*.03)+2*Math.sin(z*.11);
@@ -359,16 +378,16 @@ EQ.buildYard=function(){
   const W=newWorld('yard');
   W.sky={elev:38,azim:140,turb:3.5,ray:1.3,fog:0xb3c8d8,near:90,far:480};
   const grp=W.group;
-  ground(W,1500,TX.grass(),240);
+  ground(W,8000,TX.grass(),1280);
   // zone
   patch(W,-14,14,76,34,TX.gravel(),5,.012);
   patch(W,0,-4,8,10,TX.gravel(),5,.012);
   const A={cx:-20,cz:-54,hx:62,hz:42}; W.spots.arena=A;
   patch(W,A.cx,A.cz,A.hx*2,A.hz*2,TX.sand(),4,.02,1);
-  W.surface=(x,z)=>{
+  const M2=10;W.surface=(x,z)=>{
     if(Math.abs(x-A.cx)<A.hx&&Math.abs(z-A.cz)<A.hz)return'sand';
     if(x>-79&&x<-11&&z>-190&&z<-110)return'sand';
-    if(x>-6&&x<42&&z>-176&&z<-124)return'sand';
+    if(x>-82&&x<42&&z>-378&&z<-242)return(x>-82+M2&&x<42-M2&&z>-378+M2&&z<-242-M2)?'sand':'grass';
     if(x>-52&&x<24&&z>-3&&z<31)return'hard';
     if(Math.abs(x-24)<16&&Math.abs(z-45)<7)return'hard';
     if((x>45&&x<75&&z>37&&z<53)||(x>53&&x<75&&z>5&&z<31)||(x>53&&x<75&&z>-39&&z<-9))return'dirt';
@@ -394,7 +413,7 @@ EQ.buildYard=function(){
   }
   W.spots.gateIn={x:A.cx,z:A.cz+A.hz+3};
   /* ---- scuderia con box ---- */
-  const SB={x0:-52,x1:-20,z0:18,z1:23,n:8}; const bw=(SB.x1-SB.x0)/SB.n;
+  const SB={x0:-60,x1:-20,z0:18,z1:23,n:10}; const bw=(SB.x1-SB.x0)/SB.n;
   const plaster=TX.plaster('#efe6d6'), woodT=TX.wood('#8a5a34'), woodD=TX.wood('#6b4226');
   patch(W,(SB.x0+SB.x1)/2,(SB.z0+SB.z1)/2,SB.x1-SB.x0,SB.z1-SB.z0,TX.straw(),2.5,.03);
   patch(W,(SB.x0+SB.x1)/2,16.2,SB.x1-SB.x0+2,3.6,TX.concrete(),3,.025,.9);
@@ -458,9 +477,9 @@ EQ.buildYard=function(){
    W.colliders.push({x:cx,z:cz,r:.9});W.spots.feed={x:cx,z:cz};}
   // balle di fieno
   {const hm=new THREE.MeshStandardMaterial({map:TX.straw(),roughness:1});
-   const pos=[[-58,19],[-58,21.6],[-58,24.2],[-55.4,20.3],[-55.4,22.9],[-58,20.3,1.6],[-58,22.9,1.6]];
+   const pos=[[-66,19],[-66,21.6],[-66,24.2],[-63.4,20.3],[-63.4,22.9],[-66,20.3,1.6],[-66,22.9,1.6]];
    pos.forEach(p=>{const b=mesh(G.cyl(.8,.8,1.2,18),hm,p[0],(p[2]||0)+.8,p[1],grp);b.rotation.z=Math.PI/2;});
-   W.colliders.push({x:-57,z:21.5,hx:2,hz:3.6});}
+   W.colliders.push({x:-65,z:21.5,hx:2,hz:3.6});}
   /* ---- selleria / spogliatoio ---- */
   {const x0=-17,x1=-9,z0=18,z1=25;const cx=(x0+x1)/2,cz=(z0+z1)/2;
    boxT(W,grp,x1-x0,3.2,z1-z0,cx,1.6,cz,TX.plaster('#e8d9be'),3);
@@ -516,10 +535,33 @@ EQ.buildYard=function(){
   W.spots.paddock={x0:24,x1:48,z0:6,z1:32};
   woodFence(W,[[34,6],[24,6],[24,32],[48,32],[48,6],[38,6]],{h:1.3,rails:3});
   /* campo 3: giro libero (solo il giocatore) */
-  {const Fq={cx:18,cz:-150,hx:24,hz:26};W.spots.free=Fq;patch(W,Fq.cx,Fq.cz,Fq.hx*2,Fq.hz*2,TX.sand('#c9a878'),4,.02,1);
-   const x0=Fq.cx-Fq.hx,x1=Fq.cx+Fq.hx,z0=Fq.cz-Fq.hz,z1=Fq.cz+Fq.hz;
-   woodFence(W,[[Fq.cx-3.5,z1],[x0,z1],[x0,z0],[x1,z0],[x1,z1],[Fq.cx+3.5,z1]],{h:1.2,rails:3,white:true,post:3});
-   sign(W,'🐴 CAMPO LIBERO · solo tu',Fq.cx,2.1,z1+.3,0,3.6,.55,'#7a5230');}
+  /* campo allenamento personale: grande, con alberi attorno, erba ai lati, laghetto al centro e due ostacoli */
+  {const Fq={cx:-20,cz:-310,hx:72,hz:78};W.spots.free=Fq;
+   const x0=Fq.cx-Fq.hx,x1=Fq.cx+Fq.hx,z0=Fq.cz-Fq.hz,z1=Fq.cz+Fq.hz,M=10;
+   {const gm=new THREE.MeshStandardMaterial({map:TX.grass(),roughness:1,color:C(0xe0ffd0),polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-4});const gt=gm.map.clone();gt.needsUpdate=true;gt.repeat.set(Fq.hx/5,Fq.hz/5);W.tex.push(gt);gm.map=gt;const gp=mesh(new THREE.PlaneGeometry(Fq.hx*2,Fq.hz*2),gm,Fq.cx,.015,Fq.cz,grp);gp.rotation.x=-Math.PI/2;}
+   patch(W,Fq.cx,Fq.cz,(Fq.hx-M)*2,(Fq.hz-M)*2,TX.sand('#c9a878'),4,.025,1);
+   woodFence(W,[[Fq.cx-4,z1],[x0,z1],[x0,z0],[x1,z0],[x1,z1],[Fq.cx+4,z1]],{h:1.2,rails:3,white:true,post:3});
+   const nm=(EQ.LS.get('pname','')||'').trim()||'Giorgia';
+   sign(W,'🐴 CAMPO ALLENAMENTO '+nm.toUpperCase(),Fq.cx,2.3,z1+.3,0,5.2,.6,'#7a5230');
+   ribbon(W,[[Fq.cx,-198],[Fq.cx,-215],[Fq.cx,z1+1]],4,TX.sand('#a88a62'),.03,4);
+   // laghetto
+   const LR=17;const bank=mesh(new THREE.CircleGeometry(LR+2.2,40),new THREE.MeshStandardMaterial({color:C(0x6f8a4a),roughness:1,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-8}),Fq.cx,.04,Fq.cz,grp);bank.rotation.x=-Math.PI/2;
+   const lg=new THREE.CircleGeometry(LR,48);lg.rotateX(-Math.PI/2);const lake=new THREE.Mesh(lg,new THREE.MeshStandardMaterial({color:C(0x3f86a0),roughness:.08,metalness:.2,polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-16}));lake.position.set(Fq.cx,.09,Fq.cz);lake.receiveShadow=true;grp.add(lake);
+   W.colliders.push({x:Fq.cx,z:Fq.cz,r:LR+.6});
+   const rocks=[],reeds=[];for(let i=0;i<36;i++){const a=i/36*TAU+rnd(-.05,.05),r=LR+rnd(.2,1.6);(i%3?reeds:rocks).push({x:Fq.cx+Math.cos(a)*r,y:0,z:Fq.cz+Math.sin(a)*r,s:rnd(.35,.8),ry:rnd(0,TAU)});}
+   grp.add(inst(blob(1,1,3.1,.6),mat(0x8a8478,.9),rocks));tufts(W,reeds.map(r=>Object.assign({},r,{s:rnd(1.2,2)})),0x9ab86a);
+   // anatre
+   const dk=[];for(let i=0;i<4;i++){const g=new THREE.Group();grp.add(g);mesh(G.sph(.18,8,6),mat(i?0x8a6a4a:0x2f6b33,.6),0,.1,0,g).scale.set(.9,.7,1.4);mesh(G.sph(.1,8,6),mat(i?0x8a6a4a:0x1f7a3a,.6),0,.28,.2,g);mesh(G.cone(.04,.12,6),mat(0xf1a020,.5),0,.26,.32,g).rotation.x=Math.PI/2;dk.push({g,r:rnd(5,13),a:rnd(0,TAU),v:rnd(.1,.25)});}
+   W.updaters.push((dt,t)=>dk.forEach(d=>{d.a+=d.v*dt;d.g.position.set(Fq.cx+Math.cos(d.a)*d.r,.12+Math.sin(t*2+d.r)*.02,Fq.cz+Math.sin(d.a)*d.r);d.g.rotation.y=-d.a;}));
+   // erbetta ai lati e fiori
+   {const L=[],F=[];for(let i=0;i<900*Q();i++){const x=rnd(x0+1,x1-1),z=rnd(z0+1,z1-1);if(Math.abs(x-Fq.cx)<Fq.hx-M&&Math.abs(z-Fq.cz)<Fq.hz-M)continue;(i%5?L:F).push({x,y:i%5?0:.15,z,ry:rnd(0,3),s:rnd(.7,1.3),col:[0xffffff,0xffe14d,0xff6fa8,0xb38cff][i%4]});}
+    tufts(W,L);grp.add(inst(G.sph(.07,6,4),mat(0xffffff,.8),F,false));}
+   // alberi tutt'attorno
+   const tr=[];for(let x=x0-7;x<=x1+7;x+=10){for(const z of [z0-7,z1+7]){if(z>Fq.cz&&Math.abs(x-Fq.cx)<8)continue;tr.push({x:x+rnd(-1.5,1.5),z:z+rnd(-1.5,1.5),s:rnd(.85,1.2),ry:rnd(0,TAU)});}}
+   for(let z=z0+3;z<=z1-3;z+=10){for(const x of [x0-7,x1+7])tr.push({x:x+rnd(-1.5,1.5),z:z+rnd(-1.5,1.5),s:rnd(.85,1.2),ry:rnd(0,TAU)});}
+   for(const [cx2,cz2] of [[x0+5,z0+5],[x1-5,z0+5],[x0+5,z1-5],[x1-5,z1-5]])tr.push({x:cx2,z:cz2,s:1.1,ry:rnd(0,3)});
+   addTrees(W,'oak',tr,[0x6e9a3e,0x7aa64a,0x5f8a34,0x8ab456],.45);
+  }
   /* campo 2: addestramento con Carlo */
   {const A2={cx:-45,cz:-150,hx:34,hz:40};W.spots.arena2=A2;patch(W,A2.cx,A2.cz,A2.hx*2,A2.hz*2,TX.sand(),4,.02,1);
    const geos=[];const seg=(x1,z1,x2,z2)=>{const L=Math.hypot(x2-x1,z2-z1),a=Math.atan2(z2-z1,x2-x1),n=Math.max(1,Math.round(L/3));for(let i=0;i<=n;i++){const t=i/n;geos.push(EQ.xform(G.box(.15,1.3,.15),x1+(x2-x1)*t,.65,z1+(z2-z1)*t));}
@@ -547,7 +589,8 @@ EQ.buildYard=function(){
   const gateSign=(x,z,ry,txt,col)=>{const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=ry;grp.add(g);
     const wd=new THREE.MeshStandardMaterial({map:woodT});for(const sd of [-1,1]){mesh(G.box(.35,3.6,.35),wd,sd*5,1.8,0,g);}
     mesh(G.box(10.6,.4,.4),wd,0,3.6,0,g);const t=EQ.labelTex(txt,{bg:col,w:512,h:110,font:'bold 60px Fredoka, Trebuchet MS, sans-serif'});W.tex.push(t);
-    for(const sd of [1,-1]){const m=mesh(new THREE.PlaneGeometry(4.6,1),new THREE.MeshStandardMaterial({map:t,roughness:.6}),0,3.0,sd*.22,g);if(sd<0)m.rotation.y=Math.PI;}
+    const tb=EQ.labelTex('🏠 MANEGGIO',{bg:'#5a2e14',w:512,h:110,font:'bold 60px Fredoka, Trebuchet MS, sans-serif'});W.tex.push(tb);
+    for(const sd of [1,-1]){const inYard=(Math.sin(ry)*sd*(-x)+Math.cos(ry)*sd*(-z))>0;const m=mesh(new THREE.PlaneGeometry(4.6,1),new THREE.MeshStandardMaterial({map:inYard?t:tb,roughness:.6}),0,3.0,sd*.22,g);if(sd<0)m.rotation.y=Math.PI;}
     W.colliders.push({x:x+Math.cos(ry)*5,z:z-Math.sin(ry)*5,r:.3},{x:x-Math.cos(ry)*5,z:z+Math.sin(ry)*5,r:.3});};
   gateSign(80,0,Math.PI/2,'🏖️ SPIAGGIA ➜','#1f7aa3');
   gateSign(0,56,0,'🏙️ CITTÀ ➜','#94503a');
@@ -609,7 +652,7 @@ EQ.buildYard=function(){
      W.spots.dirtPads.push({x,z,hx,hz});});
   }
   // alberi e siepi
-  const busy=[[-86,-202,46,-90],[44,-200,54,2],[6,36,42,54],[44,36,78,54],[52,4,78,32],[52,-40,78,-8],[-54,35,-10,55],[6,17,22,31],[22,4,50,34],[-62,16,-8,26],[210,50,310,130],[-250,-120,-150,-60]];
+  const busy=[[-86,-202,46,-90],[44,-200,54,2],[6,36,42,54],[44,36,78,54],[52,4,78,32],[52,-40,78,-8],[-54,35,-10,55],[6,17,22,31],[22,4,50,34],[-70,16,-8,26],[210,50,310,130],[-250,-120,-150,-60]];
   const freeT=(x,z)=>!busy.some(b=>x>b[0]-2&&x<b[2]+2&&z>b[1]-2&&z<b[3]+2)&&W.roadD(x,z)>7&&!(Math.abs(x-A.cx)<A.hx+4&&Math.abs(z-A.cz)<A.hz+4)&&!FIELDS.some(f=>Math.abs(x-f[0])<f[2]/2+2&&Math.abs(z-f[1])<f[3]/2+2);
   const trees=[];
   for(let x=-78;x<=74;x+=8){for(const z of [52,-82]){const t={x:x+rnd(-1,1),z:z+rnd(-1.5,1.5),s:rnd(.8,1.1),ry:rnd(0,TAU)};if(freeT(t.x,t.z))trees.push(t);}}
@@ -629,8 +672,9 @@ EQ.buildYard=function(){
    grp.add(inst(G.cyl(.06,.09,3.6,8),mat(0x2a2a2a,.4,.6),L.map(a=>({x:a.x,y:1.8,z:a.z}))));
    grp.add(inst(G.sph(.22,10,8),new THREE.MeshStandardMaterial({color:0xfff6d0,emissive:C(0x554422),roughness:.2}),L.map(a=>({x:a.x,y:3.7,z:a.z}))));}
   // recinzione esterna
-  woodFence(W,[[-5,56],[-84,56],[-84,-10]],{h:1.3,rails:2,post:3});woodFence(W,[[54.2,-86],[80,-86],[80,-5]],{h:1.3,rails:2,post:3});woodFence(W,[[-84,-22],[-84,-198],[44,-198],[44,-90]],{h:1.3,rails:2,post:3});woodFence(W,[[80,5],[80,56],[5,56]],{h:1.3,rails:2,post:3});
-  W.bounds={x0:-470,x1:470,z0:-200,z1:470};
+  woodFence(W,[[-5,56],[-84,56],[-84,-10]],{h:1.3,rails:2,post:3});woodFence(W,[[54.2,-86],[80,-86],[80,-5]],{h:1.3,rails:2,post:3});woodFence(W,[[-84,-22],[-84,-198],[-24,-198]],{h:1.3,rails:2,post:3});woodFence(W,[[-16,-198],[44,-198],[44,-90]],{h:1.3,rails:2,post:3});woodFence(W,[[80,5],[80,56],[5,56]],{h:1.3,rails:2,post:3});
+  outskirts(W,{r0:520,ok:(x,z)=>!(Math.abs(x)<480&&z>-210&&z<480)&&W.roadD(x,z)>9});
+  W.bounds={x0:-3000,x1:3000,z0:-3000,z1:3000};
   W.spawn={x:12,z:45,h:-2.4};W.spawnRide={x:30,z:0,h:Math.PI/2};
   /* stanza spogliatoio (interno), lontana dal resto */
   {const R=new THREE.Group();R.position.set(300,0,300);grp.add(R);W.room=R;
@@ -668,6 +712,7 @@ EQ.buildBeach=function(){
   const H=(x,z)=>{const d=x-shore(z);let h;
     if(d<0){h=Math.min(.55,-d*.045)+U.fbm(x*.08,z*.08,2)*.08;h+=U.fbm(x*.025,z*.025,3)*4.2*U.smooth(-34,-60,d)*(1-U.smooth(-78,-100,d))+U.smooth(-30,-70,d)*1.4+U.smooth(-100,-140,d)*U.fbm(x*.01,z*.01,2)*2;}
     else h=-d*.05-Math.max(0,d-18)*.03+U.fbm(x*.1,z*.1,2)*.05;
+    if(d<-200)h=U.lerp(h,2.4+U.fbm(x*.004,z*.004,2)*3,U.smooth(-200,-330,d));
     return h;};
   W.height=H; W.water=()=>0;
   const cDry=C(0xe6cfa2),cWet=C(0xa88a5e),cDeep=C(0x8c7a58),cGrass=C(0x8e9a52),cPine=C(0x7d6a46);
@@ -691,6 +736,10 @@ EQ.buildBeach=function(){
   },TX.sandWhite(),9);
   const wg=new THREE.PlaneGeometry(1000,1500,Math.round(70*Q()+40),Math.round(110*Q()+50));wg.rotateX(-Math.PI/2);wg.translate(shore(0)+480,0,0);
   W.group.add(makeWater(wg,{beach:1,amp:.14,shallow:0x47b3b8,deep:0x0e4f73,sky:0xb4d2ea}));
+  // spiaggia e mare che continuano molto oltre
+  terrain(W,7000,7000,-2200,0,120,170,(x,z)=>H(x,z)-.55,(x,z,c)=>{const d=x-shore(z),n=U.fbm(x*.05,z*.05,2);c.copy(cDry).multiplyScalar(.92+n*.16);if(d>-6)c.lerp(cWet,U.smooth(-6,-.5,d));if(d>0)c.lerp(cDeep,U.smooth(0,12,d));if(d<-38)c.lerp(cGrass,U.smooth(-38,-55,d)*(.5+n*.6));if(d<-80)c.lerp(cPine,U.smooth(-80,-110,d));},TX.sandWhite(),9);
+  for(const [cx2,cz2,w2,d2] of [[shore(0)+480,-2600,1000,3700],[shore(0)+480,2600,1000,3700],[shore(0)+3480,0,5000,8900]]){const g2=new THREE.PlaneGeometry(w2,d2,Math.round(w2/40),Math.round(d2/40));g2.rotateX(-Math.PI/2);g2.translate(cx2,0,cz2);W.group.add(makeWater(g2,{beach:1,amp:.14,shallow:0x47b3b8,deep:0x0e4f73,sky:0xb4d2ea}));}
+  outskirts(W,{r0:0,r1:3000,n:2400,type:'umbrella',cols:[0x4e6b2e,0x587a34,0x4a6a2a],fields:0,y:H,ok:(x,z)=>x-shore(z)<-80&&!(Math.abs(z)<3000&&x>-320&&Math.abs(z)<660)});
   // pineta
   {const pines=[];for(let i=0,k=0;i<650*Q()&&k<9000;k++){const z=rnd(-ZL,ZL),x=shore(z)-rnd(78,280);if(x<-300)continue;if(pidx(x,z,10)<6)continue;if(z>150&&x>shore(z)-80)continue;pines.push({x,y:H(x,z)-.2,z,s:rnd(.8,1.25),ry:rnd(0,TAU)});i++;}
    addTrees(W,'umbrella',pines,[0x4e6b2e,0x587a34,0x4a6a2a],.4);
@@ -760,7 +809,7 @@ EQ.buildBeach=function(){
     if(Math.random()<dt*.15)EQ.sfx.gull();
   });
   for(let i=0;i<12;i++){const z=-540+i*95+rnd(-15,15);const x=shore(z)+rnd(-7,2.5);W.items.push({x,z,y:Math.max(H(x,z),0)});}
-  W.bounds={x0:-298,x1:115,z0:-ZL-5,z1:ZL+5};
+  W.bounds={x0:-3000,x1:420,z0:-3000,z1:3000};
   W.spawn={x:shore(-30)-14,z:-30,h:Math.PI/2+.4};
   W.itemKind='shell';W.deep=-.8;W.shore=shore;W.grazeAt=(x,z)=>x-shore(z)<-30;
   return W;
@@ -784,7 +833,7 @@ EQ.buildForest=function(){
   const lvl=x=>hN(x,rz(x))-1.3;
   const H=(x,z)=>{let h=hN(x,z);const dr=Math.abs(z-rz(x));if(dr<14){h=U.lerp(lvl(x)-.75,h,U.smooth(3.5,13,dr));}return h;};
   W.height=H;
-  W.water=(x,z)=>Math.abs(z-rz(x))<7?lvl(x):-99;
+  W.water=(x,z)=>Math.abs(x)<388&&Math.abs(z-rz(x))<7?lvl(x):-99;
   W.surface=(x,z)=>{if(Math.abs(z-rz(x))<5.5&&H(x,z)<lvl(x))return'water';return tDist(x,z)<2.6?'dirt':'grass';};
   const cG=C(0x5d7a35),cM=C(0x6f6a3a),cD=C(0x8a6c48),cB=C(0x7a6a4a);
   const N=Math.round(150*Q()+70);
@@ -842,7 +891,10 @@ EQ.buildForest=function(){
   W.itemKind='apple';
   const t0=trail.getTangentAt(0);
   W.spawn={x:TS[0].x,z:TS[0].z,h:Math.atan2(t0.x,t0.z)};
-  W.boundR=RB+2;
+  {const T2=terrain(W,6400,6400,0,0,110,110,(x,z)=>H(x,z)-.9,(x,z,c)=>{const n=U.fbm(x*.04,z*.04,2);c.copy(cG).lerp(cM,n);},TX.forestFloor(),7);}
+  outskirts(W,{r0:395,r1:2950,n:2600,type:'spruce',cols:[0x2f5a2c,0x355f30,0x284f26],fields:0,y:H});
+  outskirts(W,{r0:395,r1:2950,n:1600,type:'oak',cols:[0x5f8a34,0x6e9a3e,0x4f7a2c],fields:0,y:H});
+  W.boundR=2950;
   W.trail=TS;W.roads=[RE.S,RN.S,RS.S];W.rz=rz;
   return W;
 };
@@ -853,7 +905,7 @@ EQ.buildCity=function(){
   W.sky={elev:46,azim:230,turb:3,ray:1.2,fog:0xb8c8d6,near:80,far:470,exposure:.62};
   const B=44,R=12,P=B+R,n=3; // blocchi da -3..3
   const ext=(n+.5)*P;
-  ground(W,1200,TX.grass(),200,-.02);
+  ground(W,8000,TX.grass(),1330,-.02);
   patch(W,0,0,ext*2+R,ext*2+R,TX.asphalt(),6,0,.9);
   W.surface=(x,z)=>(Math.abs(x)<ext+6&&Math.abs(z)<ext+6)||Math.abs(x-28)<7||Math.abs(z-28)<7||Math.abs(z+28)<7?'hard':'grass';
   const blocks=[];
@@ -1052,7 +1104,8 @@ EQ.buildCity=function(){
   spots.sort(()=>Math.random()-.5);
   spots.slice(0,12).forEach(s=>W.items.push({x:s[0],z:s[1],y:0}));
   W.itemKind='rosette';
-  W.bounds={x0:-448,x1:448,z0:-448,z1:448};
+  outskirts(W,{r0:470,ok:(x,z)=>!(Math.abs(x)<460&&Math.abs(z)<460)&&Math.abs(x-28)>10&&Math.abs(z-28)>10&&Math.abs(z+28)>10});
+  W.bounds={x0:-3000,x1:3000,z0:-3000,z1:3000};
   W.spawn={x:0,z:-P/2,h:Math.PI/2};
   let bellT=1;W.updaters.push((dt)=>{if(bellT>0){bellT-=dt;if(bellT<=0)EQ.sfx.bell();}});
   return W;
@@ -1062,7 +1115,7 @@ EQ.buildShow=function(){
   const W=newWorld('show');
   W.sky={elev:40,azim:160,turb:3,ray:1.3,fog:0xb3c8d8,near:100,far:500};
   const grp=W.group;
-  ground(W,1000,TX.grass(),160);
+  ground(W,8000,TX.grass(),1280);
   const A={cx:0,cz:0,hx:70,hz:48};W.spots.arena=A;
   patch(W,0,0,A.hx*2,A.hz*2,TX.sand(),4,.02,1);
   patch(W,0,-72,30,16,TX.gravel(),5,.012);
@@ -1104,7 +1157,8 @@ EQ.buildShow=function(){
   // alberi
   {const tr=[];for(let i=0;i<220*Q();i++){const a=rnd(0,TAU),r=rnd(135,300);tr.push({x:Math.cos(a)*r,z:Math.sin(a)*r,s:rnd(.8,1.3),ry:rnd(0,TAU)});}addTrees(W,'oak',tr,[0x6e9a3e,0x7aa64a,0x5f8a34],.45);
    const L=[];for(let i=0;i<1500*Q();i++){const x=rnd(-170,170),z=rnd(-170,170);if(W.surface(x,z)!=='grass'||(Math.abs(x)<86&&Math.abs(z)<66)||(x>32&&x<64&&z<-72&&z>-96))continue;L.push({x,z,ry:rnd(0,3),s:rnd(.6,1.3)});}tufts(W,L);}
-  W.bounds={x0:-180,x1:180,z0:-130,z1:130};
+  outskirts(W,{r0:320});
+  W.bounds={x0:-3000,x1:3000,z0:-3000,z1:3000};
   W.spawn={x:-2,z:-63,h:0};W.spawnRide=W.spawn;
   W.updaters.push((dt,t,p)=>{EQ.loop('crowd',.016+.006*Math.sin(t*.3),420,.4,'lowpass');});
   return W;
@@ -1115,7 +1169,7 @@ EQ.buildHome=function(){
   const W=newWorld('home');
   W.sky={elev:36,azim:120,turb:3.5,ray:1.3,fog:0xb3c8d8,near:90,far:460};
   const grp=W.group;
-  ground(W,900,TX.grass(),150);
+  ground(W,8000,TX.grass(),1330);
   const GD={x0:-22,x1:22,z0:-12,z1:18};W.spots.garden=GD;
   const lawn=TX.grass().clone();lawn.needsUpdate=true;lawn.repeat.set(9,6);W.tex.push(lawn);
   const lm=mesh(new THREE.PlaneGeometry(44,30),new THREE.MeshStandardMaterial({map:lawn,roughness:1,color:C(0xd8ffc8)}),0,.015,3,grp);lm.rotation.x=-Math.PI/2;
@@ -1245,8 +1299,9 @@ EQ.buildHome=function(){
      {id:'hands',icon:'🧼',label:'Lavati le mani',p:P(10.05,-3),h:Math.PI/2,pose:'brush',dur:3,snd:'water',msg:'🧼 Mani pulite!'},
      {id:'exit',icon:'🚪',label:'Esci in giardino',p:P(0,7.2),exit:true}];
   }
-  W.bounds={x0:-200,x1:200,z0:-120,z1:150};
-  W.spawn={x:0,z:24,h:Math.PI};
+  outskirts(W,{r0:260,ok:(x,z)=>Math.abs(z-60)>9&&!(Math.abs(x)<250&&Math.abs(z)<250)});
+  W.bounds={x0:-3000,x1:3000,z0:-3000,z1:3000};
+  W.spawn={x:0,z:2,h:0};
   return W;
 };
 function metal(){return mat(0xc0c4c8,.3,1);}

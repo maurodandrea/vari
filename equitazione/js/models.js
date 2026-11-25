@@ -13,6 +13,8 @@ EQ.HORSES=[
   {id:'fulmine',name:'Fulmine',race:'Purosangue, sauro',body:0x9a4a1c,dark:0x7a3812,mane:0xa4561f,face:'lista',socks:[0,1,0,1]},
   {id:'nuvola',name:'Nuvola',race:'Appaloosa, leopardato',body:0xe6e2da,dark:0x6a5f56,mane:0x4a4038,apalo:true,face:null,socks:[0,0,0,0],muzzle:0x5b5350},
   {id:'biscotto',name:'Biscotto',race:'Pony, isabella',body:0xc8a06a,dark:0x2a1e14,mane:0x2a1e14,points:true,face:'stella',socks:[0,0,0,0],longMane:true},
+  {id:'pepe',name:'Pepe',race:'Pony Shetland, baio',body:0x6e3818,dark:0x1b120c,mane:0x17100b,points:true,face:'stella',socks:[0,0,0,0],longMane:true,pony:.68},
+  {id:'fiocco',name:'Fiocco',race:'Pony, grigio',body:0xd8d4cc,dark:0x8f8a82,mane:0xece8df,dapple:true,face:null,socks:[0,0,0,0],muzzle:0x5b5350,longMane:true,pony:.7},
 ];
 /* mantelli per i cavalli degli altri cavalieri */
 EQ.OTHER_COATS=[
@@ -218,6 +220,7 @@ EQ.buildHorse=function(def,opt){
   EQ.mergeStatic(head,ears);EQ.mergeStatic(neck);[T.pad,T.saddle,T.girth,T.bridle,T.halter].forEach(g=>EQ.mergeStatic(g));
   root.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
 
+  if(def.pony)root.scale.setScalar(def.pony);
   Object.assign(H,{root,pivot,neck,head,tail,strands,legs,ears,mouth,bitL,bitR,chin,seat,T,
     anim:{phase:Math.random()*10,amp:0,knee:0,ja:0,offs:GAITS[0].offs.slice(),earT:0,neckX:0,headX:1.05,shake:0,eat:0,t:Math.random()*100},
     tack:{halter:false,pad:false,saddle:false,girth:false,bridle:false,wraps:false,padColor:0x1d3f8a,wrapColor:0x2255aa,halterColor:0xe0487f},
