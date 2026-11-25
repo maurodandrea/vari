@@ -336,7 +336,7 @@ const POSES={
   reel:{hy:.93,sp:[.12,.05,0],hd:[-.1,0,0],lSh:[.9,0,.35],rSh:[1.15,0,-.05],lEl:[1.25,0,0],rEl:[.7,0,0],lHip:[-.15,0,0],rHip:[.2,0,0],lKnee:[-.12,0,0],rKnee:[-.2,0,0],rod:{p:42,f:0}},
 };
 const AN={faceTo:null,obj:null,pose:JSON.parse(JSON.stringify(POSES.sit)),target:'sit',walk:0,moving:false,speed:1.4,pos:null,rotY:0,holding:-1,reelSpin:0,crank:0};
-function lerpPose(dt,k=6,a=AN){const tp=POSES[a.target],p=a.pose,f=1-Math.exp(-k*dt);p.hy=lerp(p.hy,tp.hy,f);
+function lerpPose(dt,k=6,a=AN){const tp=POSES[a.target],p=a.pose,f=1-Math.exp(-k*dt*(a===AN?(st.slow||1):1));p.hy=lerp(p.hy,tp.hy,f);
   for(const j of['sp','hd','lSh','rSh','lEl','rEl','lHip','rHip','lKnee','rKnee'])for(let i=0;i<3;i++)p[j][i]=lerp(p[j][i],tp[j][i],f);
   if(tp.rod){if(!p.rod)p.rod={...tp.rod};p.rod.p=lerp(p.rod.p,tp.rod.p,f);p.rod.f=lerp(p.rod.f||0,tp.rod.f||0,f);p.rod.y=lerp(p.rod.y||0,tp.rod.y||0,f);}}
 function reelIK(){const r=st.rods[AN.holding];if(!r||!r.held||!AN.obj)return;const J=AN.obj.userData.J,knob=r.obj.userData.crank.children[1];if(!knob)return;
@@ -344,7 +344,7 @@ function reelIK(){const r=st.rods[AN.holding];if(!r||!r.held||!AN.obj)return;con
   const err=()=>{J.lSh.updateMatrixWorld(true);J.lHand.getWorldPosition(hp);return hp.distanceTo(tg);};let e=err(),st0=.12;
   for(let it=0;it<7;it++){for(const [o,k] of P){const v=o[k];o[k]=v+st0;let e1=err();if(e1<e){e=e1;continue;}o[k]=v-st0;e1=err();if(e1<e){e=e1;continue;}o[k]=v;}st0*=.6;}}
 function applyPose(t,a=AN){const J=a.obj.userData.J,p=a.pose,set=(o,v)=>o.rotation.set(v[0],v[1],v[2]);
-  const dtp=a.lt!=null?clamp(t-a.lt,0,.1):0;a.lt=t;const mv0=a.moving&&!a.swim,spd=a.speed||1.4,run=mv0&&spd>3.2;a.gA=lerp(a.gA||0,mv0?clamp(spd/1.5,.55,1.5):0,1-Math.exp(-dtp*7));const A1=a.gA,mv=A1>.02,ph=a.walk,s1=Math.sin(ph),c1=Math.cos(ph);
+  const dtp=(a.lt!=null?clamp(t-a.lt,0,.1):0)*(a===AN?(st.slow||1):1);a.lt=t;const mv0=a.moving&&!a.swim,spd=a.speed||1.4,run=mv0&&spd>3.2;a.gA=lerp(a.gA||0,mv0?clamp(spd/1.5,.55,1.5):0,1-Math.exp(-dtp*7));const A1=a.gA,mv=A1>.02,ph=a.walk,s1=Math.sin(ph),c1=Math.cos(ph);
   // bacino: sale e scende, ruota e oscilla; il busto compensa e la testa resta stabile
   J.hips.position.y=p.hy+(mv?Math.abs(c1)*.045*A1-.035*A1:Math.sin(t*1.3)*.004);J.hips.rotation.set(0,mv?s1*.09*A1:0,mv?Math.sin(2*ph)*.03*A1:0);
   set(J.spine,[p.sp[0]+(mv?(.05+(run?.2:0))*Math.min(1,A1)+Math.abs(c1)*.015*A1:0),p.sp[1]-(mv?s1*.12*A1:0),p.sp[2]-(mv?Math.sin(2*ph)*.02*A1:0)]);
@@ -709,7 +709,7 @@ function buildLandmarks(){const rm=new T.MeshStandardMaterial({color:'#6f6a62',r
     // la spiaggia del gioco è una riva dritta: castelli, torri e fari restano sulla terraferma (la costa vera curva), porti e pontili partono dalla riva
     const z=L.sea?Math.max(p.z,-60):L.t==='pier'||L.t==='port'?Math.max(p.z,0):Math.max(p.z,40+25*k);g.position.set(p.x,0,z);scene.add(g);}
   // il Circeo all'orizzonte (da Anzio a Sabaudia)
-  const c=azPos(CIRCEO.lat,CIRCEO.lon);if(c.d>2000&&c.d<70000&&c.z<1000){const k=Math.min(1,9000/c.d),m=new T.Mesh(new T.ConeGeometry(2400*k*2.2,CIRCEO.h*1.3*k*2,7,1),new T.MeshStandardMaterial({color:'#4f5a52',roughness:1}));const sc=Math.min(1,6000/c.d);m.position.set(c.x*sc,CIRCEO.h*k*.6,Math.max(c.z*sc,0)+2000*k);m.scale.set(.75,1,.4);scene.add(m);}}
+  const c=azPos(CIRCEO.lat,CIRCEO.lon);if(c.d>2000&&c.d<70000&&c.z<1000){const k=Math.min(1,9000/c.d),m=circeoMesh(5200*k*2.2,CIRCEO.h*1.3*k*2,1600*k*2,c.x<0);const sc=Math.min(1,6000/c.d);m.position.set(c.x*sc,-2,Math.min(c.z*sc,0)-1800*k);m.lookAt(0,-2,0);scene.add(m);}}
 let TRIG=null;
 function makeTripodFrame(n){const g=new T.Group(),inner=new T.Group();inner.rotation.x=SPIKE_TILT*R;g.add(inner);const W=Math.max(.6,(n-1)*.6)+.35,H=1.8,cy=.34,
     blk=new T.MeshStandardMaterial({color:'#1a1a1a',roughness:.5,metalness:.4}),yel=new T.MeshStandardMaterial({color:'#e2c23a',roughness:.5}),grn=new T.MeshStandardMaterial({color:'#9fe8a8',roughness:.45});
@@ -719,6 +719,13 @@ function makeTripodFrame(n){const g=new T.Group(),inner=new T.Group();inner.rota
   const top=y=>new T.Vector3(0,y*Math.cos(SPIKE_TILT*R),y*Math.sin(SPIKE_TILT*R));
   leg(top(H).add(new T.Vector3(-W/2,0,0)),new T.Vector3(-W/2-.25,-.05,-.35));leg(top(H).add(new T.Vector3(W/2,0,0)),new T.Vector3(W/2+.25,-.05,-.35));leg(top(H),new T.Vector3(0,-.05,.75));
   g.traverse(o=>{if(o.isMesh)o.castShadow=true;});return g;}
+// Monte Circeo: promontorio lungo con la cima a picco sul mare dal lato ovest e il crinale che scende verso est
+function circeoMesh(L,H,Wd,flip){const nx=64,nz=14,g=new T.PlaneGeometry(L,Wd,nx,nz);g.rotateX(-Math.PI/2);const P=g.attributes.position,col=[],cA=new T.Color('#3e4d3c'),cB=new T.Color('#7d7f74'),cC=new T.Color('#5a6a50');
+  for(let i=0;i<P.count;i++){const x=P.getX(i),z=P.getZ(i);let u=x/L+.5;if(flip)u=1-u;const v=z/Wd*2;
+    const prof=u<.12?Math.pow(u/.12,.6)*.92:u<.22?.92+.08*Math.sin((u-.12)/.1*Math.PI/2):u<.5?1-(u-.22)*.9:u<.85?.75-(u-.5)*1.3:Math.max(0,.3-(u-.85)*2.2);
+    const n=.06*Math.sin(u*41)+.04*Math.sin(u*97+1.3)+.03*Math.sin(v*9+u*20),y=Math.max(0,H*(prof+n)*Math.max(0,1-v*v)*(1+.15*Math.sin(u*13)));P.setY(i,y);
+    const t=y/H,cc=cA.clone().lerp(t>.7?cB:cC,Math.min(1,t*1.2));col.push(cc.r,cc.g,cc.b);}
+  g.setAttribute('color',new T.Float32BufferAttribute(col,3));g.computeVertexNormals();return new T.Mesh(g,new T.MeshStandardMaterial({vertexColors:true,roughness:1,flatShading:true}));}
 function setupRods(){if(TRIG){scene.remove(TRIG);TRIG=null;}if(holder().k==='tripod'){TRIG=makeTripodFrame(st.nRods);TRIG.position.set(0,ROD_Z*.035,ROD_Z);scene.add(TRIG);}st.rods.forEach(r=>{scene.remove(r.hit);scene.remove(r.obj);scene.remove(r.spike);scene.remove(r.line);scene.remove(r.sinker);});
   st.rods=Array.from({length:st.nRods},(_,i)=>{const x=holder().k==='tripod'?(i-(st.nRods-1)/2)*.6:rodX(i,st.nRods),spike=makeSpike(holder().k);spike.position.set(x,ROD_Z*.035,ROD_Z);scene.add(spike);
     planFix();const g0=st.gear,PQ=st.plan[i]||{},rid=PQ.rodId||g0.rod,lid=PQ.reelId||g0.reel,obj=makeRod();skinRod(obj,rid,lid);scene.add(obj);const lg=new T.BufferGeometry();lg.setAttribute('position',new T.Float32BufferAttribute(new Float32Array(40*3),3));const line=new T.Line(lg,MAT.line);line.frustumCulled=false;scene.add(line);
@@ -851,7 +858,7 @@ function mapPhys(dt){const c=MP.car;if(MP.parking){const P=MP.parking;P.t+=dt;c.
   const sp=document.getElementById('gkmh');if(sp)sp.textContent=Math.round(c.v/1.3*130)+' km/h';}
 function mapUI(){ui.innerHTML=`<div class="gpanel slim"><div class="grow" style="justify-content:space-between"><b style="font-size:16px">🚗 Lungo la costa del Lazio</b><b id="gkmh">0 km/h</b></div>
   <div id="gpark" class="gs" style="min-height:22px"></div>
-  <div class="grow"><button class="gb" id="gbrk" style="flex:1;background:#4a1f26">🛑 Frena</button><button class="gb big" id="gacc" style="flex:2">⬆ Accelera</button></div>
+  <div class="grow"><button class="gb" style="flex:.7;margin:0" onclick="GAME.turnSig(-1)">⬅</button><button class="gb" id="gbrk" style="flex:1;background:#4a1f26">🛑 Frena</button><button class="gb big" id="gacc" style="flex:2">⬆ Accelera</button><button class="gb" style="flex:.7;margin:0" onclick="GAME.turnSig(1)">➡</button></div>
   <div class="grow" style="justify-content:center"><button class="gc" onclick="GAME.flip()">🔄 Inverti senso</button><button class="gc" onclick="GAME.spotList()">📍 Scegli lo spot</button>${M3.on?'<button class="gc" onclick="GAME.mapView()">🎯 Visuale</button>':''}</div>${M3.on?'<div style="font-size:10.5px;opacity:.55;text-align:center;margin-top:4px">Trascina per girare la visuale, due dita per lo zoom · Immagini © Esri, Maxar · Strade © OpenStreetMap (OSRM)</div>':''}</div>`;
   const hold=(id,k)=>{const b=document.getElementById(id);const on=e=>{e.preventDefault();ac();MP.car[k]=1;},off=()=>{MP.car[k]=0;};b.onpointerdown=on;b.onpointerup=off;b.onpointerleave=off;b.onpointercancel=off;};hold('gacc','acc');hold('gbrk','brk');mapPark();}
 function mapPark(){const e=document.getElementById('gpark');if(!e)return;const i=MP.near;
@@ -918,10 +925,14 @@ function landTex3(){const c=document.createElement('canvas');c.width=c.height=51
 function roadTex(){return canvasTex(64,256,(g,w,h)=>{g.fillStyle='#41454b';g.fillRect(0,0,w,h);for(let i=0;i<500;i++){g.fillStyle=`rgba(${Math.random()<.5?0:255},${Math.random()<.5?0:255},255,${Math.random()*.06})`;g.fillRect(Math.random()*w,Math.random()*h,1.5,1.5);}
   g.fillStyle='#f2f2ee';g.fillRect(3,0,3,h);g.fillRect(w-6,0,3,h);g.fillRect(w/2-1.5,0,3,h*.55);});}
 function makeCar3(col,rods){const g=new T.Group(),m=c=>new T.MeshLambertMaterial({color:c});
-  const body=new T.Mesh(new T.BoxGeometry(.019,.007,.042),m(col));body.position.y=.0065;g.add(body);
-  const cab=new T.Mesh(new T.BoxGeometry(.016,.0065,.021),m(0x1d2b3a));cab.position.set(0,.0128,-.003);g.add(cab);
-  const roof=new T.Mesh(new T.BoxGeometry(.0145,.0012,.017),m(col));roof.position.set(0,.0166,-.003);g.add(roof);
-  const wg=new T.CylinderGeometry(.0042,.0042,.003,10);wg.rotateZ(Math.PI/2);const wm=m(0x111111);[[-.0095,.013],[.0095,.013],[-.0095,-.014],[.0095,-.014]].forEach(([x,z])=>{const w=new T.Mesh(wg,wm);w.position.set(x,.0042,z);g.add(w);});
+  const ext=(pts,d,mat,bev)=>{const sh=new T.Shape();pts.forEach(([z,y],i)=>i?sh.lineTo(z,y):sh.moveTo(z,y));const ge=new T.ExtrudeGeometry(sh,{depth:d,bevelEnabled:!!bev,bevelThickness:bev||0,bevelSize:bev||0,bevelSegments:2,curveSegments:4});ge.rotateY(-Math.PI/2);ge.translate(d/2,0,0);const me=new T.Mesh(ge,mat);g.add(me);return me;};
+  // carrozzeria da berlina: cofano, parafanghi, bagagliaio e abitacolo vetrato con montanti inclinati
+  ext([[-.0205,.0032],[-.021,.0092],[-.0195,.0108],[-.008,.0114],[.0095,.0114],[.0185,.0099],[.0208,.0086],[.021,.0032],[.0165,.0032],[.0163,.0062],[.0105,.0062],[.0103,.0032],[-.0095,.0032],[-.0097,.0062],[-.0157,.0062],[-.0159,.0032]],.0172,m(col),.0009);
+  ext([[-.0085,.0112],[-.0062,.0157],[-.0035,.0165],[.0035,.0165],[.0068,.0157],[.0108,.0112]],.0158,m(0x22313f),.0004);
+  const roof=new T.Mesh(new T.BoxGeometry(.0148,.0007,.0074),m(col));roof.position.set(0,.017,0);g.add(roof);
+  const bump=m(0x2a2a2a);[[.0212],[-.0212]].forEach(([z])=>{const b=new T.Mesh(new T.BoxGeometry(.0186,.0022,.0014),bump);b.position.set(0,.0042,z);g.add(b);});
+  [-1,1].forEach(sx=>{const mi=new T.Mesh(new T.BoxGeometry(.0022,.0014,.0012),m(col));mi.position.set(sx*.0098,.0122,.0078);g.add(mi);});
+  const wg=new T.CylinderGeometry(.0036,.0036,.0026,14);wg.rotateZ(Math.PI/2);const rg=new T.CylinderGeometry(.0021,.0021,.0028,10);rg.rotateZ(Math.PI/2);const wm=m(0x111111),rm0=m(0xb9bec4);[[-.0091,.0134],[.0091,.0134],[-.0091,-.0127],[.0091,-.0127]].forEach(([x,z])=>{const w=new T.Mesh(wg,wm);w.position.set(x,.0036,z);g.add(w);const rr=new T.Mesh(rg,rm0);rr.position.set(x+Math.sign(x)*.0001,.0036,z);g.add(rr);});
   const hl=new T.MeshBasicMaterial({color:0xfff6c8});[-.006,.006].forEach(x=>{const l=new T.Mesh(new T.BoxGeometry(.004,.002,.001),hl);l.position.set(x,.007,.0211);g.add(l);});
   const bl=new T.MeshBasicMaterial({color:0x661111});g.userData.brake=bl;[-.007,.007].forEach(x=>{const l=new T.Mesh(new T.BoxGeometry(.004,.002,.001),bl);l.position.set(x,.0075,-.0211);g.add(l);});
   if(rods){const rm=m(0x222222);for(const x of [-.004,0,.004]){const r=new T.Mesh(new T.CylinderGeometry(.0004,.0004,.03,4),rm);r.rotation.x=Math.PI/2;r.position.set(x,.0178,-.004);g.add(r);}
@@ -1095,7 +1106,11 @@ function exitUI(nx,near){const e=document.getElementById('gpark');if(!e)return;
   if(MP.arm!=null)e.innerHTML=`<span style="color:#ffb547">⟹ Freccia inserita</span>: esci per <b>${MP.spots[MP.arm].sp.name}</b> tra <b id="gexd"></b>`;
   else if(near)e.innerHTML=`<button class="gb big" style="margin:0;background:#1450a8" onclick="GAME.takeExit(${nx})">↘ Prendi l'uscita <b>${n}</b> · <span id="gexd"></span></button>`;
   else e.innerHTML=`🛣️ Prossima uscita: <b>${n}</b> tra <b id="gexd"></b>`;}
-G.appDir=d=>{const c=MP.car;if(!c.app)return;c.app.dir=d;c.app.chosen=true;MP.key='';click();};G.mapView=()=>{M3.zoom=1;M3.orb=0;M3.tilt=1;};G.takeExit=i=>{MP.arm=i;MP.key='';click();};G._mp=()=>({MP,M3});
+G.appDir=d=>{const c=MP.car;if(!c.app)return;c.app.dir=d;c.app.chosen=true;MP.key='';click();};G.mapView=()=>{M3.zoom=1;M3.orb=0;M3.tilt=1;};G.takeExit=i=>{MP.arm=i;MP.key='';click();};
+// frecce: vicino a un'uscita si entra nello spot
+G.turnSig=()=>{if(st.phase!=='map'||!MP.car)return;const c=MP.car;if(M3.on){if(c.ramp||c.app||MP.arm!=null)return;const nx=MP.nx;if(nx==null||nx<0)return;const d=(MP.spots[nx].ramps[c.dir].rs-c.s)*c.dir;if(d>0&&d<3)G.takeExit(nx);else{const e=document.getElementById('gpark');if(e)e.innerHTML=`Nessuna uscita vicina: la prossima è tra ${d.toFixed(1).replace('.',',')} km`;MP.key='x';}}
+  else if(MP.near>=0){if(c.v>.3)c.v=.29;G.park(MP.near);}};
+if(!window.__lzArrows){window.__lzArrows=1;addEventListener('keydown',e=>{if((e.key==='ArrowLeft'||e.key==='ArrowRight')&&window.GAME?.turnSig)GAME.turnSig();});}G._mp=()=>({MP,M3});
 function draw3D(dt){const c=MP.car,P=carPose(),car=M3.car;M3.t+=dt;const t=M3.t;
   const yaw=Math.atan2(P.hx,-P.hy);if(M3.yaw==null)M3.yaw=yaw;let dy=yaw-M3.yaw;dy=Math.atan2(Math.sin(dy),Math.cos(dy));M3.yaw+=dy*Math.min(1,dt*6);
   car.position.set(P.x,0,-P.y);car.rotation.y=M3.yaw;car.userData.brake.color.set(c.brk?0xff2a2a:0x661111);
@@ -1667,6 +1682,8 @@ function doCast(){const c=st.cast;c.on=false;const r=st.rods[st.sel],w=wxAt(st.g
     r.flight={a:tip.clone(),b:end,t:0,dur:1.1+dist/120,low:st.castStyle==='side'};r.sinker.visible=true;r.dist=0.01;r.state='flying';
     await sleep(r.flight.dur);splash();burst(end,1);r.flight=null;setTimeout(()=>{st.castCam=false;CAM.cl=null;},700);r.dist=dist;r.sx=end.x;r.sz=end.z;r.state='fishing';r.landT=st.gt;r.drifting=0;
     st.msg=(q>=1?`Lancio ${S.n} perfetto: ${Math.round(dist)} m!`:q>.8?`Buon lancio ${S.n}: ${Math.round(dist)} m`:`Lancio ${S.n} corto: ${Math.round(dist)} m`);checkTangle(r);setUI();
+    {const q=CSEQ[st.castStyle]||CSEQ.above,T0=x=>(x||[]).reduce((a,y)=>a+y[1],0),sp0=r.sinker.position.clone(),SL=.3;await sleep(.8);const m0=st.msg;st.replayCam=true;st.slow=SL;st.msg='⏪ Replay del lancio al rallentatore';setUI();
+      castAnimStart('load');st.castLead=null;r.sinker.position.copy(sp0);await sleep(T0(q.load)/SL+.4);castAnimStart('fire');st.castLead=null;r.sinker.position.copy(sp0);await sleep(T0(q.fire)/SL+.3);st.slow=1;st.replayCam=false;st.castCam=false;CAM.cl=null;st.msg=m0;}
     st.castAnim=null;pose('hold');await sleep(.6);await putRod(st.sel);await stepBack(st.sel);st.phase='wait';if(r.state!=='tangled')st.msg='Tocca la sedia per sederti, o un\'altra canna per andarci.';setUI();});}
 
 /* ---------- barchino elettrico e drone ---------- */
@@ -2002,7 +2019,7 @@ function loop(){raf=requestAnimationFrame(loop);if(!renderer)return;const dt=Mat
     a.needsUpdate=true;r.line.visible=r.sinker.visible;}
   reelWhir(AN.reelSpin>0&&AN.holding>=0?.012:0,AN.reelSpin*7);
   pilot(dt,t);updVeh(dt,t,w);
-  updFight(dt);updJump(dt,t);updCastAnim(dt);
+  updFight(dt);updJump(dt,t);updCastAnim(dt*(st.slow||1));
   // pesce appeso che esce dall'acqua
   if(fishMesh.visible&&st.fight==null){const r=st.rods[st.sel],tip=new T.Vector3();r.obj.userData.tip.getWorldPosition(tip);const k=clamp((performance.now()-fishMesh.userData.show)/900,0,1);
     fishMesh.position.set(lerp(r.x,tip.x,k),lerp(.1,tip.y-.6,k),lerp(-2,tip.z+.2,k));fishMesh.rotation.set(0,0,Math.PI/2+Math.sin(t*14)*.4);}
@@ -2092,9 +2109,9 @@ function updEnv(w,t,dt){const d=gameDate(),s0=sunPos(d,SPOT.lat,SPOT.lon),sun=su
 const CAM={p:null,l:null};
 function updCam(dt,t){let p,l;const a=AN.pos;
   if(G.camOv){camera.position.set(...G.camOv.p);camera.lookAt(...G.camOv.l);return;}
-  if(st.castCam&&AN.obj){const a=AN.rotY,fx=-Math.sin(a),fz=-Math.cos(a),rx=-fz,rz=fx,P=AN.pos;
+  if((st.castCam||st.replayCam)&&AN.obj){const a=AN.rotY,fx=-Math.sin(a),fz=-Math.cos(a),rx=-fz,rz=fx,P=AN.pos;
     // di lato e un po' davanti, a circa 22 m: si vede tutto il pescatore con la canna; quando il piombo vola lo segue verso il mare
-    const tp=new T.Vector3(P.x+rx*21+fx*5,P.y+3.2,P.z+rz*21+fz*5),r=st.rods[st.sel];let look=new T.Vector3(P.x+fx*.8,P.y+2.3,P.z+fz*.8);
+    const RD=st.replayCam?28:21,RF=st.replayCam?1:5,tp=new T.Vector3(P.x+rx*RD+fx*RF,P.y+3.2,P.z+rz*RD+fz*RF),r=st.rods[st.sel];let look=new T.Vector3(P.x+fx*.8,P.y+2.3,P.z+fz*.8);
     // da lontano ma con il teleobiettivo: pescatore e canna riempiono l'inquadratura senza la deformazione del grandangolo
     {const fw=(camera.aspect<1?34:24)*(r?.flight?1.6:1);if(Math.abs(camera.fov-fw)>.05){camera.fov=lerp(camera.fov,fw,Math.min(1,dt*3));camera.updateProjectionMatrix();}}
     if(r?.flight){const s2=r.sinker.position;look=look.lerp(s2,clamp(r.flight.t*1.2,0,.85));tp.lerp(new T.Vector3(P.x+rx*26+fx*10,P.y+6,P.z+rz*26+fz*10),clamp(r.flight.t,0,1));}
