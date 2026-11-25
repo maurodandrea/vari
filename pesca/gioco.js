@@ -1143,7 +1143,7 @@ function earnTick(dt){if(document.hidden||!['wait','atrod','fight','cast','bait'
 const gearSave=()=>{LSS('gear',st.gear);LSS('money',Math.round(st.money*100)/100);};
 const eur=v=>'€ '+v.toFixed(2).replace('.',',');
 const ROD={surf420:{n:'Surf 4,20 m',mul:1},beach390:{n:'Beach 3,90 m',mul:.9},tele420:{n:'Telescopica 4,20 m',mul:.92},surf420s:{n:'Spiaggia 4,20 m leggera',mul:1.02},surf420c:{n:'Surf 4,20 m carbonio',mul:1.04},surf450:{n:'Surf 4,50 m carbonio',mul:1.06},surf450h:{n:'Surf 4,50 m ibrida',mul:1.08},surf470:{n:'Surf 4,70 m parabolica',mul:1.1},surf480:{n:'Tournament 4,80 m',mul:1.12},surf500:{n:'Long Cast 5,00 m',mul:1.16}};
-const REELS={r5000:{n:'5000 leggero',drag:7,cast:1},r6000:{n:'6000',drag:8,cast:1},r8000:{n:'8000',drag:12,cast:1},r10000:{n:'10000',drag:15,cast:1},r14000:{n:'14000',drag:20,cast:1.01},rRear:{n:'7000 frizione posteriore',drag:10,cast:1},rLC:{n:'Long Cast 12000',drag:18,cast:1.04},rMult:{n:'Moltiplicatore da lancio',drag:22,cast:1.06},rT:{n:'Tournament 14000',drag:25,cast:1.03}};
+const REELS={r5000:{n:'5000 leggero',drag:7,cast:1},r6000:{n:'6000',drag:8,cast:1},r8000:{n:'8000',drag:12,cast:1},r10000:{n:'10000',drag:15,cast:1},r14000:{n:'14000',drag:20,cast:1.01},rRear:{n:'7000 frizione posteriore',drag:10,cast:1},rLC:{n:'Long Cast 12000',drag:18,cast:1.04},rMult:{n:'Mulinello rotante',drag:22,cast:1.06},rT:{n:'Tournament 14000',drag:25,cast:1.03}};
 const reelN=id=>REELS[id]?.n||id,reelDrag=id=>REELS[id]?.drag||12;
 // livello dell'attrezzatura montata su una canna: 0 = di base, 1 = il top (canna Long Cast + Tournament)
 function gearTier(r){const g=st.gear,rt=clamp(((ROD[r?.rodId||g.rod]?.mul||1)-.9)/.26,0,1),RL=REELS[r?.reelId||g.reel]||REELS.r8000,lt=clamp((RL.drag-7)/18*.7+(RL.cast-1)/.06*.3,0,1);return {rod:rt,reel:lt,all:(rt+lt)/2};}
@@ -1166,7 +1166,7 @@ const CAT=[
     {id:'rm_r5000',reel:'r5000',n:'Mulinello leggero 5000',d:'Per la canna leggera e i pesci di taglia piccola: frizione 7 kg.',p:()=>35},
     {id:'rm_rRear',reel:'rRear',n:'Mulinello 7000 a frizione posteriore',d:'La frizione si regola senza toccare la bobina: comoda in combattimento, 10 kg.',p:()=>59},
     {id:'rm_rLC',reel:'rLC',n:'Mulinello Long Cast 12000',d:'Bobina conica da 30 mm a passo corto: il filo esce senza attriti (+4% distanza), 18 kg.',p:()=>159},
-    {id:'rm_rMult',reel:'rMult',n:'Moltiplicatore da lancio',d:'Il mulinello rotante dei campioni di distanza (+6%): frizione a stella 22 kg.',p:()=>229},
+    {id:'rm_rMult',reel:'rMult',n:'Mulinello rotante',d:'Il mulinello a bobina rotante dei campioni di distanza (+6%): frizione a stella 22 kg.',p:()=>229},
     {id:'reelT',n:'Mulinello Tournament 14000 SA',d:'Corpo in alluminio, 7+1 cuscinetti, frizione 25 kg in carbonio.',p:()=>299}]},
   {k:'esche',n:'🪱 Esche',items:BAITS.filter(b=>!b.lim).map(b=>({id:'b_'+b.k,n:b.n+' '+b.e,d:b.d,bait:b.k,pk:{koreano:15,bibi:6,arenicola:7,americano:3,cannolicchio:10,cozza:15,sarda:10,seppia:3,gambero:10,cefalotto:5}[b.k],p:()=>({koreano:5,bibi:7,arenicola:7.5,americano:7.5,cannolicchio:2,cozza:3,sarda:3,seppia:5,gambero:5,cefalotto:10})[b.k]}))},
   {k:'ami',n:'🪝 Ami',items:[{id:'hook',n:'Ami da surfcasting · busta da 10',d:'Aberdeen a filo sottile per vermi e bibi, oppure forgiati per esche dure e pesci grossi.',opts:[{k:'m',n:'Misura',v:['0','2','4','6','8']},{k:'t',n:'Tipo',v:['Aberdeen','Forgiato']}],p:()=>4.5}]},
