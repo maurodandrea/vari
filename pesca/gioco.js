@@ -133,7 +133,7 @@ function seaSound(level){const c=AU.on?ac():null;
 /* ---------- stato del gioco ---------- */
 const G={};window.GAME=G;
 let T=null,renderer,scene,camera,sky,water,sunLight,hemi,moonLight,headLamp,clock,raf=0,root,ui,hud,cvs;
-const st={phase:'load',gt:Date.now(),speed:(()=>{if(!LSG('spd16',false)){LSS('spd16',true);LSS('speed',16);}const v=LSG('speed',16);return [1,2,4,8,16,32].includes(v)?v:16;})(),lamp:LSG('lamp',true),X:null,sim:false,rods:[],sel:0,msg:'',fight:null,cast:null,catchShow:null,
+const st={holder:LSG('holder','tripod'),phase:'load',gt:Date.now(),speed:(()=>{if(!LSG('spd16',false)){LSS('spd16',true);LSS('speed',16);}const v=LSG('speed',16);return [1,2,4,8,16,32].includes(v)?v:16;})(),lamp:LSG('lamp',true),X:null,sim:false,rods:[],sel:0,msg:'',fight:null,cast:null,catchShow:null,
   bag:LSG('bag',[]),inv:{granchio:0},best:LSG('best',{}),total:LSG('total',{n:0,kg:0,pts:0}),lead:LSG('lead',150),outfit:LSG('outfit','jeans'),castMode:'mano',castStyle:LSG('cstyle','above'),castDist:LSG('cdist',120),hook:hookNum(LSG('hook',2)),nRods:LSG('nrods',1),busy:false,lightning:0};
 const gameDate=()=>new Date(st.gt);
 G._st=st;
@@ -396,7 +396,7 @@ const SPIKE_TILT=-8,SPIKE_CUP=.7;
 function makeSpike(kind){const g=new T.Group(),inner=new T.Group();inner.rotation.x=SPIKE_TILT*R;g.add(inner);
   const H=kind==='long'?1.75:kind==='pvc'||!kind?1.25:1.45,bm=kind==='pvc'||!kind?new T.MeshStandardMaterial({color:'#e8e8e2',roughness:.6}):new T.MeshStandardMaterial({color:'#cfd5da',roughness:.35,metalness:.45}),gm=new T.MeshStandardMaterial({color:'#9fe8a8',roughness:.45,transparent:true,opacity:.92});
   // barra piatta con la punta piantata nella sabbia
-  const bar=new T.Mesh(new T.BoxGeometry(.032,H+.3,.009),bm);bar.position.y=(H-.3)/2;inner.add(bar);const fold=new T.Mesh(new T.BoxGeometry(.009,H+.3,.022),bm);fold.position.set(.0115,(H-.3)/2,.008);inner.add(fold);
+  if(kind!=='tripod'){const bar=new T.Mesh(new T.BoxGeometry(.032,H+.3,.009),bm);bar.position.y=(H-.3)/2;inner.add(bar);const fold=new T.Mesh(new T.BoxGeometry(.009,H+.3,.022),bm);fold.position.set(.0115,(H-.3)/2,.008);inner.add(fold);}else{const cy0=SPIKE_CUP*(H/1.45)-.05,stem=new T.Mesh(new T.CylinderGeometry(.014,.014,H-cy0,8),MAT.alu);stem.position.y=(H+cy0)/2;inner.add(stem);}
   // forcella in alto: base e due denti, il fusto della canna ci appoggia
   const fork=new T.Group();fork.position.set(0,H,-.03);inner.add(fork);const fb=new T.Mesh(new T.BoxGeometry(.075,.025,.05),gm);fork.add(fb);
   for(const sx of[-1,1]){const t=new T.Mesh(new T.BoxGeometry(.016,.05,.05),gm);t.position.set(sx*.03,.035,0);fork.add(t);}const fc=new T.Mesh(new T.BoxGeometry(.03,.04,.012),gm);fc.position.set(0,-.02,.025);fork.add(fc);
@@ -708,7 +708,7 @@ function buildLandmarks(){const rm=new T.MeshStandardMaterial({color:'#6f6a62',r
   // il Circeo all'orizzonte (da Anzio a Sabaudia)
   const c=azPos(CIRCEO.lat,CIRCEO.lon);if(c.d>2000&&c.d<70000&&c.z<1000){const k=Math.min(1,9000/c.d),m=new T.Mesh(new T.ConeGeometry(2400*k*2.2,CIRCEO.h*1.3*k*2,7,1),new T.MeshStandardMaterial({color:'#4f5a52',roughness:1}));const sc=Math.min(1,6000/c.d);m.position.set(c.x*sc,CIRCEO.h*k*.6,Math.max(c.z*sc,0)+2000*k);m.scale.set(.75,1,.4);scene.add(m);}}
 function setupRods(){st.rods.forEach(r=>{scene.remove(r.hit);scene.remove(r.obj);scene.remove(r.spike);scene.remove(r.line);scene.remove(r.sinker);});
-  st.rods=Array.from({length:st.nRods},(_,i)=>{const x=rodX(i,st.nRods),spike=makeSpike(st.gear.spikeT||(st.gear.bought?.spike?'alu':''));spike.position.set(x,ROD_Z*.035,ROD_Z);scene.add(spike);
+  st.rods=Array.from({length:st.nRods},(_,i)=>{const x=rodX(i,st.nRods),spike=makeSpike(holder().k);spike.position.set(x,ROD_Z*.035,ROD_Z);scene.add(spike);
     planFix();const g0=st.gear,PQ=st.plan[i]||{},rid=PQ.rodId||g0.rod,lid=PQ.reelId||g0.reel,obj=makeRod();skinRod(obj,rid,lid);scene.add(obj);const lg=new T.BufferGeometry();lg.setAttribute('position',new T.Float32BufferAttribute(new Float32Array(40*3),3));const line=new T.Line(lg,MAT.line);line.frustumCulled=false;scene.add(line);
     const sinker=new T.Mesh(new T.SphereGeometry(.05,8,6),MAT.lead);sinker.visible=false;scene.add(sinker);
     const hit=new T.Mesh(new T.CylinderGeometry(.6,.6,4.6,8),new T.MeshBasicMaterial({visible:false}));hit.position.set(x,2.2,ROD_Z-.3);hit.rotation.x=-8*R;scene.add(hit);
@@ -1307,7 +1307,7 @@ const ROD_COL={beach390:['#c9ccd0','#e6e8ea','grigio'],surf420:['#ff7a00','#ff7a
 // la canna e il mulinello scelti si vedono sul modello
 function skinRod(obj,rodId,reelId){const g=st.gear,U=obj.userData;if(!U.sk){U.sk={m1:new T.MeshStandardMaterial({roughness:.3,metalness:.35}),m2:new T.MeshStandardMaterial({roughness:.3,metalness:.35}),mr:new T.MeshStandardMaterial({roughness:.3,metalness:.75}),base:U.reel.scale.x};
     obj.traverse(o=>{if(!o.isMesh)return;if(o.material===MAT.blank)o.material=U.sk.m1;else if(o.material===MAT.blank2)o.material=U.sk.m2;else if(o.material===MAT.reel)o.material=U.sk.mr;});}
-  const rc=ROD_COL[rodId]||ROD_COL.surf420;U.sk.m1.color.set(rc[0]);U.sk.m2.color.set(rc[1]);const fl=rodId!=='beach390';U.sk.m1.emissive.set(fl?rc[0]:'#000');U.sk.m1.emissiveIntensity=.35;U.sk.m2.emissive.set(fl&&rc[1]!=='#101010'?rc[1]:'#000');U.sk.m2.emissiveIntensity=.35;U.sk.m1.metalness=U.sk.m2.metalness=fl?.1:.35;U.sk.mr.color.set(REEL_COL[reelId]||'#3d4550');
+  const rc=ROD_COL[rodId]||ROD_COL.surf420;U.sk.m1.color.set(rc[1]);U.sk.m2.color.set(rc[0]);const fl=rodId!=='beach390';U.sk.m2.emissive.set(fl?rc[0]:'#000');U.sk.m1.emissiveIntensity=.35;U.sk.m1.emissive.set(fl&&rc[1]!=='#101010'?rc[1]:'#000');U.sk.m2.emissiveIntensity=.35;U.sk.m1.metalness=U.sk.m2.metalness=fl?.1:.35;U.sk.mr.color.set(REEL_COL[reelId]||'#3d4550');
   U.reel.scale.setScalar(U.sk.base*({r5000:.85,r10000:1.08,r14000:1.16,rLC:1.12,rMult:.9,rT:1.18,r6000:.92}[reelId]||1));
   if(g.bought?.beads){const bm=new T.MeshStandardMaterial({color:'#9dff7a',emissive:'#5aff3a',emissiveIntensity:.5});obj.userData.beads=bm;}}
 function gearChips(noRR){const g=st.gear,b=g.bought||{},q=gearQuality(),rn=id=>id==='rT'?'Tournament 14000':id.slice(1);
@@ -1339,7 +1339,9 @@ function planHtml(){planFix();const g=st.gear,i=Math.min(st.pi||0,st.plan.length
     ${g.forged?.[q.hook]>0?row('Tipo amo',chip('hookT','aberdeen','Aberdeen')+chip('hookT','forgiato','Forgiato')):''}`;}
 G.planPick=k=>{st.pi=k;setUI();};
 G.planSet=(key,v)=>{planFix();const i=Math.min(st.pi||0,st.plan.length-1),q=st.plan[i];if(q[key]!==v&&planAvail(key,v,i)<=0){st.msg='Non ne hai altri liberi: '+(key==='rodId'||key==='reelId'?'compra un altro pezzo al negozio.':'cambia scelta o passa dal negozio.');setUI();return;}q[key]=v;if(key==='lead'&&!leadOk(v,q.leadT))q.leadT='piramidale';if(key==='hook'&&!(st.gear.forged?.[v]>0))q.hookT='aberdeen';st.msg='';click();setUI();};
-function maxRods(){const g=st.gear,rc=Object.values(g.rodCnt||{}).reduce((a,b)=>a+b,0),lc=Object.values(g.reelCnt||{}).reduce((a,b)=>a+b,0);return Math.max(0,Math.min(3,rc,lc,g.spikes||0));}
+function holder(){const g=st.gear,b=g.bought||{},tri=!!b.tripod,sp=(g.spikes||0)-(tri?3:0),k=b.spikeLong?'long':b.spike?'alu':'pvc';if(tri&&(st.holder==='tripod'||sp<=0))return {k:'tripod',n:3,tri,sp};return {k,n:Math.max(0,sp),tri,sp};}
+G.holder=k=>{st.holder=k;LSS('holder',k);st.nRods=Math.min(st.nRods,Math.max(1,maxRods()));planFix();click();setUI();};
+function maxRods(){const g=st.gear,rc=Object.values(g.rodCnt||{}).reduce((a,b)=>a+b,0),lc=Object.values(g.reelCnt||{}).reduce((a,b)=>a+b,0);return Math.max(0,Math.min(3,rc,lc,holder().n));}
 function loseGear(kind,id){const g=st.gear,C=kind==='rod'?g.rodCnt:g.reelCnt,L=kind==='rod'?g.rods:g.reels;if(!C[id])return;C[id]--;if(C[id]<=0){delete C[id];const k=L.indexOf(id);if(k>=0)L.splice(k,1);}
   if(kind==='rod'&&g.rod===id)g.rod=L[0]||'';if(kind==='reel'&&g.reel===id){g.reel=L[0]||'';g.drag=reelDrag(g.reel);}st.nRods=Math.min(st.nRods,Math.max(1,maxRods()));LSS('nrods',st.nRods);gearSave();}
 function dailyBonus(){if(LSG('bonusDay','')!==today()){LSS('bonusDay',today());st.money+=20;gearSave();return true;}return false;}
@@ -1473,7 +1475,7 @@ function setUI(){const p=st.phase;let h='';if(p==='wait'&&CHAIRG&&scene){const g
     h=`<div class="gpanel"><b>🎣 ${SPOT.name} · ${gameDate().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'})}</b>
       <div class="gs">Mare ${seaName(w.wave)} (${w.wave.toFixed(1).replace('.',',')} m), vento ${Math.round(w.ws)} km/h da ${windName(w.wd)}, acqua ${Math.round(w.sst)}°</div>
       <div class="grow"><span>Canne</span>${[1,2,3].map(n=>`<button class="gc ${st.nRods===n?'on':''}" ${n>maxRods()?'style="opacity:.4"':''} onclick="GAME.setN(${n})">${n}</button>`).join('')}</div>${maxRods()<1?'<div class="gs warn">Non hai una canna completa (canna, mulinello e picchetto): passa dal negozio.</div>':''}
-      ${planHtml()}
+      ${(()=>{const H=holder();return H.tri&&H.sp>0?`<div class="grow" style="gap:4px"><span>Supporto</span><button class="gc ${H.k!=='tripod'?'on':''}" onclick="GAME.holder('spike')">📍 Picchetti</button><button class="gc ${H.k==='tripod'?'on':''}" onclick="GAME.holder('tripod')">🔱 Tripode</button></div>`:'';})()}${planHtml()}
       <div class="gs">Mare ${seaName(w.wave)}: consigliato piombo da ${sug} g. ${st.msg||''}</div>
       <div class="grow" style="flex-wrap:wrap;gap:4px"><span>Vestito</span>${['jeans',...(st.gear.outfits||[])].map(k=>`<button class="gc ${st.outfit===k?'on':''}" onclick="GAME.setOutfit('${k}')">${OUTF[k].n}</button>`).join('')}</div>
       ${(st.gear.hats||[]).length>1?`<div class="grow" style="gap:4px"><span>Cappello</span>${st.gear.hats.map(k=>`<button class="gc ${(st.gear.hat||'none')===k?'on':''}" onclick="GAME.setHat('${k}')">${{cap:'Berretto',bucket:'Da pescatore',beanie:'Lana',none:'Nessuno'}[k]}</button>`).join('')}</div>`:''}
