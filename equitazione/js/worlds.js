@@ -367,7 +367,7 @@ function stableBlock(W,cx,cz,ry,n){
   mesh(EQ.merge(bars),mat(0x2c2c2c,.4,.7),0,0,0,g);mesh(EQ.merge(wood),new THREE.MeshStandardMaterial({map:woodD,roughness:.85}),0,0,0,g);mesh(EQ.merge(pl),new THREE.MeshStandardMaterial({map:plaster,roughness:.9}),0,0,0,g);
   {const z0=-2.8,z1=D+.9,zr=(z0+z1)/2,yr=4.9,ye=3.05;
    for(const [za,zb] of [[z0,zr],[z1,zr]]){const Lr=Math.hypot(zb-za,yr-ye),a=Math.atan2(yr-ye,zb-za);const r=boxT(W,g,L+1.6,.12,Lr,0,(ye+yr)/2,(za+zb)/2,tiles,2.2);r.rotation.x=-a;}
-   for(let x=x0;x<=-x0+.01;x+=bw){mesh(G.box(.2,3.05,.2),new THREE.MeshStandardMaterial({map:woodT,roughness:.8}),x,1.52,-2.6,g);const wp=g.localToWorld(new V3(x,0,-2.6));W.colliders.push({x:wp.x,z:wp.z,r:.2});}
+   g.updateMatrixWorld(true);for(let x=x0;x<=-x0+.01;x+=bw){mesh(G.box(.2,3.05,.2),new THREE.MeshStandardMaterial({map:woodT,roughness:.8}),x,1.52,-2.6,g);const wp=g.localToWorld(new V3(x,0,-2.6));W.colliders.push({x:wp.x,z:wp.z,r:.2});}
    mesh(G.box(L+1.6,.25,.2),new THREE.MeshStandardMaterial({map:woodT,roughness:.8}),0,3.0,-2.6,g);}
   g.updateMatrixWorld(true);const c=g.localToWorld(new V3(0,0,D/2));
   W.colliders.push({x:c.x,z:c.z,hx:L/2+.3,hz:D/2+.2,rot:ry});
@@ -382,9 +382,11 @@ EQ.buildYard=function(){
   // zone
   patch(W,-14,14,76,34,TX.gravel(),5,.012);
   patch(W,0,-4,8,10,TX.gravel(),5,.012);
-  const A={cx:-20,cz:-54,hx:62,hz:42}; W.spots.arena=A;
+  const A={cx:-20,cz:-54,hx:52,hz:42}; W.spots.arena=A;
   patch(W,A.cx,A.cz,A.hx*2,A.hz*2,TX.sand(),4,.02,1);
-  const M2=10;W.surface=(x,z)=>{
+  const M2=10;W.water=(x,z)=>W.lake&&Math.hypot(x-W.lake.x,z-W.lake.z)<W.lake.r?W.lake.lvl:-99;
+  W.surface=(x,z)=>{
+    if(W.lake&&Math.hypot(x-W.lake.x,z-W.lake.z)<W.lake.r)return'water';
     if(Math.abs(x-A.cx)<A.hx&&Math.abs(z-A.cz)<A.hz)return'sand';
     if(x>-79&&x<-11&&z>-190&&z<-110)return'sand';
     if(x>-82&&x<42&&z>-378&&z<-242)return(x>-82+M2&&x<42-M2&&z>-378+M2&&z<-242-M2)?'sand':'grass';
@@ -546,8 +548,8 @@ EQ.buildYard=function(){
    ribbon(W,[[Fq.cx,-198],[Fq.cx,-215],[Fq.cx,z1+1]],4,TX.sand('#a88a62'),.03,4);
    // laghetto
    const LR=17;const bank=mesh(new THREE.CircleGeometry(LR+2.2,40),new THREE.MeshStandardMaterial({color:C(0x6f8a4a),roughness:1,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-8}),Fq.cx,.04,Fq.cz,grp);bank.rotation.x=-Math.PI/2;
-   const lg=new THREE.CircleGeometry(LR,48);lg.rotateX(-Math.PI/2);const lake=new THREE.Mesh(lg,new THREE.MeshStandardMaterial({color:C(0x3f86a0),roughness:.08,metalness:.2,polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-16}));lake.position.set(Fq.cx,.09,Fq.cz);lake.receiveShadow=true;grp.add(lake);
-   W.colliders.push({x:Fq.cx,z:Fq.cz,r:LR+.6});
+   const lg=new THREE.CircleGeometry(LR,48);lg.rotateX(-Math.PI/2);const lake=new THREE.Mesh(lg,new THREE.MeshStandardMaterial({color:C(0x3f86a0),roughness:.08,metalness:.2,polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-16}));lake.position.set(Fq.cx,.38,Fq.cz);lake.material.transparent=true;lake.material.opacity=.82;lake.renderOrder=2;lake.receiveShadow=true;grp.add(lake);
+   W.lake={x:Fq.cx,z:Fq.cz,r:LR,lvl:.38};
    const rocks=[],reeds=[];for(let i=0;i<36;i++){const a=i/36*TAU+rnd(-.05,.05),r=LR+rnd(.2,1.6);(i%3?reeds:rocks).push({x:Fq.cx+Math.cos(a)*r,y:0,z:Fq.cz+Math.sin(a)*r,s:rnd(.35,.8),ry:rnd(0,TAU)});}
    grp.add(inst(blob(1,1,3.1,.6),mat(0x8a8478,.9),rocks));tufts(W,reeds.map(r=>Object.assign({},r,{s:rnd(1.2,2)})),0x9ab86a);
    // anatre
@@ -587,11 +589,11 @@ EQ.buildYard=function(){
    W.spots.wash2={horse:{x:wx,z:hz,h:Math.PI/2}};}
   /* ---- cancelli e strade verso le altre località ---- */
   const gateSign=(x,z,ry,txt,col)=>{const g=new THREE.Group();g.position.set(x,0,z);g.rotation.y=ry;grp.add(g);
-    const wd=new THREE.MeshStandardMaterial({map:woodT});for(const sd of [-1,1]){mesh(G.box(.35,3.6,.35),wd,sd*5,1.8,0,g);}
-    mesh(G.box(10.6,.4,.4),wd,0,3.6,0,g);const t=EQ.labelTex(txt,{bg:col,w:512,h:110,font:'bold 60px Fredoka, Trebuchet MS, sans-serif'});W.tex.push(t);
+    const wd=new THREE.MeshStandardMaterial({map:woodT});for(const sd of [-1,1]){mesh(G.box(.35,3.6,.35),wd,sd*8,1.8,0,g);}
+    mesh(G.box(16.6,.4,.4),wd,0,3.6,0,g);const t=EQ.labelTex(txt,{bg:col,w:512,h:110,font:'bold 60px Fredoka, Trebuchet MS, sans-serif'});W.tex.push(t);
     const tb=EQ.labelTex('🏠 MANEGGIO',{bg:'#5a2e14',w:512,h:110,font:'bold 60px Fredoka, Trebuchet MS, sans-serif'});W.tex.push(tb);
     for(const sd of [1,-1]){const inYard=(Math.sin(ry)*sd*(-x)+Math.cos(ry)*sd*(-z))>0;const m=mesh(new THREE.PlaneGeometry(4.6,1),new THREE.MeshStandardMaterial({map:inYard?t:tb,roughness:.6}),0,3.0,sd*.22,g);if(sd<0)m.rotation.y=Math.PI;}
-    W.colliders.push({x:x+Math.cos(ry)*5,z:z-Math.sin(ry)*5,r:.3},{x:x-Math.cos(ry)*5,z:z+Math.sin(ry)*5,r:.3});};
+    W.colliders.push({x:x+Math.cos(ry)*8,z:z-Math.sin(ry)*8,r:.3},{x:x-Math.cos(ry)*8,z:z+Math.sin(ry)*8,r:.3});};
   gateSign(80,0,Math.PI/2,'🏖️ SPIAGGIA ➜','#1f7aa3');
   gateSign(0,56,0,'🏙️ CITTÀ ➜','#94503a');
   gateSign(-84,-16,Math.PI/2,'🌲 BOSCO ➜','#2f6b2a');
@@ -672,7 +674,7 @@ EQ.buildYard=function(){
    grp.add(inst(G.cyl(.06,.09,3.6,8),mat(0x2a2a2a,.4,.6),L.map(a=>({x:a.x,y:1.8,z:a.z}))));
    grp.add(inst(G.sph(.22,10,8),new THREE.MeshStandardMaterial({color:0xfff6d0,emissive:C(0x554422),roughness:.2}),L.map(a=>({x:a.x,y:3.7,z:a.z}))));}
   // recinzione esterna
-  woodFence(W,[[-5,56],[-84,56],[-84,-10]],{h:1.3,rails:2,post:3});woodFence(W,[[54.2,-86],[80,-86],[80,-5]],{h:1.3,rails:2,post:3});woodFence(W,[[-84,-22],[-84,-198],[-24,-198]],{h:1.3,rails:2,post:3});woodFence(W,[[-16,-198],[44,-198],[44,-90]],{h:1.3,rails:2,post:3});woodFence(W,[[80,5],[80,56],[5,56]],{h:1.3,rails:2,post:3});
+  woodFence(W,[[-8,56],[-84,56],[-84,-8]],{h:1.3,rails:2,post:3});woodFence(W,[[56.8,-86],[80,-86],[80,-8]],{h:1.3,rails:2,post:3});woodFence(W,[[-84,-24],[-84,-198],[-24,-198]],{h:1.3,rails:2,post:3});woodFence(W,[[-16,-198],[44,-198],[44,-90]],{h:1.3,rails:2,post:3});woodFence(W,[[80,8],[80,56],[8,56]],{h:1.3,rails:2,post:3});
   outskirts(W,{r0:520,ok:(x,z)=>!(Math.abs(x)<480&&z>-210&&z<480)&&W.roadD(x,z)>9});
   W.bounds={x0:-3000,x1:3000,z0:-3000,z1:3000};
   W.spawn={x:12,z:45,h:-2.4};W.spawnRide={x:30,z:0,h:Math.PI/2};
@@ -845,7 +847,7 @@ EQ.buildForest=function(){
   {const pos=[],idx=[];const n=380;for(let i=0;i<=n;i++){const x=-390+i*2.05;for(const s of [-1,1])pos.push(x,lvl(x),rz(x)+s*7.5);}
    for(let i=0;i<n;i++){const a=i*2;idx.push(a,a+1,a+2,a+1,a+3,a+2);}
    const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));g.setIndex(idx);g.computeVertexNormals();
-   W.group.add(makeWater(g,{amp:.03,alpha:.82,shallow:0x4e7f72,deep:0x2b4c48,sky:0x9fb7b0}));
+   W.group.add(makeWater(g,{amp:.03,alpha:.86,shallow:0x4d9cc0,deep:0x1d5a80,sky:0xa8cbe6}));
    // ponte di legno dove il sentiero attraversa
   }
   // alberi

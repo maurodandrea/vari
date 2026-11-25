@@ -988,6 +988,7 @@ function spawnVehicles(w){if(w.vehSpawned)return;w.vehSpawned=true;const n=w.nam
   else if(n==='city'){
     mk('bike',-8,-24.2,Math.PI/2);mk('bike',-6.5,-24.2,Math.PI/2);mk('scooter',-5,-24.2,Math.PI/2);mk('scooter',-3.8,-24.2,Math.PI/2);mk('moto',4,-24.2,Math.PI/2);mk('moto',6,-24.2,Math.PI/2);}
   else if(n==='beach'){const sh=w.shore;mk('bike',-40,5,Math.PI/2);mk('scooter',-40,7,Math.PI/2);mk('moto',-44,5.5,Math.PI/2);mk('car',sh(260)-49.6,260,Math.PI);mk('bike',sh(-30)-18,-26,Math.PI/2);}
+  else if(n==='home'){mk('car',3.6,26,0);mk('bike',-3.2,22,0);mk('scooter',-4.6,22,0);}
   else if(n==='forest'){const s=w.spawn,rx=-Math.cos(s.h),rz=Math.sin(s.h);mk('bike',s.x+rx*3,s.z+rz*3,s.h);mk('bike',s.x+rx*3.4-Math.sin(s.h)*2,s.z+rz*3.4-Math.cos(s.h)*2,s.h);mk('moto',s.x-rx*3.4,s.z-rz*3.4,s.h);}
 }
 spawnVehicles(yard);
