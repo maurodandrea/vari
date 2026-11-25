@@ -1285,6 +1285,84 @@ EQ.buildHome=function(){
    mesh(G.box(1.6,.6,.8),mat(0xffffff,.2),10,.3,-7.4,R);mesh(G.box(1.4,.05,.6),mat(0x7fb3d5,.1),10,.58,-7.4,R);mesh(G.cyl(.04,.04,1.6,6),mat(0xcccccc,.2,.8),10.6,1.4,-7.7,R);mesh(G.cyl(.12,.12,.04,10),mat(0xcccccc,.2,.8),10.4,2.15,-7.6,R);col(10,-7.4,.85,.45,.65);
    mesh(G.box(.45,.45,.6),mat(0xffffff,.2),7.5,.22,-7.4,R);mesh(G.box(.45,.5,.15),mat(0xffffff,.2),7.5,.6,-7.75,R);col(7.5,-7.4,.28,.35,.5);
    mesh(G.box(.7,.15,.45),mat(0xffffff,.2),10.6,.85,-3,R);mesh(G.box(.3,.7,.3),mat(0xffffff,.2),10.6,.4,-3,R);mesh(G.box(.05,.7,.6),new THREE.MeshStandardMaterial({color:C(0xcfe2ea),roughness:.03,metalness:.95}),10.9,1.5,-3,R);col(10.6,-3,.36,.3,.95);
+   // ===== ARREDI EXTRA: finestre, quadri, acquario, pianoforte, stereo, gatto, specchiera, cavallo a dondolo, disegno, tappetino, torta =====
+   {const glassM=new THREE.MeshBasicMaterial({color:0xbfe4ff}),frameM=mat(0xffffff,.5);
+    const win=(x,z,ry,w,h,y,cur)=>{const g=new THREE.Group();g.position.set(x,y||1.65,z);g.rotation.y=ry;R.add(g);
+      const gl=new THREE.Mesh(new THREE.PlaneGeometry(w,h),glassM);gl.position.z=.005;g.add(gl);
+      for(const [a,b,c,d] of [[w+.12,.07,0,h/2],[w+.12,.07,0,-h/2],[.07,h,-w/2,0],[.07,h,w/2,0],[.04,h,0,0],[w,.04,0,0]]){const m=new THREE.Mesh(G.box(a,b,.05),frameM);m.position.set(c,d,.02);g.add(m);}
+      mesh(G.box(w+.25,.05,.14),frameM,0,-h/2-.05,.07,g);
+      if(cur)for(const sd of[-1,1]){const c=new THREE.Mesh(G.box(.3,h+.35,.04),mat(cur,.95));c.position.set(sd*(w/2+.12),.05,.07);g.add(c);}
+      if(cur){const bar=new THREE.Mesh(G.cyl(.02,.02,w+.8,6),mat(0x8a5a34,.5));bar.rotation.z=Math.PI/2;bar.position.set(0,h/2+.22,.08);g.add(bar);}};
+    win(-7,7.92,Math.PI,1.6,1.1,1.65,0xd9534f);win(-2.6,7.92,Math.PI,1.2,1,1.7,0xd9534f);win(7.8,7.92,Math.PI,1.4,.8,1.75,0xf6e7b0);
+    win(-9.6,-7.92,0,1.1,1,1.75,0x7a9fd6);win(-.6,-7.92,0,1,1,1.75,0xf29ac0);win(3,-7.92,0,.9,.9,1.8,0x6aa86a);win(8.6,-7.92,0,.6,.5,2.1);
+    win(10.92,-1.6,-Math.PI/2,.8,.8,1.8);
+    // quadri con cavalli
+    const pic=(x,y,z,ry,w,h,draw)=>{const t=EQ.canvasTex(192,Math.round(192*h/w),draw);W.tex.push(t);const g=new THREE.Group();g.position.set(x,y,z);g.rotation.y=ry;R.add(g);
+      mesh(G.box(w+.1,h+.1,.04),mat(0x6b4226,.5),0,0,0,g);const p=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshStandardMaterial({map:t,roughness:.8}));p.position.z=.025;g.add(p);return p;};
+    const land=(sky,gr,em)=>(g,w,h)=>{const q=g.createLinearGradient(0,0,0,h);q.addColorStop(0,sky);q.addColorStop(1,'#fff');g.fillStyle=q;g.fillRect(0,0,w,h);g.fillStyle=gr;g.fillRect(0,h*.68,w,h);g.font=Math.round(h*.45)+'px serif';g.textAlign='center';g.fillText(em,w*.5,h*.82);g.font=Math.round(h*.18)+'px serif';g.fillText('☀️',w*.85,h*.25);};
+    pic(-2.8,1.9,.1,0,1.1,.75,land('#7cc0f0','#6aa84f','🐎'));pic(-10.9,1.7,6,Math.PI/2,1.3,.9,land('#f5b06a','#c9a35a','🏇'));
+    pic(-7.5,2.05,-7.9,0,1.2,.6,land('#9fd2f5','#7fbf5a','🐴'));pic(9,1.8,7.9,Math.PI,.9,.6,land('#ffd6a0','#88c070','🌻'));
+    pic(5.3,1.9,-.1,Math.PI,1,.7,(g,w,h)=>{g.fillStyle='#2f6b33';g.fillRect(0,0,w,h);g.font=Math.round(h*.5)+'px serif';g.textAlign='center';g.fillText('🏆',w/2,h*.62);g.fillStyle='#ffe9a8';g.font='bold '+Math.round(h*.14)+'px sans-serif';g.fillText('CAMPIONESSA',w/2,h*.9);});
+    // orologio
+    {const t=EQ.canvasTex(128,128,(g,w,h)=>{g.fillStyle='#fff';g.beginPath();g.arc(64,64,60,0,TAU);g.fill();g.strokeStyle='#333';g.lineWidth=6;g.stroke();g.fillStyle='#333';for(let i=0;i<12;i++){const a=i/12*TAU;g.fillRect(64+Math.sin(a)*48-3,64-Math.cos(a)*48-3,6,6);}g.lineWidth=5;g.beginPath();g.moveTo(64,64);g.lineTo(64,28);g.moveTo(64,64);g.lineTo(92,70);g.stroke();});W.tex.push(t);
+     const c=new THREE.Mesh(new THREE.CircleGeometry(.3,24),new THREE.MeshBasicMaterial({map:t}));c.position.set(7.2,2.1,.1);R.add(c);}
+    // tappeti camere
+    const rugT=(c1,c2)=>{const t=EQ.canvasTex(128,128,(g,w,h)=>{g.fillStyle=c1;g.fillRect(0,0,w,h);g.fillStyle=c2;for(let i=0;i<8;i++){g.beginPath();g.arc(64,64,60-i*8,0,TAU);g.fill();[c1,c2]=[c2,c1];g.fillStyle=c2;}});W.tex.push(t);return t;};
+    {const r1=mesh(new THREE.CircleGeometry(1.1,32),new THREE.MeshStandardMaterial({map:rugT('#f29ac0','#ffffff'),roughness:1,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-8}),-1.3,.036,-4.3,R);r1.rotation.x=-Math.PI/2;
+     const r2=mesh(new THREE.PlaneGeometry(2.4,1.4),new THREE.MeshStandardMaterial({map:rugT('#e6d3a8','#c98a5a'),roughness:1,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-8}),-7.5,.036,-4.6,R);r2.rotation.x=-Math.PI/2;}
+    // lampada da terra
+    mesh(G.cyl(.18,.2,.04,12),mat(0x333333,.4,.6),-10.3,.02,3.2,R);mesh(G.cyl(.02,.02,1.5,6),mat(0x333333,.4,.6),-10.3,.77,3.2,R);mesh(G.cyl(.18,.3,.35,14,true),new THREE.MeshStandardMaterial({color:C(0xfff1c8),emissive:C(0xffd27a),emissiveIntensity:.6,side:THREE.DoubleSide}),-10.3,1.62,3.2,R);
+    // ACQUARIO
+    mesh(G.box(.6,.75,1.7),wood,-10.6,.375,1.6,R);col(-10.6,1.6,.32,.86,.9);
+    mesh(G.box(.5,.06,1.55),mat(0xd8c49a,.9),-10.6,.78,1.6,R);
+    const aq=new THREE.Mesh(G.box(.52,.55,1.6),new THREE.MeshStandardMaterial({color:C(0x7fd0ff),transparent:true,opacity:.35,roughness:.05,depthWrite:false}));aq.position.set(-10.6,1.03,1.6);aq.renderOrder=2;R.add(aq);
+    for(const sd of[-1,1]){mesh(G.box(.56,.04,.04),mat(0x222222,.4),-10.6,1.32,1.6+sd*.8,R);mesh(G.box(.04,.04,1.62),mat(0x222222,.4),-10.6+sd*.27,1.32,1.6,R);}
+    {const wt=new THREE.Mesh(new THREE.PlaneGeometry(.5,1.56),new THREE.MeshStandardMaterial({color:C(0x4fb4e8),transparent:true,opacity:.5,roughness:.1}));wt.rotation.x=-Math.PI/2;wt.position.set(-10.6,1.24,1.6);R.add(wt);}
+    for(let i=0;i<4;i++)mesh(G.cone(.03,.25+i%2*.12,5),mat(0x2e9e4a,.8),-10.65+(i%2)*.1,.92,1.0+i*.38,R);
+    W.fish=[];for(let i=0;i<5;i++){const f=new THREE.Group();const c=[0xff7f1f,0xffd23a,0xff4d6d,0x3ab0ff,0xff9a2e][i];
+      const b=new THREE.Mesh(G.sph(.045,8,6),mat(c,.4));b.scale.set(.6,1,1.5);f.add(b);const t=new THREE.Mesh(G.cone(.035,.06,4),mat(c,.4));t.rotation.x=-Math.PI/2;t.position.z=-.08;f.add(t);
+      f.position.set(OX-10.6+(i%3-1)*.12,.92+i*.07,OZ+1.6);f.userData={ph:i*1.3,sp:.5+i*.12,y:.92+i*.07};grp.add(f);W.fish.push(f);}
+    // PIANOFORTE
+    {const pm=mat(0x141414,.15,.2);mesh(G.box(1.5,1.2,.55),pm,-5.8,.6,7.55,R);mesh(G.box(1.5,.08,.3),pm,-5.8,.74,7.15,R);
+     mesh(G.box(1.42,.05,.24),mat(0xfafafa,.3),-5.8,.79,7.13,R);for(let k=0;k<14;k++){if(k%7===2||k%7===6)continue;mesh(G.box(.05,.04,.13),pm,-6.43+k*.1,.82,7.2,R);}
+     mesh(G.box(.5,.4,.04),mat(0xf6f2e6,.7),-5.8,1.12,7.3,R);col(-5.8,7.45,.78,.42,1.2);
+     mesh(G.box(.85,.06,.38),pm,-5.8,.46,6.62,R);for(const [a,b] of [[-.38,-.15],[.38,-.15],[-.38,.15],[.38,.15]])mesh(G.box(.04,.44,.04),pm,-5.8+a,.22,6.62+b,R);}
+    // STEREO con casse
+    mesh(G.box(1.6,.5,.4),wood,-2.6,.25,.32,R);mesh(G.box(.7,.18,.3),mat(0x222222,.3,.4),-2.6,.6,.3,R);mesh(G.box(.2,.05,.02),new THREE.MeshBasicMaterial({color:0x3aff8a}),-2.6,.63,.46,R);
+    for(const sd of[-1,1]){mesh(G.box(.35,.9,.32),mat(0x1d1d1d,.5),-2.6+sd*1.05,.45,.3,R);for(const y of[.3,.65])mesh(G.cyl(.11,.11,.02,14),mat(0x555555,.4),-2.6+sd*1.05,y,.47,R).rotation.x=Math.PI/2;}
+    col(-2.6,.32,1.25,.24,.9);
+    {const ball=new THREE.Mesh(G.sph(.18,10,8),new THREE.MeshStandardMaterial({color:C(0xdddddd),metalness:1,roughness:.15,flatShading:true}));ball.position.set(OX-2.6,2.45,OZ+2);grp.add(ball);
+     mesh(G.cyl(.01,.01,.35,4),mat(0x888888,.3),-2.6,2.65,2,R);W.disco=ball;}
+    // GATTO che dorme sul tappeto
+    {const cat=EQ.buildAnimal('cat',{col:0x9a9a9a,belly:0xf2f2f2});cat.root.position.set(OX-4.7,0,OZ+1.5);cat.root.rotation.y=-.6;cat.root.scale.setScalar(1.5);grp.add(cat.root);cat.root.userData.pet=null;W.cat=cat;
+     const bed=mesh(G.tor(.32,.08,8,16),mat(0xc0392b,.9),-4.7,.06,1.5,R);bed.rotation.x=Math.PI/2;}
+    // SPECCHIERA in camera
+    mesh(G.box(.5,.75,1.1),wood,-4.35,.375,-3,R);col(-4.35,-3,.27,.58,.8);
+    mesh(G.box(.06,1,.8),wood,-4.14,1.35,-3,R);const mir=new THREE.Mesh(new THREE.PlaneGeometry(.66,.86),new THREE.MeshStandardMaterial({color:C(0xd8eef8),metalness:.95,roughness:.05}));mir.position.set(-4.18,1.35,-3);mir.rotation.y=-Math.PI/2;R.add(mir);
+    for(let i=0;i<3;i++)mesh(G.cyl(.04,.04,.12,8),mat([0xe86aa6,0xf1c40f,0x9b59b6][i],.3),-4.35,.81,-3.3+i*.25,R);
+    // CAVALLO A DONDOLO nella cameretta
+    {const rk=new THREE.Group();rk.position.set(OX-1.3,0,OZ-4.3);grp.add(rk);const wm=mat(0xf2e2c4,.6),dm=mat(0x8a5a32,.6),rm=mat(0xc0392b,.5);
+     for(const sd of[-1,1]){const r=new THREE.Mesh(G.tor(1.3,.04,6,20,Math.PI*.42),dm);r.rotation.z=Math.PI*1.29;r.position.set(0,1.38,sd*.22);rk.add(r);}
+     for(const [x,sd] of [[.42,1],[.42,-1],[-.42,1],[-.42,-1]]){const l=new THREE.Mesh(G.cyl(.04,.04,.42,6),wm);l.position.set(x,.3,sd*.17);l.rotation.x=sd*.25;rk.add(l);}
+     const b=new THREE.Mesh(G.cap?G.cap(.18,.7):G.box(.95,.3,.34),wm);b.position.set(0,.62,0);rk.add(b);
+     const nk=new THREE.Mesh(G.box(.18,.45,.2),wm);nk.position.set(.48,.85,0);nk.rotation.z=-.4;rk.add(nk);const hd=new THREE.Mesh(G.box(.38,.18,.18),wm);hd.position.set(.66,1.05,0);rk.add(hd);
+     const mn=new THREE.Mesh(G.box(.08,.4,.06),rm);mn.position.set(.42,.98,0);mn.rotation.z=-.4;rk.add(mn);const tl=new THREE.Mesh(G.cone(.07,.35,6),rm);tl.position.set(-.55,.6,0);tl.rotation.z=-2.3;rk.add(tl);
+     const sd=new THREE.Mesh(G.box(.34,.06,.38),rm);sd.position.set(0,.79,0);rk.add(sd);for(const s2 of[-1,1]){const e=new THREE.Mesh(G.sph(.025,6,5),mat(0x111111,.3));e.position.set(.72,1.1,s2*.09);rk.add(e);}
+     W.rock=rk;col(-1.3,-4.3,.75,.3,.9);}
+    // DISEGNO alla scrivania della cameretta
+    {const c=document.createElement('canvas');c.width=128;c.height=96;const t=new THREE.CanvasTexture(c);t.encoding=THREE.sRGBEncoding;W.tex.push(t);const g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,128,96);t.needsUpdate=true;
+     const pp=new THREE.Mesh(new THREE.PlaneGeometry(.5,.36),new THREE.MeshStandardMaterial({map:t,roughness:.9}));pp.rotation.x=-Math.PI/2;pp.position.set(.8,.785,-7.4);R.add(pp);
+     const wp=new THREE.Mesh(new THREE.PlaneGeometry(.6,.45),new THREE.MeshStandardMaterial({map:t,roughness:.9}));wp.position.set(.8,1.75,-7.91);wp.visible=false;R.add(wp);
+     for(let i=0;i<4;i++){const k=mesh(G.cyl(.012,.012,.16,5),mat([0xc0392b,0x2a58c8,0x2ecc71,0xf1c40f][i],.5),.4+i*.05,.79,-7.25,R);k.rotation.z=Math.PI/2;}
+     W.draw={c,g,t,wp,n:0};}
+    // TAPPETINO YOGA nello studio
+    {const m=mesh(new THREE.PlaneGeometry(.75,1.9),new THREE.MeshStandardMaterial({color:C(0x8e5ad6),roughness:.9,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-8}),3.2,.04,-2.6,R);m.rotation.x=-Math.PI/2;
+     for(const sd of[-1,1]){mesh(G.cyl(.05,.05,.3,8),mat(0x333333,.4,.5),2.4,.05,-3.4+sd*.25,R).rotation.z=Math.PI/2;}}
+    // TORTA (appare quando la prepari)
+    {const k=new THREE.Group();k.position.set(OX+3.6,.95,OZ+5.9);grp.add(k);k.add(new THREE.Mesh(G.cyl(.26,.26,.02,20),mat(0xffffff,.3)));
+     const c1=new THREE.Mesh(G.cyl(.21,.21,.16,20),mat(0x7a4a2a,.7));c1.position.y=.09;k.add(c1);const c2=new THREE.Mesh(G.cyl(.215,.215,.04,20),mat(0xfff4f8,.6));c2.position.y=.19;k.add(c2);
+     for(let i=0;i<6;i++){const s=new THREE.Mesh(G.sph(.03,6,5),mat(0xd8232a,.4));s.position.set(Math.cos(i)*.14,.23,Math.sin(i)*.14);k.add(s);}k.visible=false;W.cake=k;}
+   }
    R.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
    W.homeSpots=[
      {id:'tv',icon:'📺',label:'Guarda la TV',p:P(-7,3.15),h:Math.PI,pose:'sit',dur:8,tv:true},
@@ -1300,6 +1378,19 @@ EQ.buildHome=function(){
      {id:'read',icon:'📚',label:'Leggi un libro sui cavalli',p:P(5.9,-4.2),h:Math.PI/2,pose:'feed',dur:4,msg:'📚 Hai imparato tutto sul galoppo!'},
      {id:'shower',icon:'🚿',label:'Fai la doccia',p:P(10,-7.3),h:Math.PI,pose:'wave',dur:5,snd:'water',shower:true,msg:'🚿 Che fresco! Profumi di pulito'},
      {id:'hands',icon:'🧼',label:'Lavati le mani',p:P(10.05,-3),h:Math.PI/2,pose:'brush',dur:3,snd:'water',msg:'🧼 Mani pulite!'},
+     {id:'game',icon:'🎮',label:'Gioca ai videogiochi',p:P(-8,3.15),h:Math.PI,pose:'drive',dur:9,game:true,msg:'🎮 Nuovo record!'},
+     {id:'piano',icon:'🎹',label:'Suona il pianoforte',p:P(-5.8,6.55),h:0,pose:'piano',dur:7,piano:true,msg:'🎹 Bravissim'+EQ.A()+'! Che bella melodia'},
+     {id:'dance',icon:'💃',label:'Metti musica e balla',p:P(-2.6,2),h:0,pose:'dance',dur:8,dance:true,msg:'💃 Che ballerin'+EQ.A()+'!'},
+     {id:'fish',icon:'🐠',label:'Dai da mangiare ai pesci',p:P(-9.7,1.6),h:-Math.PI/2,pose:'feed',dur:3.5,fish:true,msg:'🐠 I pesciolini ringraziano!'},
+     {id:'cat',icon:'🐱',label:'Accarezza Micio',p:P(-4.7,2.35),h:Math.PI,pose:'petlow',dur:3.5,cat:true,msg:'🐱 Purrr… Micio fa le fusa'},
+     {id:'snack',icon:'🥪',label:'Fai merenda a tavola',p:P(-1,4.2),h:0,pose:'sit',dur:4,snd:'munch',msg:'🥪 Che buona merenda!'},
+     {id:'cake',icon:'🎂',label:'Prepara una torta',p:P(2.55,5.95),h:Math.PI/2,pose:'brush',dur:6,snd:'cook',makeCake:true,msg:'🎂 Torta alle fragole pronta!'},
+     {id:'eatcake',icon:'🍰',label:'Mangia una fetta di torta',p:P(2.55,5.95),h:Math.PI/2,pose:'feed',dur:3,snd:'munch',eatCake:true,msg:'🍰 Squisita!'},
+     {id:'mirror',icon:'💇',label:'Pettinati allo specchio',p:P(-5.05,-3),h:Math.PI/2,pose:'mirror',dur:4.5,snd:'brush',msg:'💇 Che bella coda di cavallo!'},
+     {id:'rock',icon:'🎠',label:'Sali sul cavallo a dondolo',p:P(-1.3,-3.45),h:Math.PI/2,dur:8,rock:true,out:P(-1.3,-3.3),msg:'🎠 Hop hop! Che galoppata'},
+     {id:'draw',icon:'🖍️',label:'Disegna un cavallo',p:P(.8,-6.85),h:Math.PI,pose:'brush',dur:6,draw:true,msg:'🖍️ Che bel disegno! L\'hai appeso al muro'},
+     {id:'gym',icon:'🤸',label:'Fai ginnastica',p:P(3.2,-2.6),h:0,pose:'gym',dur:7,msg:'💪 Allenamento fatto! Pront'+EQ.A()+' per cavalcare'},
+     {id:'bath',icon:'🛁',label:'Bagno con le bolle',p:P(9.45,-7.4),h:-Math.PI/2,lie:true,ly:.6,dur:7,snd:'water',bath:true,out:P(9.3,-6.2),msg:'🛁 Che relax tra le bolle!'},
      {id:'exit',icon:'🚪',label:'Esci in giardino',p:P(0,7.2),exit:true}];
   }
   outskirts(W,{r0:260,ok:(x,z)=>Math.abs(z-60)>9&&!(Math.abs(x)<250&&Math.abs(z)<250)});
