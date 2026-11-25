@@ -112,6 +112,7 @@
   .hz.sel{border-color:#ff9f1c;background:#fff4dc}
   .hdesc{font-size:12.5px;color:#6b7c5e;text-align:center;margin:0 0 10px}
   .big{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border-radius:18px;padding:11px 14px;background:linear-gradient(180deg,#ffb347,#f08a12);color:#fff;font-size:19px;font-weight:700;box-shadow:0 4px 0 #b25f00;margin-bottom:12px}
+  .big.bh{background:linear-gradient(180deg,#d98e5f,#a8603a);box-shadow:0 4px 0 #7a3f22}
   .big .ic{font-size:32px}
   .big small{display:block;font-weight:400;font-size:12.5px;opacity:.95}
   .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
@@ -205,6 +206,7 @@
     <div class="pname hn"><span>🐴</span><input id="hName" maxlength="14" placeholder="nome del cavallo" autocomplete="off" autocapitalize="words"></div>
     <div class="chips coats" id="coats"></div>
     <button class="big" id="goYard"><span class="ic">🏠</span><span>Vai al maneggio<small>Vestiti, prendi il cavallo dal box, puliscilo, sellalo e monta!</small></span></button>
+    <button class="big bh" id="goHome"><span class="ic">🏡</span><span>Parti da casa<small>Fuori dalla porta di casa, col cavallo già sellato</small></span></button>
     <h3>Passeggiata veloce</h3>
     <div class="grid3 g2">
       <button class="place p-beach" data-trip="beach"><i>🏖️</i>Spiaggia<small>galoppa sulla riva</small></button>
@@ -272,11 +274,11 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/objects/Sky.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/utils/BufferGeometryUtils.js"></script>
 <script>if(!window.THREE){document.getElementById('loadTx').innerHTML='Impossibile caricare il motore 3D.<br>Controlla la connessione e ricarica la pagina.';}</script>
-<script src="js/core.js?v=23"></script>
-<script src="js/models.js?v=23"></script>
-<script src="js/npc.js?v=23"></script>
-<script src="js/worlds.js?v=23"></script>
-<script src="js/agents.js?v=23"></script>
-<script src="js/game.js?v=23"></script>
+<script src="js/core.js?v=26"></script>
+<script src="js/models.js?v=26"></script>
+<script src="js/npc.js?v=26"></script>
+<script src="js/worlds.js?v=26"></script>
+<script src="js/agents.js?v=26"></script>
+<script src="js/game.js?v=26"></script>
 </body>
 </html>

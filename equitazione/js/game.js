@@ -80,7 +80,7 @@ function buildPractice(w){
   const S=w.spots||{};
   if(S.arena)practice.push(makeObs(w===yard?LEVELS[2]:LEVELS[0],S.arena,w.group,true));
   if(S.arena2)practice.push(makeObs(LEVELS[1],S.arena2,w.group,true));
-  if(S.free)practice.push(makeObs({obs:[[-20,-12,0,'v',.6],[-2,16,90,'o',.7],[20,4,180,'v',.8],[0,-16,270,'v',.7]]},S.free,w.group,true));
+  if(S.free)practice.push(makeObs({obs:[[-30,-14,0,'v',.7],[30,14,180,'o',.8]]},S.free,w.group,true));
   obstacles=practice.reduce((a,p)=>a.concat(p.list),[]);
 }
 function buildObstacles(L,A){
@@ -132,8 +132,8 @@ function placeInBox(H){const b=Y.boxes[H.i];H.where='box';H.x=b.horse.x;H.z=b.ho
   H.root.position.set(H.x,0,H.z);H.root.rotation.y=H.h;H.root.visible=true;
   H.setTack({halter:false,pad:false,saddle:false,girth:false,bridle:false,wraps:false});H.rope.visible=false;H.reins.visible=false;}
 function placeAt(H,s,where){H.where=where;H.x=s.x;H.z=s.z;H.h=s.h;H.sp=0;H.root.position.set(H.x,W().height(H.x,H.z),H.z);H.root.rotation.y=H.h;}
-function attachRider(H){H.seat.add(P.root);P.root.position.set(0,-.9,0);P.root.rotation.set(0,0,0);}
-function detachRider(){scene.add(P.root);P.root.rotation.set(0,0,0);}
+function attachRider(H){const s=H.root.scale.x||1;H.seat.add(P.root);P.root.scale.setScalar(1/s);P.root.position.set(0,-.9/s,0);P.root.rotation.set(0,0,0);}
+function detachRider(){scene.add(P.root);P.root.scale.setScalar(1);P.root.rotation.set(0,0,0);}
 function fullTack(H){H.setTack({halter:false,pad:true,saddle:true,girth:true,bridle:true});}
 function ensureSafe(){if(P.outfit.helmet==null||P.outfit.protector==null){P.setOutfit({helmet:P.outfit.helmet!=null?P.outfit.helmet:0x1b1b22,protector:P.outfit.protector!=null?P.outfit.protector:0x23407f,gloves:P.outfit.gloves!=null?P.outfit.gloves:0x1a1a1a});persist();}}
 
@@ -195,6 +195,7 @@ function toMenu(){
 }
 $('horses').addEventListener('click',e=>{const b=e.target.closest('.hz');if(!b)return;EQ.audio();G.sel=+b.dataset.i;save.sel=G.sel;persist();menuPose();renderMenu();EQ.sfx.neigh();});
 $('goYard').addEventListener('click',()=>{EQ.audio();startYard();});
+$('goHome').addEventListener('click',()=>{EQ.audio();quickRide(()=>travel('home',null,true),'🏡 Si parte da casa…');});
 document.querySelectorAll('[data-trip]').forEach(b=>b.addEventListener('click',()=>{EQ.audio();quickRide(()=>goTrip(b.dataset.trip,true),PLACE[b.dataset.trip][2]);}));
 function lvlClick(e){const b=e.target.closest('.lvl');if(!b)return;EQ.audio();const l=+b.dataset.l;$('course').classList.remove('on');
   if(G.state==='menu'){quickRide(()=>goShowRace(l,true),'🚚 Si parte per il concorso…');return;}
@@ -671,7 +672,7 @@ function rideUpdate(dt){
   let inp=(G.busy||G.mount||G.lock>0||G.grazeT>0||G.state!=='ride')?{x:0,y:0}:EQ.readInput();
   if(G.lock>0)G.lock-=dt;
   if(G.course&&G.course.state==='count')inp={x:0,y:0};
-  const st0=H.stats;const maxSp=(G.slowT>0?.18:1)*MAXSP*(.38+.62*U.clamp(st0.energy/35,0,1))*(st0.hunger<15?.8:1)*((st0.thirst==null?80:st0.thirst)<15?.8:1);
+  const st0=H.stats;const maxSp=(H.def.pony?.8:1)*(G.slowT>0?.18:1)*MAXSP*(.38+.62*U.clamp(st0.energy/35,0,1))*(st0.hunger<15?.8:1)*((st0.thirst==null?80:st0.thirst)<15?.8:1);
   let target=Math.max(0,-inp.y)*maxSp;
   if(Math.abs(inp.x)>.25&&target<2.2&&inp.y<.3)target=2.2;
   if(inp.y>.35)target=0;
@@ -719,8 +720,8 @@ function rideUpdate(dt){
   H.animate(dt,{speed:R.sp,air:!R.grounded,vy:R.vy,turn:R.turn,slope,sink,eat:G.grazeT>0?1:0,graze:1});
   // Giorgia in sella
   if(G.mount){G.mount.t+=dt/G.mount.dur;const t=Math.min(1,G.mount.t),e=t*t*(3-2*t);
-    P.root.position.copy(G.mount.from).lerp(tv.set(0,-.9,0),e);P.root.position.y+=Math.sin(e*Math.PI)*.45;
-    if(t>=1){G.mount=null;P.root.position.set(0,-.9,0);msg('In sella!<small>trascina in su per partire</small>',2);}}
+    P.root.position.copy(G.mount.from).lerp(tv.set(0,-.9/(H.root.scale.x||1),0),e);P.root.position.y+=Math.sin(e*Math.PI)*.45;
+    if(t>=1){G.mount=null;P.root.position.set(0,-.9/(H.root.scale.x||1),0);msg('In sella!<small>trascina in su per partire</small>',2);}}
   const gi=R.sp<2.6?0:R.sp<7.4?1:2;
   P.pose(dt,'ride',{lean:[.08,.2,.4][gi]+(R.grounded?0:.35),jump:R.grounded?0:1,bob:gi===1&&R.grounded?Math.max(0,Math.sin(H.anim.phase*2+.5))*.06:0,speed:R.sp,snap:false});
   // statistiche
