@@ -725,7 +725,7 @@ const PJ=(lat,lon)=>[(lon-LON0)*KX,(lat-LAT0)*KY];
 async function startMap(){st.phase='map';
   if(!MP.skipAsk&&!MP.from){const ch=await new Promise(res=>{G.startChoice=v=>{root.querySelector('#gstart')?.remove();res(v);};ui.innerHTML='';const d=document.createElement('div');d.id='gstart';
       d.innerHTML=`<div class="gst-h"><b>Dove andiamo?</b><span>💶 Portafoglio del gioco <b>${eur(st.money)}</b></span><span style="font-size:12.5px;opacity:.8">Sono soldi virtuali: si spendono solo nel negozio di pesca del gioco.</span></div><div class="gst-row"><div class="gst-c"><canvas id="gsc1" width="300" height="620"></canvas><button class="gb big gst-b" onclick="GAME.startChoice('pesca')">🎣 A Pesca</button></div><div class="gst-c"><canvas id="gsc2" width="300" height="620"></canvas><button class="gb big gst-b gst-shop" onclick="GAME.startChoice('negozio')">🛒 Al Negozio</button></div></div>
-        <div class="gst-f">Euro virtuali: li guadagni pescando (0,50 € al minuto, fino a 15 € al giorno), con ogni cattura, usando l'app e con il bonus giornaliero del negozio.</div>`;root.appendChild(d);for(const [id,fn] of [['#gsc1',paintBeach],['#gsc2',paintShop]]){const c=d.querySelector(id);if(c.clientWidth&&c.clientHeight)c.width=Math.round(c.height*c.clientWidth/c.clientHeight);fn(c);}});
+        <div class="gst-f">Euro virtuali: li guadagni pescando (2 € al minuto), 10 € per ogni pesce più 20 € al kg, usando l'app e con il bonus giornaliero del negozio.</div>`;root.appendChild(d);for(const [id,fn] of [['#gsc1',paintBeach],['#gsc2',paintShop]]){const c=d.querySelector(id);if(c.clientWidth&&c.clientHeight)c.width=Math.round(c.height*c.clientWidth/c.clientHeight);fn(c);}});
     if(ch==='negozio'){openShop();return;}}
   MP.skipAsk=false;
   ['#gspd','#glamp','#gjoy'].forEach(q=>{const e=root.querySelector(q);if(e)e.style.display='none';});hud.innerHTML='';
@@ -1171,7 +1171,7 @@ const GEAR0={v:2,rod:'beach390',rods:['beach390'],rodCnt:{beach390:1},reel:'r500
 function gearLoad(){let g=LSG('gear',null);const G0=JSON.parse(JSON.stringify(GEAR0));if(!g||g.v!==2){LSS('outfit','jeans');LSS('nrods',1);return G0;}if(!g.boxFix){g.boxFix=true;if(g.bought)delete g.bought.box;}for(const k in G0)if(g[k]===undefined)g[k]=G0[k];return g;}
 st.gear=gearLoad();st.money=LSG('money',10000);if(!LSG('eco10k',0)){st.money=Math.max(st.money,10000);LSS('eco10k',1);LSS('eco3',1);LSS('money',st.money);}// per le prove si parte con 10.000 € virtuali
 // guadagni: tempo di pesca nel gioco, catture e uso dell'app (con un tetto al giorno)
-const EARN={fish:.5,fishMax:15};function earnDay(){const e=LSG('earn',{});if(e.d!==today())return {d:today(),fish:0,app:0};return e;}
+const EARN={fish:2,fishMax:1e9};function earnDay(){const e=LSG('earn',{});if(e.d!==today())return {d:today(),fish:0,app:0};return e;}
 function earn(kind,v,why){const e=earnDay(),max=kind==='fish'?EARN.fishMax:1e9,add=Math.max(0,Math.min(v,max-(e[kind]||0)));if(add<=0)return 0;e[kind]=(e[kind]||0)+add;LSS('earn',e);st.money+=add;gearSave();moneyPop(add,why);return add;}
 function moneyPop(v,why){if(!root)return;const d=document.createElement('div');d.className='gmoney';d.textContent='💶 +'+eur(v)+(why?' · '+why:'');root.appendChild(d);setTimeout(()=>d.remove(),2600);}
 function appCredit(){try{const v=+JSON.parse(localStorage.getItem('lenza.gioco.pend')||'0');if(v>0){localStorage.setItem('lenza.gioco.pend','0');st.money+=v;gearSave();setTimeout(()=>moneyPop(v,'uso dell\'app'),1500);}}catch(e){}}
@@ -2135,7 +2135,7 @@ function biteRate(r){// abboccate per minuto di gioco
 
 function sizeOf(sp){const [a,t,b]=sp.w;let x=Math.exp(Math.log(t)+(Math.random()+Math.random()+Math.random()-1.5)*.55);if(Math.random()<.04)x*=1.6;return clamp(x,a,b);}
 function lenOf(sp,w){const [a,b]=sp.lw;return Math.round(Math.pow(w*1000/a,1/b)*(sp.crab?.1:1)*10)/10||Math.round(Math.pow(w*1000/a,1/b));}
-function record(rel){const c=st.catchShow,r=st.rods[st.sel];{const gain=Math.round((3+c.w*2+(rel?2:0)+(c.rec?5:0))*100)/100;earn('catch',gain,c.rec?'cattura da record':'cattura');}const e={n:c.sp.n,w:Math.round(c.w*100)/100,l:c.l,t:st.gt,rel,bait:c.bait||''};st.bag.push(e);LSS('bag',st.bag.slice(-200));
+function record(rel){const c=st.catchShow,r=st.rods[st.sel];{const gain=Math.round((10+c.w*20)*100)/100;earn('catch',gain,c.rec?'cattura da record':'cattura');}const e={n:c.sp.n,w:Math.round(c.w*100)/100,l:c.l,t:st.gt,rel,bait:c.bait||''};st.bag.push(e);LSS('bag',st.bag.slice(-200));
   if(c.rec){st.best[c.sp.n]=e.w;LSS('best',st.best);}st.total.n++;st.total.kg+=e.w;st.total.pts+=Math.round(e.w*100)+(rel?50:0)+(c.sp.ab<.1?300:0);LSS('total',st.total);}
 G.release=()=>{record(true);st.msg='💚 Rilasciato. Bravo!';G.rebait();};
 G.keep=()=>{record(false);st.msg='🧺 Nel carniere';G.rebait();};
