@@ -984,7 +984,7 @@ function makeVeh(w,kind,x,z,h,col,tp){
   w.colliders.push(...V.cols);parkCols(V);(w.vehicles=w.vehicles||[]).push(V);return V;}
 function parkCols(V){const fx=Math.sin(V.h),fz=Math.cos(V.h);V.cols.forEach((c,i)=>{const k=V.cols.length>1?(i?-1.2:1.2):0;c.x=V.x+fx*k;c.z=V.z+fz*k;c.off=false;});}
 function spawnVehicles(w){if(w.vehSpawned)return;w.vehSpawned=true;const n=w.name,mk=(k,x,z,h,c)=>makeVeh(w,k,x,z,h,c);
-  if(n==='yard'){mk('car',30,45,-Math.PI/2);mk('car',36.5,45,-Math.PI/2);mk('car',-1.9,64,0);mk('bike',5,30,0);mk('bike',5,31.6,0);mk('scooter',5,33.2,0);mk('moto',5.2,35.4,0);}
+  if(n==='yard'){mk('car',30,45,-Math.PI/2);mk('car',36.5,45,-Math.PI/2);mk('car',-1.9,64,0);mk('bike',5,27,0);mk('bike',5,30.5,0);mk('scooter',5,34.5,0);mk('moto',5.2,39.5,0);}
   else if(n==='city'){
     mk('bike',-8,-24.2,Math.PI/2);mk('bike',-6.5,-24.2,Math.PI/2);mk('scooter',-5,-24.2,Math.PI/2);mk('scooter',-3.8,-24.2,Math.PI/2);mk('moto',4,-24.2,Math.PI/2);mk('moto',6,-24.2,Math.PI/2);}
   else if(n==='beach'){const sh=w.shore;mk('bike',-40,5,Math.PI/2);mk('scooter',-40,7,Math.PI/2);mk('moto',-44,5.5,Math.PI/2);mk('car',sh(260)-49.6,260,Math.PI);mk('bike',sh(-30)-18,-26,Math.PI/2);}
