@@ -390,13 +390,22 @@ function makeRod(){const g=new T.Group(),segs=[];let parent=g;
   const glow=new T.Sprite(new T.SpriteMaterial({map:glowTex('rgba(150,255,130,1)'),transparent:true,depthWrite:false,blending:T.AdditiveBlending}));glow.scale.set(.5,.5,.5);glow.position.y=ROD_LEN/SEG;segs[SEG-1].add(glow);g.userData.glow=glow;
   return g;}
 function bendRod(rod,b){const s=rod.userData.segs;for(let i=0;i<SEG;i++){const u=i/SEG;s[i].rotation.x=-b*u*u*.32;}}
-function makeSpike(kind){const pro=!!kind,g=new T.Group(),sm=pro?MAT.alu:new T.MeshStandardMaterial({color:'#d8d8d2',roughness:.7}),p=new T.Mesh(new T.CylinderGeometry(pro?.014:.02,.008,1.6,8),sm);p.position.y=.55;g.add(p);
-  if(kind==='long'){p.scale.y=1.25;}
-  // gambe del treppiede: dall'alto (vicino al palo) aperte verso il basso fino alla sabbia
-  const leg=(top,rad,r)=>{for(let k=0;k<3;k++){const a=k*2.09+.5,A=new T.Vector3(0,top,0),B=new T.Vector3(Math.cos(a)*rad,-.05,Math.sin(a)*rad),v=new T.Vector3().subVectors(B,A),l=new T.Mesh(new T.CylinderGeometry(r,r,v.length(),6),MAT.alu);l.position.copy(A).addScaledVector(v,.5);l.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),v.clone().normalize());g.add(l);}};
-  if(kind==='tripod')leg(1.15,.55,.012);else if(pro)leg(.5,.2,.006);
-  const cup=new T.Mesh(new T.CylinderGeometry(.035,.025,.12,10,1,true),sm);cup.position.y=.12;g.add(cup);
-  const v=new T.Mesh(new T.TorusGeometry(.04,.006,6,12,Math.PI),sm);v.position.y=1.32;v.rotation.z=Math.PI;g.add(v);g.traverse(o=>{if(o.isMesh)o.castShadow=true;});return g;}
+// picchetto da surfcasting: barra piatta in alluminio a punta, forcella in alto e portacalcio a metà (in plastica verde), piantato un po' inclinato verso il mare
+const SPIKE_TILT=-8,SPIKE_CUP=.7;
+function makeSpike(kind){const g=new T.Group(),inner=new T.Group();inner.rotation.x=SPIKE_TILT*R;g.add(inner);
+  const H=kind==='long'?1.75:kind==='pvc'||!kind?1.25:1.45,bm=kind==='pvc'||!kind?new T.MeshStandardMaterial({color:'#e8e8e2',roughness:.6}):new T.MeshStandardMaterial({color:'#cfd5da',roughness:.35,metalness:.45}),gm=new T.MeshStandardMaterial({color:'#9fe8a8',roughness:.45,transparent:true,opacity:.92});
+  // barra piatta con la punta piantata nella sabbia
+  const bar=new T.Mesh(new T.BoxGeometry(.032,H+.3,.009),bm);bar.position.y=(H-.3)/2;inner.add(bar);const fold=new T.Mesh(new T.BoxGeometry(.009,H+.3,.022),bm);fold.position.set(.0115,(H-.3)/2,.008);inner.add(fold);
+  // forcella in alto: base e due denti, il fusto della canna ci appoggia
+  const fork=new T.Group();fork.position.set(0,H,-.03);inner.add(fork);const fb=new T.Mesh(new T.BoxGeometry(.075,.025,.05),gm);fork.add(fb);
+  for(const sx of[-1,1]){const t=new T.Mesh(new T.BoxGeometry(.016,.05,.05),gm);t.position.set(sx*.03,.035,0);fork.add(t);}const fc=new T.Mesh(new T.BoxGeometry(.03,.04,.012),gm);fc.position.set(0,-.02,.025);fork.add(fc);
+  // portacalcio a metà: tazza aperta davanti dove entra il calcio della canna
+  const cy=SPIKE_CUP*(H/1.45),cup=new T.Mesh(new T.CylinderGeometry(.034,.03,.085,14,1,true,Math.PI*.15,Math.PI*1.7),new T.MeshStandardMaterial({color:'#9fe8a8',roughness:.45,side:T.DoubleSide}));cup.position.set(0,cy,-.035);inner.add(cup);
+  const cb=new T.Mesh(new T.CylinderGeometry(.034,.034,.008,14),gm);cb.position.set(0,cy-.042,-.035);inner.add(cb);const ck=new T.Mesh(new T.BoxGeometry(.04,.06,.014),gm);ck.position.set(0,cy,-.004);inner.add(ck);
+  g.userData.cupY=cy-.038;g.userData.H=H;
+  // tripode: gambe aperte dall'alto verso la sabbia
+  if(kind==='tripod'){for(let k=0;k<3;k++){const a=k*2.09+.5,A=new T.Vector3(0,1.15,0),B=new T.Vector3(Math.cos(a)*.55,-.05,Math.sin(a)*.55),v=new T.Vector3().subVectors(B,A),l=new T.Mesh(new T.CylinderGeometry(.012,.012,v.length(),6),MAT.alu);l.position.copy(A).addScaledVector(v,.5);l.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),v.clone().normalize());g.add(l);}}
+  g.traverse(o=>{if(o.isMesh)o.castShadow=true;});return g;}
 
 /* ---------- mondo ---------- */
 let overcast=null,SAND=null,CHAIRG=null,MYG=[],CHAIRHIT=null,NPCS=[],foams=[],swash,clouds=[],stars,moon,rain,cityL,grass,lineObjs=[],sinkers=[],splashP,fishMesh,bushes;
@@ -509,8 +518,8 @@ function buildNpcs(){const defs=[
     const ch=new T.Mesh(new T.BoxGeometry(.42,.03,.36),new T.MeshStandardMaterial({color:'#4b5a36'}));ch.position.set(d.x,12*.035+.56,12.05);scene.add(ch);
     for(const sx of[-1,1])for(const sz of[-1,1]){const l=new T.Mesh(new T.CylinderGeometry(.014,.014,.58,6),MAT.chairF);l.position.set(d.x+sx*.2,12*.035+.28,12.05+sz*.16);scene.add(l);}
     const bk=new T.Mesh(new T.BoxGeometry(.4,.32,.02),ch.material);bk.position.set(d.x,12*.035+.78,12.24);bk.rotation.x=-.2;scene.add(bk);
-    for(let k=0;k<2;k++){const x=d.x+(k?2.5:-2.5),sp=makeSpike();sp.position.set(x,ROD_Z*.035,ROD_Z);scene.add(sp);const rod=makeRod();scene.add(rod);
-      const r={x,obj:rod,dist:rnd(70,115),bend:0,held:false,line:null,sx:x+rnd(-4,4)};const lg=new T.BufferGeometry();lg.setAttribute('position',new T.Float32BufferAttribute(new Float32Array(20*3),3));r.line=new T.Line(lg,MAT.line);r.line.frustumCulled=false;scene.add(r.line);placeRodOnSpike(r);a.rods.push(r);}
+    for(let k=0;k<2;k++){const x=d.x+(k?2.5:-2.5),sp=makeSpike('alu');sp.position.set(x,ROD_Z*.035,ROD_Z);scene.add(sp);const rod=makeRod();scene.add(rod);
+      const r={x,spike:sp,obj:rod,dist:rnd(70,115),bend:0,held:false,line:null,sx:x+rnd(-4,4)};const lg=new T.BufferGeometry();lg.setAttribute('position',new T.Float32BufferAttribute(new Float32Array(20*3),3));r.line=new T.Line(lg,MAT.line);r.line.frustumCulled=false;scene.add(r.line);placeRodOnSpike(r);a.rods.push(r);}
     NPCS.push(a);}}
 const npcGo=(a,x,z,cb)=>{a.walkTarget={x,z,res:cb};a.moving=true;a.target='stand';};
 function npcFish(bait){const m=gameDate().getMonth()+1,c=SP.filter(sp=>!sp.crab&&(sp.bait[bait]||0)>0).map(sp=>[sp,(sp.mo[m]||.05)*sp.ab*(sp.bait[bait]||0)]);let u=Math.random()*c.reduce((a,x)=>a+x[1],0)||0;
@@ -703,7 +712,8 @@ function setupRods(){st.rods.forEach(r=>{scene.remove(r.hit);scene.remove(r.obj)
     const sinker=new T.Mesh(new T.SphereGeometry(.05,8,6),MAT.lead);sinker.visible=false;scene.add(sinker);
     const hit=new T.Mesh(new T.CylinderGeometry(.6,.6,4.6,8),new T.MeshBasicMaterial({visible:false}));hit.position.set(x,2.2,ROD_Z-.3);hit.rotation.x=-8*R;scene.add(hit);
     return {rodId:rid,reelId:lid,leadT:'piramidale',hookT:'aberdeen',lead:st.lead,hook:st.hook,rig:'lungo',broken:false,dismantled:false,i,x,spike,obj,line,sinker,hit,bait:null,dist:0,state:'idle',baitLeft:0,bend:0,bitePlan:null,held:false,sx:x,sz:-1};});}
-function placeRodOnSpike(r){const by=ROD_Z*.035;r.obj.position.set(r.x,by+.12,ROD_Z);r.obj.rotation.set(-8*R,0,0,'YXZ');}
+function placeRodOnSpike(r){const by=ROD_Z*.035,cy=r.spike?.userData.cupY??.62,t=SPIKE_TILT*R;// calcio nella tazza, fusto parallelo al picchetto
+  r.obj.position.set(r.x,by+cy*Math.cos(t)+.035*Math.sin(t),ROD_Z+cy*Math.sin(t)-.035*Math.cos(t));r.obj.rotation.set(t,0,0,'YXZ');}
 function rodInHand(r,a=AN){const J=a.obj.userData.J,hp=new T.Vector3();J.rHand.getWorldPosition(hp);const p=a.pose.rod||{p:45,f:0,y:0};
   r.obj.rotation.set((p.p-90)*R,a.rotY+(p.y||0),0,'YXZ');const dir=new T.Vector3(0,1,0).applyEuler(r.obj.rotation);r.obj.position.copy(hp).addScaledVector(dir,-.5);}
 
