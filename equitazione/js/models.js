@@ -510,6 +510,8 @@ EQ.buildGiorgia=function(){
       tg.sh=[[-.3+k*.8,0,.6+k2*.5],[-.3-k*.8,0,-.6+k2*.5]];tg.el=[[-.8,0],[-.8,0]];tg.th=[[k*.3,0,.08],[-k*.3,0,-.08]];tg.kn=[Math.max(0,k)*.6,Math.max(0,-k)*.6];
     } else if(name==='gym'){
       const k=(Math.sin(time*6)+1)/2;tg.pelY=.9+Math.sin(time*12)*.03;tg.sh=[[0,0,.2+k*2.6],[0,0,-.2-k*2.6]];tg.el=[[-.1,0],[-.1,0]];tg.th=[[0,0,.05+k*.35],[0,0,-.05-k*.35]];
+    } else if(name==='rope'){
+      tg.pelY=.9;tg.sh=[[.1,0,.55],[.1,0,-.55]];tg.el=[[-.4,0],[-.4,0]];tg.kn=[.25,.25];tg.th=[[-.1,0,.04],[-.1,0,-.04]];
     } else if(name==='wave'){
       tg.sh[1]=[0,0,-2.6];tg.el[1]=[-.3+Math.sin(time*10)*.4,0];
     }
