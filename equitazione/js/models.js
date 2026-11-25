@@ -502,6 +502,14 @@ EQ.buildGiorgia=function(){
       tg.sh[1]=[-.6+Math.sin(time*4)*.25,0,-.25];tg.el[1]=[-.8,0];tg.sh[0]=[-.3+Math.cos(time*3)*.15,0,.2];tg.headY=Math.sin(time*2)*.1;
     } else if(name==='play'){
       const k=Math.abs(Math.sin(time*6));tg.pelY=.9+k*.12;tg.sh=[[-2.6+k*.4,0,.5],[-2.6+k*.4,0,-.5]];tg.el=[[-.2,0],[-.2,0]];
+    } else if(name==='piano'){
+      tg.pelY=.5;tg.th=[[-1.5,0,.1],[-1.5,0,-.1]];tg.kn=[1.5,1.5];tg.torsoX=.12;tg.headX=.15;
+      tg.sh=[[-1.0+Math.sin(time*7)*.08,0,.25+Math.sin(time*3.1)*.2],[-1.0+Math.cos(time*8)*.08,0,-.25-Math.sin(time*2.7)*.2]];tg.el=[[-.7,0],[-.7,0]];
+    } else if(name==='dance'){
+      const k=Math.sin(time*7),k2=Math.sin(time*3.5);tg.pelY=.88+Math.abs(k)*.06;tg.torsoZ=k2*.15;tg.headY=k2*.3;
+      tg.sh=[[-.3+k*.8,0,.6+k2*.5],[-.3-k*.8,0,-.6+k2*.5]];tg.el=[[-.8,0],[-.8,0]];tg.th=[[k*.3,0,.08],[-k*.3,0,-.08]];tg.kn=[Math.max(0,k)*.6,Math.max(0,-k)*.6];
+    } else if(name==='gym'){
+      const k=(Math.sin(time*6)+1)/2;tg.pelY=.9+Math.sin(time*12)*.03;tg.sh=[[0,0,.2+k*2.6],[0,0,-.2-k*2.6]];tg.el=[[-.1,0],[-.1,0]];tg.th=[[0,0,.05+k*.35],[0,0,-.05-k*.35]];
     } else if(name==='wave'){
       tg.sh[1]=[0,0,-2.6];tg.el[1]=[-.3+Math.sin(time*10)*.4,0];
     }

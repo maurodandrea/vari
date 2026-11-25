@@ -297,6 +297,10 @@ EQ.sfx={
   kids(){for(let i=0;i<4;i++)tone(700+Math.random()*500,.12,'sine',.03,900+Math.random()*400,i*.13);},
   bikebell(){tone(2200,.25,'sine',.06);tone(2200,.25,'sine',.05,null,.18);},
   whistle(){tone(2600,.35,'sine',.05,2400);},
+  note(f,d,v){tone(f,d||.45,'triangle',v||.1);tone(f*2,(d||.45)*.6,'sine',(v||.1)*.25);},
+  bass(f){tone(f,.22,'square',.04);},
+  hat(){noise(.04,7000,2,.05,'highpass');},
+  pop(){tone(900+Math.random()*600,.06,'sine',.04,1600);},
   bell(){[0,0.9].forEach(w=>{tone(440,2.5,'sine',.08,null,w);tone(880,1.5,'sine',.03,null,w);});},
 };
 
