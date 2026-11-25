@@ -348,6 +348,7 @@ function schoolAct(dt,a,sp,w){
   if(sp.drums){a.nt=(a.nt||0)-dt;if(a.nt<=0){a.nt=.2;a.ni=(a.ni||0)+1;if(a.ni%4===1)EQ.sfx.bass(70);else if(a.ni%4===3)EQ.sfx.knock();EQ.sfx.hat();if(a.ni%8===0&&w.drums)a.cy=1;}if(w.drums){a.cy=Math.max(0,(a.cy||0)-dt*3);w.drums.cy.rotation.z=Math.sin(a.t*30)*.15*a.cy;}}
   if(sp.sing){a.nt=(a.nt||0)-dt;if(a.nt<=0){const M=[392,440,494,523,494,440,392,330,349,392];a.ni=(a.ni||0)+1;a.nt=.42;EQ.sfx.note(M[a.ni%M.length],.4,.07);FX.spark.emit(F.x+rnd(-.4,.4),2,F.z+rnd(-.4,.4),rnd(-.3,.3),.6,rnd(-.3,.3),1.2);}}
   if(sp.xylo){a.nt=(a.nt||0)-dt;if(a.nt<=0){const M=[523,587,659,698,784,880,988,1047];a.ni=(a.ni||0)+1;a.nt=.22;EQ.sfx.note(M[(a.ni*3)%M.length],.25,.08);}}
+  if(sp.flush){if(!a.fl){a.fl=1;EQ.sfx.flush();}if(Math.random()<dt*25)FX.water.emit(sp.p.x+rnd(-.15,.15),.5,sp.p.z-.8+rnd(-.15,.15),rnd(-.3,.3),.4,rnd(-.3,.3),.6);}
   if(sp.bellS&&w.sbell){if(!a.rung){a.rung=1;EQ.sfx.bell();}w.sbell.rotation.z=Math.sin(a.t*10)*.4*Math.max(0,1-a.t/3);}
 }
 function schoolEnd(a,sp,w){

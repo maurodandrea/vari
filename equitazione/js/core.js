@@ -301,6 +301,7 @@ EQ.sfx={
   bass(f){tone(f,.22,'square',.04);},
   hat(){noise(.04,7000,2,.05,'highpass');},
   pop(){tone(900+Math.random()*600,.06,'sine',.04,1600);},
+  flush(){noise(1.6,700,.4,.22,'bandpass',0,.08);noise(1.2,1800,.6,.08,'bandpass',.3,.1);tone(180,1.2,'sine',.04,90,.2);},
   bell(){[0,0.9].forEach(w=>{tone(440,2.5,'sine',.08,null,w);tone(880,1.5,'sine',.03,null,w);});},
 };
 

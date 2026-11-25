@@ -1229,13 +1229,13 @@ EQ.buildHome=function(){
    fl(0,0,22,16,parquet);
    {const tf=(x,z,w,d,c)=>{const m=mesh(new THREE.PlaneGeometry(w,d),new THREE.MeshStandardMaterial({map:tiles,roughness:.4,color:C(c||0xffffff),polygonOffset:true,polygonOffsetFactor:-4,polygonOffsetUnits:-16}),x,.07,z,R);m.rotation.x=-Math.PI/2;m.renderOrder=1;};tf(9,-4,3.9,7.9);tf(7,5,7.9,5.9,0xfff4e0);}
    const wallM=new THREE.MeshStandardMaterial({map:TX.plaster('#f3ead8'),roughness:.9});
-   const wall=(x1,z1,x2,z2)=>{const L=Math.hypot(x2-x1,z2-z1),a=Math.atan2(z2-z1,x2-x1);const m=mesh(G.box(L,2.8,.15),wallM,(x1+x2)/2,1.4,(z1+z2)/2,R);m.rotation.y=-a;
+   const wall=(x1,z1,x2,z2,h)=>{h=h||2.8;const L=Math.hypot(x2-x1,z2-z1),a=Math.atan2(z2-z1,x2-x1);const m=mesh(G.box(L,h,.15),wallM,(x1+x2)/2,h/2,(z1+z2)/2,R);m.rotation.y=-a;
      W.colliders.push({x:OX+(x1+x2)/2,z:OZ+(z1+z2)/2,hx:L/2,hz:.12,rot:a});};
-   wall(-11,-8,11,-8);wall(-11,-8,-11,8);wall(11,-8,11,8);wall(-11,8,-.8,8);wall(.8,8,11,8);
+   wall(-11,-8,11,-8);wall(-11,-8,-11,8);wall(11,-8,11,8);wall(-11,8,-.8,8,.9);wall(.8,8,11,8,.9);mesh(G.box(22.2,.06,.22),mat(0xffffff,.5),0,.92,8,R);
    // muro tra zona giorno e zona notte con porte
    wall(-11,0,-10.4,0);wall(-9.2,0,-1.6,0);wall(-.4,0,3.9,0);wall(5.1,0,8.4,0);wall(9.6,0,11,0);
    wall(-4,-8,-4,0);wall(2,-8,2,0);wall(7,-8,7,0);
-   mesh(G.box(1.5,2.4,.08),mat(0x5a3418,.5),0,1.2,8.05,R);
+   for(const x of[-.85,.85])mesh(G.box(.12,.9,.25),mat(0x5a3418,.5),x,.45,8,R);
    // SOGGIORNO
    const sofaM=mat(0x3b5b8a,.9);mesh(G.box(3.2,.45,1),sofaM,-7,.32,3.4,R);mesh(G.box(3.2,.7,.25),sofaM,-7,.75,3.95,R);for(const sd of[-1,1])mesh(G.box(.25,.6,1),sofaM,-7+sd*1.6,.5,3.4,R);
    for(let i=0;i<3;i++)mesh(G.box(.4,.3,.12),mat([0xf1c40f,0xe86aa6,0xffffff][i],.9),-8+i,.7,3.75,R);col(-7,3.5,1.7,.55,.6);
@@ -1293,7 +1293,7 @@ EQ.buildHome=function(){
       mesh(G.box(w+.25,.05,.14),frameM,0,-h/2-.05,.07,g);
       if(cur)for(const sd of[-1,1]){const c=new THREE.Mesh(G.box(.3,h+.35,.04),mat(cur,.95));c.position.set(sd*(w/2+.12),.05,.07);g.add(c);}
       if(cur){const bar=new THREE.Mesh(G.cyl(.02,.02,w+.8,6),mat(0x8a5a34,.5));bar.rotation.z=Math.PI/2;bar.position.set(0,h/2+.22,.08);g.add(bar);}};
-    win(-7,7.92,Math.PI,1.6,1.1,1.65,0xd9534f);win(-2.6,7.92,Math.PI,1.2,1,1.7,0xd9534f);win(7.8,7.92,Math.PI,1.4,.8,1.75,0xf6e7b0);
+    
     win(-9.6,-7.92,0,1.1,1,1.75,0x7a9fd6);win(-.6,-7.92,0,1,1,1.75,0xf29ac0);win(3,-7.92,0,.9,.9,1.8,0x6aa86a);win(8.6,-7.92,0,.6,.5,2.1);
     win(10.92,-1.6,-Math.PI/2,.8,.8,1.8);
     // quadri con cavalli
@@ -1301,7 +1301,7 @@ EQ.buildHome=function(){
       mesh(G.box(w+.1,h+.1,.04),mat(0x6b4226,.5),0,0,0,g);const p=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshStandardMaterial({map:t,roughness:.8}));p.position.z=.025;g.add(p);return p;};
     const land=(sky,gr,em)=>(g,w,h)=>{const q=g.createLinearGradient(0,0,0,h);q.addColorStop(0,sky);q.addColorStop(1,'#fff');g.fillStyle=q;g.fillRect(0,0,w,h);g.fillStyle=gr;g.fillRect(0,h*.68,w,h);g.font=Math.round(h*.45)+'px serif';g.textAlign='center';g.fillText(em,w*.5,h*.82);g.font=Math.round(h*.18)+'px serif';g.fillText('☀️',w*.85,h*.25);};
     pic(-2.8,1.9,.1,0,1.1,.75,land('#7cc0f0','#6aa84f','🐎'));pic(-10.9,1.7,6,Math.PI/2,1.3,.9,land('#f5b06a','#c9a35a','🏇'));
-    pic(-7.5,2.05,-7.9,0,1.2,.6,land('#9fd2f5','#7fbf5a','🐴'));pic(9,1.8,7.9,Math.PI,.9,.6,land('#ffd6a0','#88c070','🌻'));
+    pic(-7.5,2.05,-7.9,0,1.2,.6,land('#9fd2f5','#7fbf5a','🐴'));pic(10.9,1.8,.9,-Math.PI/2,.9,.6,land('#ffd6a0','#88c070','🌻'));
     pic(5.3,1.9,-.1,Math.PI,1,.7,(g,w,h)=>{g.fillStyle='#2f6b33';g.fillRect(0,0,w,h);g.font=Math.round(h*.5)+'px serif';g.textAlign='center';g.fillText('🏆',w/2,h*.62);g.fillStyle='#ffe9a8';g.font='bold '+Math.round(h*.14)+'px sans-serif';g.fillText('CAMPIONESSA',w/2,h*.9);});
     // orologio
     {const t=EQ.canvasTex(128,128,(g,w,h)=>{g.fillStyle='#fff';g.beginPath();g.arc(64,64,60,0,TAU);g.fill();g.strokeStyle='#333';g.lineWidth=6;g.stroke();g.fillStyle='#333';for(let i=0;i<12;i++){const a=i/12*TAU;g.fillRect(64+Math.sin(a)*48-3,64-Math.cos(a)*48-3,6,6);}g.lineWidth=5;g.beginPath();g.moveTo(64,64);g.lineTo(64,28);g.moveTo(64,64);g.lineTo(92,70);g.stroke();});W.tex.push(t);
@@ -1389,6 +1389,7 @@ EQ.buildHome=function(){
      {id:'pc',icon:'💻',label:'Usa il computer',p:P(4.5,-6.45),h:Math.PI,pose:'drive',dur:8,pc:true},
      {id:'read',icon:'📚',label:'Leggi un libro sui cavalli',p:P(5.9,-4.2),h:Math.PI/2,pose:'feed',dur:4,msg:'📚 Hai imparato tutto sul galoppo!'},
      {id:'shower',icon:'🚿',label:'Fai la doccia',p:P(10,-7.3),h:Math.PI,pose:'wave',dur:5,snd:'water',shower:true,msg:'🚿 Che fresco! Profumi di pulito'},
+     {id:'flush',icon:'🚽',label:'Tira lo scarico',p:P(7.5,-6.6),h:Math.PI,pose:'feed',dur:2.6,flush:true,msg:'🚽 Sciaaa! Scarico tirato'},
      {id:'hands',icon:'🧼',label:'Lavati le mani',p:P(10.05,-3),h:Math.PI/2,pose:'brush',dur:3,snd:'water',msg:'🧼 Mani pulite!'},
      {id:'game',icon:'🎮',label:'Gioca ai videogiochi',p:P(-8,3.15),h:Math.PI,pose:'drive',dur:9,game:true,msg:'🎮 Nuovo record!'},
      {id:'piano',icon:'🎹',label:'Suona il pianoforte',p:P(-5.8,6.55),h:0,pose:'piano',dur:7,piano:true,msg:'🎹 Bravissim'+EQ.A()+'! Che bella melodia'},
@@ -1444,13 +1445,13 @@ EQ.buildHome=function(){
     const m=mesh(new THREE.PlaneGeometry(17.6,9.6),new THREE.MeshBasicMaterial({map:gl,transparent:true,polygonOffset:true,polygonOffsetFactor:-3,polygonOffsetUnits:-12}),6,.05,-5,R);m.rotation.x=-Math.PI/2;}
    const wallM=new THREE.MeshStandardMaterial({map:TX.plaster('#f7f0dc'),roughness:.9});
    const wall=(x1,z1,x2,z2,h)=>{h=h||3.2;const L=Math.hypot(x2-x1,z2-z1),a=Math.atan2(z2-z1,x2-x1);const m=mesh(G.box(L,h,.18),wallM,(x1+x2)/2,h/2,(z1+z2)/2,R);m.rotation.y=-a;W.colliders.push({x:SX+(x1+x2)/2,z:SZ+(z1+z2)/2,hx:L/2,hz:.13,rot:a});};
-   wall(-15,-10,15,-10);wall(-15,-10,-15,10);wall(15,-10,15,10);wall(-15,10,-1,10);wall(1,10,15,10);
-   wall(-15,0,-10,0);wall(-8,0,5,0);wall(7.5,0,15,0);wall(-3,-10,-3,0);
+   wall(-15,-10,15,-10);wall(-15,-10,-15,10);wall(15,-10,15,10);wall(-15,10,-1,10,1);wall(1,10,15,10,1);mesh(G.box(30.2,.06,.24),mat(0xffffff,.5),0,1.02,10,R);
+   wall(-15,0,-4.8,0);wall(-3.2,0,5,0);wall(7.5,0,15,0);wall(-3,-10,-3,0);
    wall(-5,0,-5,4);wall(-5,6,-5,10);wall(5,0,5,4);wall(5,6,5,10);
-   mesh(G.box(1.8,2.5,.08),mat(0x2a58c8,.4),0,1.25,10.06,R);
+   for(const x of[-1,1])mesh(G.box(.14,1,.28),mat(0x2a58c8,.4),x,.5,10,R);
    const wood=new THREE.MeshStandardMaterial({map:TX.wood('#c49a6a'),roughness:.7});
    const room=(t,x,z,c)=>{const tx=EQ.labelTex(t,{bg:c,w:512,h:96,radius:14,font:'bold 54px Fredoka, Trebuchet MS, sans-serif'});W.tex.push(tx);const m=mesh(new THREE.PlaneGeometry(2.2,.42),new THREE.MeshBasicMaterial({map:tx}),x,2.75,z,R);return m;};
-   room('📚 AULA',-9,.11,'#2a58c8');room('🏀 PALESTRA',6.25,.11,'#c0392b');room('🍝 MENSA',-5.11,6.9,'#e67e22').rotation.y=-Math.PI/2;room('🎨 ARTE e MUSICA',5.11,6.9,'#8e44ad').rotation.y=Math.PI/2;
+   room('📚 AULA',-4,.11,'#2a58c8').scale.set(.7,.7,1);room('🏀 PALESTRA',6.25,.11,'#c0392b');room('🍝 MENSA',-5.11,6.9,'#e67e22').rotation.y=-Math.PI/2;room('🎨 ARTE e MUSICA',5.11,6.9,'#8e44ad').rotation.y=Math.PI/2;
    // ===== AULA =====
    const bc=document.createElement('canvas');bc.width=512;bc.height=224;const bt=new THREE.CanvasTexture(bc);bt.encoding=THREE.sRGBEncoding;W.tex.push(bt);const bg=bc.getContext('2d');
    mesh(G.box(4.6,2,.08),mat(0x6b4226,.6),-8,1.75,-9.86,R);const bd=new THREE.Mesh(new THREE.PlaneGeometry(4.4,1.8),new THREE.MeshBasicMaterial({map:bt}));bd.position.set(-8,1.75,-9.81);R.add(bd);W.board={c:bc,g:bg,t:bt};
@@ -1491,7 +1492,7 @@ EQ.buildHome=function(){
    {mesh(G.cyl(.02,.02,1.4,6),mat(0x333333,.4,.7),10,.7,4.2,R);mesh(G.sph(.06,8,6),mat(0x555555,.3,.8),10,1.45,4.2,R);mesh(G.cyl(.25,.25,.03,12),mat(0x333333,.4,.7),10,.02,4.2,R);}
    {const pics=[['🐴','#ffe9a8'],['🌈','#d6f0ff'],['🌻','#e8ffd6'],['🦄','#ffd6ec']];pics.forEach(([e,bgc],i)=>{const t=EQ.canvasTex(96,96,(q,w,h)=>{q.fillStyle=bgc;q.fillRect(0,0,w,h);q.font='60px serif';q.textAlign='center';q.fillText(e,w/2,h*.72);});W.tex.push(t);const m=mesh(new THREE.PlaneGeometry(.8,.8),new THREE.MeshStandardMaterial({map:t}),14.88,1.8,1.6+i*1.2,R);m.rotation.y=-Math.PI/2;});}
    // ===== ATRIO =====
-   for(let i=0;i<6;i++){mesh(G.box(.5,1.8,.45),mat([0xc0392b,0x2a58c8,0xf1c40f,0x2ecc71,0xe67e22,0x8e44ad][i],.5,.2),-4.65,.9,1.0+i*.52+(i>2?2.4:0),R);}col(-4.65,2.3,.28,1.5);col(-4.65,7.6,.28,1.5);
+   for(let i=0;i<6;i++){mesh(G.box(.5,1.8,.45),mat([0xc0392b,0x2a58c8,0xf1c40f,0x2ecc71,0xe67e22,0x8e44ad][i],.5,.2),-4.65,.9,2.0+i*.52+(i>2?2.4:0),R);}col(-4.65,2.5,.28,.8);col(-4.65,6.5,.28,.8);
    {mesh(G.box(2.4,1.8,.5),wood,1.6,.9,.35,R);const gm=new THREE.MeshStandardMaterial({color:C(0xcfe8f5),transparent:true,opacity:.35});const gb=new THREE.Mesh(G.box(2.3,1.1,.05),gm);gb.position.set(1.6,1.25,.62);R.add(gb);
     for(let i=0;i<4;i++){mesh(G.cyl(.08,.05,.18,10),mat(0xe0b040,.2,.9),.9+i*.45,1.05,.4,R);mesh(G.sph(.1,10,8),mat(0xe0b040,.2,.9),.9+i*.45,1.22,.4,R);}col(1.6,.35,1.22,.3);}
    {const bl=new THREE.Group();bl.position.set(-2.2,2.3,.12);R.add(bl);const b=new THREE.Mesh(new THREE.SphereGeometry(.22,12,8,0,TAU,0,Math.PI/2),mat(0xe0b040,.2,.9));b.rotation.x=Math.PI;bl.add(b);const bb=new THREE.Mesh(G.box(.5,.08,.12),wood);bb.position.y=.25;bl.add(bb);W.sbell=bl;}
@@ -1517,7 +1518,7 @@ EQ.buildHome=function(){
      {id:'sing',icon:'🎤',label:'Canta al microfono',p:S(10,4.9),h:Math.PI,pose:'talk',dur:7,sing:true,msg:'🎤 Applausi! Che bella voce'},
      {id:'xylo',icon:'🎶',label:'Suona i tamburelli',p:S(6.6,8.8),h:0,pose:'brush',dur:5,xylo:true,msg:'🎶 Bravissim'+A()+'!'},
      {id:'bell',icon:'🔔',label:'Suona la campanella',p:S(-2.2,1.2),h:Math.PI,pose:'wave',dur:3,bellS:true,msg:'🔔 Driiin! Ricreazione!'},
-     {id:'locker',icon:'🎒',label:'Apri l\'armadietto',p:S(-3.9,2.6),h:-Math.PI/2,pose:'feed',dur:2.5,msg:'🎒 Hai preso zaino e astuccio'},
+     {id:'locker',icon:'🎒',label:'Apri l\'armadietto',p:S(-3.9,2.5),h:-Math.PI/2,pose:'feed',dur:2.5,msg:'🎒 Hai preso zaino e astuccio'},
      {id:'drink',icon:'💧',label:'Bevi alla fontanella',p:S(3.6,9),h:0,pose:'feed',dur:2.5,snd:'water',msg:'💧 Che fresca!'},
      {id:'exit',icon:'🚪',label:'Esci dalla scuola',p:S(0,9.2),exit:true}];
   }
