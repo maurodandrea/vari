@@ -388,7 +388,7 @@ function yardActions(){
     if(h.where==='box'){
       A.push({id:'feed'+i,icon:'🥕',label:'Dai da mangiare',fn:()=>startFeed(i)});
       A.push({id:'pet'+i,icon:'💛',label:'Accarezza '+h.def.name,fn:()=>startPet({head:h.head,H:h,name:h.def.name})});
-      if(!H)A.push({id:'out'+i,icon:'🐴',label:'Porta fuori '+h.def.name,fn:()=>takeOut(i)});
+      if(!G.leading&&G.state==='foot')A.push({id:'out'+i,icon:'🐴',label:'Porta fuori '+h.def.name,fn:()=>takeOut(i)});
     } else if(G.leading&&H===h)A.push({id:'in'+i,icon:'🏠',label:'Rimetti nel box',fn:putBack});
   });
   if(G.leading){
@@ -581,7 +581,7 @@ function adopt(fh){
     if(a.label){n.root.add(a.label);a.label.position.set(0,2.15,0);}if(a.col)a.col.off=true;if(a.col2)a.col2.off=true;G.standers.push(n);
     setTimeout(()=>msg('👋 '+fh.owner+': <small>Te lo presto volentieri!</small>',2.4),900);}
   const H=fh.h;fh.taken=true;if(fh.agent)fh.agent.disabled=true;if(fh.col)fh.col.off=true;H.adopted=true;
-  scene.attach(H.root);H.i=-1;H.guest=fh;H.def=Object.assign({},H.def,{name:fh.name});
+  scene.updateMatrixWorld();scene.attach(H.root);{const d=new V3(0,0,1).applyQuaternion(H.root.quaternion);H.root.rotation.set(0,Math.atan2(d.x,d.z),0);H.root.position.y=W().height(H.root.position.x,H.root.position.z);}H.i=-1;H.guest=fh;H.def=Object.assign({},H.def,{name:fh.name});
   H.stats=H.stats||{hunger:70,clean:80,happy:70,energy:90,thirst:75};H.st={};
   H.x=H.root.position.x;H.z=H.root.position.z;H.h=H.root.rotation.y;H.sp=0;
   H.setTack({pad:true,saddle:true,girth:true,bridle:true,halter:false});H.root.visible=true;
@@ -604,7 +604,8 @@ function releaseGuest(){
 function letGo(){const H=G.cur;fade('',()=>{const n=H.def.name,fh=H.guest;releaseGuest();snapCam();msg(fh&&fh.rider?'Grazie '+fh.owner+'! 👋':n+' è di nuovo libero 🐴',2);});}
 function doorAnim(i,open){Y.boxes[i].doorT=open?1.8:0;}
 function takeOut(i){
-  fade('',()=>{const H=horses[i],b=Y.boxes[i];G.cur=H;H.where='lead';G.leading=true;H.setTack({halter:true});
+  fade('',()=>{const O=G.cur;if(O){if(O.guest)releaseGuest();else if(O.where==='ride'||O.where==='lead'){placeInBox(O);}G.cur=null;G.leading=false;}
+    const H=horses[i],b=Y.boxes[i];G.cur=H;H.where='lead';G.leading=true;H.setTack({halter:true});
     H.x=b.out.x;H.z=b.out.z;H.h=Math.PI;H.sp=0;F.x=b.out.x-.95;F.z=b.out.z-1.5;F.h=Math.PI;F.camYaw=Math.PI;snapCam();
     doorAnim(i,true);setTimeout(()=>doorAnim(i,false),1500);EQ.sfx.neigh();
     msg(`${H.def.name} è pronto!<small>portalo alla posta per pulirlo e sellarlo</small>`,3);});
@@ -621,7 +622,7 @@ function pet(H){P.pose(0,'feed',{});G.petT=1.6;G.petH=H;if(H.stats)stat(H,'happy
   msg('💛 '+H.def.name+' è contento!',1.4);if(H.stats)persist();}
 function tieAt(kind){
   const H=G.cur;
-  fade('',()=>{const s=kind==='posta'?Y.posta:Y.wash;placeAt(H,s.horse,kind);G.leading=false;H.rope.visible=false;
+  fade('',()=>{const s=kind==='posta'?Y.posta:Y.wash;horses.forEach(o=>{if(o!==H&&o.where===kind)placeInBox(o);});placeAt(H,s.horse,kind);G.leading=false;H.rope.visible=false;
     F.x=s.stand.x;F.z=s.stand.z;F.h=0;F.camYaw=0;P.root.position.set(F.x,0,F.z);P.root.rotation.y=0;
     if(kind==='posta')openPosta();else startWash();},50);
 }
