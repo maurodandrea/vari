@@ -219,10 +219,13 @@ EQ.populate.yard=function(W){
    const a=pathAgent(W,e,pth,{speed:1.3,pause:12,stopR:3,far:170});a.extra=[h.root,rp.l];a.label=label(e,EQ.randName(true),2.15);
    const c={x:0,z:0,r:.9};W.colliders.push(c);const u=a.update;a.update=(dt,t,p,d)=>{u(dt,t,p,d);c.x=h.root.position.x;c.z=h.root.position.z;};}
   // carriola del fieno lungo i box
-  {const SB=S.SB;const pth=Path([[SB.x0+2,16.2],[SB.x1-1,16.2]],false);const e=addTo(W,person({fem:false,top:0x6b5a45,pants:0x2c3e66,cap:0xc0392b,boots:0x2f6b33}));
+  {const SB=S.SB;const pth=Path([[SB.x0+2,16.2],[SB.x1-1,16.2]],false);const e=addTo(W,person({fem:false,s:1.02,skin:0x9a6340,hair:0x1a1a1a,hairStyle:'short',beard:true,top:0xe8a33a,pants:0xf2ece0,sleeves:'long',boots:0x5a3418,hat:null,cap:null}));
+   {const n=e.npc;const hy=n.headY-.2*n.s;const bm=new THREE.Mesh(EQ.merge([EQ.tint(EQ.xform(new THREE.ConeGeometry(.09,.38,10),0,0,0,Math.PI,0,0),0x1a1a1a)]),EQ.NPCMAT);bm.position.set(0,.6*n.s,.07);n.spine.add(bm);
+    const tb=new THREE.Mesh(EQ.merge([EQ.tint(EQ.xform(new THREE.SphereGeometry(.13,12,8,0,Math.PI*2,0,1.5),0,0,0,0,0,0,1,.85,1.08),0xc0392b)]),EQ.NPCMAT);tb.position.set(0,.7*n.s,-.01);n.spine.add(tb);}
+   e.lines=['Namasté! Porto il fieno ai cavalli.','I cavalli adorano il fieno fresco del mattino.','Lavoro qui da tanti anni, conosco ogni cavallo.','Vuoi aiutarmi con la carriola?','Il tuo cavallo oggi ha mangiato tutto!'];
    const b=EQ.buildBarrow();b.position.set(0,0,.85);e.root.add(b);
    const a=pathAgent(W,e,pth,{speed:1,pause:3,stopR:3,far:120,check:(a,tg,p,t)=>Math.sin(t*.5+a.s)>.75?0:tg});e.anim=(dt,sp)=>e.npc.pose(dt,sp>.1?'push':'stand',{speed:sp});
-   a.label=label(e,EQ.randName(false),2.2);addCol(W,a,.8);}
+   a.label=label(e,'Sukka',2.25);e.name='Sukka';addCol(W,a,.8);}
   // tribuna: pubblico seduto e tifosi
   if(S.stands){const st=S.stands;const vars=bakedVariants(10,'sit',()=>({}),(g)=>{g.rotateY(Math.PI);return g;});const L=[];
    for(let r=0;r<st.rows;r++)for(let x=-13.5;x<=13.5;x+=.85){if(Math.random()<.3)continue;L.push({x:x+rnd(-.1,.1),y:.5+r*st.step-.42,z:1.4*r+.55,ry:rnd(-.15,.15)});}

@@ -1035,9 +1035,10 @@ EQ.buildCity=function(){
     }
   });
   // lampioni e alberi stradali
-  {const L=[],T=[];for(let k=-n-1;k<=n;k++){const c=(k+.5)*P;for(let s=-ext+8;s<ext;s+=16){if(Math.abs(((s+ext)%P)-P/2)<R)continue;
-      for(const o of [-R/2-.6,R/2+.6]){L.push({x:c+o,z:s});L.push({x:s,z:c+o});}}}
-   const lp=L.filter((a,i)=>i%2===0);
+  {const L=[],lp=[];const curb=(P-B-5)/2;for(let k=-n-1;k<=n;k++){const c=(k+.5)*P;for(let s=-ext+8;s<ext;s+=16){if(Math.abs(((s+ext)%P)-P/2)<R)continue;
+      for(const o of [-R/2-.6,R/2+.6]){L.push({x:c+o,z:s});L.push({x:s,z:c+o});}}
+     // lampioni radi sul bordo del marciapiede, alternati sui due lati
+     let side=1;for(let s=-ext+14;s<ext;s+=40){if(Math.abs(((s+ext)%P)-P/2)<curb+4)continue;const o=side*(curb+.45);side=-side;lp.push({x:c+o,z:s});lp.push({x:s+20,z:c-o});}}
    W.group.add(inst(G.cyl(.07,.1,4.5,8),mat(0x2a2a2a,.4,.6),lp.map(a=>({x:a.x,y:2.25,z:a.z}))));
    W.group.add(inst(G.sph(.25,10,8),new THREE.MeshStandardMaterial({color:0xfff6d0,emissive:C(0x554422),roughness:.2}),lp.map(a=>({x:a.x,y:4.6,z:a.z}))));
    lp.forEach(a=>W.colliders.push({x:a.x,z:a.z,r:.2}));
