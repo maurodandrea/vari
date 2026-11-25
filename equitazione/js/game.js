@@ -318,19 +318,20 @@ function hactUpdate(dt){const a=G.hact,sp=a.sp,w=W();a.t+=dt;
     if(sp.eatCake&&w.cake)w.cake.visible=false;
     if(sp.draw&&w.draw){drawPic(w.draw,1);w.draw.wp.visible=true;w.draw.n++;}
     if(sp.sleep&&G.cur&&G.cur.stats)stat(G.cur,'happy',5);F.x=sp.p.x+(sp.lie?1.4:0);if(sp.out){F.x=sp.out.x;F.z=sp.out.z;}}}
-const SUBJ=[['Matematica',['3 + 4 = 7','5 × 2 = 10','12 − 5 = 7','20 : 4 = 5']],['Italiano',['Il cavallo galoppa nel prato.','Il = articolo','cavallo = nome','galoppa = verbo']],
-  ['Scienze',['Il cavallo è erbivoro 🌿','Ha 4 zampe e 1 zoccolo ciascuna','Può dormire in piedi!','Vive fino a 30 anni']],['Geografia',['Capitale d\'Italia: Roma','Fiume più lungo: il Po','Monte più alto: il Monte Bianco','Isola più grande: la Sicilia']],
-  ['Inglese',['horse = cavallo','saddle = sella','jump = salto','I love my pony! 🐴']]];
-const QA=[['Quanto fa 7 × 3?','21!'],['Come si dice "cavallo" in inglese?','Horse!'],['Qual è la capitale d\'Italia?','Roma!'],['Quante zampe ha un cavallo?','Quattro!'],['Cosa mangia il cavallo?','Fieno, erba e carote!'],['Quanto fa 15 + 10?','25!']];
+const SUBJ=[['Matematica',['2x + 3 = 11','2x = 8','x = 4 ✔','3/4 + 1/4 = 1']],['Italiano',['Analisi logica:','Il cavallo = soggetto','galoppa = predicato verbale','nel prato = compl. di luogo']],
+  ['Scienze',['Il cavallo è un mammifero erbivoro 🌿','Apparato digerente: 25 m di intestino!','Cellula = unità della vita','Fotosintesi: luce → energia']],['Storia',['476 d.C. caduta dell\'Impero romano','1492 Colombo in America','1861 Unità d\'Italia 🇮🇹','I cavalieri medievali e i destrieri']],
+  ['Geografia',['Le regioni italiane sono 20','Capoluogo della Toscana: Firenze','Fiume più lungo: il Po','Stati d\'Europa e capitali']],
+  ['Inglese',['Present simple:','I ride my horse every day','She rides her pony','Do you like horses? Yes, I do! 🐴']],['Tecnologia',['Il disegno tecnico','Squadra, compasso e righello','Proiezioni ortogonali','Materiali: legno, metallo, plastica']]];
+const QA=[['Quanto fa 12 × 12?','144!'],['Come si dice "sella" in inglese?','Saddle!'],['In che anno è nata l\'Italia unita?','Nel 1861!'],['Quanto vale x se 3x = 21?','x = 7!'],['Chi scrisse la Divina Commedia?','Dante Alighieri!'],['Qual è la capitale della Francia?','Parigi!'],['Cosa produce la fotosintesi?','Ossigeno e zuccheri!']];
 function drawBoard(b,title,lines,k,col){const g=b.g,w=b.c.width,h=b.c.height;g.fillStyle='#1f4a33';g.fillRect(0,0,w,h);g.fillStyle=col||'#ffffff';g.font='bold 26px "Comic Sans MS", Fredoka, sans-serif';g.fillText(title,16,34);
   g.fillStyle='#f4f4e8';g.font='22px "Comic Sans MS", Fredoka, sans-serif';let n=k*lines.length;for(let i=0;i<lines.length&&i<n;i++){const L=lines[i];const f=Math.min(1,n-i);g.fillText(L.slice(0,Math.ceil(L.length*f)),26,76+i*36);}b.t.needsUpdate=true;}
 EQ.drawHW=function(d,k){const g=d.g;g.fillStyle='#fffef6';g.fillRect(0,0,128,96);g.strokeStyle='#9fc5e8';g.lineWidth=1;for(let y=14;y<96;y+=12){g.beginPath();g.moveTo(0,y);g.lineTo(128,y);g.stroke();}g.strokeStyle='#e88';g.beginPath();g.moveTo(14,0);g.lineTo(14,96);g.stroke();
-  const L=['2 + 3 = 5 ✔','6 − 1 = 5 ✔','4 × 2 = 8 ✔','10 : 2 = 5 ✔','IL MIO PONY 🐴','10 e lode ⭐'];g.fillStyle='#2a3a8a';g.font='10px sans-serif';const n=Math.floor(k*L.length+.001);for(let i=0;i<n;i++){g.fillStyle=i===5?'#c0392b':'#2a3a8a';g.fillText(L[i],18,12+i*13);}d.t.needsUpdate=true;};
+  const L=['2x + 4 = 10 → x = 3 ✔','3/5 + 1/5 = 4/5 ✔','√49 = 7 ✔','I ride a horse ✔','Tema: il mio pony 🐴','10 e lode ⭐'];g.fillStyle='#2a3a8a';g.font='9px sans-serif';const n=Math.floor(k*L.length+.001);for(let i=0;i<n;i++){g.fillStyle=i===5?'#c0392b':'#2a3a8a';g.fillText(L[i],18,12+i*13);}d.t.needsUpdate=true;};
 const drawHW=EQ.drawHW;
 function schoolAct(dt,a,sp,w){
   if(sp.hw&&w.hw)drawHW(w.hw,a.t/sp.dur);
-  if(sp.lesson&&w.board){if(a.subj==null){a.subj=SUBJ[Math.floor(Math.random()*SUBJ.length)];msg('👩‍🏫 Maestra Rosa: <small>oggi facciamo '+a.subj[0]+'!</small>',2.6);}
-    drawBoard(w.board,'📘 '+a.subj[0],a.subj[1],Math.min(1,a.t/(sp.dur*.75)),'#ffe066');a.mt=(a.mt||0)+dt;if(a.mt>3.2&&a.t<sp.dur-2){a.mt=0;msg('👩‍🏫 '+EQ.pick(['Copiate dalla lavagna!','Bravi bambini!','Chi sa rispondere?','Attenzione, è importante!','Che classe brava!']),1.8);}}
+  if(sp.lesson&&w.board){if(a.subj==null){a.subj=SUBJ[Math.floor(Math.random()*SUBJ.length)];msg('👩‍🏫 Prof.ssa Rosa: <small>oggi facciamo '+a.subj[0]+'!</small>',2.6);}
+    drawBoard(w.board,'📘 '+a.subj[0],a.subj[1],Math.min(1,a.t/(sp.dur*.75)),'#ffe066');a.mt=(a.mt||0)+dt;if(a.mt>3.2&&a.t<sp.dur-2){a.mt=0;msg('👩‍🏫 '+EQ.pick(['Copiate dalla lavagna!','Bravi ragazzi!','Chi sa rispondere?','Attenzione, è importante!','Domani c\'è la verifica!']),1.8);}}
   if(sp.hand&&!a.q){a.q=EQ.pick(QA);msg('👩‍🏫 '+a.q[0]+'<small>🙋 '+EQ.pname()+': '+a.q[1]+'</small>',3.2);}
   if(sp.boardW&&w.board)drawBoard(w.board,'✏️ '+EQ.pname(),['Ciao a tutti! 👋','Amo i cavalli 🐴','Ho un pony di nome '+((G.cur&&G.cur.def.name)||'Furia')],Math.min(1,a.t/(sp.dur*.85)),'#ffffff');
   if(sp.basket&&w.sball){const k=Math.floor(a.t/1.6),u=(a.t%1.6)/1.1,ok=((k*7+3)%5)<3,b=w.sball,H0=w.hoop;a.score=a.score||0;a.shots=a.shots||0;

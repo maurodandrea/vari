@@ -1414,7 +1414,7 @@ EQ.buildHome=function(){
    mesh(G.box(3.4,3.2,.3),mat(0xe9e2d0,.6),0,1.6,-7.05,g);mesh(G.box(2.4,2.6,.1),mat(0x2a58c8,.4),0,1.3,-7.22,g);
    mesh(G.box(5,.2,2.4),mat(0xe9e2d0,.6),0,3.3,-8.2,g);for(const x of[-2.3,2.3])mesh(G.cyl(.12,.12,3.3,8),mat(0xffffff,.5),x,1.65,-9.2,g);
    W.colliders.push({x:-32,z:92,hx:14.2,hz:7.2});
-   sign(W,'🏫 SCUOLA',-32,5.4,84.8,Math.PI,6,1.1,'#2a58c8');
+   sign(W,'🏫 SCUOLA MEDIA',-32,5.4,84.8,Math.PI,7.6,1.1,'#2a58c8');
    // asta della bandiera
    mesh(G.cyl(.07,.09,8,8),mat(0xdddddd,.3,.7),-22,4,82,grp);{const fl=new THREE.Group();fl.position.set(-22,7.2,82);grp.add(fl);['#009246','#ffffff','#ce2b37'].forEach((c,i)=>{const m=new THREE.Mesh(G.box(.5,1,.03),mat(new THREE.Color(c).getHex(),.8));m.position.set(-.27-i*.5,0,0);fl.add(m);});W.flag=fl;}
    W.colliders.push({x:-22,z:82,r:.2});
@@ -1462,7 +1462,7 @@ EQ.buildHome=function(){
      mesh(G.box(.3,.02,.22),mat([0xffffff,0xf6e7b0][(x+z)&1],.8),x+.15,.74,z,R);}
    {const mp=EQ.canvasTex(256,192,(q,w,h)=>{q.fillStyle='#9fd2f5';q.fillRect(0,0,w,h);q.fillStyle='#6aa84f';q.beginPath();q.moveTo(90,10);q.lineTo(120,30);q.lineTo(150,70);q.lineTo(180,95);q.lineTo(200,120);q.lineTo(175,125);q.lineTo(160,150);q.lineTo(150,175);q.lineTo(135,150);q.lineTo(120,110);q.lineTo(95,80);q.lineTo(80,40);q.closePath();q.fill();q.beginPath();q.ellipse(100,150,16,12,0,0,TAU);q.fill();q.beginPath();q.ellipse(60,110,10,18,0,0,TAU);q.fill();q.fillStyle='#333';q.font='bold 18px sans-serif';q.fillText('ITALIA',10,24);});W.tex.push(mp);
     const m=mesh(new THREE.PlaneGeometry(1.5,1.1),new THREE.MeshStandardMaterial({map:mp}),-14.9,1.7,-5,R);m.rotation.y=Math.PI/2;}
-   {const al=EQ.canvasTex(512,64,(q,w,h)=>{q.fillStyle='#fffbe8';q.fillRect(0,0,w,h);q.font='bold 40px Fredoka, sans-serif';const L='ABCDEFGHILMNOPQRSTUVZ';const cs=['#c0392b','#2a58c8','#2f6b33','#e67e22','#8e44ad'];for(let i=0;i<L.length;i++){q.fillStyle=cs[i%5];q.fillText(L[i],6+i*24,46);}});W.tex.push(al);
+   {const al=EQ.canvasTex(512,64,(q,w,h)=>{q.fillStyle='#fffbe8';q.fillRect(0,0,w,h);q.fillStyle='#2a58c8';q.font='bold 28px Fredoka, sans-serif';q.textAlign='center';q.fillText('CLASSE 2ª B  ·  π = 3,14  ·  a² + b² = c²',w/2,44);});W.tex.push(al);
     mesh(new THREE.PlaneGeometry(6,.5),new THREE.MeshBasicMaterial({map:al}),-9,2.85,-9.89,R);}
    // ===== PALESTRA =====
    {const hx=14.85;mesh(G.box(.08,1.2,1.8),mat(0xffffff,.4),hx-.05,2.9,-5,R);mesh(G.box(.02,.5,.6),mat(0xe74c3c,.5),hx-.1,2.75,-5,R);const rg=mesh(G.tor(.24,.025,6,16),mat(0xff6a00,.4,.4),hx-.42,2.55,-5,R);rg.rotation.x=Math.PI/2;
@@ -1502,7 +1502,7 @@ EQ.buildHome=function(){
    R.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});
    const A=()=>EQ.A();
    W.school.spots=[
-     {id:'lesson',icon:'📚',label:'Fai lezione con la maestra',p:S(-9,-2.2),h:Math.PI,pose:'sit',dur:12,lesson:true},
+     {id:'lesson',icon:'📚',label:'Fai lezione con la prof',p:S(-9,-2.2),h:Math.PI,pose:'sit',dur:12,lesson:true},
      {id:'hand',icon:'🙋',label:'Alza la mano',p:S(-9,-2.2),h:Math.PI,pose:'wave',dur:3.5,hand:true},
      {id:'board',icon:'🧑‍🏫',label:'Scrivi alla lavagna',p:S(-7.2,-9.1),h:Math.PI,pose:'brush',dur:5,snd:'brush',boardW:true},
      {id:'basket',icon:'🏀',label:'Tira a canestro',p:S(10.6,-5),h:Math.PI/2,pose:'stand',dur:9,basket:true},
