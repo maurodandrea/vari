@@ -1173,9 +1173,10 @@ const CAT=[
   {k:'piombi',n:'⚓ Piombi',items:[{id:'lead',n:'Piombi da surfcasting · confezione da 2',d:'Piramidale tiene sulla sabbia, ogiva vola più lontano, a ragno (grip) resta fermo anche con la corrente.',opts:[{k:'g',n:'Peso',v:['80 g','100 g','125 g','150 g','175 g','200 g']},{k:'t',n:'Forma',v:['Piramidale','Ogiva','A ragno']}],p:o=>[3,4.5,5,6,6.5,7][o.g||0]}]},
   {k:'fili',n:'🧵 Fili',items:[
     {id:'line',n:'Filo madre nylon · bobina 300 m',d:'Più sottile = lanci più lunghi ma meno resistenza.',opts:[{k:'d',n:'Diametro',v:['0,20 mm','0,22 mm','0,25 mm','0,28 mm','0,30 mm']}],p:o=>[9.9,9.9,10.9,11.9,12.9][o.d]},
+    {id:'braid',n:'Trecciato per bobina · 300 m',d:'Lenza madre in multifibra: non si allunga e regge molto di più. Con il trecciato sul mulinello la lenza si spezza la metà delle volte.',opts:[{k:'d',n:'Diametro',v:['0,10 mm','0,12 mm','0,14 mm','0,16 mm']}],p:()=>29},
     {id:'leader',n:'Shock leader conico 0,26→0,57 · 5 pezzi',d:'Il tratto che regge la forza del lancio: niente più crack-off.',p:()=>8.9},
     {id:'fluo',n:'Terminale fluorocarbon · 50 m',d:'Invisibile in acqua: più sottile, più abboccate.',opts:[{k:'d',n:'Diametro',v:['0,25 mm','0,30 mm','0,35 mm','0,40 mm']}],p:o=>[7.5,7.9,8.5,8.9][o.d]}]},
-  {k:'accessori',n:'🧰 Accessori',items:[
+  {k:'accessori',n:'🧰 Minuterie',items:[
     {id:'star',n:'Starlight 4,5 mm · busta da 10',d:'Luce chimica sulla vetta: di notte vedi le tocche.',p:()=>3.9},
     {id:'swiv',n:'Girelle a barilotto n. 8 · busta da 15',d:'Tolgono le torsioni al filo; servono per rifare il terminale.',p:()=>2.9},
     {id:'snap',n:'Moschettoni rapidi · busta da 15',d:'Per agganciare il piombo al volo; servono per rifare il terminale.',p:()=>2.9},
@@ -1239,6 +1240,7 @@ function giveItem(it,o){const g=st.gear;(g.bought=g.bought||{})[it.id]=true;swit
   case 'lead':{const w=[80,100,125,150,175,200][o.g||0];if(o.t===2)g.grip[w]=(g.grip[w]||0)+2;if(o.t===1){g.ogiva=g.ogiva||{};g.ogiva[w]=(g.ogiva[w]||0)+2;}g.leads[w]=(g.leads[w]||0)+2;break;}
   case 'line':g.line=[.2,.22,.25,.28,.3][o.d||0];break;
   case 'leader':g.leader+=5;break;
+  case 'braid':g.braid=[.10,.12,.14,.16][o.d||0];break;
   case 'fluo':g.fluo=[.25,.3,.35,.4][o.d||0];g.term=(g.term||0)+10;break;
   case 'star':g.starlight+=10;break;case 'swiv':g.swivels+=15;break;case 'snap':g.snaps+=15;break;
   default:if(it.rod){if(!g.rods.includes(it.id))g.rods.push(it.id);g.rodCnt[it.id]=(g.rodCnt[it.id]||0)+1;g.rod=it.id;break;}
@@ -1262,7 +1264,7 @@ function skinRod(obj,rodId,reelId){const g=st.gear,U=obj.userData;if(!U.sk){U.sk
 function gearChips(){const g=st.gear,b=g.bought||{},q=gearQuality(),rn=id=>id==='rT'?'Tournament 14000':id.slice(1);
   return `<div class="grow" style="flex-wrap:wrap;gap:4px"><span>Canna</span>${g.rods.map(id=>`<button class="gc ${g.rod===id?'on':''}" onclick="GAME.useRod('${id}')">${ROD[id].n}</button>`).join('')}</div>
     <div class="grow" style="flex-wrap:wrap;gap:4px"><span>Mulinello</span>${g.reels.map(id=>`<button class="gc ${g.reel===id?'on':''}" onclick="GAME.useReel('${id}')">${reelN(id)}</button>`).join('')}</div>
-    <div class="gs">🎒 Filo ${String(g.line).replace('.',',')} mm${b.leader||g.leader?` · shock leader ${g.leader}`:''}${b.fluo?` · fluorocarbon ${String(g.fluo).replace('.',',')}`:''} · starlight ${g.starlight}${b.beads?' · perline':''}${b.elastic?' · elastico':''}${b.lamp||b.lampF?' · frontale LED':''}${b.spike?' · picchetti in alluminio':''}${b.box?' · cassetta':' · busta per la minuteria'}${b.bucket?' · secchio esche':''}</div>
+    <div class="gs">🎒 ${g.braid?'Trecciato '+String(g.braid).replace('.',',')+' mm':'Filo '+String(g.line).replace('.',',')+' mm'}${b.leader||g.leader?` · shock leader ${g.leader}`:''}${b.fluo?` · fluorocarbon ${String(g.fluo).replace('.',',')}`:''} · starlight ${g.starlight}${b.beads?' · perline':''}${b.elastic?' · elastico':''}${b.lamp||b.lampF?' · frontale LED':''}${b.spike?' · picchetti in alluminio':''}${b.box?' · cassetta':' · busta per la minuteria'}${b.bucket?' · secchio esche':''}</div>
     <div class="gs" style="color:${q<.8?'#ffb547':'#5ee08a'}">${q<.8?'⚠️ Attrezzatura di base: pescherai meno. Al negozio trovi di meglio.':'✅ Attrezzatura buona: '+Math.round(q*100)+'% di efficacia.'}</div>`;}
 G.useReel=id=>{const g=st.gear;g.reel=id;g.drag=reelDrag(id);gearSave();if(st.phase==='shop')shopUI();else setUI();};
 G.gearView=()=>{st.phaseBack=st.phase;st.phase='gear';setUI();};G.gearBack=()=>{st.phase=st.phaseBack||'wait';setUI();};
@@ -1305,7 +1307,7 @@ function buildShop(){scene=new T.Scene();scene.background=new T.Color('#1a1612')
   const shelf=(x,title)=>{lab(title,x,2.14,-8.4);const fr=M('#7a5a3a');box(.05,2,.45,fr,x-.95,1,-8.2);box(.05,2,.45,fr,x+.95,1,-8.2);box(1.95,2,.03,M('#d8cdb8'),x,1,-8.42);
     for(let k=0;k<5;k++){const y=.15+k*.42;box(1.9,.03,.45,fr,x,y,-8.2);for(let i=0;i<8;i++){const w=rnd(.12,.2),h=rnd(.16,.32),c=new T.Color().setHSL(Math.random(),.55,.5);const pk=box(w,h,rnd(.05,.12),M(c,{roughness:.6}),x-.82+i*.235,y+.015+h/2,-8.16+rnd(-.05,.05));
       const lb=box(w*.8,h*.3,.002,M('#ffffff',{roughness:.4}),0,h*.12,0,pk);lb.position.z=pk.geometry.parameters.depth/2+.001;}}};
-  shelf(-2.6,'AMI · PIOMBI');shelf(-.4,'FILI · TERMINALI');shelf(1.8,'ACCESSORI');
+  shelf(-2.6,'AMI · PIOMBI');shelf(-.4,'FILI · TERMINALI');shelf(1.8,'MINUTERIE');
   // frigo delle esche vive
   lab('ESCHE VIVE',3.9,2.45,-7.6,-Math.PI/4);const fr=box(1.1,2.1,.8,M('#dfe6ea',{metalness:.4,roughness:.3}),3.9,1.05,-7.7);fr.rotation.y=-Math.PI/4;
   const gl=new T.Mesh(new T.PlaneGeometry(.95,1.7),new T.MeshStandardMaterial({color:'#bfe9ff',emissive:'#9fe0ff',emissiveIntensity:.8,transparent:true,opacity:.55}));gl.position.set(3.9+Math.sin(-Math.PI/4)*.41,1.15,-7.7+Math.cos(-Math.PI/4)*.41);gl.rotation.y=-Math.PI/4;scene.add(gl);
@@ -1345,7 +1347,7 @@ const cartTot=()=>SH.cart.reduce((a,c)=>a+c.price,0);
 function shopUI(){const c=CAT.find(x=>x.k===SH.cat),tot=cartTot();hud.innerHTML=`<div>🛒 Pesca Sport</div><div>💶 <b>${eur(st.money)}</b> virtuali</div>${SH.cart.length?`<div>🧺 ${SH.cart.length} · ${eur(tot)}</div>`:''}`;
   if(SH.cat==='zaino'){const g=st.gear;ui.innerHTML=`<div class="gpanel"><div class="grow" style="justify-content:space-between"><b>🎒 Il tuo zaino</b>${btn('↩ Negozio',"shopCat('canne')")}</div>
     <div class="gs">Canne: <b>${g.rods.map(id=>ROD[id].n+(g.rodCnt[id]>1?' ×'+g.rodCnt[id]:'')).join(', ')||'nessuna'}</b></div>
-    <div class="gs">Mulinelli: <b>${g.reels.map(id=>reelN(id)+(g.reelCnt[id]>1?' ×'+g.reelCnt[id]:'')).join(', ')||'nessuno'}</b> · posti canna ${g.spikes||0} (frizione ${g.drag} kg) · filo madre ${String(g.line).replace('.',',')} mm · terminale ${String(g.fluo).replace('.',',')} mm · shock leader ${g.leader} · terminali ${g.term||0}</div>
+    <div class="gs">Mulinelli: <b>${g.reels.map(id=>reelN(id)+(g.reelCnt[id]>1?' ×'+g.reelCnt[id]:'')).join(', ')||'nessuno'}</b> · posti canna ${g.spikes||0} (frizione ${g.drag} kg) · ${g.braid?'trecciato '+String(g.braid).replace('.',','):'filo madre '+String(g.line).replace('.',',')} mm · terminale ${String(g.fluo).replace('.',',')} mm · shock leader ${g.leader} · terminali ${g.term||0}</div>
     <div class="gs">Esche: ${BAITS.filter(b=>!b.lim).map(b=>`${b.n} ${g.baits[b.k]||0}`).join(' · ')}</div>
     <div class="gs">Ami: ${[0,2,4,6,8].map(m=>`n.${m}: ${g.hooks[m]||0}`).join(' · ')}</div>
     <div class="gs">Piombi: ${[80,100,125,150,175,200].map(w=>`${w} g: ${g.leads[w]||0}${g.grip[w]?' ('+g.grip[w]+' a ragno)':''}`).join(' · ')}</div>
@@ -1357,7 +1359,7 @@ function shopUI(){const c=CAT.find(x=>x.k===SH.cat),tot=cartTot();hud.innerHTML=
       <div style="text-align:right;flex:none"><b style="color:#ffd76a">${eur(it.p(fullO(it,o)))}</b><br>${own?'<span class="gs">già tua</span>':`<button class="gb" style="margin:4px 0 0;padding:8px 12px" onclick="GAME.shopAdd('${it.id}')">＋ Carrello</button>`}</div></div>`;}).join('')
     :`<b>🧾 Alla cassa</b>${SH.cart.length?SH.cart.map((x,i)=>`<div class="grow" style="justify-content:space-between;margin:3px 0"><span class="gs" style="margin:0">${ITEM[x.id].n}${x.o&&ITEM[x.id].opts?' · '+optTxt(ITEM[x.id],x.o):''}</span><span>${eur(x.price)} <u style="cursor:pointer" onclick="GAME.shopDel(${i})">✕</u></span></div>`).join(''):'<div class="gs">Il carrello è vuoto.</div>'}`}
     <div class="grow" style="margin-top:8px">${SH.cart.length?`<button class="gb ${SH.cat==='cassa'?'big':''}" style="flex:2" onclick="GAME.${SH.cat==='cassa'?'shopPay':"shopCat('cassa')"}()">💳 ${SH.cat==='cassa'?'Paga':'Vai alla cassa'} ${eur(tot)}</button>`:''}<button class="gb" style="flex:1;background:#33404d" onclick="GAME.shopExit()">🚪 Esci</button></div>${st.msg?`<div class="gs" style="text-align:center">${st.msg}</div>`:''}</div>`;}
-G.shopCat=k=>{SH.cat=k;SH.go=k==='zaino'?'ingresso':k;st.msg='';click();shopUI();const L={sedie:'Una sedia comoda fa la differenza nelle nottate.',ombrelloni:'Con l\'ombrellone niente più pioggia sulla testa.',abbigliamento:'Lo scafandro in neoprene è caldissimo.',borsoni:'Con il carrello porti tutto in un viaggio.',picchetti:'Il tripode è perfetto sugli scogli.',torce:'La luce rossa non spaventa i pesci.',canne:'Queste sono le canne: più lunghe lanciano più lontano.',mulinelli:'I mulinelli sono nel bancone: con la bobina lunga il filo esce meglio.',esche:'Esche vive, appena arrivate!',ami:'Ami di tutte le misure: più è alto il numero, più è piccolo.',piombi:'Il piombo a ragno tiene anche con la corrente.',fili:'Lo shock leader ti salva dal crack-off.',accessori:'Le starlight non devono mai mancare di notte!',cassa:'Vieni pure alla cassa.'};if(L[k])say(SH.clerk,L[k],3.5);};
+G.shopCat=k=>{SH.cat=k;SH.go=k==='zaino'?'ingresso':k;st.msg='';click();shopUI();const L={sedie:'Una sedia comoda fa la differenza nelle nottate.',ombrelloni:'Con l\'ombrellone niente più pioggia sulla testa.',abbigliamento:'Lo scafandro in neoprene è caldissimo.',borsoni:'Con il carrello porti tutto in un viaggio.',picchetti:'Il tripode è perfetto sugli scogli.',torce:'La luce rossa non spaventa i pesci.',canne:'Queste sono le canne: più lunghe lanciano più lontano.',mulinelli:'I mulinelli sono nel bancone: con la bobina lunga il filo esce meglio.',esche:'Esche vive, appena arrivate!',ami:'Ami di tutte le misure: più è alto il numero, più è piccolo.',piombi:'Il piombo a ragno tiene anche con la corrente.',fili:'Lo shock leader ti salva dal crack-off.',accessori:'Minuterie: starlight, girelle, moschettoni… non devono mai mancare!',cassa:'Vieni pure alla cassa.'};if(L[k])say(SH.clerk,L[k],3.5);};
 G.shopOpt=(id,k,i)=>{(SH.sel[id]=SH.sel[id]||{})[k]=i;shopUI();};
 G.shopAdd=id=>{const it=ITEM[id],o=fullO(it,SH.sel[id]),price=Math.round(it.p(o)*100)/100;SH.cart.push({id,o,price});st.msg=`🧺 Aggiunto: ${it.n}${it.opts?' · '+optTxt(it,o):''}`;click();shopUI();};
 G.shopDel=i=>{SH.cart.splice(i,1);shopUI();};
@@ -1503,7 +1505,7 @@ G.rod=i=>seq(async()=>{st.sel=i;const r=st.rods[i];st.phase='busy';st.msg=r.stat
 G.back=()=>seq(async()=>{st.phase='busy';st.msg='';setUI();if(AN.holding>=0)await putRod(AN.holding);await backToChair();st.phase='wait';setUI();});
 G.rebait=()=>seq(async()=>{endShowFish();const r=st.rods[st.sel];st.phase='busy';st.msg=r.dist?'🌀 Recupera la lenza…':'';setUI();
   if(!r.held)await pickRod(st.sel);
-  if(r.dist>0){pose('reel');const d0=r.dist,K=riskOf(),u0=Math.random(),far=r.dist>20;
+  if(r.dist>0){pose('reel');const d0=r.dist,K=riskOf(),u0=Math.random(),far=r.dist>20;if(st.gear.braid)K.brk*=.5;
     const kind=!far?null:u0<K.snag?(K.rocks>.3?'scogli':'fondo'):u0<K.snag+K.sand?'sabbia':u0<K.snag+K.sand+K.brk?'rottura':u0<K.snag+K.sand+K.brk+K.weed?'alghe':null,snagAt=kind?rnd(.2,.8):2;
     for(let t=0;t<1;t+=.05){if(t>=snagAt){AN.reelSpin=0;
       if(kind==='rottura'){vib([80,40,200]);click();r.broken=true;r.bait=null;r.dist=0;r.sinker.visible=false;r.state='idle';pose('hold');st.msg=K.rocks>.3?'💥 La lenza ha sfregato sugli scogli e si è spezzata: piombo perso, rifai il terminale.':'💥 Con le onde la lenza si è spezzata durante il recupero: rifai il terminale.';st.phase='rig';setUI();return;}
@@ -1568,7 +1570,7 @@ function riskOf(){const w=wxAt(st.gt),rk=SPOT.rocks||0,wv=w.wave||0;return {rock
 function doCast(){const c=st.cast;c.on=false;const r=st.rods[st.sel],w=wxAt(st.gt),S=cSty();
   const p=c.p,[g0,g1]=S.g,gm=(g0+g1)/2,green=p>=g0&&p<=g1,q=green?1:p<g0?p/g0*.9:.7;
   // troppa forza con ground e pendulum: il filo si rompe al lancio (crack-off) e il piombo vola via
-  const rnd2=Math.random(),lk=st.gear.leader>0?.3:1;if((S.crack&&p>g1+.03&&rnd2<S.crack*lk)||rnd2<(.02+((r.lead||st.lead)>175?.015:0))*lk){if(st.gear.leader>0){st.gear.leader--;gearSave();}st.cast=null;seq(async()=>{st.phase='busy';setUI();castAnimStart('fire');await sleep(.3);whoosh();st.castLead=null;await sleep(.4);st.castAnim=null;st.castCam=false;CAM.cl=null;click();vib([60,30,60]);r.broken=true;r.bait=null;r.state='idle';r.dist=0;r.sinker.visible=false;pose('hold');
+  const rnd2=Math.random(),lk=(st.gear.leader>0?.3:1)*(st.gear.braid?.5:1);if((S.crack&&p>g1+.03&&rnd2<S.crack*lk)||rnd2<(.02+((r.lead||st.lead)>175?.015:0))*lk){if(st.gear.leader>0){st.gear.leader--;gearSave();}st.cast=null;seq(async()=>{st.phase='busy';setUI();castAnimStart('fire');await sleep(.3);whoosh();st.castLead=null;await sleep(.4);st.castAnim=null;st.castCam=false;CAM.cl=null;click();vib([60,30,60]);r.broken=true;r.bait=null;r.state='idle';r.dist=0;r.sinker.visible=false;pose('hold');
     st.msg=p>g1+.03?'💥 Crack-off! Troppa forza: il filo si è rotto al lancio e il piombo è volato via. Rifai il terminale.':'💥 La lenza si è spezzata al lancio (nodo indebolito): piombo perso, rifai il terminale.';st.phase='rig';setUI();});return;}
   // zona verde: fino al massimo dello stile; con poca potenza anche solo 10 m; oltre la zona verde il lancio si sporca
   const GR=st.gear,M=S.max*(ROD[r.rodId||GR.rod]?.mul||1)*(REELS[r.reelId||GR.reel]?.cast||1)*(1+gearTier(r).all*.08)*(1+(.25-GR.line)*.8)*(r.leadT==='ogiva'?1.05:1),base=green?M*(1-Math.abs(p-gm)*.45):p<g0?lerp(10,M*.92,Math.pow(p/g0,1.15)):lerp(M*.92,M*.4,(p-g1)/(1-g1));
@@ -1699,7 +1701,7 @@ G.strike=()=>seq(async()=>{const r=st.rods[st.sel];if(r.state!=='bite')return;co
   const sp=p.sp,w=sizeOf(sp);st.fight={r,sp,w,len:lenOf(sp,w),dist:r.dist,ten:.3,reel:false,drag:5,run:0,slack:0,t:0,pow:sp.pow*(0.6+Math.min(1.6,w/sp.w[1])*.45)};
   r.state='fight';pose('reel');st.phase='fight';vib([160,60,90]);setUI();});
 function updFight(dt){const f=st.fight;if(!f||st.phase!=='fight')return;f.t+=dt;const r=f.r,w=wxAt(st.gt);
-  {const K=riskOf();if(f.dist<14&&(K.wave>1.2||K.rocks>.3)&&f.ten>.7&&Math.random()<dt*(.004*K.wave+.01*K.rocks))return endFight(false,K.rocks>.3?'La lenza ha toccato gli scogli e si è spezzata!':'Nei frangenti la lenza ha preso un colpo d\'onda e si è spezzata!');}
+  {const K=riskOf();if(f.dist<14&&(K.wave>1.2||K.rocks>.3)&&f.ten>.7&&Math.random()<dt*(.004*K.wave+.01*K.rocks)*(st.gear.braid?.5:1))return endFight(false,K.rocks>.3?'La lenza ha toccato gli scogli e si è spezzata!':'Nei frangenti la lenza ha preso un colpo d\'onda e si è spezzata!');}
   if(!f.snag&&f.dist>15&&Math.random()<dt*.005){f.snag=true;f.reel=false;AN.reelSpin=0;st.snag={r,stage:'fight',msg:'Il pesce si è infilato tra i detriti sul fondo e la lenza si è incagliata.'};st.phase='snag';vib([150,60,150]);setUI();return;}
   if(f.run<=0&&Math.random()<dt*.5*f.pow){f.run=rnd(.6,2)*f.pow;vib([90+Math.round(f.pow*60),50,140+Math.round(f.pow*80)]);}f.run=Math.max(0,f.run-dt);
   // durante la fuga e con la tensione alta: piccoli strattoni
@@ -1711,7 +1713,7 @@ function updFight(dt){const f=st.fight;if(!f||st.phase!=='fight')return;f.t+=dt;
   else AN.reelSpin=f.reel?1:0;
   if(f.reel&&f.run<=0)f.dist-=dt*(7-f.pow*1.5)*(1.15-f.drag*.02)*(1+GT.reel*.6);else if(f.reel)f.dist-=dt*1.2*(1+GT.reel*.5);
   f.ten=lerp(f.ten,clamp(ten,0,1.2),.15);r.dist=Math.max(0,f.dist);
-  const lim=(f.sp.teeth&&hookCat(st.hook)!=='grande'?.92:1)*(1+GT.all*.12)*Math.min(1.12,Math.pow((st.gear.line||.25)/.25,.5));if(f.ten>lim){f.over=(f.over||0)+dt;if(f.over>.35)return endFight(false,f.sp.teeth?'Il serra ha tranciato la lenza con i denti!':'Lenza rotta: troppa tensione. Apri un po\' la frizione.');}else f.over=0;
+  const lim=(f.sp.teeth&&hookCat(st.hook)!=='grande'?.92:1)*(1+GT.all*.12)*Math.min(1.12,Math.pow((st.gear.line||.25)/.25,.5))*(st.gear.braid?1.08:1);if(f.ten>lim){f.over=(f.over||0)+dt;if(f.over>(st.gear.braid?.7:.35))return endFight(false,f.sp.teeth?'Il serra ha tranciato la lenza con i denti!':'Lenza rotta: troppa tensione. Apri un po\' la frizione.');}else f.over=0;
   if(f.ten<.16)f.slack+=dt;else f.slack=Math.max(0,f.slack-dt*2);if(f.slack>2.6+GT.all*2)return endFight(false,'Slamato: con la lenza lenta il pesce si è liberato.');
   if(hookCat(st.hook)==='piccolo'&&r.hookT!=='forgiato'&&f.w>2.5&&f.ten>.85&&Math.random()<dt*.6)return endFight(false,'L\'amo piccolo si è aperto: pesce troppo grosso.');
   if(f.run>0&&Math.random()<dt*4)burst(new T.Vector3(r.sx*(f.dist/Math.max(1,-r.sz))+r.x*(1-f.dist/Math.max(1,-r.sz)),0,-f.dist),.4);
