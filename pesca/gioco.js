@@ -1157,7 +1157,7 @@ const GEAR0={v:2,rod:'beach390',rods:['beach390'],rodCnt:{beach390:1},reel:'r500
   baits:{koreano:15},hooks:{4:10},leads:{80:1,100:1,125:1},grip:{},ogiva:{},forged:{},starlight:0,swivels:15,snaps:15,needle:true,elastic:false,lamp:false,torch:0,spikes:1,spikeT:'pvc',
   chair:'',chairs:[],hat:'none',hats:['none'],outfits:[],shelters:[],shelter:'',boots:false,own:{},bought:{scis:true}};
 function gearLoad(){let g=LSG('gear',null);const G0=JSON.parse(JSON.stringify(GEAR0));if(!g||g.v!==2){LSS('outfit','jeans');LSS('nrods',1);return G0;}if(!g.boxFix){g.boxFix=true;if(g.bought)delete g.bought.box;}for(const k in G0)if(g[k]===undefined)g[k]=G0[k];return g;}
-st.gear=gearLoad();st.money=LSG('money',300);if(!LSG('eco3',0)){st.money=Math.max(st.money,300);LSS('eco3',1);LSS('money',st.money);}
+st.gear=gearLoad();st.money=LSG('money',10000);if(!LSG('eco10k',0)){st.money=Math.max(st.money,10000);LSS('eco10k',1);LSS('eco3',1);LSS('money',st.money);}// per le prove si parte con 10.000 € virtuali
 // guadagni: tempo di pesca nel gioco, catture e uso dell'app (con un tetto al giorno)
 const EARN={fish:.5,fishMax:15};function earnDay(){const e=LSG('earn',{});if(e.d!==today())return {d:today(),fish:0,app:0};return e;}
 function earn(kind,v,why){const e=earnDay(),max=kind==='fish'?EARN.fishMax:1e9,add=Math.max(0,Math.min(v,max-(e[kind]||0)));if(add<=0)return 0;e[kind]=(e[kind]||0)+add;LSS('earn',e);st.money+=add;gearSave();moneyPop(add,why);return add;}
