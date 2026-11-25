@@ -6,13 +6,14 @@ const rnd=U.rnd;
 let T=0;
 
 /* ======================= SALVATAGGIO ======================= */
-const DEF_OUTFIT={helmet:null,protector:null,top:'polo:0xffffff',pants:0xf4f4f2,boots:0x141414,gloves:null,whip:false};
+const DEF_OUTFIT={helmet:null,protector:null,top:'polo:0x1c2a55',pants:0x2a2a30,boots:0x141414,gloves:null,whip:false};
 let save=LS.get('save',null);
 if(save&&save.horses&&save.horses.length<EQ.HORSES.length){while(save.horses.length<EQ.HORSES.length)save.horses.push({hunger:50,clean:40,happy:70,energy:90});}
 if(!save||!save.horses||save.horses.length!==EQ.HORSES.length)save={sel:0,outfit:Object.assign({},DEF_OUTFIT),horses:EQ.HORSES.map((h,i)=>({hunger:45+i*5,clean:30+i*6,happy:70,energy:90})),t:Date.now(),best:{}};
 {const hrs=Math.min(72,Math.max(0,(Date.now()-(save.t||Date.now()))/3.6e6));
  save.horses.forEach(s=>{s.hunger=U.clamp(s.hunger-hrs*5,5,100);s.clean=U.clamp(s.clean-hrs*3,10,100);s.energy=U.clamp(s.energy+hrs*25,0,100);});}
 save.horses.forEach(h=>{if(h.thirst==null)h.thirst=80;});
+if(save.outfitV!==2){save.outfit=Object.assign({},save.outfit||{},{top:'polo:0x1c2a55',pants:0x2a2a30,boots:0x141414});save.outfitV=2;}
 function persist(){save.t=Date.now();save.outfit=Object.assign({},P.outfit);LS.set('save',save);}
 
 /* ======================= COSTRUZIONE ======================= */

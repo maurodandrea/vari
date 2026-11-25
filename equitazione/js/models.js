@@ -342,7 +342,7 @@ EQ.buildHorseHead=function(def){
 EQ.OUTFIT_OPTS={
   helmet:{label:'Casco',icon:'⛑️',opts:[[null,'Nessuno'],[0x1b1b22,'Nero'],[0x1f3b7a,'Blu'],[0xe86aa6,'Rosa'],[0xf5f5f5,'Bianco']]},
   protector:{label:'Corpetto',icon:'🦺',opts:[[null,'Nessuno'],[0x222226,'Nero'],[0x23407f,'Blu'],[0x7b3fb0,'Viola'],[0xe25d9a,'Rosa']]},
-  top:{label:'Maglia',icon:'👕',opts:[['polo:0xffffff','Polo bianca'],['polo:0xf08cb8','Polo rosa'],['polo:0x3fae7a','Polo verde'],['giacca:0x1c2a55','Giacca blu'],['giacca:0x5b2a86','Giacca viola'],['giacca:0x111111','Giacca nera']]},
+  top:{label:'Maglia',icon:'👕',opts:[['polo:0x1c2a55','Maglia blu scuro'],['polo:0xffffff','Polo bianca'],['polo:0xf08cb8','Polo rosa'],['polo:0x3fae7a','Polo verde'],['giacca:0x1c2a55','Giacca blu'],['giacca:0x5b2a86','Giacca viola'],['giacca:0x111111','Giacca nera']]},
   pants:{label:'Pantaloni',icon:'👖',opts:[[0xf4f4f2,'Bianchi'],[0xd9c7a5,'Beige'],[0x2a2a30,'Neri'],[0x2c3e66,'Blu']]},
   boots:{label:'Stivali',icon:'👢',opts:[[0x141414,'Neri'],[0x5a3418,'Marroni']]},
   gloves:{label:'Guanti',icon:'🧤',opts:[[null,'Nessuno'],[0x1a1a1a,'Neri'],[0xf2f2f2,'Bianchi'],[0xe86aa6,'Rosa']]},
@@ -429,7 +429,7 @@ EQ.buildGiorgia=function(){
 
   P.root=root; P.pelvis=pelvis; P.torso=torso; P.head=head; P.legs=legs; P.arms=arms; P.pony=pony; P.helmet=helmet; P.prot=prot; P.whip=whip;
   P.handL=arms[0].hand; P.handR=arms[1].hand;
-  P.outfit={helmet:null,protector:null,top:'polo:0xffffff',pants:0xf4f4f2,boots:0x141414,gloves:null,whip:false};
+  P.outfit={helmet:null,protector:null,top:'polo:0x1c2a55',pants:0x2a2a30,boots:0x141414,gloves:null,whip:false};
   P.setOutfit=function(o){
     Object.assign(P.outfit,o||{}); const f=P.outfit;
     helmet.visible=f.helmet!=null; if(f.helmet!=null)M.helmet.color.copy(C(f.helmet));
