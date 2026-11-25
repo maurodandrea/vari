@@ -743,14 +743,32 @@ function paintBeach(c){const g=c.getContext('2d'),W=c.width,H=c.height;let gr=g.
   for(let k=0;k<4;k++){const y=H*(.66+k*.022);g.strokeStyle='rgba(255,255,255,.55)';g.lineWidth=3;g.beginPath();for(let x=0;x<=W;x+=12)g.lineTo(x,y+Math.sin(x/30+k)*3);g.stroke();}
   gr=g.createLinearGradient(0,H*.72,0,H);gr.addColorStop(0,'#c9a876');gr.addColorStop(1,'#a8865a');g.fillStyle=gr;g.beginPath();g.moveTo(0,H*.74);for(let x=0;x<=W;x+=20)g.lineTo(x,H*.73+Math.sin(x/60)*6);g.lineTo(W,H);g.lineTo(0,H);g.fill();
   for(let i=0;i<900;i++){g.fillStyle=`rgba(${Math.random()<.5?'90,70,40':'240,220,180'},.25)`;g.fillRect(rnd(0,W),rnd(H*.74,H),2,2);}
-  // canne sul picchetto e pescatore in controluce
-  g.strokeStyle='#14181c';g.lineCap='round';for(const [x,a] of [[W*.22,-1.2],[W*.34,-1.35],[W*.82,-1.75]]){g.lineWidth=4;g.beginPath();g.moveTo(x,H*.88);g.lineTo(x,H*.8);g.stroke();g.lineWidth=3;g.beginPath();g.moveTo(x,H*.86);g.lineTo(x+Math.cos(a)*260,H*.86+Math.sin(a)*260);g.stroke();
-    g.strokeStyle='rgba(20,24,28,.4)';g.lineWidth=1;g.beginPath();g.moveTo(x+Math.cos(a)*260,H*.86+Math.sin(a)*260);g.quadraticCurveTo(W*.5,H*.55,W*.45,H*.6);g.stroke();g.strokeStyle='#14181c';}
-  g.fillStyle='#14181c';g.beginPath();g.arc(W*.58,H*.705,11,0,7);g.fill();g.fillRect(W*.58-12,H*.715,24,48);g.fillRect(W*.58-10,H*.76,8,46);g.fillRect(W*.58+2,H*.76,8,46);g.fillRect(W*.58-22,H*.725,10,34);g.fillRect(W*.58+12,H*.725,10,34);}
+  // pescatore in controluce che piega la canna e tira un pesce che salta fuori dall'acqua
+  const k=Math.min(W/200,H/620*1.6),X=v=>W*v,Y=v=>H*v,S='#121619';g.lineCap='round';g.lineJoin='round';g.strokeStyle=S;g.fillStyle=S;
+  const fx=X(.26),fy=Y(.885),hip=[fx+4*k,fy-62*k],sho=[fx-6*k,fy-112*k],hd=[fx-8*k,fy-128*k];
+  g.lineWidth=13*k;g.beginPath();g.moveTo(hip[0],hip[1]);g.lineTo(fx+22*k,fy-30*k);g.lineTo(fx+30*k,fy);g.stroke();// gamba avanti
+  g.beginPath();g.moveTo(hip[0],hip[1]);g.lineTo(fx-10*k,fy-30*k);g.lineTo(fx-16*k,fy);g.stroke();// gamba dietro, piegata all'indietro
+  g.lineWidth=7*k;g.beginPath();g.moveTo(fx+26*k,fy);g.lineTo(fx+40*k,fy);g.moveTo(fx-20*k,fy);g.lineTo(fx-6*k,fy);g.stroke();
+  g.lineWidth=24*k;g.beginPath();g.moveTo(hip[0],hip[1]);g.lineTo(sho[0],sho[1]);g.stroke();// busto inclinato all'indietro
+  g.beginPath();g.arc(hd[0],hd[1],10*k,0,7);g.fill();g.lineWidth=4*k;g.beginPath();g.moveTo(hd[0]-4*k,hd[1]-8*k);g.lineTo(hd[0]+14*k,hd[1]-7*k);g.stroke();// testa e visiera
+  const hand1=[fx+30*k,fy-96*k],hand2=[fx+12*k,fy-74*k];g.lineWidth=8*k;g.beginPath();g.moveTo(sho[0],sho[1]);g.lineTo(fx+18*k,fy-104*k);g.lineTo(hand1[0],hand1[1]);g.stroke();
+  g.beginPath();g.moveTo(sho[0]+2*k,sho[1]+6*k);g.lineTo(fx+2*k,fy-84*k);g.lineTo(hand2[0],hand2[1]);g.stroke();
+  // canna piegata ad arco e mulinello
+  const tip=[X(.86),Y(.43)],cp=[X(.66),Y(.37)];g.lineWidth=4.5*k;g.beginPath();g.moveTo(hand2[0]-10*k,hand2[1]+14*k);g.lineTo(hand1[0],hand1[1]);g.quadraticCurveTo(cp[0],cp[1],tip[0],tip[1]);g.stroke();
+  g.lineWidth=2.5*k;g.beginPath();g.moveTo(hand1[0],hand1[1]);g.quadraticCurveTo(cp[0],cp[1],tip[0],tip[1]);g.stroke();g.beginPath();g.arc(hand2[0]+4*k,hand2[1]+2*k,6*k,0,7);g.fill();
+  // lenza tesa fino al pesce
+  const fish=[X(.74),Y(.61)];g.strokeStyle='rgba(255,240,220,.85)';g.lineWidth=1.2;g.beginPath();g.moveTo(tip[0],tip[1]);g.lineTo(fish[0]+12*k,fish[1]-6*k);g.stroke();
+  // spruzzi e cerchi d'acqua
+  g.strokeStyle='rgba(255,255,255,.75)';g.lineWidth=2;for(const r of[14,24,34]){g.beginPath();g.ellipse(fish[0],Y(.66),r*k,r*k*.25,0,0,7);g.stroke();}
+  g.fillStyle='rgba(255,255,255,.9)';for(let i=0;i<22;i++){const a=rnd(-2.8,-.3),d=rnd(8,32)*k;g.beginPath();g.arc(fish[0]+Math.cos(a)*d,Y(.655)+Math.sin(a)*d*1.2,rnd(1,2.6)*k,0,7);g.fill();}
+  // il pesce che salta, argentato e inarcato
+  g.save();g.translate(fish[0],fish[1]);g.rotate(-.6);const L=34*k;let fg=g.createLinearGradient(0,-L*.3,0,L*.3);fg.addColorStop(0,'#3a4a58');fg.addColorStop(.5,'#c9d2d8');fg.addColorStop(1,'#f4f6f7');g.fillStyle=fg;
+  g.beginPath();g.moveTo(L*.55,0);g.quadraticCurveTo(L*.2,-L*.32,-L*.35,-L*.08);g.lineTo(-L*.55,-L*.26);g.lineTo(-L*.5,0);g.lineTo(-L*.55,L*.26);g.lineTo(-L*.35,L*.08);g.quadraticCurveTo(L*.2,L*.32,L*.55,0);g.fill();
+  g.fillStyle='#0b0d10';g.beginPath();g.arc(L*.38,-L*.05,L*.05,0,7);g.fill();g.restore();}
 function paintShop(c){const g=c.getContext('2d'),W=c.width,H=c.height;g.fillStyle='#e9e1d2';g.fillRect(0,0,W,H);
   for(let i=0;i<14;i++)for(let j=0;j<24;j++){g.fillStyle=`rgba(150,120,90,${.08+Math.random()*.08})`;g.fillRect(i*32+(j%2)*16,j*28,30,26);}
   // insegna e tenda a strisce
-  g.fillStyle='#0f3b57';g.fillRect(16,30,W-32,74);g.strokeStyle='#ffd76a';g.lineWidth=4;g.strokeRect(22,36,W-44,62);g.fillStyle='#ffd76a';g.font=`800 ${Math.round(W*.13)}px Outfit,sans-serif`;g.textAlign='center';g.textBaseline='middle';g.fillText('PESCA SPORT',W/2,68);
+  g.fillStyle='#0f3b57';g.fillRect(16,30,W-32,74);g.strokeStyle='#ffd76a';g.lineWidth=4;g.strokeRect(22,36,W-44,62);g.fillStyle='#ffd76a';g.font=`800 ${Math.round(W*.105)}px Outfit,sans-serif`;g.textAlign="center";g.textBaseline="middle";g.fillText("PESCA SPORT",W/2,68);
   {const sw=(W-20)/6;for(let i=0;i<6;i++){g.fillStyle=i%2?'#f4f1ea':'#1d5f8a';g.beginPath();g.moveTo(10+i*sw,112);g.lineTo(10+(i+1)*sw,112);g.lineTo(10+(i+1)*sw,150);g.quadraticCurveTo(10+(i+.5)*sw,166,10+i*sw,150);g.fill();}}
   // vetrina illuminata con canne, mulinelli, esche e la giacca
   const x0=22,y0=170,w=W-68,h=H*.62;let gr=g.createLinearGradient(0,y0,0,y0+h);gr.addColorStop(0,'#fff6dc');gr.addColorStop(1,'#d9c9a0');g.fillStyle=gr;g.fillRect(x0,y0,w,h);
