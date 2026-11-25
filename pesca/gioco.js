@@ -132,7 +132,7 @@ function seaSound(level){const c=AU.on?ac():null;
 /* ---------- stato del gioco ---------- */
 const G={};window.GAME=G;
 let T=null,renderer,scene,camera,sky,water,sunLight,hemi,moonLight,headLamp,clock,raf=0,root,ui,hud,cvs;
-const st={phase:'load',gt:Date.now(),speed:[1,2,4,8,16,32].includes(LSG('speed',8))?LSG('speed',8):8,lamp:LSG('lamp',true),X:null,sim:false,rods:[],sel:0,msg:'',fight:null,cast:null,catchShow:null,
+const st={phase:'load',gt:Date.now(),speed:(()=>{if(!LSG('spd16',false)){LSS('spd16',true);LSS('speed',16);}const v=LSG('speed',16);return [1,2,4,8,16,32].includes(v)?v:16;})(),lamp:LSG('lamp',true),X:null,sim:false,rods:[],sel:0,msg:'',fight:null,cast:null,catchShow:null,
   bag:LSG('bag',[]),inv:{granchio:0},best:LSG('best',{}),total:LSG('total',{n:0,kg:0,pts:0}),lead:LSG('lead',150),outfit:LSG('outfit','jeans'),castMode:'mano',castStyle:LSG('cstyle','above'),castDist:LSG('cdist',120),hook:hookNum(LSG('hook',2)),nRods:LSG('nrods',1),busy:false,lightning:0};
 const gameDate=()=>new Date(st.gt);
 G._st=st;
