@@ -392,8 +392,9 @@ function makeRod(){const g=new T.Group(),segs=[];let parent=g;
 function bendRod(rod,b){const s=rod.userData.segs;for(let i=0;i<SEG;i++){const u=i/SEG;s[i].rotation.x=-b*u*u*.32;}}
 function makeSpike(kind){const pro=!!kind,g=new T.Group(),sm=pro?MAT.alu:new T.MeshStandardMaterial({color:'#d8d8d2',roughness:.7}),p=new T.Mesh(new T.CylinderGeometry(pro?.014:.02,.008,1.6,8),sm);p.position.y=.55;g.add(p);
   if(kind==='long'){p.scale.y=1.25;}
-  if(kind==='tripod'){for(let k=0;k<3;k++){const l=new T.Mesh(new T.CylinderGeometry(.012,.012,1.5,6),MAT.alu);const a=k*2.09;l.position.set(Math.cos(a)*.32,.68,Math.sin(a)*.32);l.rotation.set(Math.sin(a)*.42,0,-Math.cos(a)*.42);g.add(l);}}
-  else if(pro)for(let k=0;k<3;k++){const l=new T.Mesh(new T.CylinderGeometry(.006,.006,.5,6),MAT.alu);const a=k*2.09;l.position.set(Math.cos(a)*.12,.32,Math.sin(a)*.12);l.rotation.set(Math.sin(a)*.45,0,-Math.cos(a)*.45);g.add(l);}
+  // gambe del treppiede: dall'alto (vicino al palo) aperte verso il basso fino alla sabbia
+  const leg=(top,rad,r)=>{for(let k=0;k<3;k++){const a=k*2.09+.5,A=new T.Vector3(0,top,0),B=new T.Vector3(Math.cos(a)*rad,-.05,Math.sin(a)*rad),v=new T.Vector3().subVectors(B,A),l=new T.Mesh(new T.CylinderGeometry(r,r,v.length(),6),MAT.alu);l.position.copy(A).addScaledVector(v,.5);l.quaternion.setFromUnitVectors(new T.Vector3(0,1,0),v.clone().normalize());g.add(l);}};
+  if(kind==='tripod')leg(1.15,.55,.012);else if(pro)leg(.5,.2,.006);
   const cup=new T.Mesh(new T.CylinderGeometry(.035,.025,.12,10,1,true),sm);cup.position.y=.12;g.add(cup);
   const v=new T.Mesh(new T.TorusGeometry(.04,.006,6,12,Math.PI),sm);v.position.y=1.32;v.rotation.z=Math.PI;g.add(v);g.traverse(o=>{if(o.isMesh)o.castShadow=true;});return g;}
 
@@ -700,9 +701,9 @@ function setupRods(){st.rods.forEach(r=>{scene.remove(r.hit);scene.remove(r.obj)
   st.rods=Array.from({length:st.nRods},(_,i)=>{const x=rodX(i,st.nRods),spike=makeSpike(st.gear.spikeT||(st.gear.bought?.spike?'alu':''));spike.position.set(x,ROD_Z*.035,ROD_Z);scene.add(spike);
     const g0=st.gear,rid=g0.rods[i]&&g0.rodCnt[g0.rods[i]]>0&&i>0?g0.rods[Math.min(i,g0.rods.length-1)]:g0.rod,lid=g0.reels[i]&&i>0?g0.reels[Math.min(i,g0.reels.length-1)]:g0.reel,obj=makeRod();skinRod(obj,rid,lid);scene.add(obj);const lg=new T.BufferGeometry();lg.setAttribute('position',new T.Float32BufferAttribute(new Float32Array(40*3),3));const line=new T.Line(lg,MAT.line);line.frustumCulled=false;scene.add(line);
     const sinker=new T.Mesh(new T.SphereGeometry(.05,8,6),MAT.lead);sinker.visible=false;scene.add(sinker);
-    const hit=new T.Mesh(new T.CylinderGeometry(.6,.6,4.6,8),new T.MeshBasicMaterial({visible:false}));hit.position.set(x,2,ROD_Z-1.1);hit.rotation.x=-40*R;scene.add(hit);
+    const hit=new T.Mesh(new T.CylinderGeometry(.6,.6,4.6,8),new T.MeshBasicMaterial({visible:false}));hit.position.set(x,2.2,ROD_Z-.3);hit.rotation.x=-8*R;scene.add(hit);
     return {rodId:rid,reelId:lid,leadT:'piramidale',hookT:'aberdeen',lead:st.lead,hook:st.hook,rig:'lungo',broken:false,dismantled:false,i,x,spike,obj,line,sinker,hit,bait:null,dist:0,state:'idle',baitLeft:0,bend:0,bitePlan:null,held:false,sx:x,sz:-1};});}
-function placeRodOnSpike(r){const by=ROD_Z*.035;r.obj.position.set(r.x,by+.12,ROD_Z);r.obj.rotation.set(-40*R,0,0,'YXZ');}
+function placeRodOnSpike(r){const by=ROD_Z*.035;r.obj.position.set(r.x,by+.12,ROD_Z);r.obj.rotation.set(-8*R,0,0,'YXZ');}
 function rodInHand(r,a=AN){const J=a.obj.userData.J,hp=new T.Vector3();J.rHand.getWorldPosition(hp);const p=a.pose.rod||{p:45,f:0,y:0};
   r.obj.rotation.set((p.p-90)*R,a.rotY+(p.y||0),0,'YXZ');const dir=new T.Vector3(0,1,0).applyEuler(r.obj.rotation);r.obj.position.copy(hp).addScaledVector(dir,-.5);}
 
